@@ -17,7 +17,7 @@ message and metadata about it. To send a message, write a JSON object to the soc
 ```json
 {
   "type": "send",
-  "sourceNumber": "+12024561414",
+  "username": "+12024561414",
   "recipientNumber": "+14235290302",
   "messageBody": "Hello, Dave"
 }
