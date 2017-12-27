@@ -1,0 +1,32 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+mainClassName = 'io.finn.signald.Main'
+
+version = '0.1.0'
+
+compileJava.options.encoding = 'UTF-8'
+
+repositories {
+    maven {
+        url "https://raw.github.com/AsamK/maven/master/releases/"
+    }
+    mavenCentral()
+}
+
+dependencies {
+    compile 'com.github.turasa:signal-service-java:2.6.5_unofficial_1'
+    compile 'org.bouncycastle:bcprov-jdk15on:1.55'
+    compile 'net.sourceforge.argparse4j:argparse4j:0.7.0'
+    compile 'com.kohlschutter.junixsocket:junixsocket-native-common:2.0.4'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Main-Class': project.mainClassName,
+        )
+    }
+}
