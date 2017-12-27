@@ -49,8 +49,8 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     private SocketManager sockets;
 
     public MessageReceiver(Manager m, SocketManager sockets) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, IOException {
-        this.m = m;
-        this.sockets = sockets;
+      this.m = m;
+      this.sockets = sockets;
     }
 
     public void run() {
@@ -82,7 +82,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       try {
         SignalServiceAddress source = envelope.getSourceAddress();
         ContactInfo sourceContact = this.m.getContact(source.getNumber());
-        if(content != null && content.getDataMessage().isPresent()) {
+        if(envelope != null) {
           JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, this.m);
           this.sockets.broadcast(new MessageWrapper("message", message));
         }
