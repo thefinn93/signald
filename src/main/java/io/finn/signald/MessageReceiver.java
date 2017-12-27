@@ -79,15 +79,15 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
     @Override
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
-        try {
-          SignalServiceAddress source = envelope.getSourceAddress();
-          ContactInfo sourceContact = this.m.getContact(source.getNumber());
-          if(content != null && content.getDataMessage().isPresent()) {
-            JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, this.m);
-            this.sockets.broadcast(new MessageWrapper("message", message));
-          }
-        } catch (IOException e) {
-          e.printStackTrace();
+      try {
+        SignalServiceAddress source = envelope.getSourceAddress();
+        ContactInfo sourceContact = this.m.getContact(source.getNumber());
+        if(content != null && content.getDataMessage().isPresent()) {
+          JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, this.m);
+          this.sockets.broadcast(new MessageWrapper("message", message));
         }
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
 }
