@@ -42,6 +42,10 @@ public class Main {
       ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
       SocketManager socketmanager = new SocketManager();
 
+      // Spins up one thread per inbound connection to the control socket
+      AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
+      server.bind(new AFUNIXSocketAddress(new File(socket_path)));
+
       // Spins up one thread per registered signal number, listens for incoming messages
       String settingsPath = System.getProperty("user.home") + "/.config/signal";
 
@@ -67,10 +71,6 @@ public class Main {
           }
         }
       }
-
-      // Spins up one thread per inbound connection to the control socket
-      AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
-      server.bind(new AFUNIXSocketAddress(new File(socket_path)));
 
       while (!Thread.interrupted()) {
         System.out.println("Waiting for connection...");
