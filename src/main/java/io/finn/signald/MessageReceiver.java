@@ -19,7 +19,7 @@ package io.finn.signald;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
@@ -31,18 +31,28 @@ import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.storage.contacts.ContactInfo;
 
 
-class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
-    final Manager m;
 
+class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
+    final String username;
+    private Manager m;
+    private ConcurrentHashMap<String,Manager> managers;
     private SocketManager sockets;
 
-    public MessageReceiver(Manager m, SocketManager sockets) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, IOException {
-      this.m = m;
+    public MessageReceiver(String username, SocketManager sockets, ConcurrentHashMap<String,Manager> managers) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, IOException {
       this.sockets = sockets;
+      this.managers = managers;
+      this.username = username;
     }
 
     public void run() {
       try {
+        String settingsPath = System.getProperty("user.home") + "/.config/signal";
+        this.m = new Manager(this.username, settingsPath);
+        System.out.println("Creating new manager for " + username);
+        if(m.userExists()) {
+          this.m.init();
+          this.managers.put(username, m);
+        }
         Boolean exitNow = false;
         while(!exitNow) {
           double timeout = 3600;
@@ -60,6 +70,8 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
             System.out.println("AssertionError occured while receiving messages: " + e.getMessage());
           }
         }
+      } catch (org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException e) {
+        System.err.println("Authorization Failed for " + username);
       } catch(Exception e) {
         e.printStackTrace();
       }

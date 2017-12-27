@@ -53,22 +53,8 @@ public class Main {
       for(int i = 0; i < users.length; i++) {
         if(!users[i].isDirectory()) {
           String username = users[i].getName();
-          System.out.println("Creating new manager for " + username);
-          Manager m = new Manager(users[i].getName(), settingsPath);
-          if (m.userExists()) {
-            try {
-              m.init();
-              managers.put(username, m);
-              Thread messageReceiverThread = new Thread(new MessageReceiver(m, socketmanager));
-              messageReceiverThread.start();
-            } catch (org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException e) {
-              System.err.println("Authorization Failed for " + username);
-            } catch (Exception e) {
-              System.err.println("Error loading state file " + m.getFileName());
-              e.printStackTrace();
-              System.exit(2);
-            }
-          }
+          Thread messageReceiverThread = new Thread(new MessageReceiver(username, socketmanager, managers));
+          messageReceiverThread.start();
         }
       }
 
