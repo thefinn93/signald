@@ -28,10 +28,13 @@ import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 public class Main {
-  static String SOCKET_PATH = "signald.sock";
 
   public static void main(String[] args) {
     try {
+      String socket_path = "/var/run/signald/signald.sock";
+      if(args.length > 0) {
+        socket_path = args[0];
+      }
 
       // Workaround for BKS truststore
       Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1);
@@ -67,7 +70,7 @@ public class Main {
 
       // Spins up one thread per inbound connection to the control socket
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
-      server.bind(new AFUNIXSocketAddress(new File(SOCKET_PATH)));
+      server.bind(new AFUNIXSocketAddress(new File(socket_path)));
 
       while (!Thread.interrupted()) {
         System.out.println("Waiting for connection...");
