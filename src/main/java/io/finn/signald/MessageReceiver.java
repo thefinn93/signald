@@ -63,7 +63,8 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
             try {
               this.m.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
             } catch (IOException e) {
-              System.out.println("IO Exception while receiving messages: " + e.getMessage());
+              System.out.println("IO Exception while receiving messages for " + m.getUsername());
+              e.printStackTrace();
             } catch (AssertionError e) {
               System.out.println("AssertionError occured while receiving messages: " + e.getMessage());
             }

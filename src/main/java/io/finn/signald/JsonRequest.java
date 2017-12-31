@@ -11,6 +11,7 @@ class JsonRequest {
     public String recipientGroupId;
     public Boolean voice;
     public String code;
+    public String deviceName;
     public List<String> attachmentFilenames;
 
     JsonRequest() {}

@@ -18,8 +18,10 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 import org.asamk.signal.AttachmentInvalidException;
+import org.asamk.signal.UserAlreadyExists;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -27,6 +29,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -92,6 +95,9 @@ public class SocketHandler implements Runnable {
       case "verify":
         verify(request);
         break;
+      case "link":
+        link(request);
+        break;
       default:
         System.err.println("Unknown command type " + request.type);
         break;
@@ -109,7 +115,7 @@ public class SocketHandler implements Runnable {
 
   private void listAccounts(JsonRequest request) throws JsonProcessingException {
     JsonAccountList accounts = new JsonAccountList(this.managers);
-    this.reply(new JsonMessageWrapper("account_list", accounts));
+    this.reply("account_list", accounts, request.id);
   }
 
   private void register(JsonRequest request) throws IOException {
@@ -126,7 +132,7 @@ public class SocketHandler implements Runnable {
     }
     System.out.println("Registering (voice: " + voice + ")");
     m.register(voice);
-    this.reply(new JsonMessageWrapper("verification_required", new JsonAccount(m)));
+    this.reply("verification_required", new JsonAccount(m), request.id);
   }
 
   private void verify(JsonRequest request) throws IOException {
@@ -138,7 +144,7 @@ public class SocketHandler implements Runnable {
     } else {
       System.err.println("Submitting verification code " + request.code + " for number " + request.username);
       m.verifyAccount(request.code);
-      this.reply(new JsonMessageWrapper("verification_succeeded", new JsonAccount(m)));
+      this.reply("verification_succeeded", new JsonAccount(m), request.id);
     }
   }
 
@@ -149,7 +155,6 @@ public class SocketHandler implements Runnable {
     if(this.managers.containsKey(username)) {
       return this.managers.get(username);
     } else {
-      System.err.println("No existing manager for " + username + ", making a new one");
       Manager m = new Manager(username, settingsPath);
       if(m.userExists()) {
         m.init();
@@ -159,9 +164,31 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void reply(JsonMessageWrapper message) throws JsonProcessingException {
+  private void reply(String type, Object data, String id) throws JsonProcessingException {
+    JsonMessageWrapper message = new JsonMessageWrapper(type, data, id);
     String jsonmessage = this.mpr.writeValueAsString(message);
     PrintWriter out = new PrintWriter(this.writer, true);
     out.println(jsonmessage);
+  }
+
+  private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException {
+    String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
+    Manager m = new Manager(null, settingsPath);
+    m.createNewIdentity();
+    String deviceName = "signald"; // TODO: Set this to "signald on <hostname>"
+    if(request.deviceName != null) {
+      deviceName = request.deviceName;
+    }
+    try {
+      m.getDeviceLinkUri();
+      this.reply("linking_uri", new JsonLinkingURI(m), request.id);
+      m.finishDeviceLink(deviceName);
+    } catch(TimeoutException e) {
+      this.reply("linking_error", new JsonError(1, "Timed out while waiting for device to link"), request.id);
+    } catch(IOException e) {
+      this.reply("linking_error", new JsonError(2, e.getMessage()), request.id);
+    } catch(UserAlreadyExists e) {
+      this.reply("linking_error", new JsonError(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again."), request.id);
+    }
   }
 }
