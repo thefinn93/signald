@@ -346,6 +346,7 @@ class Manager {
             fileChannel.truncate(fileChannel.position());
             fileChannel.force(false);
         } catch (Exception e) {
+            e.printStackTrace();
             System.err.println(String.format("Error saving file: %s", e.getMessage()));
         }
     }

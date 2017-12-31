@@ -86,6 +86,12 @@ public class SocketHandler implements Runnable {
       case "list_accounts":
         listAccounts(request);
         break;
+      case "register":
+        register(request);
+        break;
+      case "verify":
+        verify(request);
+        break;
       default:
         System.err.println("Unknown command type " + request.type);
         break;
@@ -106,5 +112,50 @@ public class SocketHandler implements Runnable {
     String jsonmessage = this.mpr.writeValueAsString(new JsonMessageWrapper("account_list", accounts));
     PrintWriter out = new PrintWriter(this.writer, true);
     out.println(jsonmessage);
+  }
+
+  private void register(JsonRequest request) throws IOException {
+    System.err.println("Register request: " + request);
+    Manager m = getManager(request.username);
+    Boolean voice = false;
+    if(request.voice != null) {
+      voice = request.voice;
+    }
+
+    if(!m.userHasKeys()) {
+      System.out.println("User has no keys, making some");
+      m.createNewIdentity();
+    }
+    System.out.println("Registering (voice: " + voice + ")");
+    m.register(voice);
+  }
+
+  private void verify(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    if(!m.userHasKeys()) {
+      System.err.println("User has no keys, first call register.");
+    } else if(m.isRegistered()) {
+      System.err.println("User is already verified");
+    } else {
+      System.err.println("Submitting verification code " + request.code + " for number " + request.username);
+      m.verifyAccount(request.code);
+    }
+  }
+
+  private Manager getManager(String username) throws IOException {
+    // So many problems in this method, need to have a single place to create new managers, probably in MessageReceiver
+    String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
+
+    if(this.managers.containsKey(username)) {
+      return this.managers.get(username);
+    } else {
+      System.err.println("No existing manager for " + username + ", making a new one");
+      Manager m = new Manager(username, settingsPath);
+      if(m.userExists()) {
+        m.init();
+      }
+      this.managers.put(username, m);
+      return m;
+    }
   }
 }

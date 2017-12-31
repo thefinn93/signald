@@ -49,25 +49,24 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         String settingsPath = System.getProperty("user.home") + "/.config/signal";
         this.m = new Manager(this.username, settingsPath);
         System.out.println("Creating new manager for " + username);
+        this.managers.put(username, m);
         if(m.userExists()) {
           this.m.init();
-          this.managers.put(username, m);
-        }
-        Boolean exitNow = false;
-        while(!exitNow) {
-          double timeout = 3600;
-          boolean returnOnTimeout = true;
-          if (timeout < 0) {
-            returnOnTimeout = false;
-            timeout = 3600;
-          }
-          boolean ignoreAttachments = false;
-          try {
-            this.m.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
-          } catch (IOException e) {
-            System.out.println("IO Exception while receiving messages: " + e.getMessage());
-          } catch (AssertionError e) {
-            System.out.println("AssertionError occured while receiving messages: " + e.getMessage());
+          while(true) {
+            double timeout = 3600;
+            boolean returnOnTimeout = true;
+            if (timeout < 0) {
+              returnOnTimeout = false;
+              timeout = 3600;
+            }
+            boolean ignoreAttachments = false;
+            try {
+              this.m.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
+            } catch (IOException e) {
+              System.out.println("IO Exception while receiving messages: " + e.getMessage());
+            } catch (AssertionError e) {
+              System.out.println("AssertionError occured while receiving messages: " + e.getMessage());
+            }
           }
         }
       } catch (org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException e) {

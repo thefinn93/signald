@@ -9,6 +9,8 @@ class JsonRequest {
     public String messageBody;
     public String recipientNumber;
     public String recipientGroupId;
+    public Boolean voice;
+    public String code;
     public List<String> attachmentFilenames;
 
     JsonRequest() {}
