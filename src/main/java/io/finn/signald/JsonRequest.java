@@ -13,6 +13,7 @@ class JsonRequest {
     public String code;
     public String deviceName;
     public List<String> attachmentFilenames;
+    public String uri;
 
     JsonRequest() {}
 }

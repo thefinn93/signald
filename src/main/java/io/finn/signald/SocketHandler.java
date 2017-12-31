@@ -28,6 +28,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.URISyntaxException;
+import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
@@ -98,6 +100,9 @@ public class SocketHandler implements Runnable {
       case "link":
         link(request);
         break;
+      case "addDevice":
+        addDevice(request);
+        break;
       default:
         System.err.println("Unknown command type " + request.type);
         break;
@@ -148,6 +153,12 @@ public class SocketHandler implements Runnable {
     }
   }
 
+  private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException {
+    Manager m = getManager(request.username);
+    m.addDeviceLink(new URI(request.uri));
+    reply("device_added", new JsonStatusMessage(4, "Successfully linked device", false), request.id);
+  }
+
   private Manager getManager(String username) throws IOException {
     // So many problems in this method, need to have a single place to create new managers, probably in MessageReceiver
     String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
@@ -184,11 +195,11 @@ public class SocketHandler implements Runnable {
       this.reply("linking_uri", new JsonLinkingURI(m), request.id);
       m.finishDeviceLink(deviceName);
     } catch(TimeoutException e) {
-      this.reply("linking_error", new JsonError(1, "Timed out while waiting for device to link"), request.id);
+      this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", true), request.id);
     } catch(IOException e) {
-      this.reply("linking_error", new JsonError(2, e.getMessage()), request.id);
+      this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), true), request.id);
     } catch(UserAlreadyExists e) {
-      this.reply("linking_error", new JsonError(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again."), request.id);
+      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", true), request.id);
     }
   }
 }
