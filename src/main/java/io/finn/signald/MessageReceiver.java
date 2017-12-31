@@ -84,7 +84,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         ContactInfo sourceContact = this.m.getContact(source.getNumber());
         if(envelope != null) {
           JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, this.m);
-          this.sockets.broadcast(new MessageWrapper("message", message));
+          this.sockets.broadcast(new JsonMessageWrapper("message", message));
         }
       } catch (IOException e) {
         e.printStackTrace();

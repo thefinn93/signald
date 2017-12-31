@@ -24,6 +24,7 @@ import org.asamk.signal.AttachmentInvalidException;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,16 +33,19 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonGenerator;
 
 public class SocketHandler implements Runnable {
   private BufferedReader reader;
+  private PrintWriter writer;
   private ConcurrentHashMap<String,Manager> managers;
   private ObjectMapper mpr = new ObjectMapper();
 
 
   public SocketHandler(Socket socket, ConcurrentHashMap<String,Manager> managers) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+    this.writer = new PrintWriter(socket.getOutputStream(), true);
     this.managers = managers;
 
     this.mpr.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY); // disable autodetect
@@ -74,11 +78,13 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void handleRequest(JsonRequest request) {
-    System.out.println("Pretending to handle request...");
+  private void handleRequest(JsonRequest request) throws Exception {
     switch(request.type) {
       case "send":
         send(request);
+        break;
+      case "list_accounts":
+        listAccounts(request);
         break;
       default:
         System.err.println("Unknown command type " + request.type);
@@ -93,5 +99,12 @@ public class SocketHandler implements Runnable {
     } catch(EncapsulatedExceptions | AttachmentInvalidException | IOException e) {
       e.printStackTrace();
     }
+  }
+
+  private void listAccounts(JsonRequest request) throws JsonProcessingException {
+    JsonAccountList accounts = new JsonAccountList(this.managers);
+    String jsonmessage = this.mpr.writeValueAsString(new JsonMessageWrapper("account_list", accounts));
+    PrintWriter out = new PrintWriter(this.writer, true);
+    out.println(jsonmessage);
   }
 }

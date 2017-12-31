@@ -36,15 +36,18 @@ class SocketManager {
     this.sockets.remove(s);
   }
 
-  public void broadcast(MessageWrapper message) throws JsonProcessingException, IOException {
-    String jsonmessage = this.mpr.writeValueAsString(message);
+  public void broadcast(JsonMessageWrapper message) throws JsonProcessingException, IOException {
     synchronized(this.sockets) {
       Iterator i = this.sockets.iterator();
       while(i.hasNext()) {
-        Socket s = (Socket)i.next();
-        PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-        out.println(jsonmessage);
+        send(message, (Socket)i.next());
       }
     }
+  }
+
+  public void send(JsonMessageWrapper message, Socket s) throws JsonProcessingException, IOException {
+    String jsonmessage = this.mpr.writeValueAsString(message);
+    PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+    out.println(jsonmessage);
   }
 }
