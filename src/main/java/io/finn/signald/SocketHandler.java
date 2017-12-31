@@ -109,9 +109,7 @@ public class SocketHandler implements Runnable {
 
   private void listAccounts(JsonRequest request) throws JsonProcessingException {
     JsonAccountList accounts = new JsonAccountList(this.managers);
-    String jsonmessage = this.mpr.writeValueAsString(new JsonMessageWrapper("account_list", accounts));
-    PrintWriter out = new PrintWriter(this.writer, true);
-    out.println(jsonmessage);
+    this.reply(new JsonMessageWrapper("account_list", accounts));
   }
 
   private void register(JsonRequest request) throws IOException {
@@ -128,6 +126,7 @@ public class SocketHandler implements Runnable {
     }
     System.out.println("Registering (voice: " + voice + ")");
     m.register(voice);
+    this.reply(new JsonMessageWrapper("verification_required", new JsonAccount(m)));
   }
 
   private void verify(JsonRequest request) throws IOException {
@@ -139,6 +138,7 @@ public class SocketHandler implements Runnable {
     } else {
       System.err.println("Submitting verification code " + request.code + " for number " + request.username);
       m.verifyAccount(request.code);
+      this.reply(new JsonMessageWrapper("verification_succeeded", new JsonAccount(m)));
     }
   }
 
@@ -157,5 +157,11 @@ public class SocketHandler implements Runnable {
       this.managers.put(username, m);
       return m;
     }
+  }
+
+  private void reply(JsonMessageWrapper message) throws JsonProcessingException {
+    String jsonmessage = this.mpr.writeValueAsString(message);
+    PrintWriter out = new PrintWriter(this.writer, true);
+    out.println(jsonmessage);
   }
 }
