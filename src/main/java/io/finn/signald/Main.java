@@ -50,12 +50,17 @@ public class Main {
       String settingsPath = System.getProperty("user.home") + "/.config/signal";
 
       File[] users = new File(settingsPath + "/data").listFiles();
-      for(int i = 0; i < users.length; i++) {
-        if(!users[i].isDirectory()) {
-          String username = users[i].getName();
-          Thread messageReceiverThread = new Thread(new MessageReceiver(username, socketmanager, managers));
-          messageReceiverThread.start();
+
+      if(users != null) {
+        for(int i = 0; i < users.length; i++) {
+          if(!users[i].isDirectory()) {
+            String username = users[i].getName();
+            Thread messageReceiverThread = new Thread(new MessageReceiver(username, socketmanager, managers));
+            messageReceiverThread.start();
+          }
         }
+      } else {
+        System.err.println("WARNING! No users are currently defined, you'll need to register or link to your existing signal account");
       }
 
       while (!Thread.interrupted()) {
