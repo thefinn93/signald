@@ -43,6 +43,7 @@ Sends a signal message to another user or a group. Possible values are:
 ### `register`
 
 Begins the process of registering a new number on signal for use with signald. Possible values are:
+
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The phone number to register |
@@ -62,6 +63,7 @@ Completes the registration process, by providing a verification code sent after 
 ### `addDevice`
 
 Adds another device to a signal account that signald controls the master device on. Possible values are:
+
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The account to add the device to. |
