@@ -59,6 +59,17 @@ Completes the registration process, by providing a verification code sent after 
 | `code` | string | yes | The verification code. The `-` in the middle code is optional.
 
 
+### `addDevice`
+
+Adds another device to a signal account that signald controls the master device on. Possible values are:
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `username` | string | yes | The account to add the device to. |
+| `uri` | string | yes | The `tsdevice:` URI that is provided by the other device (displayed as a QR code normally) |
+
+
+
+
 ### `list_accounts`
 Returns a list of all currently known accounts in signald, including ones that have not completed registration. No other fields are used.
 
