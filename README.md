@@ -74,5 +74,8 @@ Adds another device to a signal account that signald controls the master device 
 Returns a list of all currently known accounts in signald, including ones that have not completed registration. No other fields are used.
 
 
+## License
+This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
+
 ## Contributing
 I would like to get this to the point that anything one can do in the signal app can also be done via signald. There should be open issues for all missing features. If you have a feature you want feel free to work on it and submit a pull request. If you don't want to work on it, follow the relevant issue and get notified when there is progress.
