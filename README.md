@@ -3,16 +3,13 @@
 signald is a daemon that facilitates communication over Signal.
 
 
-## Setup
-
-1. Build signald: `./gradlew installDist`
-1. Using [signal-cli](https://github.com/Asamk/signal-cli), register your number(s) on signal or link to your existing device(s). Note this step should be available via the control socket soon.
-1. Run `signald`. It will be at `build/install/signald/bin/signald` if you ran the command in step 1.
-
-## Usage
-When run, `signald` will create a unix domain socket called `signald.sock`. Connect to it (eg `nc -U signald.sock`).
-When any registered numbers receive a message, any clients connected to the socket will receive a JSON object with the
-message and metadata about it. To send a message, write a JSON object to the socket, like this:
+## Quick Start
+1. Run `./gradlew installDist` to build signald
+1. Run `build/install/signald/bin/signald signald.sock` to start signald. It will continue running until killed (or ctrl-C)
+1. In a second terminal window, connect to the signald control socket: `nc -U signald.sock`
+1. Register a new number on signal by typing this: `{"type": "register", "username": "+12024561414"}` (replace `+12024561414` with your own number)
+1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
+1. Incoming messages will be sent to the socket and shown on your screen. To send a message, use something like this:
 
 ```json
 {
@@ -23,5 +20,48 @@ message and metadata about it. To send a message, write a JSON object to the soc
 }
 ```
 
+*However, it must all be sent on a single line* otherwise signald will attempt to interpret each line as json.
 
-Note that due to reasons, it should all be sent on the same line.
+
+## Control Messages
+Each message sent to the control socket must be valid JSON and have a `type` field. The possible message types and their
+arguments are enumerated below. All messages may optionally include an `id` field. When signald follows up on a previous
+command, it will include the same `id` value. Most commands (but not all) require `username` field, which is the number
+to use for this action, as multiple numbers can be registered with signald at the same time.
+
+### `send`
+Sends a signal message to another user or a group. Possible values are:
+
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `username` | string | yes | The signal number you are sending *from*. |
+| `recipientNumber` | string | no | The number you are sending to. Required if not sending to a group |
+| `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
+| `messageBody` | string | no | The text of the message. |
+| `attachmentFilenames` | list of strings | no | A list of files to attach, by path on the local disk. |
+
+### `register`
+
+Begins the process of registering a new number on signal for use with signald. Possible values are:
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `username` | string | yes | The phone number to register |
+| `voice` | boolean | no | Indicates if the verification code should be sent via a phone call. If `false` or not set the verification is done via SMS |
+
+
+### `verify`
+
+Completes the registration process, by providing a verification code sent after the `register` command. Possible values are:
+
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `username` | string | yes | The phone number that is being verified |
+| `code` | string | yes | The verification code. The `-` in the middle code is optional.
+
+
+### `list_accounts`
+Returns a list of all currently known accounts in signald, including ones that have not completed registration. No other fields are used.
+
+
+## Contributing
+I would like to get this to the point that anything one can do in the signal app can also be done via signald. There should be open issues for all missing features. If you have a feature you want feel free to work on it and submit a pull request. If you don't want to work on it, follow the relevant issue and get notified when there is progress.
