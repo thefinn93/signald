@@ -100,7 +100,7 @@ public class SocketHandler implements Runnable {
       case "link":
         link(request);
         break;
-      case "addDevice":
+      case "add_device":
         addDevice(request);
         break;
       default:

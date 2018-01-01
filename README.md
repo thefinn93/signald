@@ -60,7 +60,7 @@ Completes the registration process, by providing a verification code sent after 
 | `code` | string | yes | The verification code. The `-` in the middle code is optional.
 
 
-### `addDevice`
+### `add_device`
 
 Adds another device to a signal account that signald controls the master device on. Possible values are:
 
