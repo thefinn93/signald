@@ -49,10 +49,9 @@ public class Main {
       // Spins up one thread per registered signal number, listens for incoming messages
       String settingsPath = System.getProperty("user.home") + "/.config/signal";
 
-      File datadir = new File(settingsPath + "/data");
+      File[] users = new File(settingsPath + "/data").listFiles();
 
-      if(datadir != null) {
-        File[] users = datadir.listFiles();
+      if(users != null) {
         for(int i = 0; i < users.length; i++) {
           if(!users[i].isDirectory()) {
             String username = users[i].getName();
