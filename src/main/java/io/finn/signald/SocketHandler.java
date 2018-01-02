@@ -18,10 +18,13 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.internal.util.Base64;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
+import org.asamk.signal.GroupNotFoundException;
+import org.asamk.signal.NotAGroupMemberException;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -32,6 +35,8 @@ import java.net.URISyntaxException;
 import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
+import java.util.List;
+import java.util.ArrayList;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -75,7 +80,7 @@ public class SocketHandler implements Runnable {
           System.out.println(line);
           request = this.mpr.readValue(line, JsonRequest.class);
           handleRequest(request);
-        } catch(Exception e) {
+        } catch(Throwable e) {
           e.printStackTrace();
           System.err.println("+-- Original request text: " + line);
         }
@@ -83,7 +88,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void handleRequest(JsonRequest request) throws Exception {
+  private void handleRequest(JsonRequest request) throws Throwable {
     switch(request.type) {
       case "send":
         send(request);
@@ -102,6 +107,9 @@ public class SocketHandler implements Runnable {
         break;
       case "add_device":
         addDevice(request);
+        break;
+      case "update_group":
+        updateGroup(request);
         break;
       default:
         System.err.println("Unknown command type " + request.type);
@@ -175,12 +183,46 @@ public class SocketHandler implements Runnable {
     }
   }
 
+  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+    Manager m = getManager(request.username);
+
+    byte[] groupId = null;
+    if(request.recipientGroupId != null) {
+      groupId = Base64.decode(request.recipientGroupId);
+    }
+    if (groupId == null) {
+        groupId = new byte[0];
+    }
+
+    String groupName = request.groupName;
+    if(groupName == null) {
+        groupName = "";
+    }
+
+    List<String> groupMembers = request.members;
+    if (groupMembers == null) {
+        groupMembers = new ArrayList<String>();
+    }
+
+    String groupAvatar = request.avatar;
+    if (groupAvatar == null) {
+        groupAvatar = "";
+    }
+
+    byte[] newGroupId = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
+
+    if (groupId.length != newGroupId.length) {
+        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + ".", false), request.id);
+    }
+  }
+
   private void reply(String type, Object data, String id) throws JsonProcessingException {
     JsonMessageWrapper message = new JsonMessageWrapper(type, data, id);
     String jsonmessage = this.mpr.writeValueAsString(message);
     PrintWriter out = new PrintWriter(this.writer, true);
     out.println(jsonmessage);
   }
+
 
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException {
     String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere

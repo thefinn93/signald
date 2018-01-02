@@ -31,6 +31,9 @@ class JsonRequest {
     public String deviceName;
     public List<String> attachmentFilenames;
     public String uri;
+    public String groupName;
+    public List<String> members;
+    public String avatar;
 
     JsonRequest() {}
 }
