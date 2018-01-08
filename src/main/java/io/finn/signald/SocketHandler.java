@@ -65,20 +65,18 @@ public class SocketHandler implements Runnable {
       JsonRequest request;
       try {
         line = this.reader.readLine();
-      } catch(IOException e) {
-        System.err.println("Error parsing input:");
-        e.printStackTrace();
-        break;
-      }
-      if(line != null && !line.equals("")) {
-        try {
-          System.out.println(line);
-          request = this.mpr.readValue(line, JsonRequest.class);
-          handleRequest(request);
-        } catch(Exception e) {
-          e.printStackTrace();
-          System.err.println("+-- Original request text: " + line);
+        if(line != null && !line.equals("")) {
+            System.out.println(line);
+            request = this.mpr.readValue(line, JsonRequest.class);
+            try {
+                handleRequest(request);
+            } catch(Throwable e) {
+                handleError(e, request);
+            }
         }
+      } catch(IOException e) {
+        handleError(e, null);
+        break;
       }
     }
   }
@@ -105,6 +103,7 @@ public class SocketHandler implements Runnable {
         break;
       default:
         System.err.println("Unknown command type " + request.type);
+        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
         break;
     }
   }
@@ -200,6 +199,19 @@ public class SocketHandler implements Runnable {
       this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), true), request.id);
     } catch(UserAlreadyExists e) {
       this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", true), request.id);
+    }
+  }
+
+  private void handleError(Throwable error, JsonRequest request) {
+    error.printStackTrace();
+    String requestid = "";
+    if(request != null) {
+        requestid = request.id;
+    }
+    try {
+        this.reply("unexpected_error", new JsonStatusMessage(0, error.getStackTrace().toString(), true), requestid);
+    } catch(JsonProcessingException e) {
+        e.printStackTrace();
     }
   }
 }
