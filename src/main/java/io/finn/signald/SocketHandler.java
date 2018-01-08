@@ -109,6 +109,9 @@ public class SocketHandler implements Runnable {
       case "update_group":
         updateGroup(request);
         break;
+      case "list_groups":
+        listGroups(request);
+        break;
       default:
         System.err.println("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
@@ -212,7 +215,14 @@ public class SocketHandler implements Runnable {
 
     if (groupId.length != newGroupId.length) {
         this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + ".", false), request.id);
+    } else {
+        this.reply("group_updated", new JsonStatusMessage(6, "Updated group", false), request.id);
     }
+  }
+
+  private void listGroups(JsonRequest request) throws IOException, JsonProcessingException {
+    Manager m = getManager(request.username);
+    this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
   private void reply(String type, Object data, String id) throws JsonProcessingException {
@@ -251,7 +261,7 @@ public class SocketHandler implements Runnable {
         requestid = request.id;
     }
     try {
-        this.reply("unexpected_error", new JsonStatusMessage(0, error.getStackTrace().toString(), true), requestid);
+        this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), true), requestid);
     } catch(JsonProcessingException e) {
         e.printStackTrace();
     }
