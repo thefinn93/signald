@@ -26,7 +26,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import org.apache.http.util.TextUtils;
+
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
@@ -41,6 +43,7 @@ import org.asamk.signal.storage.protocol.JsonSignalProtocolStore;
 import org.asamk.signal.storage.threads.JsonThreadStore;
 import org.asamk.signal.storage.threads.ThreadInfo;
 import org.asamk.signal.util.Util;
+
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -92,7 +95,11 @@ import java.util.concurrent.TimeoutException;
 
 import static java.nio.file.attribute.PosixFilePermission.*;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 class Manager {
+    private static final Logger logger = LogManager.getLogger();
     private final static String URL = "https://textsecure-service.whispersystems.org";
     private final static String CDN_URL = "https://cdn.signal.org";
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
@@ -231,9 +238,9 @@ class Manager {
         fileChannel = new RandomAccessFile(new File(getFileName()), "rw").getChannel();
         lock = fileChannel.tryLock();
         if (lock == null) {
-            System.err.println("Config file is in use by another instance, waiting…");
+            logger.info("Config file is in use by another instance, waiting…");
             lock = fileChannel.lock();
-            System.err.println("Config file lock acquired.");
+            logger.info("Config file lock acquired.");
         }
     }
 
@@ -249,7 +256,7 @@ class Manager {
                 save();
             }
         } catch (AuthorizationFailedException e) {
-            System.err.println("Authorization failed, was the number registered elsewhere?");
+            logger.warn("Authorization failed, was the number registered elsewhere?");
         }
     }
 
@@ -347,8 +354,8 @@ class Manager {
             fileChannel.truncate(fileChannel.position());
             fileChannel.force(false);
         } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println(String.format("Error saving file: %s", e.getMessage()));
+            logger.warn("Error saving files");
+            logger.catching(e);
         }
     }
 
@@ -664,9 +671,7 @@ class Manager {
                 try {
                     member = canonicalizeNumber(member);
                 } catch (InvalidNumberException e) {
-                    System.err.println("Failed to add member \"" + member + "\" to group: " + e.getMessage());
-                    System.err.println("Aborting…");
-                    System.exit(1);
+                    logger.warn("Failed to add member \"" + member + "\" to group: " + e.getMessage());
                 }
                 if (g.members.contains(member)) {
                     continue;
@@ -680,9 +685,7 @@ class Manager {
                 for (ContactTokenDetails contact : contacts) {
                     newMembers.remove(contact.getNumber());
                 }
-                System.err.println("Failed to add members " + join(", ", newMembers) + " to group: Not registered on Signal");
-                System.err.println("Aborting…");
-                System.exit(1);
+                logger.warn("Failed to add members " + join(", ", newMembers) + " to group: Not registered on Signal");
             }
         }
 
@@ -795,9 +798,9 @@ class Manager {
         if (contact == null) {
             contact = new ContactInfo();
             contact.number = number;
-            System.err.println("Add contact " + number + " named " + name);
+            logger.info("Add contact " + number + " named " + name);
         } else {
-            System.err.println("Updating contact " + number + " name " + contact.name + " -> " + name);
+            logger.info("Updating contact " + number + " name " + contact.name + " -> " + name);
         }
         contact.name = name;
         contactStore.updateContact(contact);
@@ -844,7 +847,7 @@ class Manager {
         try {
             sendSyncMessage(message);
         } catch (UntrustedIdentityException e) {
-            e.printStackTrace();
+            logger.catching(e);
         }
     }
 
@@ -854,7 +857,7 @@ class Manager {
         try {
             sendSyncMessage(message);
         } catch (UntrustedIdentityException e) {
-            e.printStackTrace();
+            logger.catching(e);
         }
     }
 
@@ -933,8 +936,8 @@ class Manager {
             try {
                 recipientsTS.add(getPushAddress(recipient));
             } catch (InvalidNumberException e) {
-                System.err.println("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
-                System.err.println("Aborting sending.");
+                logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
+                logger.warn("Aborting sending.");
                 save();
                 return null;
             }
@@ -978,7 +981,7 @@ class Manager {
                             try {
                                 retrieveGroupAvatarAttachment(avatar.asPointer(), group.groupId);
                             } catch (IOException | InvalidMessageException e) {
-                                System.err.println("Failed to retrieve group avatar (" + avatar.asPointer().getId() + "): " + e.getMessage());
+                                logger.warn("Failed to retrieve group avatar (" + avatar.asPointer().getId() + "): " + e.getMessage());
                             }
                         }
                     }
@@ -998,7 +1001,7 @@ class Manager {
                         try {
                             sendGroupInfoRequest(groupInfo.getGroupId(), source);
                         } catch (IOException | EncapsulatedExceptions e) {
-                            e.printStackTrace();
+                            logger.catching(e);
                         }
                     }
                     break;
@@ -1007,7 +1010,7 @@ class Manager {
                         try {
                             sendGroupInfoRequest(groupInfo.getGroupId(), source);
                         } catch (IOException | EncapsulatedExceptions e) {
-                            e.printStackTrace();
+                            logger.catching(e);
                         }
                     } else {
                         group.members.remove(source);
@@ -1019,7 +1022,7 @@ class Manager {
                         try {
                             sendUpdateGroupMessage(groupInfo.getGroupId(), source);
                         } catch (IOException | EncapsulatedExceptions e) {
-                            e.printStackTrace();
+                            logger.catching(e);
                         } catch (NotAGroupMemberException e) {
                             // We have left this group, so don't send a group update message
                         }
@@ -1053,7 +1056,7 @@ class Manager {
                     try {
                         retrieveAttachment(attachment.asPointer());
                     } catch (IOException | InvalidMessageException e) {
-                        System.err.println("Failed to retrieve attachment (" + attachment.asPointer().getId() + "): " + e.getMessage());
+                        logger.warn("Failed to retrieve attachment (" + attachment.asPointer().getId() + "): " + e.getMessage());
                     }
                 }
             }
@@ -1081,7 +1084,7 @@ class Manager {
                         continue;
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.catching(e);
                     continue;
                 }
                 SignalServiceContent content = null;
@@ -1098,7 +1101,7 @@ class Manager {
                 try {
                     Files.delete(fileEntry.toPath());
                 } catch (IOException e) {
-                    System.err.println("Failed to delete cached message file “" + fileEntry + "”: " + e.getMessage());
+                    logger.warn("Failed to delete cached message file “" + fileEntry + "”: " + e.getMessage());
                 }
             }
             // Try to delete directory if empty
@@ -1129,7 +1132,7 @@ class Manager {
                                 File cacheFile = getMessageCacheFile(envelope.getSource(), now, envelope.getTimestamp());
                                 storeEnvelope(envelope, cacheFile);
                             } catch (IOException e) {
-                                System.err.println("Failed to store encrypted message in disk cache, ignoring: " + e.getMessage());
+                                logger.warn("Failed to store encrypted message in disk cache, ignoring: " + e.getMessage());
                             }
                         }
                     });
@@ -1138,7 +1141,7 @@ class Manager {
                         return;
                     continue;
                 } catch (InvalidVersionException e) {
-                    System.err.println("Ignoring error: " + e.getMessage());
+                    logger.info("Ignoring error: " + e.getMessage());
                     continue;
                 }
                 if (!envelope.isReceipt()) {
@@ -1159,7 +1162,7 @@ class Manager {
                         // Try to delete directory if empty
                         new File(getMessageCachePath()).delete();
                     } catch (IOException e) {
-                        System.err.println("Failed to delete cached message file “" + cacheFile + "”: " + e.getMessage());
+                        logger.warn("Failed to delete cached message file “" + cacheFile + "”: " + e.getMessage());
                     }
                 }
             }
@@ -1189,14 +1192,14 @@ class Manager {
                         try {
                             sendContacts();
                         } catch (UntrustedIdentityException | IOException e) {
-                            e.printStackTrace();
+                            logger.catching(e);
                         }
                     }
                     if (rm.isGroupsRequest()) {
                         try {
                             sendGroups();
                         } catch (UntrustedIdentityException | IOException e) {
-                            e.printStackTrace();
+                            logger.catching(e);
                         }
                     }
                 }
@@ -1225,13 +1228,13 @@ class Manager {
                             }
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.catching(e);
                     } finally {
                         if (tmpFile != null) {
                             try {
                                 Files.delete(tmpFile.toPath());
                             } catch (IOException e) {
-                                System.err.println("Failed to delete received groups temp file “" + tmpFile + "”: " + e.getMessage());
+                                logger.warn("Failed to delete received groups temp file “" + tmpFile + "”: " + e.getMessage());
                             }
                         }
                     }
@@ -1270,13 +1273,13 @@ class Manager {
                             }
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.catching(e);
                     } finally {
                         if (tmpFile != null) {
                             try {
                                 Files.delete(tmpFile.toPath());
                             } catch (IOException e) {
-                                System.err.println("Failed to delete received contacts temp file “" + tmpFile + "”: " + e.getMessage());
+                                logger.warn("Failed to delete received contacts temp file “" + tmpFile + "”: " + e.getMessage());
                             }
                         }
                     }
@@ -1392,7 +1395,7 @@ class Manager {
                 output.write(buffer, 0, read);
             }
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            logger.catching(e);
             return null;
         }
         return outputFile;
@@ -1405,7 +1408,7 @@ class Manager {
                 byte[] preview = pointer.getPreview().get();
                 output.write(preview, 0, preview.length);
             } catch (FileNotFoundException e) {
-                e.printStackTrace();
+                logger.catching(e);
                 return null;
             }
         }
@@ -1422,14 +1425,14 @@ class Manager {
                     output.write(buffer, 0, read);
                 }
             } catch (FileNotFoundException e) {
-                e.printStackTrace();
+                logger.catching(e);
                 return null;
             }
         } finally {
             try {
                 Files.delete(tmpFile.toPath());
             } catch (IOException e) {
-                System.err.println("Failed to delete received attachment temp file “" + tmpFile + "”: " + e.getMessage());
+                logger.warn("Failed to delete received attachment temp file “" + tmpFile + "”: " + e.getMessage());
             }
         }
         return outputFile;
@@ -1482,7 +1485,7 @@ class Manager {
             try {
                 Files.delete(groupsFile.toPath());
             } catch (IOException e) {
-                System.err.println("Failed to delete groups temp file “" + groupsFile + "”: " + e.getMessage());
+                logger.warn("Failed to delete groups temp file “" + groupsFile + "”: " + e.getMessage());
             }
         }
     }
@@ -1529,7 +1532,7 @@ class Manager {
             try {
                 Files.delete(contactsFile.toPath());
             } catch (IOException e) {
-                System.err.println("Failed to delete contacts temp file “" + contactsFile + "”: " + e.getMessage());
+                logger.warn("Failed to delete contacts temp file “" + contactsFile + "”: " + e.getMessage());
             }
         }
     }
@@ -1575,7 +1578,7 @@ class Manager {
             try {
                 sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
             } catch (IOException | UntrustedIdentityException e) {
-                e.printStackTrace();
+                logger.catching(e);
             }
             save();
             return true;
@@ -1603,7 +1606,7 @@ class Manager {
             try {
                 sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
             } catch (IOException | UntrustedIdentityException e) {
-                e.printStackTrace();
+                logger.catching(e);
             }
             save();
             return true;
@@ -1627,7 +1630,7 @@ class Manager {
                 try {
                     sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
                 } catch (IOException | UntrustedIdentityException e) {
-                    e.printStackTrace();
+                    logger.catching(e);
                 }
             }
         }
