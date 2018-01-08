@@ -30,13 +30,15 @@ import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.storage.contacts.ContactInfo;
 
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     final String username;
     private Manager m;
     private ConcurrentHashMap<String,Manager> managers;
     private SocketManager sockets;
+    private static final Logger logger = LogManager.getLogger();
 
     public MessageReceiver(String username, SocketManager sockets, ConcurrentHashMap<String,Manager> managers) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, IOException {
       this.sockets = sockets;
@@ -48,7 +50,8 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       try {
         String settingsPath = System.getProperty("user.home") + "/.config/signal";
         this.m = new Manager(this.username, settingsPath);
-        System.out.println("Creating new manager for " + username);
+        Thread.currentThread().setName(this.username + "-manager");
+        logger.info("Creating new manager for " + username);
         this.managers.put(username, m);
         if(m.userExists()) {
           this.m.init();
@@ -62,18 +65,15 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
             boolean ignoreAttachments = false;
             try {
               this.m.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
-            } catch (IOException e) {
-              System.out.println("IO Exception while receiving messages for " + m.getUsername());
-              e.printStackTrace();
-            } catch (AssertionError e) {
-              System.out.println("AssertionError occured while receiving messages: " + e.getMessage());
+            } catch (IOException | AssertionError e) {
+                logger.catching(e);
             }
           }
         }
       } catch (org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException e) {
-        System.err.println("Authorization Failed for " + username);
+        logger.warn("Authorization Failed for " + username);
       } catch(Exception e) {
-        e.printStackTrace();
+        logger.catching(e);
       }
     }
 
@@ -87,7 +87,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           this.sockets.broadcast(new JsonMessageWrapper("message", message));
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        logger.catching(e);
       }
     }
 }

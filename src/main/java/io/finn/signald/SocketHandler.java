@@ -46,12 +46,15 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonGenerator;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class SocketHandler implements Runnable {
   private BufferedReader reader;
   private PrintWriter writer;
   private ConcurrentHashMap<String,Manager> managers;
   private ObjectMapper mpr = new ObjectMapper();
-
+  private static final Logger logger = LogManager.getLogger();
 
   public SocketHandler(Socket socket, ConcurrentHashMap<String,Manager> managers) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -71,7 +74,7 @@ public class SocketHandler implements Runnable {
       try {
         line = this.reader.readLine();
         if(line != null && !line.equals("")) {
-            System.out.println(line);
+            logger.debug(line);
             request = this.mpr.readValue(line, JsonRequest.class);
             try {
                 handleRequest(request);
@@ -116,7 +119,7 @@ public class SocketHandler implements Runnable {
        leaveGroup(request);
        break;
       default:
-        System.err.println("Unknown command type " + request.type);
+        logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
         break;
     }
@@ -127,7 +130,7 @@ public class SocketHandler implements Runnable {
     try {
       manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber);
     } catch(EncapsulatedExceptions | AttachmentInvalidException | IOException e) {
-      e.printStackTrace();
+      logger.catching(e);
     }
   }
 
@@ -137,7 +140,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void register(JsonRequest request) throws IOException {
-    System.err.println("Register request: " + request);
+    logger.info("Register request: " + request);
     Manager m = getManager(request.username);
     Boolean voice = false;
     if(request.voice != null) {
@@ -145,10 +148,10 @@ public class SocketHandler implements Runnable {
     }
 
     if(!m.userHasKeys()) {
-      System.out.println("User has no keys, making some");
+      logger.info("User has no keys, making some");
       m.createNewIdentity();
     }
-    System.out.println("Registering (voice: " + voice + ")");
+    logger.info("Registering (voice: " + voice + ")");
     m.register(voice);
     this.reply("verification_required", new JsonAccount(m), request.id);
   }
@@ -156,11 +159,11 @@ public class SocketHandler implements Runnable {
   private void verify(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
     if(!m.userHasKeys()) {
-      System.err.println("User has no keys, first call register.");
+      logger.warn("User has no keys, first call register.");
     } else if(m.isRegistered()) {
-      System.err.println("User is already verified");
+      logger.warn("User is already verified");
     } else {
-      System.err.println("Submitting verification code " + request.code + " for number " + request.username);
+      logger.info("Submitting verification code " + request.code + " for number " + request.username);
       m.verifyAccount(request.code);
       this.reply("verification_succeeded", new JsonAccount(m), request.id);
     }
@@ -265,7 +268,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void handleError(Throwable error, JsonRequest request) {
-    error.printStackTrace();
+    logger.catching(error);
     String requestid = "";
     if(request != null) {
         requestid = request.id;
@@ -273,7 +276,7 @@ public class SocketHandler implements Runnable {
     try {
         this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), true), requestid);
     } catch(JsonProcessingException e) {
-        e.printStackTrace();
+        logger.catching(error);
     }
   }
 }
