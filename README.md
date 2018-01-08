@@ -70,11 +70,30 @@ Adds another device to a signal account that signald controls the master device 
 | `uri` | string | yes | The `tsdevice:` URI that is provided by the other device (displayed as a QR code normally) |
 
 
-
-
 ### `list_accounts`
+
 Returns a list of all currently known accounts in signald, including ones that have not completed registration. No other fields are used.
 
+
+### `list_groups`
+
+Returns a list of all groups the specified user is in.
+
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `username` | string | yes | The account to list the groups of |
+
+### `update_group`
+
+Creates or modifies a group. Only specify fields that should be updated.
+
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `username` | string | yes | The account to use to update the group |
+| `recipientGroupId` | string | no | The base64 encoded group ID. If left out, a new group will be created. |
+| `groupName` | string | no | The value to set the group name to. |
+| `members` | list of strings | no | A list of users (eg full international format phone numbers) that should be added to the group. |
+| `groupAvatar` | string | no | The avatar to set as the group's avatar. Actual format unknown, probably a path to a file on the disk |
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)

@@ -215,6 +215,8 @@ public class SocketHandler implements Runnable {
 
     if (groupId.length != newGroupId.length) {
         this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + ".", false), request.id);
+    } else {
+        this.reply("group_updated", new JsonStatusMessage(6, "Updated group", false), request.id);
     }
   }
 
