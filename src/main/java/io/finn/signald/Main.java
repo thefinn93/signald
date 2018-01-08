@@ -23,11 +23,16 @@ import java.net.Socket;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+
 public class Main {
+
+  private static final Logger logger = LogManager.getLogger("signald");
 
   public static void main(String[] args) {
     try {
@@ -60,16 +65,16 @@ public class Main {
           }
         }
       } else {
-        System.err.println("WARNING! No users are currently defined, you'll need to register or link to your existing signal account");
+        logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
       }
 
       while (!Thread.interrupted()) {
-        System.out.println("Waiting for connection...");
+        logger.info("Waiting for connection...");
         try {
           Socket socket = server.accept();
           socketmanager.add(socket);
 
-          System.out.println("Connected: " + socket);
+          logger.debug("Connected: " + socket);
 
           // Kick off the thread to read input
           Thread socketHandlerThread = new Thread(new SocketHandler(socket, managers));
@@ -79,7 +84,6 @@ public class Main {
           e.printStackTrace();
         }
       }
-
     } catch(Exception e) {
       e.printStackTrace();
       System.exit(1);
