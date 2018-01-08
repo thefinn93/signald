@@ -18,10 +18,13 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.internal.util.Base64;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
+import org.asamk.signal.GroupNotFoundException;
+import org.asamk.signal.NotAGroupMemberException;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -32,6 +35,8 @@ import java.net.URISyntaxException;
 import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
+import java.util.List;
+import java.util.ArrayList;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -65,25 +70,23 @@ public class SocketHandler implements Runnable {
       JsonRequest request;
       try {
         line = this.reader.readLine();
-      } catch(IOException e) {
-        System.err.println("Error parsing input:");
-        e.printStackTrace();
-        break;
-      }
-      if(line != null && !line.equals("")) {
-        try {
-          System.out.println(line);
-          request = this.mpr.readValue(line, JsonRequest.class);
-          handleRequest(request);
-        } catch(Exception e) {
-          e.printStackTrace();
-          System.err.println("+-- Original request text: " + line);
+        if(line != null && !line.equals("")) {
+            System.out.println(line);
+            request = this.mpr.readValue(line, JsonRequest.class);
+            try {
+                handleRequest(request);
+            } catch(Throwable e) {
+                handleError(e, request);
+            }
         }
+      } catch(IOException e) {
+        handleError(e, null);
+        break;
       }
     }
   }
 
-  private void handleRequest(JsonRequest request) throws Exception {
+  private void handleRequest(JsonRequest request) throws Throwable {
     switch(request.type) {
       case "send":
         send(request);
@@ -103,8 +106,12 @@ public class SocketHandler implements Runnable {
       case "add_device":
         addDevice(request);
         break;
+      case "update_group":
+        updateGroup(request);
+        break;
       default:
         System.err.println("Unknown command type " + request.type);
+        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
         break;
     }
   }
@@ -175,12 +182,46 @@ public class SocketHandler implements Runnable {
     }
   }
 
+  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+    Manager m = getManager(request.username);
+
+    byte[] groupId = null;
+    if(request.recipientGroupId != null) {
+      groupId = Base64.decode(request.recipientGroupId);
+    }
+    if (groupId == null) {
+        groupId = new byte[0];
+    }
+
+    String groupName = request.groupName;
+    if(groupName == null) {
+        groupName = "";
+    }
+
+    List<String> groupMembers = request.members;
+    if (groupMembers == null) {
+        groupMembers = new ArrayList<String>();
+    }
+
+    String groupAvatar = request.avatar;
+    if (groupAvatar == null) {
+        groupAvatar = "";
+    }
+
+    byte[] newGroupId = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
+
+    if (groupId.length != newGroupId.length) {
+        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + ".", false), request.id);
+    }
+  }
+
   private void reply(String type, Object data, String id) throws JsonProcessingException {
     JsonMessageWrapper message = new JsonMessageWrapper(type, data, id);
     String jsonmessage = this.mpr.writeValueAsString(message);
     PrintWriter out = new PrintWriter(this.writer, true);
     out.println(jsonmessage);
   }
+
 
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException {
     String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
@@ -200,6 +241,19 @@ public class SocketHandler implements Runnable {
       this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), true), request.id);
     } catch(UserAlreadyExists e) {
       this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", true), request.id);
+    }
+  }
+
+  private void handleError(Throwable error, JsonRequest request) {
+    error.printStackTrace();
+    String requestid = "";
+    if(request != null) {
+        requestid = request.id;
+    }
+    try {
+        this.reply("unexpected_error", new JsonStatusMessage(0, error.getStackTrace().toString(), true), requestid);
+    } catch(JsonProcessingException e) {
+        e.printStackTrace();
     }
   }
 }
