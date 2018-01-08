@@ -23,12 +23,14 @@ import org.whispersystems.signalservice.internal.util.Base64;
 import org.asamk.signal.storage.groups.GroupInfo;
 
 import java.util.List;
+import java.util.ArrayList;
 
 class JsonGroupInfo {
     String groupId;
     List<String> members;
     String name;
     String type;
+    Long avatarId;
 
     JsonGroupInfo(SignalServiceGroup groupInfo, Manager m) {
         this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
@@ -44,5 +46,12 @@ class JsonGroupInfo {
         }
 
         this.type = groupInfo.getType().toString();
+    }
+
+    JsonGroupInfo(GroupInfo groupInfo, Manager m) {
+        this.groupId = Base64.encodeBytes(groupInfo.groupId);
+	this.name = groupInfo.name;
+	this.members =  new ArrayList(groupInfo.members);
+	this.avatarId = groupInfo.getAvatarId();
     }
 }
