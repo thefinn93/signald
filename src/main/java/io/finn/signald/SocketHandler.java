@@ -130,7 +130,7 @@ public class SocketHandler implements Runnable {
     try {
       manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber);
     } catch(EncapsulatedExceptions | AttachmentInvalidException | IOException e) {
-      e.printStackTrace();
+      logger.catching(e);
     }
   }
 
@@ -268,7 +268,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void handleError(Throwable error, JsonRequest request) {
-    error.printStackTrace();
+    logger.catching(error);
     String requestid = "";
     if(request != null) {
         requestid = request.id;
@@ -276,7 +276,7 @@ public class SocketHandler implements Runnable {
     try {
         this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), true), requestid);
     } catch(JsonProcessingException e) {
-        e.printStackTrace();
+        logger.catching(error);
     }
   }
 }

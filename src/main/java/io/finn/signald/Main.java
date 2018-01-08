@@ -74,18 +74,16 @@ public class Main {
           Socket socket = server.accept();
           socketmanager.add(socket);
 
-          logger.debug("Connected: " + socket);
-
           // Kick off the thread to read input
-          Thread socketHandlerThread = new Thread(new SocketHandler(socket, managers));
+          Thread socketHandlerThread = new Thread(new SocketHandler(socket, managers), "socketlistener");
           socketHandlerThread.start();
 
         } catch(IOException e) {
-          e.printStackTrace();
+          logger.catching(e);
         }
       }
     } catch(Exception e) {
-      e.printStackTrace();
+        logger.catching(e);
       System.exit(1);
     }
   }

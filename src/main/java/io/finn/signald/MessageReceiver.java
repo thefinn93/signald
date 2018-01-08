@@ -50,6 +50,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       try {
         String settingsPath = System.getProperty("user.home") + "/.config/signal";
         this.m = new Manager(this.username, settingsPath);
+        Thread.currentThread().setName(this.username + "-manager");
         logger.info("Creating new manager for " + username);
         this.managers.put(username, m);
         if(m.userExists()) {
@@ -86,7 +87,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           this.sockets.broadcast(new JsonMessageWrapper("message", message));
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        logger.catching(e);
       }
     }
 }
