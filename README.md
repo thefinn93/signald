@@ -95,6 +95,15 @@ Creates or modifies a group. Only specify fields that should be updated.
 | `members` | list of strings | no | A list of users (eg full international format phone numbers) that should be added to the group. |
 | `groupAvatar` | string | no | The avatar to set as the group's avatar. Actual format unknown, probably a path to a file on the disk |
 
+### `leave_group`
+
+Leaves a group
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | string | yes | The account to leave the group | 
+| `recipientGroupId` string | yes | the base64 encoded group ID |
+
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 

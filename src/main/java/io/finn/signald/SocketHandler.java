@@ -112,6 +112,9 @@ public class SocketHandler implements Runnable {
       case "list_groups":
         listGroups(request);
         break;
+      case "leave_group":
+       leaveGroup(request);
+       break;
       default:
         System.err.println("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
@@ -223,6 +226,13 @@ public class SocketHandler implements Runnable {
   private void listGroups(JsonRequest request) throws IOException, JsonProcessingException {
     Manager m = getManager(request.username);
     this.reply("group_list", new JsonGroupList(m), request.id);
+  }
+
+  private void leaveGroup(JsonRequest request) throws IOException, JsonProcessingException, GroupNotFoundException, EncapsulatedExceptions, NotAGroupMemberException {
+    Manager m = getManager(request.username);
+    byte[] groupId = Base64.decode(request.recipientGroupId);
+    m.sendQuitGroupMessage(groupId);
+    this.reply("left_group", new JsonStatusMessage(7, "Successfully left group", false), request.id);
   }
 
   private void reply(String type, Object data, String id) throws JsonProcessingException {
