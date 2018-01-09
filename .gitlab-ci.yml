@@ -2,6 +2,7 @@ image: java:8-jdk
 
 stages:
   - build
+  - package
 
 before_script:
   - env
@@ -15,8 +16,22 @@ cache:
 build:
   stage: build
   script:
-    - ./gradlew build distTar
+    - ./gradlew build
+
+tar:
+  stage: package
+  script:
+    - ./gradlew distTar
   artifacts:
     paths:
-      - build/distributions/*
+      - build/distributions/*.tar
+    expire_in: 1 week
+
+deb:
+  stage: package
+  script:
+    - ./gradlew deb
+  artifacts:
+    paths:
+      - build/distributions/*.deb
     expire_in: 1 week
