@@ -5,7 +5,6 @@ stages:
   - package
 
 before_script:
-  - env
   - export GRADLE_USER_HOME=`pwd`/.gradle
 
 cache:
