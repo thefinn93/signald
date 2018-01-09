@@ -1,16 +1,18 @@
+plugins {
+   id 'net.nemerosa.versioning' version '2.6.1'
+   id "nebula.ospackage" version "4.6.0"
+}
 apply plugin: 'java'
 apply plugin: 'application'
 
 mainClassName = 'io.finn.signald.Main'
 
-version = '0.1.0'
-
 compileJava.options.encoding = 'UTF-8'
 
+
 repositories {
-    maven {
-        url "https://raw.github.com/AsamK/maven/master/releases/"
-    }
+    maven {url "https://raw.github.com/AsamK/maven/master/releases/"}
+    maven {url "https://plugins.gradle.org/m2/"}
     mavenCentral()
 }
 
@@ -23,6 +25,11 @@ dependencies {
     compile 'io.sentry:sentry-log4j2:1.6.4'
 }
 
+apply plugin: 'net.nemerosa.versioning'
+apply plugin: "nebula.ospackage"
+
+version = versioning.info.full
+
 jar {
     manifest {
         attributes(
@@ -30,5 +37,16 @@ jar {
                 'Implementation-Version': project.version,
                 'Main-Class': project.mainClassName,
         )
+    }
+}
+
+
+
+ospackage {
+    task deb(type: Deb) {
+        packageName = 'signald'
+        version = versioning.info.tag + "-" + versioning.info.full
+        release = 1
+        preInstall file('src/main/resources/io/finn/signald/debian-preinstall.sh')
     }
 }
