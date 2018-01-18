@@ -24,6 +24,5 @@ gradle-app.setting
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
 
-#dont commit the systemd unit to repo, end user might 
-not be running systemd
+#dont commit the systemd unit to repo, end user might not be running systemd
 signald.service
