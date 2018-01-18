@@ -187,7 +187,8 @@ fi
 if [ "$(uname)" == 'Linux' ]
 then
     make_systemd_unit_file
+    echo "In order to use systemd unit file, cp or mv signald.service to /etc/systemd/system/"
+    echo
 fi
 
 exec "$JAVACMD" "$@"
-echo "In order to use the systemd unit file either cp or mv signald.service to /etc/systemd/system/"
