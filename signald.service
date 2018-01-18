@@ -1,0 +1,7 @@
+[Unit]
+Description=Autostart signald
+[Service]
+Type=simple
+ExecStart=/home/netkitteh/projects/signald/build/install/signald/bin/signald /tmp/signald.sock
+[Install]
+Alias=signald
