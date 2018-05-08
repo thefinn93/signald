@@ -30,6 +30,7 @@ import io.finn.signald.Manager;
 
 class JsonMessageEnvelope {
     String source;
+    String username;
     int sourceDevice;
     String relay;
     long timestamp;
@@ -47,6 +48,7 @@ class JsonMessageEnvelope {
         this.timestamp = envelope.getTimestamp();
         this.timestampISO = formatTimestampISO(envelope.getTimestamp());
         this.isReceipt = envelope.isReceipt();
+	this.username = m.getUsername();
         if (content != null) {
             if (content.getDataMessage().isPresent()) {
                 this.dataMessage = new JsonDataMessage(content.getDataMessage().get(), m);
