@@ -101,7 +101,7 @@ Leaves a group
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `username` | string | yes | The account to leave the group | 
+| `username` | string | yes | The account to leave the group |
 | `recipientGroupId` string | yes | the base64 encoded group ID |
 
 ### `link`
@@ -109,8 +109,16 @@ Leaves a group
 Adds a new account to signald by linking to another signal device that has already registered. Provides a URI that should be used to
 link. To link with the Signal app, encode the URI as a QR code, open the Signal app, go to settings -> Linked Devices, tap the + button
 in the bottom right and scan the QR code.
-
 *Takes no argument*
+
+### `get_user`
+
+Checks whether a contact is currently registered with the server. Returns the contact's registration state.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
+| `recipientNumber` | `string` | yes | The full number to look up. |
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)

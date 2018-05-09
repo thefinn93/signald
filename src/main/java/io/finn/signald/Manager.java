@@ -67,6 +67,7 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.*;
+import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.internal.configuration.SignalCdnUrl;
@@ -1641,5 +1642,9 @@ class Manager {
     public String computeSafetyNumber(String theirUsername, IdentityKey theirIdentityKey) {
         Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(username, getIdentity(), theirUsername, theirIdentityKey);
         return fingerprint.getDisplayableFingerprint().getDisplayText();
+    }
+
+    public Optional<ContactTokenDetails> getUser(String e164number) throws IOException {
+        return accountManager.getContact(e164number);
     }
 }

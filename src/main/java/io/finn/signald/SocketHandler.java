@@ -20,6 +20,8 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.internal.util.Base64;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
@@ -118,6 +120,9 @@ public class SocketHandler implements Runnable {
       case "leave_group":
        leaveGroup(request);
        break;
+      case "get_user":
+        getUser(request);
+        break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
@@ -269,6 +274,16 @@ public class SocketHandler implements Runnable {
       this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), true), request.id);
     } catch(UserAlreadyExists e) {
       this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", true), request.id);
+    }
+  }
+
+  private void getUser(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    Optional<ContactTokenDetails> contact = m.getUser(request.recipientNumber);
+    if(contact.isPresent()) {
+      this.reply("user", new JsonContact(contact.get()), request.id);
+    } else {
+      this.reply("user_not_registered", null, request.id);
     }
   }
 
