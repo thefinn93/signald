@@ -128,8 +128,13 @@ public class SocketHandler implements Runnable {
   private void send(JsonRequest request) {
     Manager manager = this.managers.get(request.username);
     try {
-      manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber);
-    } catch(EncapsulatedExceptions | AttachmentInvalidException | IOException e) {
+      if(request.recipientGroupId != null) {
+        byte[] groupId = Base64.decode(request.recipientGroupId);
+        manager.sendGroupMessage(request.messageBody, request.attachmentFilenames, groupId);
+      } else {
+        manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber);
+      }
+    } catch(EncapsulatedExceptions | AttachmentInvalidException | GroupNotFoundException | NotAGroupMemberException | IOException e) {
       logger.catching(e);
     }
   }
