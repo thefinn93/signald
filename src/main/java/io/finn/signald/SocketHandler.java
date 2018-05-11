@@ -123,6 +123,9 @@ public class SocketHandler implements Runnable {
       case "get_user":
         getUser(request);
         break;
+      case "get_identities":
+	getIdentities(request);
+	break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
@@ -285,6 +288,11 @@ public class SocketHandler implements Runnable {
     } else {
       this.reply("user_not_registered", null, request.id);
     }
+  }
+
+  private void getIdentities(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    this.reply("fingerprints", new JsonIdentityList(m.getIdentities(request.recipientNumber)), request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
