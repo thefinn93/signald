@@ -120,6 +120,16 @@ Checks whether a contact is currently registered with the server. Returns the co
 | `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
 | `recipientNumber` | `string` | yes | The full number to look up. |
 
+
+### `get_identities`
+
+Returns all known identities/keys for a given number.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to check the identity |
+| `recipientNumber` | `string` | yes | The full number to look up. |
+
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
