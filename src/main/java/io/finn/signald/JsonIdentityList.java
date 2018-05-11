@@ -29,5 +29,11 @@ class JsonIdentityList {
     for(JsonIdentityKeyStore.Identity identity : identities) {
       this.identities.add(new JsonIdentity(identity));
     }
+  }
+
+  JsonIdentityList(String number, Manager m) {
+    for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
+      this.identities.add(new JsonIdentity(identity, m, number));
+    }
   }    
 }

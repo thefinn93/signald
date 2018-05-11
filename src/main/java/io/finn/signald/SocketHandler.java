@@ -292,7 +292,7 @@ public class SocketHandler implements Runnable {
 
   private void getIdentities(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
-    this.reply("fingerprints", new JsonIdentityList(m.getIdentities(request.recipientNumber)), request.id);
+    this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {

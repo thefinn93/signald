@@ -29,6 +29,7 @@ class JsonIdentity {
   public String trust_level;
   public long added;
   public String fingerprint;
+  public String safety_number;
 
   JsonIdentity(JsonIdentityKeyStore.Identity identity) {
     this.trust_level = identity.getTrustLevel().name();
@@ -36,4 +37,8 @@ class JsonIdentity {
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
   }
 
+  JsonIdentity(JsonIdentityKeyStore.Identity identity, Manager m, String number) {
+    this(identity);
+    this.safety_number = m.computeSafetyNumber(number, identity.getIdentityKey());
+  }
 }
