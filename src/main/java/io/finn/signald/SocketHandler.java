@@ -75,7 +75,12 @@ public class SocketHandler implements Runnable {
       JsonRequest request;
       try {
         line = this.reader.readLine();
-        if(line != null && !line.equals("")) {
+	if(line == null) {
+	  this.reader.close();
+	  this.writer.close();
+	  return;
+        }
+        if(!line.equals("")) {
             logger.debug(line);
             request = this.mpr.readValue(line, JsonRequest.class);
             try {
