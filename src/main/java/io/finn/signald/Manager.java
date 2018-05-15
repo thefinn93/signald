@@ -310,7 +310,7 @@ class Manager {
         if (threadStore == null) {
             threadStore = new JsonThreadStore();
         }
-	if(rootNode.has("profileKey")) {
+        if(rootNode.has("profileKey")) {
             profileKey = Base64.decode(rootNode.get("profileKey").asText());
         }
     }
@@ -353,7 +353,7 @@ class Manager {
                 .putPOJO("contactStore", contactStore)
                 .putPOJO("threadStore", threadStore)
         ;
-	if(profileKey != null) {
+        if(profileKey != null) {
           rootNode.put("profileKey", Base64.encodeBytes(profileKey));
         }
         try {
@@ -488,8 +488,7 @@ class Manager {
         IdentityKeyPair identityKeyPair = signalProtocolStore.getIdentityKeyPair();
         String verificationCode = accountManager.getNewDeviceVerificationCode();
 
-        // TODO send profile key
-        accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, Optional.<byte[]>absent(), verificationCode);
+        accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, Optional.of(profileKey), verificationCode);
     }
 
     private List<PreKeyRecord> generatePreKeys() {
@@ -1519,10 +1518,9 @@ class Manager {
                         }
                     }
 
-                    // TODO include profile key
                     out.write(new DeviceContact(record.number, Optional.fromNullable(record.name),
                             createContactAvatarAttachment(record.number), Optional.fromNullable(record.color),
-                            Optional.fromNullable(verifiedMessage), Optional.<byte[]>absent(), false, Optional.<Integer>absent()));
+                            Optional.fromNullable(verifiedMessage), Optional.of(profileKey), false, Optional.<Integer>absent()));
                 }
             }
 
@@ -1659,9 +1657,9 @@ class Manager {
     private byte[] getProfileKey() {
         if(profileKey == null) {
             profileKey = Util.getSecretBytes(32);
-	    save();
+            save();
         }
-	return profileKey;
+        return profileKey;
     }
 
     public void setProfileName(String name) throws IOException {
