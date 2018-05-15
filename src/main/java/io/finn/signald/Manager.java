@@ -859,7 +859,7 @@ class Manager {
         }
     }
 
-    private void requestSyncContacts() throws IOException {
+    public void requestSyncContacts() throws IOException {
         SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONTACTS).build();
         SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
         try {

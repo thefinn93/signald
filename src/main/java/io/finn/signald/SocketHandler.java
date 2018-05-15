@@ -133,6 +133,8 @@ public class SocketHandler implements Runnable {
         break;
       case "set_profile":
         setProfile(request);
+      case "sync_contacts":
+        syncContacts(request);
         break;
       default:
         logger.warn("Unknown command type " + request.type);
@@ -303,10 +305,17 @@ public class SocketHandler implements Runnable {
     this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
   }
 
+
   private void setProfile(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
     m.setProfileName(request.name);
     this.reply("profile_set", null, request.id);
+  }
+  
+  private void syncContacts(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    m.requestSyncContacts();
+    this.reply("sync_requested", null, request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
