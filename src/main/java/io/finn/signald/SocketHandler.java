@@ -129,10 +129,11 @@ public class SocketHandler implements Runnable {
         getUser(request);
         break;
       case "get_identities":
-	getIdentities(request);
-	break;
+        getIdentities(request);
+        break;
       case "set_profile":
-	setProfile(request);
+        setProfile(request);
+        break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
