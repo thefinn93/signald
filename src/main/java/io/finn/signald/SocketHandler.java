@@ -131,6 +131,8 @@ public class SocketHandler implements Runnable {
       case "get_identities":
 	getIdentities(request);
 	break;
+      case "set_profile":
+	setProfile(request);
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
@@ -298,6 +300,12 @@ public class SocketHandler implements Runnable {
   private void getIdentities(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
     this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
+  }
+
+  private void setProfile(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    m.setProfileName(request.name);
+    this.reply("profile_set", null, request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {

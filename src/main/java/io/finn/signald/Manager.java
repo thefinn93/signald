@@ -133,6 +133,8 @@ class Manager {
     private int preKeyIdOffset;
     private int nextSignedPreKeyId;
 
+    private byte[] profileKey;
+
     private boolean registered = false;
 
     private JsonSignalProtocolStore signalProtocolStore;
@@ -308,6 +310,9 @@ class Manager {
         if (threadStore == null) {
             threadStore = new JsonThreadStore();
         }
+	if(rootNode.has("profileKey")) {
+            profileKey = Base64.decode(rootNode.get("profileKey").asText());
+        }
     }
 
     private void migrateLegacyConfigs() {
@@ -348,6 +353,9 @@ class Manager {
                 .putPOJO("contactStore", contactStore)
                 .putPOJO("threadStore", threadStore)
         ;
+	if(profileKey != null) {
+          rootNode.put("profileKey", Base64.encodeBytes(profileKey));
+        }
         try {
             openFileChannel();
             fileChannel.position(0);
@@ -1646,5 +1654,17 @@ class Manager {
 
     public Optional<ContactTokenDetails> getUser(String e164number) throws IOException {
         return accountManager.getContact(e164number);
+    }
+
+    private byte[] getProfileKey() {
+        if(profileKey == null) {
+            profileKey = Util.getSecretBytes(32);
+	    save();
+        }
+	return profileKey;
+    }
+
+    public void setProfileName(String name) throws IOException {
+        accountManager.setProfileName(getProfileKey(), name);
     }
 }
