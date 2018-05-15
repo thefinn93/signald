@@ -57,11 +57,11 @@ class SocketManager {
     synchronized(this.sockets) {
       Iterator i = this.sockets.iterator();
       while(i.hasNext()) {
-	Socket s = (Socket)i;
+        Socket s = (Socket)i.next();
         if(s.isClosed()) {
-	  this.remove(s);
-	} else {
-          send(message, (Socket)i.next());
+          this.remove(s);
+        } else {
+          send(message, s);
         }
       }
     }
