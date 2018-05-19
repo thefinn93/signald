@@ -21,10 +21,18 @@ class JsonStatusMessage {
   public int msg_number;
   public String message;
   public boolean error;
+  public JsonRequest request;
 
-  JsonStatusMessage(int msgNumber, String message, boolean error) {
+  JsonStatusMessage(int msgNumber, String message) {
     this.msg_number = msgNumber;
     this.message = message;
-    this.error = error;
+    this.error = false;
+  }
+
+  JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
+    this.msg_number = msgNumber;
+    this.message = message;
+    this.error = true;
+    this.request = request;
   }
 }

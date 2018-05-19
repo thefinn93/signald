@@ -138,7 +138,7 @@ public class SocketHandler implements Runnable {
         break;
       default:
         logger.warn("Unknown command type " + request.type);
-        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
+        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
         break;
     }
   }
@@ -195,7 +195,7 @@ public class SocketHandler implements Runnable {
   private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException {
     Manager m = getManager(request.username);
     m.addDeviceLink(new URI(request.uri));
-    reply("device_added", new JsonStatusMessage(4, "Successfully linked device", false), request.id);
+    reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
   private Manager getManager(String username) throws IOException {
@@ -243,9 +243,9 @@ public class SocketHandler implements Runnable {
     byte[] newGroupId = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
 
     if (groupId.length != newGroupId.length) {
-        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + ".", false), request.id);
+        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + "."), request.id);
     } else {
-        this.reply("group_updated", new JsonStatusMessage(6, "Updated group", false), request.id);
+        this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
     }
   }
 
@@ -258,7 +258,7 @@ public class SocketHandler implements Runnable {
     Manager m = getManager(request.username);
     byte[] groupId = Base64.decode(request.recipientGroupId);
     m.sendQuitGroupMessage(groupId);
-    this.reply("left_group", new JsonStatusMessage(7, "Successfully left group", false), request.id);
+    this.reply("left_group", new JsonStatusMessage(7, "Successfully left group"), request.id);
   }
 
   private void reply(String type, Object data, String id) throws JsonProcessingException {
@@ -282,11 +282,11 @@ public class SocketHandler implements Runnable {
       this.reply("linking_uri", new JsonLinkingURI(m), request.id);
       m.finishDeviceLink(deviceName);
     } catch(TimeoutException e) {
-      this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", true), request.id);
+      this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch(IOException e) {
-      this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), true), request.id);
+      this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), request), request.id);
     } catch(UserAlreadyExists e) {
-      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", true), request.id);
+      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", request), request.id);
     }
   }
 
@@ -325,7 +325,7 @@ public class SocketHandler implements Runnable {
         requestid = request.id;
     }
     try {
-        this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), true), requestid);
+        this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
     } catch(JsonProcessingException e) {
         logger.catching(error);
     }
