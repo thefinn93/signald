@@ -71,10 +71,11 @@ public class Main {
       }
 
       while (!Thread.interrupted()) {
-        logger.info("Waiting for connection...");
         try {
           Socket socket = server.accept();
           socketmanager.add(socket);
+
+          logger.info("Accepted socket connection");
 
           // Kick off the thread to read input
           Thread socketHandlerThread = new Thread(new SocketHandler(socket, managers), "socketlistener");

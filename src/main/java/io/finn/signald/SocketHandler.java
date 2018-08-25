@@ -75,10 +75,10 @@ public class SocketHandler implements Runnable {
       JsonRequest request;
       try {
         line = this.reader.readLine();
-	if(line == null) {
-	  this.reader.close();
-	  this.writer.close();
-	  return;
+        if(line == null) {
+          this.reader.close();
+          this.writer.close();
+          return;
         }
         if(!line.equals("")) {
             logger.debug(line);
@@ -133,6 +133,9 @@ public class SocketHandler implements Runnable {
         break;
       case "sync_contacts":
         syncContacts(request);
+        break;
+      case "list_contacts":
+        listContacts(request);
         break;
       default:
         logger.warn("Unknown command type " + request.type);
@@ -203,9 +206,12 @@ public class SocketHandler implements Runnable {
     if(this.managers.containsKey(username)) {
       return this.managers.get(username);
     } else {
+      logger.info("Creating a manager for " + username);
       Manager m = new Manager(username, settingsPath);
       if(m.userExists()) {
         m.init();
+      } else {
+        logger.warn("Created manager for a user that doesn't exist! (" + username + ")");
       }
       this.managers.put(username, m);
       return m;
@@ -307,6 +313,11 @@ public class SocketHandler implements Runnable {
     Manager m = getManager(request.username);
     m.requestSyncContacts();
     this.reply("sync_requested", null, request.id);
+  }
+
+  private void listContacts(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    this.reply("contact_list", m.getContacts(), request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
