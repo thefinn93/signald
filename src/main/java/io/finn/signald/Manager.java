@@ -67,6 +67,7 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.*;
+import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.internal.configuration.SignalCdnUrl;
@@ -298,6 +299,7 @@ class Manager {
             contactStore = jsonProcessor.convertValue(contactStoreNode, JsonContactsStore.class);
         }
         if (contactStore == null) {
+            logger.info("No contactStore been loaded");
             contactStore = new JsonContactsStore();
         }
         JsonNode threadStoreNode = rootNode.get("threadStore");
@@ -430,6 +432,7 @@ class Manager {
         requestSyncContacts();
 
         save();
+        logger.info("Successfully finished linked to " + username + " as device #" + deviceId);
     }
 
     public List<DeviceInfo> getLinkedDevices() throws IOException {
@@ -851,7 +854,7 @@ class Manager {
         }
     }
 
-    private void requestSyncContacts() throws IOException {
+    public void requestSyncContacts() throws IOException {
         SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONTACTS).build();
         SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
         try {
@@ -1542,6 +1545,15 @@ class Manager {
         sendSyncMessage(SignalServiceSyncMessage.forVerified(verifiedMessage));
     }
 
+    public List<ContactInfo> getContacts() {
+      if(contactStore == null) {
+        logger.warn("contactStore is null what tf!");
+        return Collections.<ContactInfo>emptyList();
+      }
+      List<ContactInfo> contacts = this.contactStore.getContacts();
+      return contacts;
+    }
+
     public ContactInfo getContact(String number) {
         return contactStore.getContact(number);
     }
@@ -1641,5 +1653,9 @@ class Manager {
     public String computeSafetyNumber(String theirUsername, IdentityKey theirIdentityKey) {
         Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(username, getIdentity(), theirUsername, theirIdentityKey);
         return fingerprint.getDisplayableFingerprint().getDisplayText();
+    }
+
+    public Optional<ContactTokenDetails> getUser(String e164number) throws IOException {
+        return accountManager.getContact(e164number);
     }
 }

@@ -5,19 +5,15 @@ signald is a daemon that facilitates communication over Signal.
 
 ## Quick Start
 1. Run `./gradlew installDist` to build signald
-1. Run `build/install/signald/bin/signald signald.sock` to start signald. It will continue running until killed (or ctrl-C)
-1. In a second terminal window, connect to the signald control socket: `nc -U signald.sock`
+1. Run `sudo mkdir /var/run/signald && sudo chown $(whoami) /var/run/signald`
+1. Run `build/install/signald/bin/signald` to start signald. It will continue running until killed (or ctrl-C)
+1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock`
 1. Register a new number on signal by typing this: `{"type": "register", "username": "+12024561414"}` (replace `+12024561414` with your own number)
 1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
 1. Incoming messages will be sent to the socket and shown on your screen. To send a message, use something like this:
 
 ```json
-{
-  "type": "send",
-  "username": "+12024561414",
-  "recipientNumber": "+14235290302",
-  "messageBody": "Hello, Dave"
-}
+{"type": "send", "username": "+12024561414", "recipientNumber": "+14235290302", "messageBody": "Hello, Dave"}
 ```
 
 *However, it must all be sent on a single line* otherwise signald will attempt to interpret each line as json.
@@ -101,8 +97,34 @@ Leaves a group
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `username` | string | yes | The account to leave the group | 
+| `username` | string | yes | The account to leave the group |
 | `recipientGroupId` string | yes | the base64 encoded group ID |
+
+### `link`
+
+Adds a new account to signald by linking to another signal device that has already registered. Provides a URI that should be used to
+link. To link with the Signal app, encode the URI as a QR code, open the Signal app, go to settings -> Linked Devices, tap the + button
+in the bottom right and scan the QR code.
+*Takes no argument*
+
+### `get_user`
+
+Checks whether a contact is currently registered with the server. Returns the contact's registration state.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
+| `recipientNumber` | `string` | yes | The full number to look up. |
+
+
+### `get_identities`
+
+Returns all known identities/keys for a given number.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to check the identity |
+| `recipientNumber` | `string` | yes | The full number to look up. |
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)

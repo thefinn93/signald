@@ -57,7 +57,12 @@ class SocketManager {
     synchronized(this.sockets) {
       Iterator i = this.sockets.iterator();
       while(i.hasNext()) {
-        send(message, (Socket)i.next());
+        Socket s = (Socket)i.next();
+        if(s.isClosed()) {
+          this.remove(s);
+        } else {
+          send(message, s);
+        }
       }
     }
   }

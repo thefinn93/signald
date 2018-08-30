@@ -51,7 +51,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         String settingsPath = System.getProperty("user.home") + "/.config/signal";
         this.m = new Manager(this.username, settingsPath);
         Thread.currentThread().setName(this.username + "-manager");
-        logger.info("Creating new manager for " + username);
+        logger.info("Created new manager for " + username);
         this.managers.put(username, m);
         if(m.userExists()) {
           this.m.init();

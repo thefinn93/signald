@@ -20,6 +20,8 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.internal.util.Base64;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
@@ -73,7 +75,12 @@ public class SocketHandler implements Runnable {
       JsonRequest request;
       try {
         line = this.reader.readLine();
-        if(line != null && !line.equals("")) {
+        if(line == null) {
+          this.reader.close();
+          this.writer.close();
+          return;
+        }
+        if(!line.equals("")) {
             logger.debug(line);
             request = this.mpr.readValue(line, JsonRequest.class);
             try {
@@ -118,9 +125,21 @@ public class SocketHandler implements Runnable {
       case "leave_group":
        leaveGroup(request);
        break;
+      case "get_user":
+        getUser(request);
+        break;
+      case "get_identities":
+        getIdentities(request);
+        break;
+      case "sync_contacts":
+        syncContacts(request);
+        break;
+      case "list_contacts":
+        listContacts(request);
+        break;
       default:
         logger.warn("Unknown command type " + request.type);
-        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, true), request.id);
+        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
         break;
     }
   }
@@ -128,8 +147,13 @@ public class SocketHandler implements Runnable {
   private void send(JsonRequest request) {
     Manager manager = this.managers.get(request.username);
     try {
-      manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber);
-    } catch(EncapsulatedExceptions | AttachmentInvalidException | IOException e) {
+      if(request.recipientGroupId != null) {
+        byte[] groupId = Base64.decode(request.recipientGroupId);
+        manager.sendGroupMessage(request.messageBody, request.attachmentFilenames, groupId);
+      } else {
+        manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber);
+      }
+    } catch(EncapsulatedExceptions | AttachmentInvalidException | GroupNotFoundException | NotAGroupMemberException | IOException e) {
       logger.catching(e);
     }
   }
@@ -172,7 +196,7 @@ public class SocketHandler implements Runnable {
   private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException {
     Manager m = getManager(request.username);
     m.addDeviceLink(new URI(request.uri));
-    reply("device_added", new JsonStatusMessage(4, "Successfully linked device", false), request.id);
+    reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
   private Manager getManager(String username) throws IOException {
@@ -182,9 +206,12 @@ public class SocketHandler implements Runnable {
     if(this.managers.containsKey(username)) {
       return this.managers.get(username);
     } else {
+      logger.info("Creating a manager for " + username);
       Manager m = new Manager(username, settingsPath);
       if(m.userExists()) {
         m.init();
+      } else {
+        logger.warn("Created manager for a user that doesn't exist! (" + username + ")");
       }
       this.managers.put(username, m);
       return m;
@@ -220,9 +247,9 @@ public class SocketHandler implements Runnable {
     byte[] newGroupId = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
 
     if (groupId.length != newGroupId.length) {
-        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + ".", false), request.id);
+        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + "."), request.id);
     } else {
-        this.reply("group_updated", new JsonStatusMessage(6, "Updated group", false), request.id);
+        this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
     }
   }
 
@@ -235,7 +262,7 @@ public class SocketHandler implements Runnable {
     Manager m = getManager(request.username);
     byte[] groupId = Base64.decode(request.recipientGroupId);
     m.sendQuitGroupMessage(groupId);
-    this.reply("left_group", new JsonStatusMessage(7, "Successfully left group", false), request.id);
+    this.reply("left_group", new JsonStatusMessage(7, "Successfully left group"), request.id);
   }
 
   private void reply(String type, Object data, String id) throws JsonProcessingException {
@@ -259,12 +286,38 @@ public class SocketHandler implements Runnable {
       this.reply("linking_uri", new JsonLinkingURI(m), request.id);
       m.finishDeviceLink(deviceName);
     } catch(TimeoutException e) {
-      this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", true), request.id);
+      this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch(IOException e) {
-      this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), true), request.id);
+      this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), request), request.id);
     } catch(UserAlreadyExists e) {
-      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", true), request.id);
+      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", request), request.id);
     }
+  }
+
+  private void getUser(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    Optional<ContactTokenDetails> contact = m.getUser(request.recipientNumber);
+    if(contact.isPresent()) {
+      this.reply("user", new JsonContact(contact.get()), request.id);
+    } else {
+      this.reply("user_not_registered", null, request.id);
+    }
+  }
+
+  private void getIdentities(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
+  }
+
+  private void syncContacts(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    m.requestSyncContacts();
+    this.reply("sync_requested", null, request.id);
+  }
+
+  private void listContacts(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    this.reply("contact_list", m.getContacts(), request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
@@ -274,7 +327,7 @@ public class SocketHandler implements Runnable {
         requestid = request.id;
     }
     try {
-        this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), true), requestid);
+        this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
     } catch(JsonProcessingException e) {
         logger.catching(error);
     }

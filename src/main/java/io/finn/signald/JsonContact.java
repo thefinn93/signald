@@ -16,23 +16,22 @@
  */
 
 package io.finn.signald;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 
-class JsonStatusMessage {
-  public int msg_number;
-  public String message;
-  public boolean error;
-  public JsonRequest request;
+class JsonContact {
+  public String token;
+  public String relay;
+  public String number;
+  public boolean voice;
+  public boolean video;
 
-  JsonStatusMessage(int msgNumber, String message) {
-    this.msg_number = msgNumber;
-    this.message = message;
-    this.error = false;
+  JsonContact(ContactTokenDetails contact) {
+    this.token = contact.getToken();
+    this.relay = contact.getRelay();
+    this.number = contact.getNumber();
+    this.voice = contact.isVoice();
+    this.video = contact.isVideo();
   }
 
-  JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
-    this.msg_number = msgNumber;
-    this.message = message;
-    this.error = true;
-    this.request = request;
-  }
 }

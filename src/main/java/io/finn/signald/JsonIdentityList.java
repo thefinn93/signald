@@ -17,22 +17,23 @@
 
 package io.finn.signald;
 
-class JsonStatusMessage {
-  public int msg_number;
-  public String message;
-  public boolean error;
-  public JsonRequest request;
+import java.util.List;
+import java.util.ArrayList;
 
-  JsonStatusMessage(int msgNumber, String message) {
-    this.msg_number = msgNumber;
-    this.message = message;
-    this.error = false;
+import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;                                                                                         
+
+class JsonIdentityList {
+  public List<JsonIdentity> identities = new ArrayList<JsonIdentity>();
+
+  JsonIdentityList(List<JsonIdentityKeyStore.Identity> identities) {
+    for(JsonIdentityKeyStore.Identity identity : identities) {
+      this.identities.add(new JsonIdentity(identity));
+    }
   }
 
-  JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
-    this.msg_number = msgNumber;
-    this.message = message;
-    this.error = true;
-    this.request = request;
-  }
+  JsonIdentityList(String number, Manager m) {
+    for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
+      this.identities.add(new JsonIdentity(identity, m, number));
+    }
+  }    
 }
