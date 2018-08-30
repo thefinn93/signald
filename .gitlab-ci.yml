@@ -1,4 +1,6 @@
 image: java:8-jdk
+before_script:
+  - VERSION=$(git describe --always --tags)
 
 stages:
   - build

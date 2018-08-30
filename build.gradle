@@ -28,7 +28,8 @@ dependencies {
 apply plugin: 'net.nemerosa.versioning'
 apply plugin: "nebula.ospackage"
 
-version = versioning.info.full
+//version = versioning.info.full
+version = "$System.env.VERSION"
 
 jar {
     manifest {
@@ -45,7 +46,7 @@ jar {
 ospackage {
     task deb(type: Deb) {
         packageName = 'signald'
-        version = versioning.info.full
+        version = version
         release = 1
         preInstall file('src/main/resources/io/finn/signald/debian-preinstall.sh')
     }
