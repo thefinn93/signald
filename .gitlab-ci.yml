@@ -1,4 +1,4 @@
-image: java:8-jdk
+image: gradle:4.10.0
 
 stages:
   - build
@@ -15,12 +15,12 @@ cache:
 build:
   stage: build
   script:
-    - ./gradlew build
+    - gradle build
 
 tar:
   stage: package
   script:
-    - ./gradlew distTar
+    - gradle distTar
   artifacts:
     paths:
       - build/distributions/*.tar
@@ -31,7 +31,7 @@ deb:
   before_script:
     - VERSION=$(git describe --always --tags)
   script:
-    - ./gradlew deb
+    - gradle deb
   artifacts:
     paths:
       - build/distributions/*.deb
@@ -40,7 +40,7 @@ deb:
 rpm:
   stage: package
   script:
-    - ./gradlew buildRpm
+    - gradle buildRpm
   artifacts:
     paths:
       - build/distributions/*.rpm
