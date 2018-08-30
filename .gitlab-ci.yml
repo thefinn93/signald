@@ -1,6 +1,4 @@
 image: java:8-jdk
-before_script:
-  - VERSION=$(git describe --always --tags)
 
 stages:
   - build
@@ -30,6 +28,8 @@ tar:
 
 deb:
   stage: package
+  before_script:
+    - VERSION=$(git describe --always --tags)
   script:
     - ./gradlew deb
   artifacts:
