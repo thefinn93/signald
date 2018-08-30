@@ -45,7 +45,7 @@ jar {
 ospackage {
     task deb(type: Deb) {
         packageName = 'signald'
-        version = versioning.info.tag + "-" + versioning.info.full
+        version = versioning.info.full
         release = 1
         preInstall file('src/main/resources/io/finn/signald/debian-preinstall.sh')
     }
