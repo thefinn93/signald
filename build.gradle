@@ -29,7 +29,7 @@ apply plugin: 'net.nemerosa.versioning'
 apply plugin: "nebula.ospackage"
 
 //version = versioning.info.full
-version = "$System.env.VERSION"
+version = "${System.env.VERSION}"
 
 jar {
     manifest {
