@@ -33,9 +33,10 @@ deb:
     - echo "Building signald version $VERSION"
   script:
     - ./gradlew deb
+    - mv build/distributions/*.deb .
   artifacts:
     paths:
-      - build/distributions/*.deb
+      - *.deb
     expire_in: 1 week
 
 rpm:
