@@ -29,7 +29,7 @@ tar:
 deb:
   stage: package
   before_script:
-    - VERSION=$(git describe --always --tags)
+    - export VERSION=$(git describe --always --tags)
     - echo "Building signald version $VERSION"
   script:
     - ./gradlew deb
