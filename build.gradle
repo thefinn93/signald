@@ -49,5 +49,15 @@ ospackage {
         version = version
         release = 1
         preInstall file('src/main/resources/io/finn/signald/debian-preinstall.sh')
+
+        into "/usr/local/signald"
+
+        from(jar.outputs.files) {
+            into "bin"
+        }
+        from('src/main/resources') {
+            fileType CONFIG | NOREPLACE
+            into 'conf'
+        }
     }
 }
