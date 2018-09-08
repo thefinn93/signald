@@ -298,7 +298,7 @@ public class SocketHandler implements Runnable {
     Manager m = getManager(request.username);
     Optional<ContactTokenDetails> contact = m.getUser(request.recipientNumber);
     if(contact.isPresent()) {
-      this.reply("user", new JsonContact(contact.get()), request.id);
+      this.reply("user", new JsonContactTokenDetails(contact.get()), request.id);
     } else {
       this.reply("user_not_registered", null, request.id);
     }

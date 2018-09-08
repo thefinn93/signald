@@ -19,14 +19,14 @@ package io.finn.signald;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 
-class JsonContact {
+class JsonContactTokenDetails {
   public String token;
   public String relay;
   public String number;
   public boolean voice;
   public boolean video;
 
-  JsonContact(ContactTokenDetails contact) {
+  JsonContactTokenDetails(ContactTokenDetails contact) {
     this.token = contact.getToken();
     this.relay = contact.getRelay();
     this.number = contact.getNumber();
