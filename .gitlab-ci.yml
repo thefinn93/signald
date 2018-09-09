@@ -38,12 +38,3 @@ deb:
     paths:
       - "*.deb"
     expire_in: 1 week
-
-rpm:
-  stage: package
-  script:
-    - ./gradlew buildRpm
-  artifacts:
-    paths:
-      - build/distributions/*.rpm
-    expire_in: 1 week
