@@ -36,14 +36,5 @@ deb:
     - mv build/distributions/*.deb .
   artifacts:
     paths:
-      - *.deb
-    expire_in: 1 week
-
-rpm:
-  stage: package
-  script:
-    - ./gradlew buildRpm
-  artifacts:
-    paths:
-      - build/distributions/*.rpm
+      - "*.deb"
     expire_in: 1 week
