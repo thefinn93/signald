@@ -36,7 +36,7 @@ deb:
     - mv build/distributions/*.deb .
   artifacts:
     paths:
-      - *.deb
+      - "*.deb"
     expire_in: 1 week
 
 rpm:
