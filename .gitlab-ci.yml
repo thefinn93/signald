@@ -2,9 +2,9 @@ image: java:8-jdk
 
 stages:
   - build
+  - package
 
 before_script:
-  - env
   - export GRADLE_USER_HOME=`pwd`/.gradle
 
 cache:
@@ -15,8 +15,26 @@ cache:
 build:
   stage: build
   script:
-    - ./gradlew build distTar
+    - ./gradlew build
+
+tar:
+  stage: package
+  script:
+    - ./gradlew distTar
   artifacts:
     paths:
-      - build/distributions/*
+      - build/distributions/*.tar
+    expire_in: 1 week
+
+deb:
+  stage: package
+  before_script:
+    - export VERSION=$(git describe --always --tags)
+    - echo "Building signald version $VERSION"
+  script:
+    - ./gradlew deb
+    - mv build/distributions/*.deb .
+  artifacts:
+    paths:
+      - "*.deb"
     expire_in: 1 week

@@ -1,0 +1,18 @@
+[Unit]
+Description=A daemon for interacting with the Signal Private Messanger
+Wants=network.target
+After=network.target
+
+[Service]
+Type=simple
+PermissionsStartOnly=true
+ExecStartPre=-/bin/rm /var/run/signald/signald.sock
+ExecStartPre=/bin/mkdir -p /var/run/signald
+ExecStartPre=/bin/chown signald:signald /var/run/signald
+User=signald
+Group=signald
+ExecStart=/usr/lib/signald/bin/signald
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
