@@ -34,7 +34,8 @@ deb:
   script:
     - ./gradlew deb
     - mv build/distributions/*.deb .
+  only:
+    - tags
   artifacts:
     paths:
       - "*.deb"
-    expire_in: 1 week
