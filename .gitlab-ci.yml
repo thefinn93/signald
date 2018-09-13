@@ -3,6 +3,7 @@ image: java:8-jdk
 stages:
   - build
   - package
+  - publish
 
 before_script:
   - export GRADLE_USER_HOME=`pwd`/.gradle
@@ -26,7 +27,7 @@ tar:
       - build/distributions/*.tar
     expire_in: 1 week
 
-deb:
+deb:build:
   stage: package
   before_script:
     - export VERSION=$(git describe --always --tags)
@@ -36,6 +37,17 @@ deb:
     - mv build/distributions/*.deb .
   only:
     - tags
+    - feature/deb-packaging
   artifacts:
     paths:
       - "*.deb"
+
+deb:publish:
+  stage: publish
+  image: registry.git.callpipe.com/finn/debian-repo-builder
+  script:
+    - mkdir public/ && cd public/
+    - release-deb ../
+    - find
+    - cat dists/experimental/main/binary-amd64/Release
+    - cat dists/experimental/main/binary-amd64/Packages
