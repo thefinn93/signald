@@ -57,7 +57,7 @@ deb:publish:
     - mkdir public/ && cd public/
     - mc cp -r -q minio/updates.signald.org/ .
   script:
-    - release-deb ../
+    - release-deb ../ D89FFB45291229A410A1430A659475081F665F29
     - gpg --homedir /opt/signing-keys/.gnupg --export --armor D89FFB45291229A410A1430A659475081F665F29 > apt-signing-key.asc
     - mc cp -r -q . minio/updates.signald.org/
   dependencies:
