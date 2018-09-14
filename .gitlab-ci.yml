@@ -39,7 +39,6 @@ deb:build:
     - mv build/distributions/*.deb .
   only:
     - tags
-    - feature/deb-packaging
   artifacts:
     paths:
       - "*.deb"
@@ -49,7 +48,6 @@ deb:publish:
   image: registry.git.callpipe.com/finn/debian-repo-builder:master
   only:
     - tags
-    - feature/deb-packaging
   tags:
     - package-signer
   before_script:
