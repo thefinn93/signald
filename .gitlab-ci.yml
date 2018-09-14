@@ -50,6 +50,5 @@ deb:publish:
   script:
     - mkdir public/ && cd public/
     - release-deb ../
-    - find
-    - cat dists/experimental/main/binary-amd64/Release
-    - cat dists/experimental/main/binary-amd64/Packages
+    - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
+    - mc cp -rq . minio/updates.signald.org/
