@@ -45,7 +45,7 @@ deb:build:
 deb:publish:
   stage: publish
   image: registry.git.callpipe.com/finn/debian-repo-builder:master
-  tag:
+  tags:
     - package-signer
   script:
     - mkdir public/ && cd public/
