@@ -47,10 +47,12 @@ deb:publish:
   image: registry.git.callpipe.com/finn/debian-repo-builder:master
   tags:
     - package-signer
-  script:
-    - mkdir public/ && cd public/
-    - release-deb ../
+  before_script:
     - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
+    - mkdir public/ && cd public/
+    - mc cp -r -q minio/updates.signald.org/ .
+  script:
+    - release-deb ../
     - mc cp -r -q . minio/updates.signald.org/
   dependencies:
     - deb:build
