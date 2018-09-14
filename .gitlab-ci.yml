@@ -51,4 +51,4 @@ deb:publish:
     - mkdir public/ && cd public/
     - release-deb ../
     - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
-    - mc cp -rq . minio/updates.signald.org/
+    - mc cp -r -q . minio/updates.signald.org/
