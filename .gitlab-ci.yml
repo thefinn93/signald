@@ -22,6 +22,8 @@ tar:
   stage: package
   script:
     - ./gradlew distTar
+  only:
+    - tags
   artifacts:
     paths:
       - build/distributions/*.tar
