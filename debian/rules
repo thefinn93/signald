@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+%:
+	dh $@ --with javahelper # use the javahelper extension
+
+override_dh_auto_build:
+	./gradlew assemble
+	./gradlew test
+
+override_dh_auto_install:
+	dh_auto_install
+	# here we can install additional files like an upstart configuration
+	# export UPSTART_TARGET_DIR=debian/my_project/etc/init/; \
+	# mkdir -p $${UPSTART_TARGET_DIR}; \
+	# install -m 644 debian/my_project.conf $${UPSTART_TARGET_DIR};
+
+# additional install target of javahelper
+override_jh_installlibs:
+	LIB_DIR="debian/signald/opt/signald/lib"; \
+	mkdir -p $${LIB_DIR}; \
+	install lib/*.jar $${LIB_DIR}; \
+	install build/libs/*.jar $${LIB_DIR};
+	# BIN_DIR="debian/signald/opt/signald/bin"; \
+	# mkdir -p $${BIN_DIR}; \
+	# install build/scripts/my_project_start_script.sh $${BIN_DIR}; \

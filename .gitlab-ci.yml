@@ -34,11 +34,13 @@ deb:build:
   before_script:
     - export VERSION=$(git describe --always --tags)
     - echo "Building signald version $VERSION"
+  tags:
+    - package-signer
   script:
-    - ./gradlew deb
-    - mv build/distributions/*.deb .
+    - dpkg-buildpackage -k D89FFB45291229A410A1430A659475081F665F29
   only:
     - tags
+    - feature/deb-packaging
   artifacts:
     paths:
       - "*.deb"
