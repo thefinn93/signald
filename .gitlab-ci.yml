@@ -31,6 +31,7 @@ tar:
 
 deb:build:
   stage: package
+  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   before_script:
     - export VERSION=$(git describe --always --tags)
     - echo "Building signald version $VERSION"
@@ -47,7 +48,7 @@ deb:build:
 
 deb:publish:
   stage: publish
-  image: registry.git.callpipe.com/finn/debian-repo-builder:master
+  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   only:
     - tags
   tags:
