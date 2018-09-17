@@ -8,8 +8,8 @@
 	dh $@ --with javahelper # use the javahelper extension
 
 override_dh_auto_build:
-	./gradlew assemble
-	./gradlew test
+	gradle assemble
+	gradle test
 
 override_dh_auto_install:
 	dh_auto_install
