@@ -1,3 +1,6 @@
+# Debian packaging log files
+debian/*.log
+
 #####=== Java ===#####
 
 *.class
