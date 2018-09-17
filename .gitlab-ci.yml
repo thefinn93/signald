@@ -39,6 +39,8 @@ deb:build:
   tags:
     - package-signer
   script:
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
+    - cat debian/changelog
     - dpkg-buildpackage --sign-key=D89FFB45291229A410A1430A659475081F665F29
     - cp -rv ../signald_* .
   only:
@@ -53,6 +55,7 @@ deb:publish:
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   only:
     - tags
+    - feature/deb-packaging
   tags:
     - package-signer
   before_script:
