@@ -40,6 +40,7 @@ deb:build:
     - package-signer
   script:
     - dpkg-buildpackage --sign-key=D89FFB45291229A410A1430A659475081F665F29
+    - cp -rv ../signald_* .
   only:
     - tags
     - feature/deb-packaging
