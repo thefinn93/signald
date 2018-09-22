@@ -36,7 +36,7 @@ deb:build:
   stage: package
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   before_script:
-    - export VERSION=$(git describe --always --tags)
+    - export VERSION=$(git describe --abbrev=0)+git$(shell date +%Y-%m-%d)r$(git rev-parse --short=8 HEAD).$(git rev-list $(git describe --abbrev=0)..HEAD --count)
     - echo "Building signald version $VERSION"
   tags:
     - package-signer
