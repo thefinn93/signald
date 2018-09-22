@@ -4,7 +4,7 @@ signald is a daemon that facilitates communication over Signal.
 
 
 ## Quick Start
-1. Run `./gradlew installDist` to build signald
+1. Run `make installDist` to build signald
 1. Run `sudo mkdir /var/run/signald && sudo chown $(whoami) /var/run/signald`
 1. Run `build/install/signald/bin/signald` to start signald. It will continue running until killed (or ctrl-C)
 1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock`
@@ -15,9 +15,6 @@ signald is a daemon that facilitates communication over Signal.
 ```json
 {"type": "send", "username": "+12024561414", "recipientNumber": "+14235290302", "messageBody": "Hello, Dave"}
 ```
-
-*However, it must all be sent on a single line* otherwise signald will attempt to interpret each line as json.
-
 
 ## Control Messages
 Each message sent to the control socket must be valid JSON and have a `type` field. The possible message types and their
@@ -125,6 +122,10 @@ Returns all known identities/keys for a given number.
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
 | `recipientNumber` | `string` | yes | The full number to look up. |
+
+### `version`
+
+Returns the version of signald in use
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
