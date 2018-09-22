@@ -16,18 +16,20 @@ cache:
 
 build:
   stage: build
+  before_script:
+    - apt update && apt install -y make
   script:
-    - ./gradlew build
+    - make installDist
 
 tar:
   stage: package
   script:
-    - ./gradlew distTar
+    - make distTar
   only:
     - tags
   artifacts:
     paths:
-      - build/distributions/*.tar
+      - signald
     expire_in: 1 week
 
 deb:build:
