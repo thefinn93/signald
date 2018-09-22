@@ -5,9 +5,6 @@ stages:
   - package
   - publish
 
-before_script:
-  - export GRADLE_USER_HOME=`pwd`/.gradle
-
 cache:
   paths:
     - .gradle/wrapper
@@ -15,27 +12,28 @@ cache:
 
 build:
   stage: build
+  before_script:
+    - apt update && apt install -y make
   script:
-    - ./gradlew build
+    - make installDist
 
 tar:
   stage: package
   script:
-    - ./gradlew distTar
+    - make distTar
   only:
     - tags
   artifacts:
     paths:
-      - build/distributions/*.tar
+      - signald
     expire_in: 1 week
 
 deb:build:
   stage: package
   before_script:
-    - export VERSION=$(git describe --always --tags)
-    - echo "Building signald version $VERSION"
+    - apt update && apt install -y make
   script:
-    - ./gradlew deb
+    - make deb
     - mv build/distributions/*.deb .
   only:
     - tags

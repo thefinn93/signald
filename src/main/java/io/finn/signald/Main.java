@@ -17,6 +17,8 @@
 
 package io.finn.signald;
 
+import io.finn.signald.BuildConfig;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
@@ -36,6 +38,7 @@ public class Main {
   private static final Logger logger = LogManager.getLogger("signald");
 
   public static void main(String[] args) {
+    logger.info("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
     try {
       Sentry.init();
       String socket_path = "/var/run/signald/signald.sock";
