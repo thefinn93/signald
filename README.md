@@ -127,6 +127,23 @@ Returns all known identities/keys for a given number.
 
 Returns the version of signald in use
 
+### `list_contacts`
+
+Lists all of the contacts in the contact store for the specified user.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to list the contacts of |
+
+### `sync_contacts`
+
+Sends a contact sync request to the other devices on this account.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
+
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
