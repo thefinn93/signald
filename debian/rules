@@ -13,6 +13,8 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	dh_auto_install
+	dh_systemd_enable || true
+	dh_systemd_start || true
 	# here we can install additional files like an upstart configuration
 	# export UPSTART_TARGET_DIR=debian/my_project/etc/init/; \
 	# mkdir -p $${UPSTART_TARGET_DIR}; \
