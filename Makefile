@@ -10,7 +10,7 @@ all: installDist tar
 
 deb:
 	gbp dch --verbose --ignore-branch --debian-tag="%(version)s" --git-author --new-version=$(VERSION)
-	dpkg-buildpackage -us -uc
+	dpkg-buildpackage -us -uc -b
 
 installDist distTar:
 	$(GRADLE) $@
