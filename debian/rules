@@ -5,7 +5,7 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ --with javahelper # use the javahelper extension
+	dh $@ --with javahelper --with systemd # use the javahelper extension
 
 override_dh_auto_build:
 	gradle assemble
