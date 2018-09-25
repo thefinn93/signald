@@ -21,17 +21,6 @@ build:
   script:
     - make installDist
 
-tar:
-  stage: package
-  script:
-    - make distTar
-  only:
-    - tags
-  artifacts:
-    paths:
-      - signald
-    expire_in: 1 week
-
 deb:build:
   stage: package
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
