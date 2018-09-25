@@ -1,5 +1,6 @@
 # Debian packaging log files
 debian/*.log
+debian/signald
 
 #####=== Java ===#####
 

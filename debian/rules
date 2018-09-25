@@ -8,8 +8,7 @@
 	dh $@ --with javahelper --with systemd # use the javahelper extension
 
 override_dh_auto_build:
-	gradle assemble
-	gradle test
+	dh_auto_build -- installDist
 
 override_dh_auto_install:
 	dh_auto_install
@@ -22,7 +21,4 @@ override_dh_auto_install:
 
 # additional install target of javahelper
 override_jh_installlibs:
-	ln -s /var/lib/signald/bin/signald /usr/bin/signald
-	# BIN_DIR="debian/signald/opt/signald/bin"; \
-	# mkdir -p $${BIN_DIR}; \
-	# install build/scripts/my_project_start_script.sh $${BIN_DIR}; \
+	dh_link debian/signald/var/lib/signald/bin/signald debian/signald/usr/bin/signald
