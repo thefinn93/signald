@@ -20,7 +20,7 @@ set -e
 
 case "$1" in
     configure)
-      adduser --system --no-create-home --home /var/lib/signald signald
+      adduser --system --group --no-create-home --home /var/lib/signald signald
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
