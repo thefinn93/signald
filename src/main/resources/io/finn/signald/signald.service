@@ -11,7 +11,7 @@ ExecStartPre=/bin/mkdir -p /var/run/signald
 ExecStartPre=/bin/chown signald:signald /var/run/signald
 User=signald
 Group=signald
-ExecStart=/usr/lib/signald/bin/signald
+ExecStart=/usr/bin/signald
 Restart=on-failure
 
 [Install]

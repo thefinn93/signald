@@ -22,10 +22,7 @@ override_dh_auto_install:
 
 # additional install target of javahelper
 override_jh_installlibs:
-	LIB_DIR="debian/signald/opt/signald/lib"; \
-	mkdir -p $${LIB_DIR}; \
-	install lib/*.jar $${LIB_DIR}; \
-	install build/libs/*.jar $${LIB_DIR};
+	ln -s /var/lib/signald/bin/signald /usr/bin/signald
 	# BIN_DIR="debian/signald/opt/signald/bin"; \
 	# mkdir -p $${BIN_DIR}; \
 	# install build/scripts/my_project_start_script.sh $${BIN_DIR}; \
