@@ -25,12 +25,18 @@ dependencies {
     compile 'io.sentry:sentry-log4j2:1.6.4'
 }
 
-//version = versioning.info.full
-version = "${System.env.VERSION}"
+
 buildConfig {
-  version = version
-  appName = "${System.env.CI_PROJECT_NAME}"
   packageName = "io.finn.signald"
+  version = System.getenv("VERSION") ?: "unversioned"
+  appName = System.getenv("CI_PROJECT_NAME") ?: "signald"
+
+  buildConfigField 'String', 'BRANCH', { System.getenv("CI_BUILD_REF_NAME") ?: "" }
+  buildConfigField 'String', 'COMMIT', { System.getenv("CI_COMMIT_SHA") ?: "" }
+
+  buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "" }
+  buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "" }
+  buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "" }
 }
 
 
