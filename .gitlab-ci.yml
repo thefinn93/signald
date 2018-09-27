@@ -2,8 +2,12 @@ image: java:8-jdk
 
 stages:
   - build
-  - package
   - publish
+  - cleanup
+
+variables:
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Xmx512m"
 
 cache:
   paths:
@@ -17,44 +21,46 @@ build:
   script:
     - make installDist
 
-tar:
-  stage: package
-  script:
-    - make distTar
-  only:
-    - tags
-  artifacts:
-    paths:
-      - signald
-    expire_in: 1 week
-
 deb:build:
-  stage: package
+  stage: build
+  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   before_script:
-    - apt update && apt install -y make
+    - export VERSION=$(./version.sh)
+    - echo "Building signald version $VERSION"
+  tags:
+    - package-signer
   script:
-    - make deb
-    - mv build/distributions/*.deb .
-  only:
-    - tags
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
+    - cat debian/changelog
+    - dpkg-buildpackage --sign-key=D89FFB45291229A410A1430A659475081F665F29 -b
+    - cp -rv ../signald_${VERSION}* .
   artifacts:
     paths:
-      - "*.deb"
+      - "signald_*"
 
 deb:publish:
   stage: publish
-  image: registry.git.callpipe.com/finn/debian-repo-builder:master
-  only:
-    - tags
+  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   tags:
     - package-signer
   before_script:
     - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
-    - mkdir public/ && cd public/
-    - mc cp -r -q minio/updates.signald.org/ .
+    - export SUITE=$(get-suite)
+    - export VERSION=$(./version.sh)
+    - mkdir -p public/dists/${SUITE}/
+    - mc cp -r -q "minio/updates.signald.org/dists/${SUITE}/" public/ || true
+    - cd public
   script:
     - release-deb ../ D89FFB45291229A410A1430A659475081F665F29
     - gpg --homedir /opt/signing-keys/.gnupg --export --armor D89FFB45291229A410A1430A659475081F665F29 > apt-signing-key.asc
-    - mc cp -r -q . minio/updates.signald.org/
+    - for f in dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/updates.signald.org/$f"; done
   dependencies:
     - deb:build
+
+deb:cleanup:
+  stage: cleanup
+  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  before_script:
+    - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
+  script:
+    - repo-cron minio/updates.signald.org

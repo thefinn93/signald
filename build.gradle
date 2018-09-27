@@ -1,8 +1,7 @@
 plugins {
-   id 'net.nemerosa.versioning' version '2.6.1'
-   id "nebula.ospackage" version "4.6.0"
    id 'de.fuerstenau.buildconfig' version '1.1.8'
 }
+
 apply plugin: 'java'
 apply plugin: 'application'
 
@@ -26,9 +25,6 @@ dependencies {
     compile 'io.sentry:sentry-log4j2:1.6.4'
 }
 
-apply plugin: 'net.nemerosa.versioning'
-apply plugin: "nebula.deb"
-
 //version = versioning.info.full
 version = "${System.env.VERSION}"
 buildConfig {
@@ -37,6 +33,7 @@ buildConfig {
   packageName = "io.finn.signald"
 }
 
+
 jar {
     manifest {
         attributes(
@@ -44,33 +41,5 @@ jar {
                 'Implementation-Version': project.version,
                 'Main-Class': project.mainClassName,
         )
-    }
-}
-
-
-task deb(type: Deb) {
-    def applicationName = "signald"
-    def distInstallPath = "/usr/lib/signald"
-    packageName = 'signald'
-    version = version
-    release = 1
-    preInstall file('src/main/resources/io/finn/signald/debian-preinstall.sh')
-    requires('libunixsocket-java')
-    requires('openjdk-8-jre-headless')
-
-    from("build/install/signald") {
-        exclude '**/*.bat'
-        into distInstallPath
-    }
-
-    from("src/main/resources/io/finn/signald/signald.service") {
-      into "/lib/systemd/system"
-    }
-
-    link("/usr/bin/${applicationName}", "${distInstallPath}/bin/${applicationName}")
-
-    from('src/main/resources') {
-        fileType CONFIG | NOREPLACE
-        into 'conf'
     }
 }
