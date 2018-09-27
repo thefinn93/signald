@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+export DH_VERBOSE=1
+
+%:
+	dh $@ --with javahelper --with systemd # use the javahelper extension
+
+override_dh_auto_build:
+	dh_auto_build -- installDist
+
+override_dh_install:
+	$(RM) build/install/signald/bin/signald.bat
+	dh_install
+
+override_jh_exec:
+	dh_link var/lib/signald/bin/signald usr/bin/signald
+
+override_dh_auto_install:
+	dh_auto_install
+	dh_systemd_enable || true
+	dh_systemd_start || true

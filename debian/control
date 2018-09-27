@@ -1,0 +1,18 @@
+Source: signald
+Section: java
+Priority: optional
+Maintainer: Finn Herzfeld <signald@janky.solutions>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.8
+Homepage: https://signald.org
+Vcs-Git: https://git.callpipe.com/finn/signald.git
+Vcs-Browser: https://git.callpipe.com/finn/signald
+#Vcs-Git: https://anonscm.debian.org/collab-maint/signald.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/signald.git
+
+Package: signald
+Architecture: all
+Depends:default-jre, libunixsocket-java, ${misc:Depends}
+Description:  an unofficial daemon that facilitates communication with the Signal messaging app.
+ signald is a daemon to facilitate communicating with users of the Signal messaging app. It is an
+ unofficial signal client and is not in any way endorsed or even approved by Signal Messenger

@@ -143,7 +143,25 @@ Sends a contact sync request to the other devices on this account.
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to sync contacts for. |
 
+## Debian Installation
 
+Add the following to your `sources.list`:
+
+```
+deb https://updates.signald.org stable main
+```
+
+And trust the signing key:
+
+```
+curl https://updates.signald.org/apt-signing-key.asc | sudo apt-key add -
+```
+
+Now you can install signald:
+
+```
+sudo apt install signald
+```
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
