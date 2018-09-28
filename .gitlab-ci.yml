@@ -8,7 +8,6 @@ stages:
 variables:
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Xmx512m"
-  GNUPGHOME: "/opt/signing-keys/.gnupg"
 
 cache:
   paths:
@@ -54,7 +53,7 @@ deb:publish:
     - cd public
   script:
     - release-deb ../ D89FFB45291229A410A1430A659475081F665F29
-    - gpg --export --armor D89FFB45291229A410A1430A659475081F665F29 > apt-signing-key.asc
+    - gpg --homedir /opt/signing-keys/.gnupg --export --armor D89FFB45291229A410A1430A659475081F665F29 > apt-signing-key.asc
     - for f in dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/updates.signald.org/$f"; done
   dependencies:
     - deb:build
