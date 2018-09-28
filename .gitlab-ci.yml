@@ -34,6 +34,7 @@ deb:build:
     - cat debian/changelog
     - dpkg-buildpackage --sign-key=D89FFB45291229A410A1430A659475081F665F29 -b
     - cp -rv ../signald_${VERSION}* .
+    - gpg --detached-sign "signald_${VERSION}*.deb"
   artifacts:
     paths:
       - "signald_*"
