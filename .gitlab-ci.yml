@@ -32,9 +32,9 @@ deb:build:
   script:
     - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
     - cat debian/changelog
-    - dpkg-buildpackage --sign-key=D89FFB45291229A410A1430A659475081F665F29 -b
+    - dpkg-buildpackage --sign-key="${SIGNING_KEY}" -b
     - cp -rv ../signald_${VERSION}* .
-    - gpg --homedir /opt/signing-keys/.gnupg --detach-sign signald_${VERSION}*.deb
+    - gpg --detach-sign signald_${VERSION}*.deb
   artifacts:
     paths:
       - "signald_*"
@@ -52,8 +52,8 @@ deb:publish:
     - mc cp -r -q "minio/updates.signald.org/dists/${SUITE}/" public/ || true
     - cd public
   script:
-    - release-deb ../ D89FFB45291229A410A1430A659475081F665F29
-    - gpg --homedir /opt/signing-keys/.gnupg --export --armor D89FFB45291229A410A1430A659475081F665F29 > apt-signing-key.asc
+    - release-deb ../ "${SIGNING_KEY}"
+    - gpg --export --armor "${SIGNING_KEY}" > apt-signing-key.asc
     - for f in dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/updates.signald.org/$f"; done
   dependencies:
     - deb:build
