@@ -101,17 +101,17 @@ import org.apache.logging.log4j.Logger;
 
 class Manager {
     private static final Logger logger = LogManager.getLogger();
-    private final static String URL = "https://textsecure-service.whispersystems.org";
-    private final static String CDN_URL = "https://cdn.signal.org";
+    private final static String URL = BuildConfig.SIGNAL_URL;
+    private final static String CDN_URL = BuildConfig.SIGNAL_CDN_URL;
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
     private final static SignalServiceConfiguration serviceConfiguration = new SignalServiceConfiguration(
             new SignalServiceUrl[]{new SignalServiceUrl(URL, TRUST_STORE)},
             new SignalCdnUrl[]{new SignalCdnUrl(CDN_URL, TRUST_STORE)}
     );
 
-    public final static String PROJECT_NAME = Manager.class.getPackage().getImplementationTitle();
-    public final static String PROJECT_VERSION = Manager.class.getPackage().getImplementationVersion();
-    private final static String USER_AGENT = PROJECT_NAME == null ? null : PROJECT_NAME + " " + PROJECT_VERSION;
+    public final static String PROJECT_NAME = BuildConfig.NAME;
+    public final static String PROJECT_VERSION = BuildConfig.VERSION;
+    private final static String USER_AGENT = BuildConfig.USER_AGENT;
 
     private final static int PREKEY_MINIMUM_COUNT = 20;
     private static final int PREKEY_BATCH_SIZE = 100;

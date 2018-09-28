@@ -21,10 +21,14 @@ import io.finn.signald.BuildConfig;
 class JsonVersionMessage {
   public String name;
   public String version;
+  public String branch;
+  public String commit;
 
   JsonVersionMessage() {
     this.name = BuildConfig.NAME;
     this.version = BuildConfig.VERSION;
+    this.branch = BuildConfig.BRANCH;
+    this.commit = BuildConfig.COMMIT;
   }
 
 }
