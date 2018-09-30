@@ -70,6 +70,7 @@ import org.whispersystems.signalservice.api.push.exceptions.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
+import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalCdnUrl;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceUrl;
@@ -141,6 +142,8 @@ class Manager {
     private JsonContactsStore contactStore;
     private JsonThreadStore threadStore;
     private SignalServiceMessagePipe messagePipe = null;
+
+    private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
     public Manager(String username, String settingsPath) {
         this.username = username;
@@ -250,7 +253,7 @@ class Manager {
 
         migrateLegacyConfigs();
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, deviceId, USER_AGENT);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, deviceId, USER_AGENT, sleepTimer);
         try {
             if (registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
                 refreshPreKeys();
@@ -377,7 +380,7 @@ class Manager {
     public void register(boolean voiceVerification) throws IOException {
         password = Util.getSecret(18);
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
 
         if (voiceVerification)
             accountManager.requestVoiceVerificationCode();
@@ -389,7 +392,7 @@ class Manager {
     }
 
     public void updateAccountAttributes() throws IOException {
-        accountManager.setAccountAttributes(signalingKey, signalProtocolStore.getLocalRegistrationId(), true);
+        accountManager.setAccountAttributes(signalingKey, signalProtocolStore.getLocalRegistrationId(), true, null);
     }
 
     public void unregister() throws IOException {
@@ -402,7 +405,7 @@ class Manager {
     public URI getDeviceLinkUri() throws TimeoutException, IOException {
         password = Util.getSecret(18);
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
         String uuid = accountManager.getNewDeviceUuid();
 
         registered = false;
@@ -523,7 +526,7 @@ class Manager {
     public void verifyAccount(String verificationCode) throws IOException {
         verificationCode = verificationCode.replace("-", "");
         signalingKey = Util.getSecret(52);
-        accountManager.verifyAccountWithCode(verificationCode, signalingKey, signalProtocolStore.getLocalRegistrationId(), true);
+        accountManager.verifyAccountWithCode(verificationCode, signalingKey, signalProtocolStore.getLocalRegistrationId(), true, null);
 
         //accountManager.setGcmId(Optional.of(GoogleCloudMessaging.getInstance(this).register(REGISTRATION_ID)));
         registered = true;
@@ -563,7 +566,7 @@ class Manager {
             mime = "application/octet-stream";
         }
         // TODO mabybe add a parameter to set the voiceNote and preview option
-        return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, Optional.<byte[]>absent(), null);
+        return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, Optional.<byte[]>absent(), 0, 0, null);
     }
 
     private Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
@@ -1114,7 +1117,8 @@ class Manager {
 
     public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException {
         retryFailedReceivedMessages(handler, ignoreAttachments);
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT);
+        // TODO: Do we need anything for that second-to-last argument ("listener")? signal-cli sets it to null
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
 
         try {
             if (messagePipe == null) {
@@ -1416,7 +1420,7 @@ class Manager {
             }
         }
 
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT);
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
 
         File tmpFile = Util.createTempFile();
         try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE)) {
@@ -1442,7 +1446,7 @@ class Manager {
     }
 
     private InputStream retrieveAttachmentAsStream(SignalServiceAttachmentPointer pointer, File tmpFile) throws IOException, InvalidMessageException {
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT);
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
         return messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE);
     }
 
@@ -1467,9 +1471,11 @@ class Manager {
             try (OutputStream fos = new FileOutputStream(groupsFile)) {
                 DeviceGroupsOutputStream out = new DeviceGroupsOutputStream(fos);
                 for (GroupInfo record : groupStore.getGroups()) {
+                    Optional<Integer> expirationTimer = Optional.<Integer>absent();
+                    Optional<String> color = Optional.<String>absent();
                     out.write(new DeviceGroup(record.groupId, Optional.fromNullable(record.name),
                             new ArrayList<>(record.members), createGroupAvatarAttachment(record.groupId),
-                            record.active));
+                            record.active, expirationTimer, color));
                 }
             }
 
@@ -1514,9 +1520,11 @@ class Manager {
                     }
 
                     // TODO include profile key
+                    // TODO: Don't hard code `false` value for blocked argument
+                    Optional<Integer> expirationTimer = Optional.<Integer>absent();
                     out.write(new DeviceContact(record.number, Optional.fromNullable(record.name),
                             createContactAvatarAttachment(record.number), Optional.fromNullable(record.color),
-                            Optional.fromNullable(verifiedMessage), Optional.<byte[]>absent()));
+                            Optional.fromNullable(verifiedMessage), Optional.<byte[]>absent(), false, expirationTimer));
                 }
             }
 

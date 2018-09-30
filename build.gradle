@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.turasa:signal-service-java:2.6.5_unofficial_1'
+    compile 'com.github.turasa:signal-service-java:2.8.0_unofficial_1'
     compile 'org.bouncycastle:bcprov-jdk15on:1.55'
     compile 'com.kohlschutter.junixsocket:junixsocket-native-common:2.0.4'
     compile 'org.apache.logging.log4j:log4j-api:2.10.0'
