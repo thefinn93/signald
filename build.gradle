@@ -34,9 +34,9 @@ buildConfig {
   buildConfigField 'String', 'BRANCH', { System.getenv("CI_BUILD_REF_NAME") ?: "" }
   buildConfigField 'String', 'COMMIT', { System.getenv("CI_COMMIT_SHA") ?: "" }
 
-  buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "" }
-  buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "" }
-  buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "" }
+  buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://textsecure-service.whispersystems.org" }
+  buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org" }
+  buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "signald-" + version }
 }
 
 
