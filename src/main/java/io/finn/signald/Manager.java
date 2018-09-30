@@ -146,6 +146,7 @@ class Manager {
     private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
     public Manager(String username, String settingsPath) {
+        logger.info("Creating new manager for " + username + " (stored at " + settingsPath + ")");
         this.username = username;
         this.settingsPath = settingsPath;
         this.dataPath = this.settingsPath + "/data";
@@ -1113,6 +1114,10 @@ class Manager {
             // Try to delete directory if empty
             dir.delete();
         }
+    }
+
+    public void shutdownMessagePipe() {
+        this.messagePipe.shutdown();
     }
 
     public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException {
