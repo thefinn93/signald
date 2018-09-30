@@ -49,8 +49,9 @@ public class Main {
       // Workaround for BKS truststore
       Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1);
 
-      ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
       SocketManager socketmanager = new SocketManager();
+      ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
+      ConcurrentHashMap<String,MessageReceiver> receivers = new ConcurrentHashMap<String,MessageReceiver>();
 
       // Spins up one thread per inbound connection to the control socket
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
@@ -61,27 +62,17 @@ public class Main {
 
       File[] users = new File(settingsPath + "/data").listFiles();
 
-      if(users != null) {
-        for(int i = 0; i < users.length; i++) {
-          if(!users[i].isDirectory()) {
-            String username = users[i].getName();
-            Thread messageReceiverThread = new Thread(new MessageReceiver(username, socketmanager, managers));
-            messageReceiverThread.start();
-          }
-        }
-      } else {
-        logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
-      }
+      if(users == null) {
+         logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
+       }
 
       while (!Thread.interrupted()) {
         try {
           Socket socket = server.accept();
           socketmanager.add(socket);
 
-          logger.info("Accepted socket connection");
-
           // Kick off the thread to read input
-          Thread socketHandlerThread = new Thread(new SocketHandler(socket, managers), "socketlistener");
+          Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers, managers), "socketlistener");
           socketHandlerThread.start();
 
         } catch(IOException e) {
@@ -89,7 +80,7 @@ public class Main {
         }
       }
     } catch(Exception e) {
-        logger.catching(e);
+      logger.catching(e);
       System.exit(1);
     }
   }

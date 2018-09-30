@@ -39,6 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.io.File;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -55,13 +57,18 @@ public class SocketHandler implements Runnable {
   private BufferedReader reader;
   private PrintWriter writer;
   private ConcurrentHashMap<String,Manager> managers;
+  private ConcurrentHashMap<String,MessageReceiver> receivers;
   private ObjectMapper mpr = new ObjectMapper();
   private static final Logger logger = LogManager.getLogger();
+  private Socket socket;
+  private ArrayList<String> subscribedAccounts = new ArrayList<String>();
 
-  public SocketHandler(Socket socket, ConcurrentHashMap<String,Manager> managers) throws IOException {
+  public SocketHandler(Socket socket, ConcurrentHashMap<String,MessageReceiver> receivers, ConcurrentHashMap<String,Manager> managers) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     this.writer = new PrintWriter(socket.getOutputStream(), true);
+    this.socket = socket;
     this.managers = managers;
+    this.receivers = receivers;
 
     this.mpr.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY); // disable autodetect
     this.mpr.enable(SerializationFeature.WRITE_NULL_MAP_VALUES);
@@ -70,19 +77,28 @@ public class SocketHandler implements Runnable {
   }
 
   public void run() {
+    logger.info("Client connected");
+
     try {
       this.reply("version", new JsonVersionMessage(), null);
     } catch(JsonProcessingException e) {
       handleError(e, null);
     }
+
     while(true) {
       String line = null;
       JsonRequest request;
       try {
         line = this.reader.readLine();
         if(line == null) {
+          logger.info("Client disconnected");
           this.reader.close();
           this.writer.close();
+          for(Map.Entry<String, MessageReceiver> entry : this.receivers.entrySet()) {
+            if(entry.getValue().unsubscribe(this.socket)) {
+              logger.info("Unsubscribed from " + entry.getKey());
+            }
+          }
           return;
         }
         if(!line.equals("")) {
@@ -105,6 +121,12 @@ public class SocketHandler implements Runnable {
     switch(request.type) {
       case "send":
         send(request);
+        break;
+      case "subscribe":
+        subscribe(request);
+        break;
+      case "unsubscribe":
+        unsubscribe(request);
         break;
       case "list_accounts":
         listAccounts(request);
@@ -152,8 +174,8 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request) {
-    Manager manager = this.managers.get(request.username);
+  private void send(JsonRequest request) throws IOException {
+    Manager manager = getManager(request.username);
     try {
       if(request.recipientGroupId != null) {
         byte[] groupId = Base64.decode(request.recipientGroupId);
@@ -166,8 +188,17 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void listAccounts(JsonRequest request) throws JsonProcessingException {
-    JsonAccountList accounts = new JsonAccountList(this.managers);
+  private void listAccounts(JsonRequest request) throws JsonProcessingException, IOException {
+    // We have to create a manager for each account that we're listing, which is all of them :/
+    String settingsPath = System.getProperty("user.home") + "/.config/signal";
+    File[] users = new File(settingsPath + "/data").listFiles();
+    for(int i = 0; i < users.length; i++) {
+      if(!users[i].isDirectory()) {
+        getManager(users[i].getName());
+      }
+    }
+
+    JsonAccountList accounts = new JsonAccountList(this.managers, this.subscribedAccounts);
     this.reply("account_list", accounts, request.id);
   }
 
@@ -293,6 +324,7 @@ public class SocketHandler implements Runnable {
       m.getDeviceLinkUri();
       this.reply("linking_uri", new JsonLinkingURI(m), request.id);
       m.finishDeviceLink(deviceName);
+      this.managers.put(m.getUsername(), m);
     } catch(TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch(IOException e) {
@@ -326,6 +358,24 @@ public class SocketHandler implements Runnable {
   private void listContacts(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
     this.reply("contact_list", m.getContacts(), request.id);
+  }
+
+  private void subscribe(JsonRequest request) throws IOException {
+    if(!this.receivers.containsKey(request.username)) {
+      MessageReceiver receiver = new MessageReceiver(request.username, this.managers);
+      this.receivers.put(request.username, receiver);
+      Thread messageReceiverThread = new Thread(receiver);
+      messageReceiverThread.start();
+    }
+    this.receivers.get(request.username).subscribe(this.socket);
+    this.subscribedAccounts.add(request.username);
+    this.reply("subscribed", null, request.id);  // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
+  }
+
+  private void unsubscribe(JsonRequest request) throws IOException {
+    this.receivers.get(request.username).unsubscribe(this.socket);
+    this.subscribedAccounts.remove(request.username);
+    this.reply("unsubscribed", null, request.id);  // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
 
   private void version() throws IOException {

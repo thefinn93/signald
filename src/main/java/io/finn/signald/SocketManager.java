@@ -49,8 +49,12 @@ class SocketManager {
     this.sockets.add(s);
   }
 
-  public void remove(Socket s) {
-    this.sockets.remove(s);
+  public boolean remove(Socket s) {
+    return this.sockets.remove(s);
+  }
+
+  public int size() {
+    return this.sockets.size();
   }
 
   public void broadcast(JsonMessageWrapper message) throws JsonProcessingException, IOException {

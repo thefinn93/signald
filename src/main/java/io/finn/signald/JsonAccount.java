@@ -23,6 +23,7 @@ class JsonAccount {
   public String filename;
   public boolean registered;
   public boolean has_keys;
+  public boolean subscribed;
 
   JsonAccount(Manager m) {
     this.username = m.getUsername();
@@ -30,6 +31,11 @@ class JsonAccount {
     this.filename = m.getFileName();
     this.registered = m.isRegistered();
     this.has_keys = m.userHasKeys();
+  }
+
+  JsonAccount(Manager m, boolean subscribed) {
+    this(m);
+    this.subscribed = subscribed;
   }
 
 }

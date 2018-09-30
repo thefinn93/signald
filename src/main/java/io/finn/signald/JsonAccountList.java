@@ -25,11 +25,12 @@ import java.util.Enumeration;
 class JsonAccountList {
   public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
-  JsonAccountList(ConcurrentHashMap<String,Manager> managers) {
+  JsonAccountList(ConcurrentHashMap<String,Manager> managers, ArrayList<String> subscribedAccounts) {
     Enumeration<String> usernames = managers.keys();
     while(usernames.hasMoreElements()) {
-      Manager manager = managers.get(usernames.nextElement());
-      JsonAccount account = new JsonAccount(manager);
+      String username = usernames.nextElement();
+      Manager manager = managers.get(username);
+      JsonAccount account = new JsonAccount(manager, subscribedAccounts.contains(username));
       accounts.add(account);
     }
   }
