@@ -156,6 +156,8 @@ Lists all of the contacts in the contact store for the specified user.
 
 Sends a contact sync request to the other devices on this account.
 
+**NOTE**: Contact sync responses are received like all other messages, and won't come in until that account is subscribed.
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to sync contacts for. |
