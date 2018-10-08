@@ -192,6 +192,7 @@ class Manager {
     }
 
     private static void createPrivateDirectories(String path) throws IOException {
+        logger.info("Creating directory " + path);
         final Path file = new File(path).toPath();
         try {
             Set<PosixFilePermission> perms = EnumSet.of(OWNER_READ, OWNER_WRITE, OWNER_EXECUTE);
