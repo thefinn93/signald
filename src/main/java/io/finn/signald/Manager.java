@@ -342,8 +342,7 @@ class Manager {
             return;
         }
         if(password == null) {
-            logger.warn("Refusing to save account with empty password! See https://git.callpipe.com/finn/signald/issues/30 especially if you know how this happened or can reproduce it");
-            return;
+            throw new RuntimeException("Refusing to save account with empty password! See https://git.callpipe.com/finn/signald/issues/30 especially if you know how this happened or can reproduce it");
         }
         ObjectNode rootNode = jsonProcessor.createObjectNode();
         rootNode.put("username", username)
