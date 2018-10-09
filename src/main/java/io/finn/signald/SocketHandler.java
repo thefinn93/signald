@@ -325,6 +325,7 @@ public class SocketHandler implements Runnable {
       this.reply("linking_uri", new JsonLinkingURI(m), request.id);
       m.finishDeviceLink(deviceName);
       this.managers.put(m.getUsername(), m);
+      this.reply("linking_successful", new JsonAccount(m), request.id);
     } catch(TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch(IOException e) {
