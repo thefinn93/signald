@@ -41,6 +41,9 @@ public class Main {
     logger.info("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
     try {
       Sentry.init();
+      Sentry.getContext().addExtra("release", BuildConfig.VERSION);
+      Sentry.getContext().addExtra("signal_url", BuildConfig.SIGNAL_URL);
+      Sentry.getContext().addExtra("signal_cdn_url", BuildConfig.SIGNAL_CDN_URL);
       String socket_path = "/var/run/signald/signald.sock";
       if(args.length > 0) {
         socket_path = args[0];
