@@ -45,8 +45,8 @@ class JsonRequest {
     @JsonCreator
     public static JsonRequest Create(String jsonString) throws JsonParseException, JsonMappingException, IOException {
         ObjectMapper mapper = new ObjectMapper();
-	JsonRequest request = null;
-	request = mapper.readValue(jsonString, JsonRequest.class);
-	return request;
+        JsonRequest request = null;
+        request = mapper.readValue(jsonString, JsonRequest.class);
+        return request;
     }
 }
