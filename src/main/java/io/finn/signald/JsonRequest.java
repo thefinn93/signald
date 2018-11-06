@@ -18,6 +18,12 @@
 package io.finn.signald;
 
 import java.util.List;
+import java.io.IOException;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 class JsonRequest {
     public String type;
@@ -36,4 +42,11 @@ class JsonRequest {
     public String avatar;
 
     JsonRequest() {}
+    @JsonCreator
+    public static JsonRequest Create(String jsonString) throws JsonParseException, JsonMappingException, IOException {
+        ObjectMapper mapper = new ObjectMapper();
+	JsonRequest request = null;
+	request = mapper.readValue(jsonString, JsonRequest.class);
+	return request;
+    }
 }
