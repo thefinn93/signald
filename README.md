@@ -8,7 +8,7 @@ signald is a daemon that facilitates communication over Signal.
 *if you run Debian and would prefer an apt repo, see [Debian Installation](#debian-installation) below*
 
 1. Run `make installDist` to build signald
-1. Run `sudo mkdir /var/run/signald && sudo chown $(whoami) /var/run/signald`
+1. Run `make setup` to configure the system directories
 1. Run `build/install/signald/bin/signald` to start signald. It will continue running until killed (or ctrl-C)
 1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock`
 1. Register a new number on signal by typing this: `{"type": "register", "username": "+12024561414"}` (replace `+12024561414` with your own number)
