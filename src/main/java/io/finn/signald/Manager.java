@@ -754,6 +754,28 @@ class Manager {
                 .asGroupMessage(group.build());
     }
 
+    public void setExpiration(byte[] groupId, int expiresInSeconds) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, EncapsulatedExceptions {
+        if (groupId == null) {
+            return;
+        }
+        GroupInfo g = getGroupForSending(groupId);
+
+        SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
+
+        messageBuilder.asExpirationUpdate().withExpiration(expiresInSeconds);
+        sendMessage(messageBuilder, new ArrayList<>(g.members));
+    }
+
+    public void setExpiration(String recipient, int expiresInSeconds) throws IOException, EncapsulatedExceptions {
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+        messageBuilder.asExpirationUpdate().withExpiration(expiresInSeconds);
+
+        List<String> recipients = new ArrayList<>(1);
+        recipients.add(recipient);
+
+        sendMessage(messageBuilder, recipients, false);
+    }
+
     private void sendGroupInfoRequest(byte[] groupId, String recipient) throws IOException, EncapsulatedExceptions {
         if (groupId == null) {
             return;
@@ -884,7 +906,13 @@ class Manager {
         }
     }
 
+
     private void sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients)
+            throws EncapsulatedExceptions, IOException {
+        sendMessage(messageBuilder, recipients, true);
+    }
+
+    private void sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients, boolean useExistingExpiration)
             throws EncapsulatedExceptions, IOException {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) return;
@@ -910,10 +938,12 @@ class Manager {
                 List<NetworkFailureException> networkExceptions = new LinkedList<>();
                 for (SignalServiceAddress address : recipientsTS) {
                     ThreadInfo thread = threadStore.getThread(address.getNumber());
-                    if (thread != null) {
-                        messageBuilder.withExpiration(thread.messageExpirationTime);
-                    } else {
-                        messageBuilder.withExpiration(0);
+                    if(useExistingExpiration) {
+                        if (thread != null) {
+                            messageBuilder.withExpiration(thread.messageExpirationTime);
+                        } else {
+                            messageBuilder.withExpiration(0);
+                        }
                     }
                     message = messageBuilder.build();
                     try {

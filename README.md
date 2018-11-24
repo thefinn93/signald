@@ -165,6 +165,19 @@ Sends a contact sync request to the other devices on this account.
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to sync contacts for. |
 
+### `set_expiration`
+
+Sets or changes the expiration time for messages in a group or PM.
+
+As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclusive and one of them is required.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to use. |
+| `recipientNumber` | `string` | no | The PM to change expiration for. |
+| `recipientGroupId` | `string` | no | The group ID to update expiration for. |
+| `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
+
 ## Debian Installation
 
 Add the following to your `sources.list`:
