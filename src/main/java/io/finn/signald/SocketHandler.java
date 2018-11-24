@@ -146,6 +146,9 @@ public class SocketHandler implements Runnable {
       case "update_group":
         updateGroup(request);
         break;
+      case "set_expiration":
+        setExpiration(request);
+        break;
       case "list_groups":
         listGroups(request);
         break;
@@ -290,6 +293,19 @@ public class SocketHandler implements Runnable {
     } else {
         this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
     }
+  }
+
+  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, EncapsulatedExceptions, IOException {
+    Manager m = getManager(request.username);
+
+    if(request.recipientGroupId != null) {
+      byte[] groupId = Base64.decode(request.recipientGroupId);
+      m.setExpiration(groupId, request.expiresInSeconds);
+    } else {
+      m.setExpiration(request.recipientNumber, request.expiresInSeconds);
+    }
+
+    this.reply("expiration_updated", null, request.id);
   }
 
   private void listGroups(JsonRequest request) throws IOException, JsonProcessingException {

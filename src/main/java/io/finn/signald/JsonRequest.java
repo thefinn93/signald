@@ -34,6 +34,7 @@ class JsonRequest {
     public String groupName;
     public List<String> members;
     public String avatar;
+    public int expiresInSeconds;
 
     JsonRequest() {}
 }
