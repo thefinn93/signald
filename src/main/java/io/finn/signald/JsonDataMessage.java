@@ -29,6 +29,7 @@ class JsonDataMessage {
     int expiresInSeconds;
     List<JsonAttachment> attachments;
     JsonGroupInfo groupInfo;
+    SignalServiceDataMessage.Quote quote;
 
     JsonDataMessage(SignalServiceDataMessage dataMessage, Manager m) {
         this.timestamp = dataMessage.getTimestamp();
@@ -46,6 +47,10 @@ class JsonDataMessage {
             }
         } else {
             this.attachments = new ArrayList<>();
+        }
+
+        if(dataMessage.getQuote().isPresent()) {
+          this.quote = dataMessage.getQuote().get();
         }
     }
 }

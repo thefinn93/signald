@@ -35,6 +35,24 @@ Sends a signal message to another user or a group. Possible values are:
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
 | `attachmentFilenames` | list of strings | no | A list of files to attach, by path on the local disk. |
+| `quote` | quote | no | The message to quote |
+
+**Quote objects** can have these keys:
+| Field | Type   | Required? | Description |
+|-------|--------|-----------|-------------|
+| `id`  | number | yes\*      | The timestamp of the original message. |
+| `author` | string | yes\*   | The username (full e164 phone number) of the author of the quoted message. |
+| `text` | string | yes\*     | The text of the quoted message. |
+| `attachments` | list of quoted attachments | no | A list of attachments in the quoted message. |
+
+**Quoted** attachment objects can have these keys:
+| Field | Type   | Required? | Description |
+|-------|--------|-----------|-------------|
+| `contentType` | string | yes | The content type of the quoted attachment |
+| `fileName` | string | no | The original filename of the quoted attachment |
+
+
+\*If you don't put these values it will send it but the Signal app doesn't seem to render it (Signal Desktop does though?)
 
 ### `register`
 
