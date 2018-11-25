@@ -17,25 +17,20 @@
 
 package io.finn.signald;
 
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import java.util.List;
+import java.util.ArrayList;
 
-class JsonRequest {
-    public String type;
-    public String id;
-    public String username;
-    public String messageBody;
-    public String recipientNumber;
-    public String recipientGroupId;
-    public Boolean voice;
-    public String code;
-    public String deviceName;
-    public List<String> attachmentFilenames;
-    public String uri;
-    public String groupName;
-    public List<String> members;
-    public String avatar;
-    public JsonQuote quote;
-    public int expiresInSeconds;
 
-    JsonRequest() {}
+class JsonQuotedAttachment {
+  public String contentType;
+  public String fileName;
+  public String thumbnail;
+
+  public SignalServiceDataMessage.Quote.QuotedAttachment getAttachment() {
+    // FileInputStream thumbnailFile = new FileInputStream(this.thumbnail);
+    // SignalServiceAttachmentStream thumbnail = new SignalServiceAttachmentStream(thumbnailFile, this.contentType, thumbnailFile.length,this.Filename, false, null, 0, 0, null, null);
+    return new SignalServiceDataMessage.Quote.QuotedAttachment(this.contentType, this.fileName, null);
+  }
 }
