@@ -19,8 +19,9 @@ package io.finn.signald;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 
-import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;                                                                                         
+import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
 
 class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<JsonIdentity>();
@@ -32,8 +33,16 @@ class JsonIdentityList {
   }
 
   JsonIdentityList(String number, Manager m) {
-    for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
-      this.identities.add(new JsonIdentity(identity, m, number));
+    if(number == null) {
+      for (Map.Entry<String, List<JsonIdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
+        for (JsonIdentityKeyStore.Identity identity : keys.getValue()) {
+            this.identities.add(new JsonIdentity(identity));
+        }
+      }
+    } else {
+      for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
+        this.identities.add(new JsonIdentity(identity, m, number));
+      }
     }
-  }    
+  }
 }
