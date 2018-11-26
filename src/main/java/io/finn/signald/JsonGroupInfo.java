@@ -39,10 +39,11 @@ class JsonGroupInfo {
         }
         if (groupInfo.getName().isPresent()) {
             this.name = groupInfo.getName().get();
-        } else if( m != null) {
+        } else if(m != null) {
             GroupInfo group = m.getGroup(groupInfo.getGroupId());
-            if( group != null)
+            if(group != null) {
                 this.name = group.name;
+            }
         }
 
         this.type = groupInfo.getType().toString();
@@ -51,7 +52,7 @@ class JsonGroupInfo {
     JsonGroupInfo(GroupInfo groupInfo, Manager m) {
         this.groupId = Base64.encodeBytes(groupInfo.groupId);
 	this.name = groupInfo.name;
-	this.members =  new ArrayList(groupInfo.members);
+	this.members =  new ArrayList<String>(groupInfo.members);
 	this.avatarId = groupInfo.getAvatarId();
     }
 }
