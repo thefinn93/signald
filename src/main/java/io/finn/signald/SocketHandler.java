@@ -29,6 +29,7 @@ import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
+import org.asamk.signal.util.Hex;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Locale;
 import java.io.File;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -162,6 +164,9 @@ public class SocketHandler implements Runnable {
         break;
       case "get_identities":
         getIdentities(request);
+        break;
+      case "trust":
+        trust(request);
         break;
       case "sync_contacts":
         syncContacts(request);
@@ -366,6 +371,31 @@ public class SocketHandler implements Runnable {
   private void getIdentities(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
     this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
+  }
+
+  private void trust(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    String fingerprint = request.fingerprint.replaceAll(" ", "");
+    if (fingerprint.length() == 66) {
+      byte[] fingerprintBytes;
+      fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
+      boolean res = m.trustIdentityVerified(request.recipientNumber, fingerprintBytes);
+      if (!res) {
+        this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request), request.id);
+      } else {
+        this.reply("trusted_fingerprint", new JsonStatusMessage(0, "Successfully trusted fingerprint", request), request.id);
+      }
+    } else if (fingerprint.length() == 60) {
+      boolean res = m.trustIdentityVerifiedSafetyNumber(request.recipientNumber, fingerprint);
+      if (!res) {
+        this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request), request.id);
+      } else {
+        this.reply("trusted_safety_number", new JsonStatusMessage(0, "Successfully trusted safety number", request), request.id);
+      }
+    } else {
+      System.err.println("Fingerprint has invalid format, either specify the old hex fingerprint or the new safety number");
+      this.reply("trust_failed", new JsonStatusMessage(0, "Fingerprint has invalid format, either specify the old hex fingerprint or the new safety number", request), request.id);
+    }
   }
 
   private void syncContacts(JsonRequest request) throws IOException {

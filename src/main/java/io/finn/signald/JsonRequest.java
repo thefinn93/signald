@@ -36,6 +36,7 @@ class JsonRequest {
     public String avatar;
     public JsonQuote quote;
     public int expiresInSeconds;
+    public String fingerprint;
 
     JsonRequest() {}
 }

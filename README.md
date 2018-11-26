@@ -137,12 +137,23 @@ Checks whether a contact is currently registered with the server. Returns the co
 
 ### `get_identities`
 
-Returns all known identities/keys for a given number.
+Returns all known identities/keys, optionally just for a specific number.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to check the identity |
+| `recipientNumber` | `string` | no | The full number to look up. |
+
+
+### `trust`
+
+Trust's a safety number or fingerprint.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
 | `recipientNumber` | `string` | yes | The full number to look up. |
+| `fingerprint` | `string` | yes | the safety number or fingerprint to trust. |
 
 ### `version`
 
