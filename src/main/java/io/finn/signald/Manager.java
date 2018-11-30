@@ -844,6 +844,11 @@ class Manager {
         save();
     }
 
+    public void updateContact(ContactInfo contact) {
+        contactStore.updateContact(contact);
+        save();
+    }
+
     public String getGroupName(byte[] groupId) {
         GroupInfo group = getGroup(groupId);
         if (group == null) {

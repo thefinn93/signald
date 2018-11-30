@@ -174,6 +174,9 @@ public class SocketHandler implements Runnable {
       case "list_contacts":
         listContacts(request);
         break;
+      case "update_contact":
+        updateContact(request);
+        break;
       case "version":
         version();
         break;
@@ -407,6 +410,22 @@ public class SocketHandler implements Runnable {
   private void listContacts(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
     this.reply("contact_list", m.getContacts(), request.id);
+  }
+
+  public void updateContact(JsonRequest request) throws IOException {
+    Manager m = getManager(request.username);
+    if(request.contact == null) {
+      this.reply("update_contact_error", new JsonStatusMessage(0, "No contact specificed!", request), request.id);
+      return;
+    }
+
+    if(request.contact.number == null) {
+      this.reply("update_contact_error", new JsonStatusMessage(0, "No number specified! Contact must have a number", request), request.id);
+      return;
+    }
+
+    m.updateContact(request.contact);
+    this.reply("contact_updated", null, request.id);
   }
 
   private void subscribe(JsonRequest request) throws IOException {

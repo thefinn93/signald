@@ -194,6 +194,24 @@ Sends a contact sync request to the other devices on this account.
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to sync contacts for. |
 
+
+### `update_contact`
+
+Create or update a contact in our contact store.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to update contacts for. |
+| `contact` | `contact` | yes | The contact to create or update. |
+
+
+**contact** objects can have these keys:
+| Field | Type   | Required? | Description |
+|-------|--------|-----------|-------------|
+| `number` | `string` | yes | The phone number of the contact. If no contact exists with this number, a new one will be created. |
+| `name` | `string | no | The name for this contact. |
+| `color` | string | no | The color for conversations with this contact. |
+
 ### `set_expiration`
 
 Sets or changes the expiration time for messages in a group or PM.
