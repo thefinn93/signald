@@ -67,7 +67,6 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.*;
-import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
@@ -338,10 +337,15 @@ class Manager {
     }
 
     private void save() {
+        save(false);
+    }
+
+
+    private void save(boolean allowBlankPassword) {
         if (username == null) {
             return;
         }
-        if(password == null) {
+        if(password == null && !allowBlankPassword) {
             throw new RuntimeException("Refusing to save account with empty password! See https://git.callpipe.com/finn/signald/issues/30 especially if you know how this happened or can reproduce it");
         }
         ObjectNode rootNode = jsonProcessor.createObjectNode();
@@ -375,7 +379,7 @@ class Manager {
         signalProtocolStore = new JsonSignalProtocolStore(identityKey, registrationId);
         groupStore = new JsonGroupStore();
         registered = false;
-        save();
+        save(true);
     }
 
     public boolean isRegistered() {
@@ -387,10 +391,11 @@ class Manager {
 
         accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
 
-        if (voiceVerification)
+        if (voiceVerification) {
             accountManager.requestVoiceVerificationCode();
-        else
+        } else {
             accountManager.requestSmsVerificationCode();
+        }
 
         registered = false;
         save();
