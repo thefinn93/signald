@@ -17,7 +17,10 @@
 
 package io.finn.signald;
 
+import org.asamk.signal.storage.contacts.ContactInfo;
+
 import java.util.List;
+
 
 class JsonRequest {
     public String type;
@@ -37,6 +40,7 @@ class JsonRequest {
     public JsonQuote quote;
     public int expiresInSeconds;
     public String fingerprint;
+    public ContactInfo contact;
 
     JsonRequest() {}
 }
