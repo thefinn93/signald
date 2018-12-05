@@ -1,5 +1,6 @@
 # signald - An (unofficial) Signal Daemon
 
+
 signald is a daemon that facilitates communication over Signal.
 
 
@@ -18,6 +19,16 @@ signald is a daemon that facilitates communication over Signal.
 ```json
 {"type": "send", "username": "+12024561414", "recipientNumber": "+14235290302", "messageBody": "Hello, Dave"}
 ```
+
+## Contributing
+[Issues and MRs are accepted via GitLab.com](https://gitlab.com/thefinn93/signald). There is an IRC channel, `#signald` on Freenode,
+for those that go for that sort of thing. MRs gladly accepted.
+
+
+## Stability
+This is currently beta software. The public API may have backwards-incompatible, breaking changes before it stabilizes, although we will make an
+effort to not do that. Further, there are no guarantees of safety or security with this software.
+
 
 ## Control Messages
 Each message sent to the control socket must be valid JSON and have a `type` field. The possible message types and their
