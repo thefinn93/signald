@@ -49,6 +49,7 @@ Sends a signal message to another user or a group. Possible values are:
 | `quote` | quote | no | The message to quote |
 
 **Quote objects** can have these keys:
+
 | Field | Type   | Required? | Description |
 |-------|--------|-----------|-------------|
 | `id`  | number | yes\*      | The timestamp of the original message. |
@@ -56,14 +57,16 @@ Sends a signal message to another user or a group. Possible values are:
 | `text` | string | yes\*     | The text of the quoted message. |
 | `attachments` | list of quoted attachments | no | A list of attachments in the quoted message. |
 
+\* If you don't put these values it will send it but the Signal app doesn't seem to render it (Signal Desktop does though?)
+
+
 **Quoted** attachment objects can have these keys:
+
 | Field | Type   | Required? | Description |
 |-------|--------|-----------|-------------|
 | `contentType` | string | yes | The content type of the quoted attachment |
 | `fileName` | string | no | The original filename of the quoted attachment |
 
-
-\*If you don't put these values it will send it but the Signal app doesn't seem to render it (Signal Desktop does though?)
 
 ### `register`
 
