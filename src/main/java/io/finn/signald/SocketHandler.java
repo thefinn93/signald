@@ -199,6 +199,7 @@ public class SocketHandler implements Runnable {
     } else {
       manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber, quote);
     }
+    this.reply("success", new JsonStatusMessage(0, "success"), request.id);
   }
 
   private void listAccounts(JsonRequest request) throws JsonProcessingException, IOException {
