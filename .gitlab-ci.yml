@@ -1,6 +1,7 @@
 image: java:8-jdk
 
 stages:
+  - check for updates
   - build
   - publish
   - cleanup
@@ -66,3 +67,18 @@ deb:cleanup:
     - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
   script:
     - repo-cron minio/updates.signald.org
+
+checkupdates:gradle:
+  stage: check for updates
+  only:
+    - schedules
+  before_script:
+    - apt-get update && apt-get install -y jq
+    - mkdir -p ~/.ssh
+    - echo "$GIT_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+    - echo "$GITLAB_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - git config --global user.email "upgrade-robot@signald.org"
+    - git config --global user.name "Upgrade Robot"
+    - git remote set-url origin git@git.callpipe.com:finn/signald.git
+  script:
+    - ./gradlew checkLibVersions | grep UPGRADE | cut -c 9- | tools/check-gradle-updates.sh
