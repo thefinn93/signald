@@ -29,8 +29,22 @@ for those that go for that sort of thing. MRs gladly accepted.
 This is currently beta software. The public API may have backwards-incompatible, breaking changes before it stabilizes, although we will make an
 effort to not do that. Further, there are no guarantees of safety or security with this software.
 
+## Interacting with signald
 
-## Control Messages
+### Use a library
+signald's protocol can be somewhat annoying to interact with, and several libraries are available to assist with that:
+
+* Python:
+  * [pysignald](https://pypi.org/project/pysignald/) - a third party signald library in python
+  * [Janky Signal Bot Framework](https://github.com/JankySolutions/SignalBotFramework) - a janky framework for writing simple call and response bots
+* Go:
+  * [signald-go](https://git.callpipe.com/finn/signald-go) - a signald library in go
+
+### Write a library
+When started, signald will create a unix socket at `/var/run/signald/signald.sock` (can be overridden on the command line).
+To interact with it, connect to that socket and send new line (`\n`) terminated JSON strings. The specific protocol is described below.
+
+## Socket protocol.
 Each message sent to the control socket must be valid JSON and have a `type` field. The possible message types and their
 arguments are enumerated below. All messages may optionally include an `id` field. When signald follows up on a previous
 command, it will include the same `id` value. Most commands (but not all) require `username` field, which is the number
