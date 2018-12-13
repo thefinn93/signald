@@ -34,6 +34,7 @@ deb:build:
     - dpkg-buildpackage -b
     - cp -rv ../signald_${VERSION}* .
   artifacts:
+    expire_in: 1 year
     paths:
       - "signald_*"
 
@@ -55,6 +56,7 @@ deb:publish:
     - gpg --export --armor "${SIGNING_KEY}" > apt-signing-key.asc
     - for f in apt-signing-key.asc dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/updates.signald.org/$f"; done
   artifacts:
+    expire_in: 1 year
     paths:
       - "signald_*.sig"
   dependencies:
