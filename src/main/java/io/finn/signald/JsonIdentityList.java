@@ -26,9 +26,9 @@ import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
 class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<JsonIdentity>();
 
-  JsonIdentityList(List<JsonIdentityKeyStore.Identity> identities) {
+  JsonIdentityList(List<JsonIdentityKeyStore.Identity> identities, Manager m) {
     for(JsonIdentityKeyStore.Identity identity : identities) {
-      this.identities.add(new JsonIdentity(identity));
+      this.identities.add(new JsonIdentity(identity, m));
     }
   }
 
@@ -36,7 +36,7 @@ class JsonIdentityList {
     if(number == null) {
       for (Map.Entry<String, List<JsonIdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
         for (JsonIdentityKeyStore.Identity identity : keys.getValue()) {
-            this.identities.add(new JsonIdentity(identity));
+            this.identities.add(new JsonIdentity(identity, m, keys.getKey()));
         }
       }
     } else {

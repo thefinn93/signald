@@ -30,15 +30,17 @@ class JsonIdentity {
   public long added;
   public String fingerprint;
   public String safety_number;
+  public String username;
 
-  JsonIdentity(JsonIdentityKeyStore.Identity identity) {
+  JsonIdentity(JsonIdentityKeyStore.Identity identity, Manager m) {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
   }
 
-  JsonIdentity(JsonIdentityKeyStore.Identity identity, Manager m, String number) {
-    this(identity);
-    this.safety_number = m.computeSafetyNumber(number, identity.getIdentityKey());
+  JsonIdentity(JsonIdentityKeyStore.Identity identity, Manager m, String username) {
+    this(identity, m);
+    this.safety_number = m.computeSafetyNumber(username, identity.getIdentityKey());
+    this.username = username;
   }
 }
