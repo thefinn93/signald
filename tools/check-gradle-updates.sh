@@ -16,7 +16,7 @@ while read upgrade; do
     echo "Creating branch $BRANCH"
     git checkout -b "$BRANCH"
   else
-    git merge "$CI_COMMIT_REF_NAME"
+    git merge -X theirs "$CI_COMMIT_REF_NAME"
   fi
 
   echo "Editing build.gradle to upgrade to $GROUP:$NAME:$LATEST"
