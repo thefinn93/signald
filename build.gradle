@@ -74,7 +74,7 @@ task checkLibVersions {
                             // versions.removeAll { it.toLowerCase().contains('rc') }
                             // def newest = versions.max()
                             def newest = metadata.versioning.latest;
-                            if (version != newest) {
+                            if ("$version" != "$newest") {
                                 println "UPGRADE {\"group\": \"$group\", \"name\": \"$name\", \"current\": \"$version\", \"latest\": \"$newest\"}"
                             }
                         } catch (FileNotFoundException e) {
