@@ -29,7 +29,7 @@ while read upgrade; do
   if git diff --quiet; then
     git commit -m "autocommit: Upgrade $GROUP:$NAME to $LATEST" build.gradle || echo "Nothing to commit, continuing"
 
-    if [[ ! git diff --quiet "$CI_COMMIT_REF_NAME" ]]; then
+    if ! git diff --quiet "$CI_COMMIT_REF_NAME" ; then
       git push -u origin "$BRANCH"
       existing=$(curl -sH "Private-Token: $GITLAB_TOKEN" "https://git.callpipe.com/api/v4/projects/92/merge_requests?source_branch=${BRANCH}&target_branch=${CI_COMMIT_REF_NAME}&state=opened" | jq length)
       if [[ "$existing" == "0" ]]; then
