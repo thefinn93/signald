@@ -2,7 +2,7 @@
 set -euo pipefail
 
 while read upgrade; do
-  echo "$(tput setaf 4)$(tput bold)Processing upgrade: $upgrade $(tput sgr0)"
+  echo "Processing upgrade: $upgrade"
   git checkout "$CI_COMMIT_REF_NAME"
   git pull origin "$CI_COMMIT_REF_NAME"
 
@@ -29,22 +29,25 @@ while read upgrade; do
   if git diff --quiet; then
     git commit -m "autocommit: Upgrade $GROUP:$NAME to $LATEST" build.gradle || echo "Nothing to commit, continuing"
 
-    git push -u origin "$BRANCH"
-
-    existing=$(curl -sH "Private-Token: $GITLAB_TOKEN" "https://git.callpipe.com/api/v4/projects/92/merge_requests?source_branch=${BRANCH}&target_branch=${CI_COMMIT_REF_NAME}&state=opened" | jq length)
-    if [[ "$existing" == "0" ]]; then
-      echo "Creating a merge request for ${BRANCH} -> ${CI_COMMIT_REF_NAME}"
-      curl -sH "Private-Token: $GITLAB_TOKEN" \
-        -o /dev/null \
-        -d "source_branch=${BRANCH}" \
-        -d "target_branch=${CI_COMMIT_REF_NAME}" \
-        -d "title=Upgrade dependency ${GROUP}:${NAME}" \
-        -d "description=Looks like there's a new version of ${NAME}. Consider upgrading." \
-        -d "assignee_id=${GITLAB_USER_ID}" \
-        -d "labels=Automatically+Generated" \
-        "https://git.callpipe.com/api/v4/projects/92/merge_requests"
+    if [[ ! git diff --quiet "$CI_COMMIT_REF_NAME" ]]; then
+      git push -u origin "$BRANCH"
+      existing=$(curl -sH "Private-Token: $GITLAB_TOKEN" "https://git.callpipe.com/api/v4/projects/92/merge_requests?source_branch=${BRANCH}&target_branch=${CI_COMMIT_REF_NAME}&state=opened" | jq length)
+      if [[ "$existing" == "0" ]]; then
+        echo "Creating a merge request for ${BRANCH} -> ${CI_COMMIT_REF_NAME}"
+        curl -sH "Private-Token: $GITLAB_TOKEN" \
+          -o /dev/null \
+          -d "source_branch=${BRANCH}" \
+          -d "target_branch=${CI_COMMIT_REF_NAME}" \
+          -d "title=Upgrade dependency ${GROUP}:${NAME}" \
+          -d "description=Looks like there's a new version of ${NAME}. Consider upgrading." \
+          -d "assignee_id=${GITLAB_USER_ID}" \
+          -d "labels=Automatically+Generated" \
+          "https://git.callpipe.com/api/v4/projects/92/merge_requests"
+      else
+        echo "A merge requests from ${BRANCH} to ${CI_COMMIT_REF_NAME} already exists."
+      fi
     else
-      echo "A merge requests from ${BRANCH} to ${CI_COMMIT_REF_NAME} already exists."
+      echo "$BRANCH is up to date with $CI_COMMIT_REF_NAME, not opening an MR"
     fi
   else
     echo "No changes made."
