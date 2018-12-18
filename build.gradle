@@ -61,20 +61,20 @@ task checkLibVersions {
             configurations.each { configuration ->
                 configuration.allDependencies.each { dependency ->
                     def version = dependency.version
-                    if (!version.contains('SNAPSHOT') && !checked[dependency]) {
+                    if (!checked[dependency]) {
                         def group = dependency.group
                         def path = group.replace('.', '/')
                         def name = dependency.name
                         def url = "http://repo1.maven.org/maven2/$path/$name/maven-metadata.xml"
                         try {
                             def metadata = new XmlSlurper().parseText(url.toURL().text)
-                            def versions = metadata.versioning.versions.version.collect { it.text() }
-                            versions.removeAll { it.toLowerCase().contains('alpha') }
-                            versions.removeAll { it.toLowerCase().contains('beta') }
-                            versions.removeAll { it.toLowerCase().contains('rc') }
-                            def newest = versions.max()
+                            // def versions = metadata.versioning.versions.version.collect { it.text() }
+                            // versions.removeAll { it.toLowerCase().contains('alpha') }
+                            // versions.removeAll { it.toLowerCase().contains('beta') }
+                            // versions.removeAll { it.toLowerCase().contains('rc') }
+                            // def newest = versions.max()
+                            def newest = metadata.versioning.latest;
                             if (version != newest) {
-                                /* def upgradejson = new groovy.json.JsonBuilder({"test": "omg"}) */
                                 println "UPGRADE {\"group\": \"$group\", \"name\": \"$name\", \"current\": \"$version\", \"latest\": \"$newest\"}"
                             }
                         } catch (FileNotFoundException e) {
