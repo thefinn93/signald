@@ -23,7 +23,7 @@ dependencies {
     compile 'org.apache.logging.log4j:log4j-api:2.10.0'
     compile 'org.apache.logging.log4j:log4j-core:2.10.0'
     compile 'io.sentry:sentry-log4j2:1.7.9'
-    compile 'org.slf4j:slf4j-nop:1.7.25'
+    compile 'org.slf4j:slf4j-nop:1.8.0-beta2'
 }
 
 
