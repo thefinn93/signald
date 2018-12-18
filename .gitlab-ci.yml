@@ -1,4 +1,4 @@
-image: java:8-jdk
+image: openjdk:8-jdk
 
 stages:
   - check for updates
