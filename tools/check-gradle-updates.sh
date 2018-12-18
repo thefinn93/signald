@@ -2,6 +2,7 @@
 set -euo pipefail
 
 while read upgrade; do
+  echo "$(tput setaf 4)$(tput bold)Processing upgrade: $upgrade $(tput sgr0)"
   git checkout "$CI_COMMIT_REF_NAME"
   git pull origin "$CI_COMMIT_REF_NAME"
 
