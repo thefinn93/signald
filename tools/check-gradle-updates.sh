@@ -19,6 +19,7 @@ while read upgrade; do
     echo "Creating branch $BRANCH"
     git checkout -b "$BRANCH"
   else
+    git pull origin "$BRANCH"
     git merge -X theirs "$CI_COMMIT_REF_NAME"
   fi
 
