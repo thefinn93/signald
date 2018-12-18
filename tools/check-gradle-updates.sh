@@ -3,6 +3,7 @@ set -euo pipefail
 
 while read upgrade; do
   git checkout "$CI_COMMIT_REF_NAME"
+  git pull origin "$CI_COMMIT_REF_NAME"
 
   GROUP=$(echo "$upgrade" | jq -r .group)
   NAME=$(echo "$upgrade" | jq -r .name)
@@ -11,8 +12,6 @@ while read upgrade; do
 
   BRANCH="automated-upgrade/${GROUP}-${NAME}"
 
-  # Pull any changes to our branch that may have occured after the commit that made this job
-  git pull
 
   # Check out the branch
   if ! git checkout "$BRANCH" 2> /dev/null; then
