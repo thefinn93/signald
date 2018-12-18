@@ -65,6 +65,8 @@ deb:publish:
 deb:cleanup:
   stage: cleanup
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  only:
+    - schedules
   before_script:
     - mc config host add minio "${MINIO_URL}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
   script:
