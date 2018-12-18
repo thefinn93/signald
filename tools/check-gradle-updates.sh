@@ -19,17 +19,18 @@ while read upgrade; do
     git merge -X theirs "$CI_COMMIT_REF_NAME"
   fi
 
-  echo "Editing build.gradle to upgrade to $GROUP:$NAME:$LATEST"
+  echo "Editing build.gradle to upgrade $GROUP:$NAME from $CURRENT to $LATEST"
   sed -i "s#compile '$GROUP:$NAME:.*'#compile '$GROUP:$NAME:$LATEST'#g" build.gradle
 
-  git commit -m "autocommit: Upgrade $GROUP:$NAME to $LATEST" build.gradle || echo "Nothing to commit, continuing"
+  if git diff --quiet; then
+    git commit -m "autocommit: Upgrade $GROUP:$NAME to $LATEST" build.gradle || echo "Nothing to commit, continuing"
 
-  git push -u origin "$BRANCH"
+    git push -u origin "$BRANCH"
 
-  existing=$(curl -sH "Private-Token: $GITLAB_TOKEN" "https://git.callpipe.com/api/v4/projects/92/merge_requests?source_branch=${BRANCH}&target_branch=${CI_COMMIT_REF_NAME}&state=opened" | jq length)
-  if [[ "$existing" == "0" ]]; then
-    echo "Creating a merge request for ${BRANCH} -> ${CI_COMMIT_REF_NAME}"
-    curl -sH "Private-Token: $GITLAB_TOKEN" \
+    existing=$(curl -sH "Private-Token: $GITLAB_TOKEN" "https://git.callpipe.com/api/v4/projects/92/merge_requests?source_branch=${BRANCH}&target_branch=${CI_COMMIT_REF_NAME}&state=opened" | jq length)
+    if [[ "$existing" == "0" ]]; then
+      echo "Creating a merge request for ${BRANCH} -> ${CI_COMMIT_REF_NAME}"
+      curl -sH "Private-Token: $GITLAB_TOKEN" \
         -o /dev/null \
         -d "source_branch=${BRANCH}" \
         -d "target_branch=${CI_COMMIT_REF_NAME}" \
@@ -38,7 +39,10 @@ while read upgrade; do
         -d "assignee_id=${GITLAB_USER_ID}" \
         -d "labels=Automatically+Generated" \
         "https://git.callpipe.com/api/v4/projects/92/merge_requests"
+    else
+      echo "A merge requests from ${BRANCH} to ${CI_COMMIT_REF_NAME} already exists."
+    fi
   else
-    echo "A merge requests from ${BRANCH} to ${CI_COMMIT_REF_NAME} already exists."
+    echo "No changes made."
   fi
 done
