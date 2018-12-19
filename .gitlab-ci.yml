@@ -89,3 +89,4 @@ checkupdates:gradle:
     - git remote set-url origin git@git.callpipe.com:finn/signald.git
   script:
     - ./gradlew checkLibVersions | grep UPGRADE | cut -c 9- | tools/check-gradle-updates.sh
+  allow_failure: true
