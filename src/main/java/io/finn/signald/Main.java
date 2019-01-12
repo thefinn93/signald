@@ -21,7 +21,11 @@ import io.finn.signald.BuildConfig;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,6 +48,9 @@ public class Main {
       Sentry.getContext().addExtra("release", BuildConfig.VERSION);
       Sentry.getContext().addExtra("signal_url", BuildConfig.SIGNAL_URL);
       Sentry.getContext().addExtra("signal_cdn_url", BuildConfig.SIGNAL_CDN_URL);
+
+      String bind_addr = System.getenv("SIGNALD_BIND_ADDR");
+
       String socket_path = "/var/run/signald/signald.sock";
       if(args.length > 0) {
         socket_path = args[0];
@@ -56,9 +63,23 @@ public class Main {
       ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
       ConcurrentHashMap<String,MessageReceiver> receivers = new ConcurrentHashMap<String,MessageReceiver>();
 
-      // Spins up one thread per inbound connection to the control socket
-      AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
-      server.bind(new AFUNIXSocketAddress(new File(socket_path)));
+      ServerSocket server;
+      if (bind_addr != null) {
+        URI uri = new URI("tcp://" + bind_addr); // may throw URISyntaxException
+        String host = uri.getHost();
+        int port = uri.getPort();
+        if (uri.getHost() == null || uri.getPort() == -1) {
+          throw new URISyntaxException(uri.toString(), "SIGNALD_BIND_ADDR must be HOST:PORT");
+        }
+
+        logger.info("Listening on " + bind_addr);
+        server = new ServerSocket(port, 0, InetAddress.getByName(host));
+      } else {
+        logger.info("Listening on " + socket_path);
+        // Spins up one thread per inbound connection to the control socket
+        server = AFUNIXServerSocket.newInstance();
+        server.bind(new AFUNIXSocketAddress(new File(socket_path)));
+      }
 
       // Spins up one thread per registered signal number, listens for incoming messages
       String settingsPath = System.getProperty("user.home") + "/.config/signal";
@@ -66,8 +87,8 @@ public class Main {
       File[] users = new File(settingsPath + "/data").listFiles();
 
       if(users == null) {
-         logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
-       }
+        logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
+      }
 
       while (!Thread.interrupted()) {
         try {
