@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "$CI_COMMIT_REF_NAME" == "feature/autoupdates" ]]; then
+  set -x
+fi
 
 while read upgrade; do
   echo "Processing upgrade: $upgrade"
@@ -20,8 +23,13 @@ while read upgrade; do
     echo "Creating branch $BRANCH"
     git checkout -b "$BRANCH"
   else
-    git pull origin "$BRANCH"
-    git merge -X theirs "$CI_COMMIT_REF_NAME"
+    if git pull origin "$BRANCH"; then
+      git merge -X theirs "$CI_COMMIT_REF_NAME"
+    else
+      git checkout "$CI_COMMIT_REF_NAME"
+      git branch -D "$BRANCH"
+      git checkout -b "$BRANCH"
+    fi
   fi
 
   echo "Editing build.gradle to upgrade $GROUP:$NAME from $CURRENT to $LATEST"
@@ -32,7 +40,7 @@ while read upgrade; do
     git commit -m "autocommit: Upgrade $GROUP:$NAME to $LATEST" build.gradle || echo "Nothing to commit, continuing"
 
     if ! git diff --quiet "$CI_COMMIT_REF_NAME" ; then
-      git push -u origin "$BRANCH"
+      git push origin "$BRANCH"
       existing=$(curl -sH "Private-Token: $GITLAB_TOKEN" "https://git.callpipe.com/api/v4/projects/92/merge_requests?source_branch=${BRANCH}&target_branch=${CI_COMMIT_REF_NAME}&state=opened" | jq length)
       if [[ "$existing" == "0" ]]; then
         echo "Creating a merge request for ${BRANCH} -> ${CI_COMMIT_REF_NAME}"
