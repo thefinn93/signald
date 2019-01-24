@@ -79,14 +79,11 @@ checkupdates:gradle:
     - master
   before_script:
     - apt-get update && apt-get install -y jq
-    - mkdir -p ~/.ssh
-    - echo "$GIT_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-    - chmod 600 ~/.ssh/id_ed25519
-    - ssh-keygen -yf ~/.ssh/id_ed25519
-    - echo "$GITLAB_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - git config --global user.email "upgrade-robot@signald.org"
     - git config --global user.name "Upgrade Robot"
-    - git remote set-url origin git@git.callpipe.com:finn/signald.git
+    - git remote set-url origin https://${GITLAB_USER}:${GITLAB_TOKEN}@git.callpipe.com/finn/signald.git
   script:
     - ./gradlew checkLibVersions | grep UPGRADE | cut -c 9- | tools/check-gradle-updates.sh
   allow_failure: true
+  cache:
+   policy: push
