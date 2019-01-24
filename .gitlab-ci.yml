@@ -76,6 +76,7 @@ checkupdates:gradle:
   stage: check for updates
   only:
     - schedules
+    - feature/autoupdates
     - master
   before_script:
     - apt-get update && apt-get install -y jq
