@@ -3,6 +3,7 @@ set -euo pipefail
 
 while read upgrade; do
   echo "Processing upgrade: $upgrade"
+  git reset --hard
   git checkout "$CI_COMMIT_REF_NAME"
   git pull origin "$CI_COMMIT_REF_NAME"
 
@@ -26,7 +27,8 @@ while read upgrade; do
   echo "Editing build.gradle to upgrade $GROUP:$NAME from $CURRENT to $LATEST"
   sed -i "s#compile '$GROUP:$NAME:.*'#compile '$GROUP:$NAME:$LATEST'#g" build.gradle
 
-  if git diff --quiet; then
+
+  if ! git diff --quiet; then
     git commit -m "autocommit: Upgrade $GROUP:$NAME to $LATEST" build.gradle || echo "Nothing to commit, continuing"
 
     if ! git diff --quiet "$CI_COMMIT_REF_NAME" ; then
