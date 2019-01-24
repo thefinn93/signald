@@ -85,3 +85,5 @@ checkupdates:gradle:
   script:
     - ./gradlew checkLibVersions | grep UPGRADE | cut -c 9- | tools/check-gradle-updates.sh
   allow_failure: true
+  cache:
+   policy: push
