@@ -258,7 +258,7 @@ As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclu
 Add the following to your `sources.list`:
 
 ```
-deb https://updates.signald.org stable main
+deb https://updates.signald.org master main
 ```
 
 And trust the signing key:
