@@ -2,7 +2,6 @@ package org.asamk.signal.storage.protocol;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.IdentityKey;
@@ -21,7 +20,6 @@ public class JsonIdentityKeyStore implements IdentityKeyStore {
 
     private final IdentityKeyPair identityKeyPair;
     private final int localRegistrationId;
-
 
     public JsonIdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId) {
         this.identityKeyPair = identityKeyPair;
@@ -92,6 +90,25 @@ public class JsonIdentityKeyStore implements IdentityKeyStore {
         return false;
     }
 
+    @Override
+    public IdentityKey getIdentity(SignalProtocolAddress address) {
+        List<Identity> identities = trustedKeys.get(address.getName());
+        if (identities == null || identities.size() == 0) {
+            return null;
+        }
+
+        long maxDate = 0;
+        Identity maxIdentity = null;
+        for (Identity id : identities) {
+            final long time = id.getDateAdded().getTime();
+            if (maxIdentity == null || maxDate <= time) {
+                maxDate = time;
+                maxIdentity = id;
+            }
+        }
+        return maxIdentity.getIdentityKey();
+    }
+
     public Map<String, List<Identity>> getIdentities() {
         // TODO deep copy
         return trustedKeys;
@@ -105,13 +122,12 @@ public class JsonIdentityKeyStore implements IdentityKeyStore {
     public static class JsonIdentityKeyStoreDeserializer extends JsonDeserializer<JsonIdentityKeyStore> {
 
         @Override
-        public JsonIdentityKeyStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+        public JsonIdentityKeyStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
             JsonNode node = jsonParser.getCodec().readTree(jsonParser);
 
             try {
                 int localRegistrationId = node.get("registrationId").asInt();
                 IdentityKeyPair identityKeyPair = new IdentityKeyPair(Base64.decode(node.get("identityKey").asText()));
-
 
                 JsonIdentityKeyStore keyStore = new JsonIdentityKeyStore(identityKeyPair, localRegistrationId);
 
@@ -140,7 +156,7 @@ public class JsonIdentityKeyStore implements IdentityKeyStore {
     public static class JsonIdentityKeyStoreSerializer extends JsonSerializer<JsonIdentityKeyStore> {
 
         @Override
-        public void serialize(JsonIdentityKeyStore jsonIdentityKeyStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+        public void serialize(JsonIdentityKeyStore jsonIdentityKeyStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
             json.writeStartObject();
             json.writeNumberField("registrationId", jsonIdentityKeyStore.getLocalRegistrationId());
             json.writeStringField("identityKey", Base64.encodeBytes(jsonIdentityKeyStore.getIdentityKeyPair().serialize()));
@@ -161,6 +177,7 @@ public class JsonIdentityKeyStore implements IdentityKeyStore {
     }
 
     public class Identity {
+
         IdentityKey identityKey;
         TrustLevel trustLevel;
         Date added;
@@ -171,13 +188,13 @@ public class JsonIdentityKeyStore implements IdentityKeyStore {
             this.added = new Date();
         }
 
-        public Identity(IdentityKey identityKey, TrustLevel trustLevel, Date added) {
+        Identity(IdentityKey identityKey, TrustLevel trustLevel, Date added) {
             this.identityKey = identityKey;
             this.trustLevel = trustLevel;
             this.added = added;
         }
 
-        public boolean isTrusted() {
+        boolean isTrusted() {
             return trustLevel == TrustLevel.TRUSTED_UNVERIFIED ||
                     trustLevel == TrustLevel.TRUSTED_VERIFIED;
         }

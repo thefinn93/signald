@@ -21,21 +21,56 @@ import java.io.File;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
+import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.libsignal.util.guava.Optional;
+
 
 class JsonAttachment {
     String contentType;
     long id;
     int size;
     String storedFilename;
+    String filename;
+    String caption;
+    int width;
+    int height;
+    boolean voiceNote;
+    String preview;
+    String key;
+    String digest;
+
+    JsonAttachment(String storedFilename) {
+        this.filename = storedFilename;
+    }
 
     JsonAttachment(SignalServiceAttachment attachment, Manager m) {
         this.contentType = attachment.getContentType();
         final SignalServiceAttachmentPointer pointer = attachment.asPointer();
         if (attachment.isPointer()) {
             this.id = pointer.getId();
+            this.key = Base64.encodeBytes(pointer.getKey());
+
             if (pointer.getSize().isPresent()) {
                 this.size = pointer.getSize().get();
             }
+
+            if(pointer.getPreview().isPresent()) {
+                this.preview = Base64.encodeBytes(pointer.getPreview().get());
+            }
+
+            if(pointer.getDigest().isPresent()) {
+                this.digest = Base64.encodeBytes(pointer.getDigest().get());
+            }
+
+            this.voiceNote = pointer.getVoiceNote();
+
+            this.width = pointer.getWidth();
+            this.height = pointer.getHeight();
+
+            if(pointer.getCaption().isPresent()) {
+                this.caption = pointer.getCaption().get();
+            }
+
             if( m != null) {
                 File file = m.getAttachmentFile(pointer.getId());
                 if( file.exists()) {
@@ -44,5 +79,12 @@ class JsonAttachment {
             }
 
         }
+    }
+
+    public Optional<byte[]> getPreview() {
+      if(preview != null) {
+          return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
+      }
+      return Optional.<byte[]>absent();
     }
 }

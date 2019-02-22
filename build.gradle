@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.turasa:signal-service-java:2.8.0_unofficial_1'
+    compile 'com.github.turasa:signal-service-java:2.12.7_unofficial_1'
     compile 'org.bouncycastle:bcprov-jdk15on:1.61'
     compile 'com.kohlschutter.junixsocket:junixsocket-common:2.2.0'
     compile 'com.kohlschutter.junixsocket:junixsocket-native-common:2.2.0'
@@ -38,6 +38,7 @@ buildConfig {
 
   buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://textsecure-service.whispersystems.org" }
   buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org" }
+  buildConfigField 'String', 'SIGNAL_CONTACT_DISCOVERY_URL', { System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com" }
   buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "signald-" + version }
 }
 

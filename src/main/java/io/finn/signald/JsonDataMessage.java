@@ -30,6 +30,7 @@ class JsonDataMessage {
     List<JsonAttachment> attachments;
     JsonGroupInfo groupInfo;
     SignalServiceDataMessage.Quote quote;
+    List<JsonPreview> previews;
 
     JsonDataMessage(SignalServiceDataMessage dataMessage, Manager m) {
         this.timestamp = dataMessage.getTimestamp();
@@ -52,5 +53,14 @@ class JsonDataMessage {
         if(dataMessage.getQuote().isPresent()) {
           this.quote = dataMessage.getQuote().get();
         }
+
+        if(dataMessage.getPreviews().isPresent()) {
+          previews = new ArrayList<JsonPreview>();
+          for(SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
+            previews.add(new JsonPreview(p, m));
+          }
+        }
+
+
     }
 }

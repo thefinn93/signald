@@ -59,7 +59,7 @@ Sends a signal message to another user or a group. Possible values are:
 | `recipientNumber` | string | no | The number you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
-| `attachmentFilenames` | list of strings | no | A list of files to attach, by path on the local disk. |
+| `attachments` | list of `attachment` | no | A list of attachments (see below) |
 | `quote` | quote | no | The message to quote |
 
 **Quote objects** can have these keys:
@@ -80,6 +80,17 @@ Sends a signal message to another user or a group. Possible values are:
 |-------|--------|-----------|-------------|
 | `contentType` | string | yes | The content type of the quoted attachment |
 | `fileName` | string | no | The original filename of the quoted attachment |
+
+**attachment** objects can have these keys:
+
+| Field       | Type     | Required? | Description |
+|-------------|----------|-----------|-------------|
+| `filename`  | `string` | yes       | The filename of the attachment |
+| `caption`   | `string` | no        | An optional caption |
+| `width`     | `int`    | no        | The width of the image |
+| `height`    | `int`    | no        | The height of the image |
+| `voiceNote` | `bool`   | no        | True if this attachment is a voice note |
+| `preview`   | `string` | no        | The preview data to send, base64 encoded |
 
 
 ### `register`
@@ -234,11 +245,12 @@ Create or update a contact in our contact store.
 
 
 **contact** objects can have these keys:
+
 | Field | Type   | Required? | Description |
 |-------|--------|-----------|-------------|
 | `number` | `string` | yes | The phone number of the contact. If no contact exists with this number, a new one will be created. |
-| `name` | `string | no | The name for this contact. |
-| `color` | string | no | The color for conversations with this contact. |
+| `name` | `string` | no | The name for this contact. |
+| `color` | `string` | no | The color for conversations with this contact. |
 
 ### `set_expiration`
 
