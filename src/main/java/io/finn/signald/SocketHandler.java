@@ -17,13 +17,15 @@
 
 package io.finn.signald;
 
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.internal.util.Base64;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
@@ -38,6 +40,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URISyntaxException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.List;
@@ -45,6 +48,8 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Locale;
 import java.io.File;
+import java.io.InputStream;
+import java.io.FileInputStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -187,17 +192,50 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request) throws IOException, EncapsulatedExceptions, GroupNotFoundException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+  private void send(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, GroupNotFoundException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
     Manager manager = getManager(request.username);
+
     SignalServiceDataMessage.Quote quote = null;
+
     if(request.quote != null) {
       quote = request.quote.getQuote();
     }
+
+    if(request.attachmentFilenames != null) {
+      logger.warn("Using deprecated attachmentFilenames argument for send! Use attachments instead");
+      if(request.attachments == null) {
+        request.attachments = new ArrayList<JsonAttachment>();
+      }
+      for(String attachmentFilename: request.attachmentFilenames) {
+        request.attachments.add(new JsonAttachment(attachmentFilename));
+      }
+    }
+
+    List<SignalServiceAttachment> attachments = null;
+    if (request.attachments != null) {
+        attachments = new ArrayList<>(request.attachments.size());
+        for (JsonAttachment attachment : request.attachments) {
+            try {
+                File attachmentFile = new File(attachment.filename);
+                InputStream attachmentStream = new FileInputStream(attachmentFile);
+                final long attachmentSize = attachmentFile.length();
+                String mime = Files.probeContentType(attachmentFile.toPath());
+                if (mime == null) {
+                    mime = "application/octet-stream";
+                }
+
+                attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, Optional.fromNullable(attachment.caption), null));
+            } catch (IOException e) {
+                throw new AttachmentInvalidException(attachment.filename, e);
+            }
+        }
+    }
+
     if(request.recipientGroupId != null) {
       byte[] groupId = Base64.decode(request.recipientGroupId);
-      manager.sendGroupMessage(request.messageBody, request.attachmentFilenames, groupId, quote);
+      manager.sendGroupMessage(request.messageBody, attachments, groupId, quote);
     } else {
-      manager.sendMessage(request.messageBody, request.attachmentFilenames, request.recipientNumber, quote);
+      manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
     }
     this.reply("success", new JsonStatusMessage(0, "success"), request.id);
   }
@@ -271,7 +309,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
     Manager m = getManager(request.username);
 
     byte[] groupId = null;
@@ -306,7 +344,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, EncapsulatedExceptions, IOException {
+  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, UntrustedIdentityException, EncapsulatedExceptions, IOException {
     Manager m = getManager(request.username);
 
     if(request.recipientGroupId != null) {
@@ -324,7 +362,7 @@ public class SocketHandler implements Runnable {
     this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
-  private void leaveGroup(JsonRequest request) throws IOException, JsonProcessingException, GroupNotFoundException, EncapsulatedExceptions, NotAGroupMemberException {
+  private void leaveGroup(JsonRequest request) throws IOException, JsonProcessingException, GroupNotFoundException, UntrustedIdentityException, NotAGroupMemberException, EncapsulatedExceptions {
     Manager m = getManager(request.username);
     byte[] groupId = Base64.decode(request.recipientGroupId);
     m.sendQuitGroupMessage(groupId);

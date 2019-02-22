@@ -17,31 +17,18 @@
 
 package io.finn.signald;
 
-import org.asamk.signal.storage.contacts.ContactInfo;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
-import java.util.List;
+class JsonPreview {
+    String url;
+    String title;
+    JsonAttachment attachment;
 
-
-class JsonRequest {
-    public String type;
-    public String id;
-    public String username;
-    public String messageBody;
-    public String recipientNumber;
-    public String recipientGroupId;
-    public Boolean voice;
-    public String code;
-    public String deviceName;
-    public List<String> attachmentFilenames;
-    public List<JsonAttachment> attachments;
-    public String uri;
-    public String groupName;
-    public List<String> members;
-    public String avatar;
-    public JsonQuote quote;
-    public int expiresInSeconds;
-    public String fingerprint;
-    public ContactInfo contact;
-
-    JsonRequest() {}
+    JsonPreview(SignalServiceDataMessage.Preview preview, Manager m) {
+        url = preview.getUrl();
+        title = preview.getTitle();
+        if(preview.getImage().isPresent()) {
+          attachment = new JsonAttachment(preview.getImage().get(), m);
+        }
+    }
 }

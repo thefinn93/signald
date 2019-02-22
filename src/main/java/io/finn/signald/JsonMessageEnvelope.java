@@ -20,6 +20,8 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.internal.util.Base64;
+
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -29,35 +31,69 @@ import java.util.TimeZone;
 import io.finn.signald.Manager;
 
 class JsonMessageEnvelope {
-    String source;
     String username;
+    String uuid;
+    boolean hasUuid;
+    boolean hasSource;
+    String source;
+    boolean hasSourceDevice;
     int sourceDevice;
+    int type;
+    boolean hasRelay;
     String relay;
     long timestamp;
     String timestampISO;
+    long serverTimestamp;
+    boolean hasLegacyMessage;
+    boolean hasContent;
+    // String content;
+    boolean isSignalMessage;
+    boolean isPrekeySignalMessage;
     boolean isReceipt;
+    boolean isUnidentifiedSender;
     JsonDataMessage dataMessage;
     JsonSyncMessage syncMessage;
     JsonCallMessage callMessage;
 
-    public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent content, Manager m) {
-        SignalServiceAddress source = envelope.getSourceAddress();
-        this.source = source.getNumber();
-        this.sourceDevice = envelope.getSourceDevice();
-        this.relay = source.getRelay().isPresent() ? source.getRelay().get() : null;
-        this.timestamp = envelope.getTimestamp();
-        this.timestampISO = formatTimestampISO(envelope.getTimestamp());
-        this.isReceipt = envelope.isReceipt();
-        this.username = m.getUsername();
-        if (content != null) {
-            if (content.getDataMessage().isPresent()) {
-                this.dataMessage = new JsonDataMessage(content.getDataMessage().get(), m);
+
+    public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, Manager m) {
+        SignalServiceAddress sourceAddress = envelope.getSourceAddress();
+        username = m.getUsername();
+        hasUuid = envelope.hasUuid();
+        if(hasUuid) {
+          uuid = envelope.getUuid();
+        }
+        hasSource = envelope.hasSource();
+        if(hasSource) {
+          source = sourceAddress.getNumber();
+        }
+        hasSourceDevice = envelope.hasSourceDevice();
+        if(hasSourceDevice) {
+          sourceDevice = envelope.getSourceDevice();
+        }
+        type = envelope.getType();
+        hasRelay = sourceAddress.getRelay().isPresent();
+        if(hasRelay) {
+            relay = sourceAddress.getRelay().get();
+        }
+        timestamp = envelope.getTimestamp();
+        timestampISO = formatTimestampISO(envelope.getTimestamp());
+        serverTimestamp = envelope.getServerTimestamp();
+        hasLegacyMessage = envelope.hasLegacyMessage();
+        hasContent = envelope.hasContent();
+        // if(hasContent) {
+        //   content = Base64.encodeBytes(envelope.getContent());
+        // }
+        isReceipt = envelope.isReceipt();
+        if (c != null) {
+            if (c.getDataMessage().isPresent()) {
+                this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), m);
             }
-            if (content.getSyncMessage().isPresent()) {
-                this.syncMessage = new JsonSyncMessage(content.getSyncMessage().get());
+            if (c.getSyncMessage().isPresent()) {
+                this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get());
             }
-            if (content.getCallMessage().isPresent()) {
-                this.callMessage = new JsonCallMessage(content.getCallMessage().get());
+            if (c.getCallMessage().isPresent()) {
+                this.callMessage = new JsonCallMessage(c.getCallMessage().get());
             }
         }
     }
