@@ -316,17 +316,34 @@ class Manager {
         if (contactStoreNode != null) {
             contactStore = jsonProcessor.convertValue(contactStoreNode, JsonContactsStore.class);
         }
+
         if (contactStore == null) {
             logger.info("No contactStore been loaded");
             contactStore = new JsonContactsStore();
         }
+
         JsonNode threadStoreNode = rootNode.get("threadStore");
         if (threadStoreNode != null) {
             threadStore = jsonProcessor.convertValue(threadStoreNode, JsonThreadStore.class);
         }
+
         if (threadStore == null) {
             threadStore = new JsonThreadStore();
         }
+    }
+
+    private void initFullAccount() {
+      if (groupStore == null) {
+          groupStore = new JsonGroupStore();
+      }
+
+      if (contactStore == null) {
+          contactStore = new JsonContactsStore();
+      }
+
+      if (threadStore == null) {
+          threadStore = new JsonThreadStore();
+      }
     }
 
     private void migrateLegacyConfigs() {
@@ -391,8 +408,8 @@ class Manager {
         IdentityKeyPair identityKey = KeyHelper.generateIdentityKeyPair();
         int registrationId = KeyHelper.generateRegistrationId(false);
         signalProtocolStore = new JsonSignalProtocolStore(identityKey, registrationId);
-        groupStore = new JsonGroupStore();
         registered = false;
+        initFullAccount();
         save(true);
     }
 
@@ -412,6 +429,7 @@ class Manager {
         }
 
         registered = false;
+        initFullAccount();
         save();
     }
 
@@ -453,12 +471,12 @@ class Manager {
         signalProtocolStore = new JsonSignalProtocolStore(ret.getIdentity(), signalProtocolStore.getLocalRegistrationId());
 
         registered = true;
-        threadStore = new JsonThreadStore();
         refreshPreKeys();
 
         requestSyncGroups();
         requestSyncContacts();
 
+        initFullAccount();
         save();
         logger.info("Successfully finished linked to " + username + " as device #" + deviceId);
     }
@@ -556,8 +574,8 @@ class Manager {
         //accountManager.setGcmId(Optional.of(GoogleCloudMessaging.getInstance(this).register(REGISTRATION_ID)));
         registered = true;
 
-        threadStore = new JsonThreadStore();
         refreshPreKeys();
+        initFullAccount();
         save();
     }
 
