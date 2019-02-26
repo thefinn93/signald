@@ -38,7 +38,7 @@ public class Main {
   private static final Logger logger = LogManager.getLogger("signald");
 
   public static void main(String[] args) {
-    logger.info("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
+    logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
     try {
       Sentry.init();
       Sentry.getContext().addExtra("release", BuildConfig.VERSION);
@@ -68,6 +68,8 @@ public class Main {
       if(users == null) {
          logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
        }
+
+      logger.info("Started " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
       while (!Thread.interrupted()) {
         try {
