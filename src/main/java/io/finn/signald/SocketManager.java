@@ -25,11 +25,11 @@ import java.util.Iterator;
 import java.util.ArrayList;
 import java.net.Socket;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.core.JsonGenerator;
 
@@ -40,7 +40,7 @@ class SocketManager {
 
   public SocketManager() {
     this.mpr.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY); // disable autodetect
-    this.mpr.enable(SerializationFeature.WRITE_NULL_MAP_VALUES);
+    this.mpr.setSerializationInclusion(Include.NON_NULL);
     this.mpr.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     this.mpr.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
   }

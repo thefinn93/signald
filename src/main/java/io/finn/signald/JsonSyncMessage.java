@@ -17,23 +17,53 @@
 
 package io.finn.signald;
 
+import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
+import org.whispersystems.signalservice.internal.util.Base64;
 
 import java.util.List;
 
 class JsonSyncMessage {
     JsonDataMessage sentMessage;
+    JsonAttachment contacts;
+    boolean contactsComplete;
+    JsonAttachment groups;
     List<String> blockedNumbers;
+    List<String> blockedGroups;
+    String requestType;
     List<ReadMessage> readMessages;
+    // JsonVerifiedMessage verified;
+    JsonConfigurationMessage configuration;
 
-    JsonSyncMessage(SignalServiceSyncMessage syncMessage) {
+    JsonSyncMessage(SignalServiceSyncMessage syncMessage, Manager m) {
+        if(syncMessage.getContacts().isPresent()) {
+          ContactsMessage c = syncMessage.getContacts().get();
+          contacts = new JsonAttachment(c.getContactsStream(), m);
+          contactsComplete = c.isComplete();
+        }
+
+        if(syncMessage.getGroups().isPresent()) {
+          groups = new JsonAttachment(syncMessage.getGroups().get(), m);
+        }
+
+
+
         if (syncMessage.getSent().isPresent()) {
             this.sentMessage = new JsonDataMessage(syncMessage.getSent().get().getMessage(), null);
         }
+
         if (syncMessage.getBlockedList().isPresent()) {
-            this.blockedNumbers = syncMessage.getBlockedList().get().getNumbers();
+            blockedNumbers = syncMessage.getBlockedList().get().getNumbers();
+            for(byte[] groupId : syncMessage.getBlockedList().get().getGroupIds()) {
+                blockedGroups.add(Base64.encodeBytes(groupId));
+            }
         }
+
+        if(syncMessage.getRequest().isPresent()) {
+            requestType = syncMessage.getRequest().get().getRequest().toString();
+        }
+
         if (syncMessage.getRead().isPresent()) {
             this.readMessages = syncMessage.getRead().get();
         }

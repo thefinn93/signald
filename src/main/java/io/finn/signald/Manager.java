@@ -473,10 +473,11 @@ class Manager {
         registered = true;
         refreshPreKeys();
 
+        initFullAccount();
+
         requestSyncGroups();
         requestSyncContacts();
 
-        initFullAccount();
         save();
         logger.info("Successfully finished linked to " + username + " as device #" + deviceId);
     }
