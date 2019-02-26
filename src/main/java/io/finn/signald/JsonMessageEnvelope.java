@@ -54,6 +54,8 @@ class JsonMessageEnvelope {
     JsonDataMessage dataMessage;
     JsonSyncMessage syncMessage;
     JsonCallMessage callMessage;
+    JsonReceiptMessage receipt;
+    JsonTypingMessage typing;
 
 
     public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, Manager m) {
@@ -89,11 +91,21 @@ class JsonMessageEnvelope {
             if (c.getDataMessage().isPresent()) {
                 this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), m);
             }
+
             if (c.getSyncMessage().isPresent()) {
-                this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get());
+                this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), m);
             }
+
             if (c.getCallMessage().isPresent()) {
                 this.callMessage = new JsonCallMessage(c.getCallMessage().get());
+            }
+
+            if(c.getReceiptMessage().isPresent()) {
+              this.receipt = new JsonReceiptMessage(c.getReceiptMessage().get());
+            }
+
+            if(c.getTypingMessage().isPresent()) {
+              this.typing = new JsonTypingMessage(c.getTypingMessage().get());
             }
         }
     }
