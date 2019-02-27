@@ -205,7 +205,7 @@ will not listen for messages from the Signal server and the server will store th
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `username` | `string` | yes | The user to unsubscribe to messages for. |
+| `username` | `string` | yes | The user to subscribe to messages for. |
 
 ### `unsubscribe`
 
