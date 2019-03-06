@@ -71,13 +71,15 @@ public class SocketHandler implements Runnable {
   private static final Logger logger = LogManager.getLogger();
   private Socket socket;
   private ArrayList<String> subscribedAccounts = new ArrayList<String>();
+  private String data_path;
 
-  public SocketHandler(Socket socket, ConcurrentHashMap<String,MessageReceiver> receivers, ConcurrentHashMap<String,Manager> managers) throws IOException {
+  public SocketHandler(Socket socket, ConcurrentHashMap<String,MessageReceiver> receivers, ConcurrentHashMap<String,Manager> managers, String data_path) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     this.writer = new PrintWriter(socket.getOutputStream(), true);
     this.socket = socket;
     this.managers = managers;
     this.receivers = receivers;
+    this.data_path = data_path;
 
     this.mpr.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY); // disable autodetect
     this.mpr.setSerializationInclusion(Include.NON_NULL);
@@ -242,8 +244,7 @@ public class SocketHandler implements Runnable {
 
   private void listAccounts(JsonRequest request) throws JsonProcessingException, IOException {
     // We have to create a manager for each account that we're listing, which is all of them :/
-    String settingsPath = System.getProperty("user.home") + "/.config/signal";
-    File[] users = new File(settingsPath + "/data").listFiles();
+    File[] users = new File(data_path + "/data").listFiles();
     for(int i = 0; i < users.length; i++) {
       if(!users[i].isDirectory()) {
         getManager(users[i].getName());
@@ -292,13 +293,12 @@ public class SocketHandler implements Runnable {
 
   private Manager getManager(String username) throws IOException {
     // So many problems in this method, need to have a single place to create new managers, probably in MessageReceiver
-    String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
 
     if(this.managers.containsKey(username)) {
       return this.managers.get(username);
     } else {
       logger.info("Creating a manager for " + username);
-      Manager m = new Manager(username, settingsPath);
+      Manager m = new Manager(username, data_path);
       if(m.userExists()) {
         m.init();
       } else {
@@ -378,8 +378,7 @@ public class SocketHandler implements Runnable {
 
 
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException {
-    String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
-    Manager m = new Manager(null, settingsPath);
+    Manager m = new Manager(null, data_path);
     m.createNewIdentity();
     String deviceName = "signald"; // TODO: Set this to "signald on <hostname>"
     if(request.deviceName != null) {
@@ -469,7 +468,7 @@ public class SocketHandler implements Runnable {
 
   private void subscribe(JsonRequest request) throws IOException {
     if(!this.receivers.containsKey(request.username)) {
-      MessageReceiver receiver = new MessageReceiver(request.username, this.managers);
+      MessageReceiver receiver = new MessageReceiver(request.username, this.managers, this.data_path);
       this.receivers.put(request.username, receiver);
       Thread messageReceiverThread = new Thread(receiver);
       messageReceiverThread.start();

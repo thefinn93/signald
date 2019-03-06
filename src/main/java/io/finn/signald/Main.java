@@ -30,24 +30,48 @@ import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 
 import io.sentry.Sentry;
 
-public class Main {
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
+
+@Command(name=BuildConfig.NAME, mixinStandardHelpOptions=true, version=BuildConfig.NAME + " " + BuildConfig.VERSION)
+public class Main implements Runnable {
+
+  public static void main(String[] args) {
+    CommandLine.run(new Main(), System.err, args);
+  }
+
+  @Option(names={"-v", "--verbose"}, description="Verbose mode. Helpful for troubleshooting.")
+  private boolean verbose = false;
+
+  @Option(names={"-s", "--socket"}, description="The path to the socket file")
+  private String socket_path = "/var/run/signald/signald.sock";
+
+  @Option(names={"-d", "--data"}, description="Data storage location")
+  private String data_path = System.getProperty("user.home") + "/.config/signald";
 
   private static final Logger logger = LogManager.getLogger("signald");
 
-  public static void main(String[] args) {
+  public void run() {
+    Logger logger = LogManager.getLogger("signald");
+    if(verbose) {
+      Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
+    }
+
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
+
     try {
       Sentry.init();
       Sentry.getContext().addExtra("release", BuildConfig.VERSION);
       Sentry.getContext().addExtra("signal_url", BuildConfig.SIGNAL_URL);
       Sentry.getContext().addExtra("signal_cdn_url", BuildConfig.SIGNAL_CDN_URL);
-      String socket_path = "/var/run/signald/signald.sock";
-      if(args.length > 0) {
-        socket_path = args[0];
-      }
 
       // Workaround for BKS truststore
       Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1);
@@ -56,18 +80,20 @@ public class Main {
       ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
       ConcurrentHashMap<String,MessageReceiver> receivers = new ConcurrentHashMap<String,MessageReceiver>();
 
+      logger.info("Binding to socket " + socket_path);
+
       // Spins up one thread per inbound connection to the control socket
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
       server.bind(new AFUNIXSocketAddress(new File(socket_path)));
 
       // Spins up one thread per registered signal number, listens for incoming messages
-      String settingsPath = System.getProperty("user.home") + "/.config/signal";
-
-      File[] users = new File(settingsPath + "/data").listFiles();
+      File[] users = new File(data_path + "/data").listFiles();
 
       if(users == null) {
          logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
-       }
+      }
+
+      logger.debug("Using data folder " + data_path);
 
       logger.info("Started " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
@@ -77,7 +103,7 @@ public class Main {
           socketmanager.add(socket);
 
           // Kick off the thread to read input
-          Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers, managers), "socketlistener");
+          Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers, managers, data_path), "socketlistener");
           socketHandlerThread.start();
 
         } catch(IOException e) {

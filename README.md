@@ -284,6 +284,17 @@ Now you can install signald:
 ```
 sudo apt install signald
 ```
+
+
+## Transition An Account From signal-cli
+
+signald's on-disk data structures are generally the same as or very similar to signal-cli's. Until recently, signald used the same
+location to store the accounts on the disk. To transition all of your accounts from signal-cli to signald, simply rename `~/.config/signal`
+to `~/.config/signald`. Please note that you should **not** copy and use the same account with both programs. Link them to the same user
+if you would like to use both signald and signal-cli.
+
+If you have installed the `.deb` and are using the system-wide signald service, copy to `/var/lib/signald`
+
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
