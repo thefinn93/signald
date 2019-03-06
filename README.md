@@ -29,6 +29,11 @@ for those that go for that sort of thing. MRs gladly accepted.
 This is currently beta software. The public API may have backwards-incompatible, breaking changes before it stabilizes, although we will make an
 effort to not do that. Further, there are no guarantees of safety or security with this software.
 
+Breaking changes that have been made:
+* As of [!86](https://git.callpipe.com/finn/signald/merge_requests/68), the data folder has moved from `~/.config/signal` to `~/.config/signald`.
+  You will need to migrate your data manually, unless you're using the debian package, which should handle this automatically.
+* As of [!66](https://git.callpipe.com/finn/signald/merge_requests/66), JSON keys that previously had values of `null` will simply not be sent.
+
 ## Interacting with signald
 
 ### Use a library
