@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "$CI_COMMIT_REF_NAME" == "feature/autoupdates" ]]; then
+  echo "Branch detected as $CI_COMMIT_REF_NAME, enabling debug mode"
   set -x
 fi
 

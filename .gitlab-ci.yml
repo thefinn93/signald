@@ -84,7 +84,7 @@ checkupdates:gradle:
     - git config --global user.name "Upgrade Robot"
     - git remote set-url origin https://${GITLAB_USER}:${GITLAB_TOKEN}@git.callpipe.com/finn/signald.git
   script:
-    - ./gradlew checkLibVersions | grep UPGRADE | cut -c 9- | tools/check-gradle-updates.sh
+    - ./gradlew checkLibVersions | (grep UPGRADE || true)| cut -c 9- | tools/check-gradle-updates.sh
   allow_failure: true
   cache:
    policy: push
