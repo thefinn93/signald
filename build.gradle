@@ -25,6 +25,7 @@ dependencies {
     compile 'org.apache.logging.log4j:log4j-core:2.11.2'
     compile 'io.sentry:sentry-log4j2:1.7.21'
     compile 'org.slf4j:slf4j-nop:1.8.0-beta4'
+    compile 'info.picocli:picocli:3.9.5'
 }
 
 

@@ -40,10 +40,12 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     private ConcurrentHashMap<String,Manager> managers;
     private SocketManager sockets;
     private static final Logger logger = LogManager.getLogger();
+    private String data_path;
 
-    public MessageReceiver(String username, ConcurrentHashMap<String,Manager> managers) {
+    public MessageReceiver(String username, ConcurrentHashMap<String,Manager> managers, String data_path) {
       this.managers = managers;
       this.username = username;
+      this.data_path = data_path;
       this.sockets = new SocketManager();
     }
 
@@ -60,14 +62,12 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       return removed;
     }
 
-    private Manager getManager(String username) throws IOException {
-      String settingsPath = System.getProperty("user.home") + "/.config/signal";  // TODO: Stop hard coding this everywhere
-
+    private Manager getManager(String username, String data_path) throws IOException {
       if(this.managers.containsKey(username)) {
         return this.managers.get(username);
       } else {
         logger.info("Creating a manager for " + username);
-        Manager m = new Manager(username, settingsPath);
+        Manager m = new Manager(username, data_path);
         if(m.userExists()) {
           m.init();
         } else {
@@ -82,7 +82,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     public void run() {
       try {
         Thread.currentThread().setName(this.username + "-manager");
-        this.m = getManager(this.username);
+        this.m = getManager(this.username, this.data_path);
         while(true) {
           double timeout = 3600;
           boolean returnOnTimeout = true;
