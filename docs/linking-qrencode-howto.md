@@ -1,13 +1,13 @@
 # Guide to linking `signald` to an existing account using `qrencode`
 
 ## Requirements
-* A phone with signal and pre-existing signal account
+* A phone with Signal and pre-existing Signal account
 * `signald` installed
 * `qrencode` installed
 
 ## Instructions
 ### Step 1:
-Ensure that `signald` is running, **and** that `signald` has finished initalizing. Look for a message similar to the following, if checking the output of `signald`:
+Ensure that `signald` is running, **and** that `signald` has finished initializing. Look for a message similar to the following, if checking the output of `signald`:
 
 ```
 23:34:14.665 [main] INFO  signald - Started signald 0.7.0+git2019-03-24rf98e1fcb.44
@@ -19,6 +19,8 @@ Once `signald` is ready, connect via netcat (aka `nc`):
 netcat -U /var/run/signald/signald.sock
 ```
 
+**NOTE:** Debian users will need the `netcat-openbsd` package to have the `-U` flag.
+
 ### Step 2:
 Once connected, issue the link command by entering the following into `netcat` and pressing enter:
 
@@ -27,10 +29,10 @@ Once connected, issue the link command by entering the following into `netcat` a
 ```
 
 ### Step 3:
-After a little wait you should recieve a notice in the following format:
+After a little wait you should receive a notice in the following format:
 
 ```json
-{"type":"linking_uri","data":{"uri":"tsdevice:/?uuid=o_0123456789abcedfghij&pub_key=0123456789abcedfghijklmnopqrstuvwxyz01234567"}}
+{"type":"linking_uri","data":{"uri":"tsdevice:/?uuid=aes8EW8nC14Xz0aV-qugFw&pub_key=BQFy%2FyfItwo4LD3wqY7LV6i4nkWIqtYA6%2BpmlnnCk7As"}}
 ```
 **NOTE:** As soon as this notice arrives, you will have a limited time to finish the linking process.
 
@@ -39,15 +41,15 @@ After a little wait you should recieve a notice in the following format:
 Copy the returned uri (the double quoted string staring with 'tsdevice'), and use qrencode to output a qr code in the terminal with:
 
 ```bash
-qrencode -t ANSI "tsdevice:/?uuid=o_0123456789abcedfghij&pub_key=0123456789abcedfghijklmnopqrstuvwxyz01234567"
+qrencode -t ANSI "tsdevice:/?uuid=aes8EW8nC14Xz0aV-qugFw&pub_key=BQFy%2FyfItwo4LD3wqY7LV6i4nkWIqtYA6%2BpmlnnCk7As"
 ```
 
 **NOTE:** Both ANSI and ASCII qr code outputs will be larger than a minimal 80x24 terminal.
 
 ### Step 5:
-Scan the qr code in your phone's singal app.  
+Scan the qr code in your phone's signal app.  
 
-**NOTE:** Refer to the singnal [documentation](https://support.signal.org/hc/en-us/articles/360007320551-Linked-Devices).
+**NOTE:** Refer to the Signal [documentation](https://support.signal.org/hc/en-us/articles/360007320551-Linked-Devices).
 
 ### Done
 Your `signald` instance should now be linked!
