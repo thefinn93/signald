@@ -27,8 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import org.apache.http.util.TextUtils;
-
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
@@ -110,6 +108,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.nio.file.attribute.PosixFilePermission.*;
+
+import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -423,9 +423,9 @@ class Manager {
         accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
 
         if (voiceVerification) {
-            accountManager.requestVoiceVerificationCode(Locale.getDefault());  // TODO: Allow requester to set the locale
+            accountManager.requestVoiceVerificationCode(Locale.getDefault(), Optional.<String>absent());  // TODO: Allow requester to set the locale
         } else {
-            accountManager.requestSmsVerificationCode(true); //  TODO: Allow requester to set androidSmsRetrieverSupported
+            accountManager.requestSmsVerificationCode(true, Optional.<String>absent()); //  TODO: Allow requester to set androidSmsRetrieverSupported
         }
 
         registered = false;
@@ -516,7 +516,7 @@ class Manager {
         String deviceIdentifier = query.get("uuid");
         String publicKeyEncoded = query.get("pub_key");
 
-        if (TextUtils.isEmpty(deviceIdentifier) || TextUtils.isEmpty(publicKeyEncoded)) {
+        if (isEmpty(deviceIdentifier) || isEmpty(publicKeyEncoded)) {
             throw new RuntimeException("Invalid device link uri");
         }
 
