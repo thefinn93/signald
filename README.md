@@ -20,7 +20,7 @@ signald is a daemon that facilitates communication over Signal.
 {"type": "send", "username": "+12024561414", "recipientNumber": "+14235290302", "messageBody": "Hello, Dave"}
 ```
 
-## Contributing
+## Contributing/Feedback/Bugs
 [Issues and MRs are accepted via GitLab.com](https://gitlab.com/thefinn93/signald). There is an IRC channel, `#signald` on Freenode,
 for those that go for that sort of thing. MRs gladly accepted.
 
