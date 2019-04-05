@@ -90,6 +90,7 @@ deb:cleanup:
 
 checkupdates:gradle:
   stage: check for updates
+  image: openjdk:11-jdk
   only:
     - schedules
     - feature/autoupdates
