@@ -33,6 +33,10 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+import org.asamk.signal.util.SecurityProvider;
+
 import io.sentry.Sentry;
 
 import picocli.CommandLine;
@@ -74,7 +78,8 @@ public class Main implements Runnable {
       Sentry.getContext().addExtra("signal_cdn_url", BuildConfig.SIGNAL_CDN_URL);
 
       // Workaround for BKS truststore
-      Security.insertProviderAt(new org.bouncycastle.jce.provider.BouncyCastleProvider(), 1);
+      Security.insertProviderAt(new SecurityProvider(), 1);
+      Security.addProvider(new BouncyCastleProvider());
 
       SocketManager socketmanager = new SocketManager();
       ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
