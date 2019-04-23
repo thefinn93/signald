@@ -39,6 +39,8 @@ class JsonAttachment {
     String key;
     String digest;
 
+    // JsonAttachment() {}
+
     JsonAttachment(String storedFilename) {
         this.filename = storedFilename;
     }
