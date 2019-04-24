@@ -12,10 +12,6 @@ case "$1" in
         ;;
 
     upgrade|abort-upgrade)
-        if [[ -d /var/lib/signald/.config/signal ]]; then
-          mv /var/lib/signald/.config/signal/* /var/lib/signald/
-          rm -rf /var/lib/signald/.config/signal
-        fi
         ;;
 
     *)
