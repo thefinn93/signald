@@ -245,9 +245,11 @@ public class SocketHandler implements Runnable {
   private void listAccounts(JsonRequest request) throws JsonProcessingException, IOException {
     // We have to create a manager for each account that we're listing, which is all of them :/
     File[] users = new File(data_path + "/data").listFiles();
-    for(int i = 0; i < users.length; i++) {
-      if(!users[i].isDirectory()) {
-        getManager(users[i].getName());
+    if(users != null) {
+      for(int i = 0; i < users.length; i++) {
+        if(!users[i].isDirectory()) {
+          getManager(users[i].getName());
+        }
       }
     }
 
