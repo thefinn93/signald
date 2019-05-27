@@ -18,6 +18,8 @@ build-java-8:
   stage: build
   before_script:
     - apt update && apt install -y make
+  except:
+    - schedules
   script:
     - make installDist
 
@@ -26,6 +28,8 @@ build-java-9:
   stage: build
   before_script:
     - apt update && apt install -y make
+  except:
+    - schedules
   script:
     - make installDist
 
@@ -34,6 +38,8 @@ build-java-11:
   stage: build
   before_script:
     - apt update && apt install -y make
+  except:
+    - schedules
   script:
     - make installDist
 
@@ -49,6 +55,8 @@ deb:build:
     - cat debian/changelog
     - dpkg-buildpackage -b
     - cp -rv ../signald_${VERSION}* .
+  except:
+    - schedules
   artifacts:
     expire_in: 1 year
     paths:
@@ -71,6 +79,8 @@ deb:publish:
     - release-deb ../ "${SIGNING_KEY}"
     - gpg --export --armor "${SIGNING_KEY}" > apt-signing-key.asc
     - for f in apt-signing-key.asc dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/${S3_BUCKET}/updates.signald.org/$f"; done
+  except:
+    - schedules
   artifacts:
     expire_in: 1 year
     paths:
