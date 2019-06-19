@@ -72,13 +72,13 @@ deb:publish:
     - export SUITE=$(get-suite)
     - export VERSION=$(./version.sh)
     - mkdir -p public/dists/${SUITE}/
-    - mc cp -r -q "minio/${S3_BUCKET}/updates.signald.org/dists/${SUITE}/" public/ || true
+    - mc cp -r -q "minio/${S3_BUCKET}/dists/${SUITE}/" public/ || true
   script:
     - gpg --detach-sign signald_${VERSION}*.deb
     - cd public
     - release-deb ../ "${SIGNING_KEY}"
     - gpg --export --armor "${SIGNING_KEY}" > apt-signing-key.asc
-    - for f in apt-signing-key.asc dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/${S3_BUCKET}/updates.signald.org/$f"; done
+    - for f in apt-signing-key.asc dists/${SUITE}/main/binary-amd64/signald_${VERSION}* $(find dists/ -type f | grep -v -E "\.deb$"); do mc cp -q "$f" "minio/${S3_BUCKET}/$f"; done
   except:
     - schedules
   artifacts:
@@ -96,7 +96,9 @@ deb:cleanup:
   before_script:
     - mc config host add minio "${S3_URL}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
   script:
-    - repo-cron "minio/${S3_BUCKET}/updates.signald.org"
+    - repo-cron "minio/${S3_BUCKET}"
+  variables:
+    STORAGE_TIME: "31557600"  # Store 1 year of historical builds
 
 checkupdates:gradle:
   stage: check for updates
