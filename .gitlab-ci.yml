@@ -97,6 +97,8 @@ deb:cleanup:
     - mc config host add minio "${S3_URL}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
   script:
     - repo-cron "minio/${S3_BUCKET}"
+  variables:
+    STORAGE_TIME: "31557600"  # Store 1 year of historical builds
 
 checkupdates:gradle:
   stage: check for updates
