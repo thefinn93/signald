@@ -58,7 +58,6 @@ deb:build:
   except:
     - schedules
   artifacts:
-    expire_in: 1 year
     paths:
       - "signald_*"
 
@@ -82,7 +81,6 @@ deb:publish:
   except:
     - schedules
   artifacts:
-    expire_in: 1 year
     paths:
       - "signald_*.sig"
   dependencies:
