@@ -4,13 +4,15 @@
 signald is a daemon that facilitates communication over Signal.
 
 
+## Installation
+
+ - [From source](./docs/install/source.md)
+ - [Debian](./docs/install/debian.md)
+ - [Docker](./docs/install/docker.md)
+
 ## Quick Start
 
-*if you run Debian and would prefer an apt repo, see [Debian Installation](#debian-installation) below*
-
-1. Run `make installDist` to build signald
-1. Run `make setup` to configure the system directories
-1. Run `build/install/signald/bin/signald` to start signald. It will continue running until killed (or ctrl-C)
+1. Startup signald depending on your installation method
 1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock` (Debian users will need to have `netcat-openbsd` installed)
 1. Register a new number on signal by typing this: `{"type": "register", "username": "+12024561414"}` (replace `+12024561414` with your own number)
 1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
@@ -269,27 +271,6 @@ As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclu
 | `recipientNumber` | `string` | no | The PM to change expiration for. |
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
 | `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
-
-## Debian Installation
-
-Add the following to your `sources.list`:
-
-```
-deb https://updates.signald.org master main
-```
-
-And trust the signing key:
-
-```
-curl https://updates.signald.org/apt-signing-key.asc | sudo apt-key add -
-```
-
-Now you can install signald:
-
-```
-sudo apt install signald
-```
-
 
 ## Transition An Account From signal-cli
 
