@@ -276,6 +276,7 @@ class Manager {
             }
         } catch (AuthorizationFailedException e) {
             logger.warn("Authorization failed, was the number registered elsewhere?");
+            registered = false;
         }
     }
 
