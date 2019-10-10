@@ -43,7 +43,6 @@ build-java-11:
   script:
     - make installDist
 
-
 deb:build:
   stage: build
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
@@ -60,6 +59,28 @@ deb:build:
   artifacts:
     paths:
       - "signald_*"
+
+build-docker:
+  image: docker:latest
+  stage: build
+  tags:
+    - docker-builder
+  only:
+    - branches
+    - tags
+  before_script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}; fi
+  script:
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME} .
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}
+    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME} ${CI_REGISTRY_IMAGE}:latest; fi;
+    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then docker push ${CI_REGISTRY_IMAGE}:latest; fi;
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME} ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_NAME}; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_NAME}; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME} ${DOCKER_HUB_USERNAME}/signald:latest; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:latest; fi
+
 
 deb:publish:
   stage: publish
