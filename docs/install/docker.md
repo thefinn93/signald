@@ -2,7 +2,7 @@
 
 Pull the image from Docker Hub
 
-`docker pull bisentenialwrug/signald`
+`docker pull finn/signald`
 
 # Running the image
 
