@@ -996,29 +996,19 @@ class Manager {
                     message = messageBuilder.build();
                     try {
                         messageSender.sendMessage(address, getAccessFor(address), message);
-                    } catch (UntrustedIdentityException e) {
+                    } catch(UntrustedIdentityException e) {
                         signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                         untrustedIdentities.add(e);
-                    } catch (UnregisteredUserException e) {
+                        logger.warn("UntrustedIdentityException sending message to " + e.getE164Number());
+                    } catch(UnregisteredUserException e) {
                         unregisteredUsers.add(e);
-                    } catch (PushNetworkException e) {
+                        logger.warn("UnregisteredUserException when sending message to %s" + address.getNumber());
+                    } catch(PushNetworkException e) {
                         networkExceptions.add(new NetworkFailureException(address.getNumber(), e));
+                        logger.warn("PushNetworkException when sending message to %s" + address.getNumber());
                     }
                 }
                 if (!untrustedIdentities.isEmpty() || !unregisteredUsers.isEmpty() || !networkExceptions.isEmpty()) {
-                    logger.warn("EncapsulatedExceptions being thrown!");
-                    if(!untrustedIdentities.isEmpty()) {
-                      logger.warn("untrustedIdentities not empty");
-                    }
-
-                    if(!unregisteredUsers.isEmpty()) {
-                      logger.warn("unregisteredUsers not empty");
-                    }
-
-                    if(!networkExceptions.isEmpty()) {
-                      logger.warn("networkExceptions not empty");
-                    }
-
                     throw new EncapsulatedExceptions(untrustedIdentities, unregisteredUsers, networkExceptions);
                 }
             }

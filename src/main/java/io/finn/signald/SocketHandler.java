@@ -26,6 +26,10 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
+import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
@@ -233,13 +237,26 @@ public class SocketHandler implements Runnable {
         }
     }
 
-    if(request.recipientGroupId != null) {
-      byte[] groupId = Base64.decode(request.recipientGroupId);
-      manager.sendGroupMessage(request.messageBody, attachments, groupId, quote);
-    } else {
-      manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
+    try {
+      if(request.recipientGroupId != null) {
+        byte[] groupId = Base64.decode(request.recipientGroupId);
+        manager.sendGroupMessage(request.messageBody, attachments, groupId, quote);
+      } else {
+        manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
+      }
+      this.reply("success", new JsonStatusMessage(0, "success"), request.id);
+    } catch(EncapsulatedExceptions e) {
+      for(UntrustedIdentityException i: e.getUntrustedIdentityExceptions()) {
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(i, manager), request.id);
+      }
+      for(UnregisteredUserException i: e.getUnregisteredUserExceptions()) {
+        this.reply("unregistered_user", new JsonUnregisteredUserException(i), request.id);
+      }
+
+      for(NetworkFailureException i: e.getNetworkExceptions()) {
+        this.reply("network_failure", new JsonNetworkFailureException(i), request.id);
+      }
     }
-    this.reply("success", new JsonStatusMessage(0, "success"), request.id);
   }
 
   private void listAccounts(JsonRequest request) throws JsonProcessingException, IOException {
