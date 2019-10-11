@@ -1006,6 +1006,19 @@ class Manager {
                     }
                 }
                 if (!untrustedIdentities.isEmpty() || !unregisteredUsers.isEmpty() || !networkExceptions.isEmpty()) {
+                    logger.warn("EncapsulatedExceptions being thrown!");
+                    if(!untrustedIdentities.isEmpty()) {
+                      logger.warn("untrustedIdentities not empty");
+                    }
+
+                    if(!unregisteredUsers.isEmpty()) {
+                      logger.warn("unregisteredUsers not empty");
+                    }
+
+                    if(!networkExceptions.isEmpty()) {
+                      logger.warn("networkExceptions not empty");
+                    }
+
                     throw new EncapsulatedExceptions(untrustedIdentities, unregisteredUsers, networkExceptions);
                 }
             }
