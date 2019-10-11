@@ -46,6 +46,7 @@ build-java-11:
 deb:build:
   stage: build
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  retry: 2
   before_script:
     - export VERSION=$(./version.sh)
     - echo "Building signald version $VERSION"
