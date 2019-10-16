@@ -19,6 +19,10 @@ deb:
 installDist distTar:
 	$(GRADLE) $@
 
+integrationTest:
+	export SIGNAL_URL=https://signal-server.signald.org
+	$(GRADLE) $@
+
 setup:
 	sudo mkdir -p /var/run/signald
 	sudo chown $(shell whoami) /var/run/signald
