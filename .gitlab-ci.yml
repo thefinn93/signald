@@ -54,6 +54,7 @@ deb:build:
   before_script:
     - export VERSION=$(./version.sh)
     - echo "Building signald version $VERSION"
+    - rm -rf .gradle
   script:
     - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
     - cat debian/changelog
