@@ -23,13 +23,13 @@ import org.whispersystems.signalservice.internal.util.Base64;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
+import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-
 
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
@@ -230,7 +230,7 @@ public class SocketHandler implements Runnable {
                     mime = "application/octet-stream";
                 }
 
-                attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, Optional.fromNullable(attachment.caption), null));
+                attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null));
             } catch (IOException e) {
                 throw new AttachmentInvalidException(attachment.filename, e);
             }
@@ -238,17 +238,41 @@ public class SocketHandler implements Runnable {
     }
 
     try {
+      List<SendMessageResult> sendMessageResults;
       if(request.recipientGroupId != null) {
         byte[] groupId = Base64.decode(request.recipientGroupId);
-        manager.sendGroupMessage(request.messageBody, attachments, groupId, quote);
+        sendMessageResults = manager.sendGroupMessage(request.messageBody, attachments, groupId, quote);
       } else {
-        manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
+        sendMessageResults = manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
       }
-      this.reply("success", new JsonStatusMessage(0, "success"), request.id);
+
+      for(SendMessageResult result: sendMessageResults) {
+        SendMessageResult.Success success = result.getSuccess();
+        if(success != null) {
+          if(success.isUnidentified()) {
+            this.reply("success", new JsonStatusMessage(0, "successfully send unidentified message"), request.id);
+          }
+          if(success.isNeedsSync()) {
+            this.reply("success", new JsonStatusMessage(1, "isNeedsSync = true"), request.id);
+          }
+        }
+
+        if(result.isNetworkFailure()) {
+          // TODO: Log more info about what message failed, who it failed to, and any other info needed to resend
+          this.reply("network_failure", null, request.id);
+        }
+
+        if(result.isUnregisteredFailure()) {
+          this.reply("unregistered_user", null, request.id);
+        }
+
+        SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
+        if(identityFailure != null) {
+          this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getNumber(), manager), request.id);
+        }
+
+      }
     } catch(EncapsulatedExceptions e) {
-      for(UntrustedIdentityException i: e.getUntrustedIdentityExceptions()) {
-        this.reply("untrusted_identity", new JsonUntrustedIdentityException(i, manager), request.id);
-      }
       for(UnregisteredUserException i: e.getUnregisteredUserExceptions()) {
         this.reply("unregistered_user", new JsonUnregisteredUserException(i), request.id);
       }
