@@ -33,7 +33,7 @@ configurations {
 }
 
 dependencies {
-    compile 'com.github.turasa:signal-service-java:2.13.0_unofficial_2'
+    compile 'com.github.turasa:signal-service-java:2.13.9_unofficial_1'
     compile 'org.bouncycastle:bcprov-jdk15on:1.64'
     compile 'com.kohlschutter.junixsocket:junixsocket-common:2.2.0'
     compile 'com.kohlschutter.junixsocket:junixsocket-native-common:2.2.0'

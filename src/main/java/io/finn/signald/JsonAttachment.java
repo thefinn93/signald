@@ -38,6 +38,7 @@ class JsonAttachment {
     String preview;
     String key;
     String digest;
+    String blurhash;
 
     JsonAttachment() {}
 
@@ -71,6 +72,10 @@ class JsonAttachment {
 
             if(pointer.getCaption().isPresent()) {
                 this.caption = pointer.getCaption().get();
+            }
+
+            if(pointer.getBlurHash().isPresent()) {
+                this.blurhash = pointer.getBlurHash().get();
             }
 
             if( m != null) {
