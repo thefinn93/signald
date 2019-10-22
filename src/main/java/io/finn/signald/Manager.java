@@ -821,6 +821,14 @@ class Manager {
         recipients.add(recipient);
 
         sendMessage(messageBuilder, recipients, false);
+
+        ThreadInfo thread = threadStore.getThread(recipient);
+        if (thread == null) {
+            thread = new ThreadInfo();
+            thread.id = recipient;
+        }
+        thread.messageExpirationTime = expiresInSeconds;
+        threadStore.updateThread(thread);
     }
 
     private void sendGroupInfoRequest(byte[] groupId, String recipient) throws IOException, EncapsulatedExceptions, UntrustedIdentityException {
