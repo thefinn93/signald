@@ -830,8 +830,7 @@ class Manager {
         List<String> recipients = new ArrayList<>(1);
         recipients.add(recipient);
 
-        sendMessage(messageBuilder, recipients, false);
-
+        return sendMessage(messageBuilder, recipients);
     }
 
     private List<SendMessageResult> sendGroupInfoRequest(byte[] groupId, String recipient) throws IOException, EncapsulatedExceptions, UntrustedIdentityException {
