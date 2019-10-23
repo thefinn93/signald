@@ -818,6 +818,10 @@ class Manager {
         SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
 
         ThreadInfo thread = threadStore.getThread(recipient);
+        if (thread == null) {
+            thread = new ThreadInfo();
+            thread.id = recipient;
+        }
         thread.messageExpirationTime = expiresInSeconds;
         threadStore.updateThread(thread);
 
