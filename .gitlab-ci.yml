@@ -1,6 +1,7 @@
 stages:
   - check for updates
   - build
+  - test
   - publish
   - cleanup
 
@@ -42,6 +43,9 @@ build-java-11:
     - schedules
   script:
     - make installDist
+  artifacts:
+    paths:
+      - build/
 
 deb:build:
   stage: build
@@ -57,6 +61,8 @@ deb:build:
     - cp -rv ../signald_${VERSION}* .
   except:
     - schedules
+  cache:
+    key: deb-builder
   artifacts:
     paths:
       - "signald_*"
@@ -107,6 +113,21 @@ deb:publish:
       - "signald_*.sig"
   dependencies:
     - deb:build
+
+test:integration:
+  image: openjdk:11-jdk
+  stage: test
+  before_script:
+    - cp tools/log4j2.xml src/main/resources/log4j2.xml
+  script:
+    - ./gradlew integrationTest --info
+  variables:
+    SIGNAL_URL: $SIGNAL_TEST_SERVER
+  artifacts:
+    reports:
+      junit: build/test-results/integrationTest/TEST-*.xml
+  dependencies:
+    - build-java-11
 
 deb:cleanup:
   stage: cleanup

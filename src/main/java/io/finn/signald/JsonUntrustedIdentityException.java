@@ -26,12 +26,9 @@ class JsonUntrustedIdentityException {
   public String fingerprint;
   public String safety_number;
 
-
-  JsonUntrustedIdentityException(UntrustedIdentityException e, Manager m) {
-    this.number = e.getE164Number();
-    IdentityKey key  = e.getIdentityKey();
+  JsonUntrustedIdentityException(IdentityKey key, String number, Manager m) {
+    this.number = number;
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
     this.safety_number = m.computeSafetyNumber(this.number, key);
   }
-
 }
