@@ -1,5 +1,5 @@
 [Unit]
-Description=A daemon for interacting with the Signal Private Messanger
+Description=A daemon for interacting with the Signal Private Messenger
 Wants=network.target
 After=network.target
 
