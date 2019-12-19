@@ -44,6 +44,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
+
 
 @Command(name=BuildConfig.NAME, mixinStandardHelpOptions=true, version=BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {
@@ -99,6 +101,8 @@ public class Main implements Runnable {
       }
 
       logger.debug("Using data folder " + data_path);
+
+      SignalProtocolLoggerProvider.setProvider(new ProtocolLogger());
 
       logger.info("Started " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
