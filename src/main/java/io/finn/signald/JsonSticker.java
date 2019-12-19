@@ -18,7 +18,7 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.thoughtcrime.securesms.util.Hex;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,9 +32,9 @@ class JsonSticker {
   JsonAttachment attachment;
 
   JsonSticker(SignalServiceDataMessage.Sticker sticker, Manager m) {
-    this.packID = Base64.encodeBytes(sticker.getPackId());
-    this.packKey = Base64.encodeBytes(sticker.getPackKey());
-    this.stickerID = sticker.getStickerId();
-    this.attachment = new JsonAttachment(sticker.getAttachment(), m);
+    packID = Hex.toStringCondensed(sticker.getPackId());
+    packKey = Hex.toStringCondensed(sticker.getPackKey());
+    stickerID = sticker.getStickerId();
+    attachment = new JsonAttachment(sticker.getAttachment(), m);
   }
 }
