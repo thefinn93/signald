@@ -31,6 +31,7 @@ class JsonDataMessage {
     JsonGroupInfo groupInfo;
     SignalServiceDataMessage.Quote quote;
     List<JsonPreview> previews;
+    JsonSticker sticker;
 
     JsonDataMessage(SignalServiceDataMessage dataMessage, Manager m) {
         this.timestamp = dataMessage.getTimestamp();
@@ -61,6 +62,9 @@ class JsonDataMessage {
           }
         }
 
+        if(dataMessage.getSticker().isPresent()) {
+          this.sticker = new JsonSticker(dataMessage.getSticker().get(), m);
+        }
 
     }
 }
