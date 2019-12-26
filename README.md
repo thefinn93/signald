@@ -272,6 +272,26 @@ As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclu
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
 | `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
 
+
+### `get_profile`
+
+Gets a user's profile. At this time only the name is available. Must have the user's profileKey already, otherwise you'll get a `profile_not_available`.
+
+| Field             | Type     | Required | Description |
+|-------------------|----------|----------|-------------|
+| `username`        | `string` | yes      | The account to use. |
+| `recipientNumber` | `string` | yes      | The number of the user who's profile is being checked. |
+
+
+### `set_profile`
+
+Sets the user's profile. At thie time only the name is available.
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `username` | `string` | yes      | The account to use. |
+| `name`     | `string` | yes      | The number of the user who's profile is being checked. |
+
 ## Transition An Account From signal-cli
 
 signald's on-disk data structures are generally the same as or very similar to signal-cli's. Until recently, signald used the same
