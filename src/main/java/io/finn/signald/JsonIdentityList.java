@@ -40,8 +40,11 @@ class JsonIdentityList {
         }
       }
     } else {
-      for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
-        this.identities.add(new JsonIdentity(identity, m, number));
+      List<JsonIdentityKeyStore.Identity> identities = m.getIdentities(number);
+      if(identities != null) {
+        for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
+          this.identities.add(new JsonIdentity(identity, m, number));
+        }
       }
     }
   }
