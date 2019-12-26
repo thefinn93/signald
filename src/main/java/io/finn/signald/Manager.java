@@ -397,13 +397,15 @@ class Manager {
                 .put("signalingKey", signalingKey)
                 .put("preKeyIdOffset", preKeyIdOffset)
                 .put("nextSignedPreKeyId", nextSignedPreKeyId)
-                .put("profileKey", Base64.encodeBytes(profileKey))
                 .put("registered", registered)
                 .putPOJO("axolotlStore", signalProtocolStore)
                 .putPOJO("groupStore", groupStore)
                 .putPOJO("contactStore", contactStore)
                 .putPOJO("threadStore", threadStore)
         ;
+        if(profileKey != null) {
+          rootNode.put("profileKey", Base64.encodeBytes(profileKey));
+        }
         try {
             openFileChannel();
             fileChannel.position(0);
