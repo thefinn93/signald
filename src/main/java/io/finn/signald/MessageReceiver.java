@@ -108,15 +108,17 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
     @Override
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
+      String type = "message";
       if(exception != null) {
         logger.catching(exception);
+        type = "unreadable_message";
       }
       try {
         SignalServiceAddress source = envelope.getSourceAddress();
         ContactInfo sourceContact = this.m.getContact(source.getNumber());
         if(envelope != null) {
           JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, this.m);
-          this.sockets.broadcast(new JsonMessageWrapper("message", message));
+          this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
         }
       } catch (IOException e) {
         logger.catching(e);
