@@ -459,6 +459,10 @@ public class SocketHandler implements Runnable {
 
   private void trust(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
+    if(request.fingerprint == null) {
+      this.reply("input_error", new JsonStatusMessage(0, "Fingerprint must be a string!", request), request.id);
+      return;
+    }
     String fingerprint = request.fingerprint.replaceAll(" ", "");
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
