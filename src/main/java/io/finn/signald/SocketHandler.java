@@ -30,7 +30,9 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStre
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 
+import org.asamk.signal.storage.contacts.ContactInfo;
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.UserAlreadyExists;
 import org.asamk.signal.GroupNotFoundException;
@@ -190,6 +192,12 @@ public class SocketHandler implements Runnable {
         break;
       case "version":
         version();
+        break;
+      case "get_profile":
+        getProfile(request);
+        break;
+      case "set_profile":
+        setProfile(request);
         break;
       default:
         logger.warn("Unknown command type " + request.type);
@@ -459,6 +467,10 @@ public class SocketHandler implements Runnable {
 
   private void trust(JsonRequest request) throws IOException {
     Manager m = getManager(request.username);
+    if(request.fingerprint == null) {
+      this.reply("input_error", new JsonStatusMessage(0, "Fingerprint must be a string!", request), request.id);
+      return;
+    }
     String fingerprint = request.fingerprint.replaceAll(" ", "");
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
@@ -529,6 +541,22 @@ public class SocketHandler implements Runnable {
 
   private void version() throws IOException {
       this.reply("version", new JsonVersionMessage(), null);
+  }
+
+  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException {
+      Manager m = getManager(request.username);
+      ContactInfo contact = m.getContact(request.recipientNumber);
+      if(contact == null || contact.profileKey == null) {
+          this.reply("profile_not_available", null, request.id);
+          return;
+      }
+      this.reply("profile", new JsonProfile(m.getProfile(request.recipientNumber), Base64.decode(contact.profileKey)), request.id);
+  }
+
+  private void setProfile(JsonRequest request) throws IOException {
+      Manager m = getManager(request.username);
+      m.setProfileName(request.name);
+      this.reply("profile_set", null, request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {

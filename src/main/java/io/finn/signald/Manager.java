@@ -72,10 +72,11 @@ import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-// import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
@@ -148,6 +149,7 @@ class Manager {
     private String signalingKey;
     private int preKeyIdOffset;
     private int nextSignedPreKeyId;
+    private byte[] profileKey;
 
     private boolean registered = false;
 
@@ -305,6 +307,12 @@ class Manager {
         } else {
             nextSignedPreKeyId = 0;
         }
+        if (rootNode.has("profileKey")) {
+            profileKey = Base64.decode(getNotNullNode(rootNode, "profileKey").asText());
+        } else {
+            profileKey = Util.getSecretBytes(32);
+        }
+
         signalProtocolStore = jsonProcessor.convertValue(getNotNullNode(rootNode, "axolotlStore"), JsonSignalProtocolStore.class);
         registered = getNotNullNode(rootNode, "registered").asBoolean();
         JsonNode groupStoreNode = rootNode.get("groupStore");
@@ -389,6 +397,7 @@ class Manager {
                 .put("signalingKey", signalingKey)
                 .put("preKeyIdOffset", preKeyIdOffset)
                 .put("nextSignedPreKeyId", nextSignedPreKeyId)
+                .put("profileKey", Base64.encodeBytes(profileKey))
                 .put("registered", registered)
                 .putPOJO("axolotlStore", signalProtocolStore)
                 .putPOJO("groupStore", groupStore)
@@ -689,8 +698,7 @@ class Manager {
                 .withId(groupId)
                 .build();
 
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder()
-                .asGroupMessage(group);
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asGroupMessage(group);
 
         final GroupInfo g = getGroupForSending(groupId);
         g.members.remove(this.username);
@@ -799,8 +807,7 @@ class Manager {
             }
         }
 
-        return SignalServiceDataMessage.newBuilder()
-                .asGroupMessage(group.build());
+        return SignalServiceDataMessage.newBuilder().asGroupMessage(group.build());
     }
 
     public List<SendMessageResult> setExpiration(byte[] groupId, int expiresInSeconds) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, EncapsulatedExceptions, UntrustedIdentityException {
@@ -842,8 +849,7 @@ class Manager {
         SignalServiceGroup.Builder group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.REQUEST_INFO)
                 .withId(groupId);
 
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder()
-                .asGroupMessage(group.build());
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asGroupMessage(group.build());
 
         // Send group info request message to the recipient who sent us a message with this groupId
         final List<String> membersSend = new ArrayList<>();
@@ -871,8 +877,7 @@ class Manager {
     }
 
     public List<SendMessageResult> sendEndSessionMessage(List<String> recipients) throws IOException, EncapsulatedExceptions, UntrustedIdentityException {
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder()
-                .asEndSessionMessage();
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
 
         return sendMessage(messageBuilder, recipients);
     }
@@ -981,6 +986,10 @@ class Manager {
             throws EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, IOException {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) return;
+
+        if(profileKey != null) {
+            messageBuilder = messageBuilder.withProfileKey(profileKey);
+        }
 
         SignalServiceDataMessage message = null;
         try {
@@ -1245,6 +1254,21 @@ class Manager {
                 }
             }
         }
+
+        if(message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
+            if(source.equals(username)) {
+                profileKey = message.getProfileKey().get();
+                save();
+            } else {
+                ContactInfo contact = contactStore.getContact(source);
+                if(contact == null) {
+                    contact = new ContactInfo();
+                    contact.number = source;
+                }
+                contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
+                updateContact(contact);
+            }
+        }
     }
 
     public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException {
@@ -1392,6 +1416,7 @@ class Manager {
                         }
                     }
                 }
+
                 if (syncMessage.getGroups().isPresent()) {
                     File tmpFile = null;
                     try {
@@ -1454,7 +1479,11 @@ class Manager {
                                 if (c.getColor().isPresent()) {
                                     contact.color = c.getColor().get();
                                 }
-                                contactStore.updateContact(contact);
+
+                                if(c.getProfileKey().isPresent()) {
+                                    contact.profileKey = Base64.encodeBytes(c.getProfileKey().get());
+                                }
+                                updateContact(contact);
 
                                 if (c.getAvatar().isPresent()) {
                                     retrieveContactAvatarAttachment(c.getAvatar().get(), contact.number);
@@ -1886,5 +1915,24 @@ class Manager {
     public Optional<UnidentifiedAccessPair> getAccessFor(SignalServiceAddress recipient) {
         // TODO implement
         return Optional.absent();
+    }
+
+    public byte[] getProfileKey() {
+        return profileKey;
+    }
+
+    public void setProfileKey(final byte[] profileKey) {
+        this.profileKey = profileKey;
+	save();
+    }
+
+    public void setProfileName(String name) throws IOException {
+        accountManager.setProfileName(profileKey, name);
+	save();
+    }
+
+    public SignalServiceProfile getProfile(String number) throws IOException {
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
+        return messageReceiver.retrieveProfile(new SignalServiceAddress(number), Optional.<UnidentifiedAccess>absent());
     }
 }
