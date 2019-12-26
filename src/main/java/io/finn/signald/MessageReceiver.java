@@ -108,6 +108,9 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
     @Override
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
+      if(exception != null) {
+        logger.catching(exception);
+      }
       try {
         SignalServiceAddress source = envelope.getSourceAddress();
         ContactInfo sourceContact = this.m.getContact(source.getNumber());
