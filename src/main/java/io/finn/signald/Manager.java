@@ -971,7 +971,7 @@ class Manager {
         SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password,
                 deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
         try {
-            messageSender.sendMessage(message, null);
+            messageSender.sendMessage(message, Optional.<UnidentifiedAccessPair>absent());
         } catch (UntrustedIdentityException e) {
             signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
             throw e;
