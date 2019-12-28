@@ -276,7 +276,7 @@ public class SocketHandler implements Runnable {
 
         SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
         if(identityFailure != null) {
-          this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getNumber(), manager), request.id);
+          this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getNumber(), manager, request), request.id);
         }
 
       }
