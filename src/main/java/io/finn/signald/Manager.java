@@ -1062,7 +1062,7 @@ class Manager {
                     }
                     return result;
                 } catch (UntrustedIdentityException e) {
-                    // account.getSignalProtocolStore().saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                    signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     return Collections.emptyList();
                 }
             } else if (recipientsTS.size() == 1 && recipientsTS.contains(new SignalServiceAddress(username))) {
@@ -1080,7 +1080,7 @@ class Manager {
                 try {
                     messageSender.sendMessage(syncMessage, unidentifiedAccess);
                 } catch (UntrustedIdentityException e) {
-                    // account.getSignalProtocolStore().saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                    signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
                 }
                 return results;
@@ -1099,7 +1099,7 @@ class Manager {
                         SendMessageResult result = messageSender.sendMessage(address, getAccessFor(address), message);
                         results.add(result);
                     } catch (UntrustedIdentityException e) {
-                        // account.getSignalProtocolStore().saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                        signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                         results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
                     }
                 }
