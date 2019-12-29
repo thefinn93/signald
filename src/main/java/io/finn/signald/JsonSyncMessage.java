@@ -25,7 +25,7 @@ import org.whispersystems.signalservice.internal.util.Base64;
 import java.util.List;
 
 class JsonSyncMessage {
-    JsonDataMessage sentMessage;
+    JsonSentTranscriptMessage sent;
     JsonAttachment contacts;
     boolean contactsComplete;
     JsonAttachment groups;
@@ -50,7 +50,7 @@ class JsonSyncMessage {
 
 
         if (syncMessage.getSent().isPresent()) {
-            this.sentMessage = new JsonDataMessage(syncMessage.getSent().get().getMessage(), null);
+            this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), m);
         }
 
         if (syncMessage.getBlockedList().isPresent()) {
