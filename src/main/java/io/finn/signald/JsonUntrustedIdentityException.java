@@ -22,13 +22,17 @@ import org.asamk.signal.util.Hex;
 
 
 class JsonUntrustedIdentityException {
+  public String username;
   public String number;
   public String fingerprint;
   public String safety_number;
+  public JsonRequest request;
 
-  JsonUntrustedIdentityException(IdentityKey key, String number, Manager m) {
+  JsonUntrustedIdentityException(IdentityKey key, String number, Manager m, JsonRequest request) {
+    this.username = m.getUsername();
     this.number = number;
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
     this.safety_number = m.computeSafetyNumber(this.number, key);
+    this.request = request;
   }
 }
