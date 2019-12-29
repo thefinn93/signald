@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2018 Finn Herzfeld
+ * Copyright (C) 2019 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,13 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
 import org.whispersystems.signalservice.internal.util.Base64;
 
+import org.asamk.signal.util.Hex;
+
 import java.util.List;
+import java.util.LinkedList;
 
 class JsonSyncMessage {
     JsonSentTranscriptMessage sent;
@@ -33,10 +37,16 @@ class JsonSyncMessage {
     List<String> blockedGroups;
     String requestType;
     List<ReadMessage> readMessages;
-    // JsonVerifiedMessage verified;
+    JsonViewOnceOpenMessage viewOnceOpen;
+    JsonVerifiedMessage verified;
     JsonConfigurationMessage configuration;
+    List<JsonStickerPackOperationMessage> stickerPackOperations = new LinkedList<>();
 
     JsonSyncMessage(SignalServiceSyncMessage syncMessage, Manager m) {
+        if(syncMessage.getSent().isPresent()) {
+            this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), m);
+        }
+
         if(syncMessage.getContacts().isPresent()) {
           ContactsMessage c = syncMessage.getContacts().get();
           contacts = new JsonAttachment(c.getContactsStream(), m);
@@ -47,13 +57,7 @@ class JsonSyncMessage {
           groups = new JsonAttachment(syncMessage.getGroups().get(), m);
         }
 
-
-
-        if (syncMessage.getSent().isPresent()) {
-            this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), m);
-        }
-
-        if (syncMessage.getBlockedList().isPresent()) {
+        if(syncMessage.getBlockedList().isPresent()) {
             blockedNumbers = syncMessage.getBlockedList().get().getNumbers();
             for(byte[] groupId : syncMessage.getBlockedList().get().getGroupIds()) {
                 blockedGroups.add(Base64.encodeBytes(groupId));
@@ -64,8 +68,22 @@ class JsonSyncMessage {
             requestType = syncMessage.getRequest().get().getRequest().toString();
         }
 
-        if (syncMessage.getRead().isPresent()) {
+        if(syncMessage.getRead().isPresent()) {
             this.readMessages = syncMessage.getRead().get();
+        }
+
+        if(syncMessage.getViewOnceOpen().isPresent()) {
+            this.viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
+        }
+
+        if(syncMessage.getVerified().isPresent()) {
+           this.verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
+        }
+
+        if(syncMessage.getStickerPackOperations().isPresent()) {
+          for(StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
+            stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
+          }
         }
     }
 }
