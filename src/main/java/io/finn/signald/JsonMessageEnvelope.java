@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2018 Finn Herzfeld
+/*
+ * Copyright (C) 2019 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,26 +20,19 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.internal.util.Base64;
-
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-import io.finn.signald.Manager;
-
 class JsonMessageEnvelope {
     String username;
     String uuid;
-    boolean hasUuid;
-    boolean hasSource;
     String source;
-    boolean hasSourceDevice;
+    String sender;
     int sourceDevice;
     int type;
-    boolean hasRelay;
     String relay;
     long timestamp;
     String timestampISO;
@@ -47,8 +40,6 @@ class JsonMessageEnvelope {
     boolean hasLegacyMessage;
     boolean hasContent;
     // String content;
-    boolean isSignalMessage;
-    boolean isPrekeySignalMessage;
     boolean isReceipt;
     boolean isUnidentifiedSender;
     JsonDataMessage dataMessage;
@@ -61,31 +52,34 @@ class JsonMessageEnvelope {
     public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, Manager m) {
         SignalServiceAddress sourceAddress = envelope.getSourceAddress();
         username = m.getUsername();
-        hasUuid = envelope.hasUuid();
-        if(hasUuid) {
-          uuid = envelope.getUuid();
+        if (envelope.hasUuid()) {
+            uuid = envelope.getUuid();
         }
-        hasSource = envelope.hasSource();
-        if(hasSource) {
-          source = sourceAddress.getNumber();
+
+        if (sourceAddress != null) {
+            source = sourceAddress.getNumber();
         }
-        hasSourceDevice = envelope.hasSourceDevice();
-        if(hasSourceDevice) {
-          sourceDevice = envelope.getSourceDevice();
+
+        sender = c.getSender();
+
+        if (envelope.hasSourceDevice()) {
+            sourceDevice = envelope.getSourceDevice();
         }
+
         type = envelope.getType();
-        hasRelay = sourceAddress.getRelay().isPresent();
-        if(hasRelay) {
+
+        if (sourceAddress.getRelay().isPresent()) {
             relay = sourceAddress.getRelay().get();
         }
+
         timestamp = envelope.getTimestamp();
         timestampISO = formatTimestampISO(envelope.getTimestamp());
         serverTimestamp = envelope.getServerTimestamp();
+
         hasLegacyMessage = envelope.hasLegacyMessage();
+
         hasContent = envelope.hasContent();
-        // if(hasContent) {
-        //   content = Base64.encodeBytes(envelope.getContent());
-        // }
+
         isReceipt = envelope.isReceipt();
         if (c != null) {
             if (c.getDataMessage().isPresent()) {
@@ -100,14 +94,15 @@ class JsonMessageEnvelope {
                 this.callMessage = new JsonCallMessage(c.getCallMessage().get());
             }
 
-            if(c.getReceiptMessage().isPresent()) {
-              this.receipt = new JsonReceiptMessage(c.getReceiptMessage().get());
+            if (c.getReceiptMessage().isPresent()) {
+                this.receipt = new JsonReceiptMessage(c.getReceiptMessage().get());
             }
 
-            if(c.getTypingMessage().isPresent()) {
-              this.typing = new JsonTypingMessage(c.getTypingMessage().get());
+            if (c.getTypingMessage().isPresent()) {
+                this.typing = new JsonTypingMessage(c.getTypingMessage().get());
             }
         }
+        isUnidentifiedSender = envelope.isUnidentifiedSender();
     }
 
     private static String formatTimestampISO(long timestamp) {
