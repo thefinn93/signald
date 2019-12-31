@@ -30,7 +30,6 @@ class JsonMessageEnvelope {
     String username;
     String uuid;
     String source;
-    String sender;
     int sourceDevice;
     int type;
     String relay;
@@ -56,11 +55,11 @@ class JsonMessageEnvelope {
             uuid = envelope.getUuid();
         }
 
-        if (sourceAddress != null) {
+        if (envelope.hasSource()) {
             source = sourceAddress.getNumber();
+        } else {
+            source = c.getSender();
         }
-
-        sender = c.getSender();
 
         if (envelope.hasSourceDevice()) {
             sourceDevice = envelope.getSourceDevice();
