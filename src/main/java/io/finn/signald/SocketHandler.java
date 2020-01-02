@@ -206,7 +206,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, GroupNotFoundException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+  private void send(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, GroupNotFoundException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
     Manager manager = getManager(request.username);
 
     SignalServiceDataMessage.Quote quote = null;
@@ -291,7 +291,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void listAccounts(JsonRequest request) throws JsonProcessingException, IOException {
+  private void listAccounts(JsonRequest request) throws IOException, NoSuchAccountException {
     // We have to create a manager for each account that we're listing, which is all of them :/
     File[] users = new File(data_path + "/data").listFiles();
     if(users != null) {
@@ -306,9 +306,9 @@ public class SocketHandler implements Runnable {
     this.reply("account_list", accounts, request.id);
   }
 
-  private void register(JsonRequest request) throws IOException {
+  private void register(JsonRequest request) throws IOException, NoSuchAccountException {
     logger.info("Register request: " + request);
-    Manager m = getManager(request.username);
+    Manager m = getManager(request.username, true);
     Boolean voice = false;
     if(request.voice != null) {
       voice = request.voice;
@@ -323,7 +323,7 @@ public class SocketHandler implements Runnable {
     this.reply("verification_required", new JsonAccount(m), request.id);
   }
 
-  private void verify(JsonRequest request) throws IOException {
+  private void verify(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     if(!m.userHasKeys()) {
       logger.warn("User has no keys, first call register.");
@@ -336,13 +336,16 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException {
+  private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException, NoSuchAccountException {
     Manager m = getManager(request.username);
     m.addDeviceLink(new URI(request.uri));
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
-  private Manager getManager(String username) throws IOException {
+  private Manager getManager(String username) throws IOException, NoSuchAccountException {
+    return getManager(username, false);
+  }
+  private Manager getManager(String username, boolean newUser) throws IOException, NoSuchAccountException {
     // So many problems in this method, need to have a single place to create new managers, probably in MessageReceiver
 
     if(this.managers.containsKey(username)) {
@@ -350,17 +353,19 @@ public class SocketHandler implements Runnable {
     } else {
       logger.info("Creating a manager for " + username);
       Manager m = new Manager(username, data_path);
-      if(m.userExists()) {
-        m.init();
-      } else {
-        logger.warn("Created manager for a user that doesn't exist! (" + username + ")");
+      if(!newUser) {
+        if(m.userExists()) {
+          m.init();
+        } else {
+          throw new NoSuchAccountException(username);
+        }
       }
       this.managers.put(username, m);
       return m;
     }
   }
 
-  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
     Manager m = getManager(request.username);
 
     byte[] groupId = null;
@@ -395,7 +400,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, UntrustedIdentityException, EncapsulatedExceptions, IOException {
+  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, UntrustedIdentityException, EncapsulatedExceptions, IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
 
     if(request.recipientGroupId != null) {
@@ -408,12 +413,12 @@ public class SocketHandler implements Runnable {
     this.reply("expiration_updated", null, request.id);
   }
 
-  private void listGroups(JsonRequest request) throws IOException, JsonProcessingException {
+  private void listGroups(JsonRequest request) throws IOException, JsonProcessingException, NoSuchAccountException {
     Manager m = getManager(request.username);
     this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
-  private void leaveGroup(JsonRequest request) throws IOException, JsonProcessingException, GroupNotFoundException, UntrustedIdentityException, NotAGroupMemberException, EncapsulatedExceptions {
+  private void leaveGroup(JsonRequest request) throws IOException, JsonProcessingException, GroupNotFoundException, UntrustedIdentityException, NotAGroupMemberException, EncapsulatedExceptions, NoSuchAccountException {
     Manager m = getManager(request.username);
     byte[] groupId = Base64.decode(request.recipientGroupId);
     m.sendQuitGroupMessage(groupId);
@@ -450,7 +455,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void getUser(JsonRequest request) throws IOException {
+  private void getUser(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     Optional<ContactTokenDetails> contact = m.getUser(request.recipientNumber);
     if(contact.isPresent()) {
@@ -460,12 +465,12 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void getIdentities(JsonRequest request) throws IOException {
+  private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
   }
 
-  private void trust(JsonRequest request) throws IOException {
+  private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     if(request.fingerprint == null) {
       this.reply("input_error", new JsonStatusMessage(0, "Fingerprint must be a string!", request), request.id);
@@ -494,18 +499,18 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void syncContacts(JsonRequest request) throws IOException {
+  private void syncContacts(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     m.requestSyncContacts();
     this.reply("sync_requested", null, request.id);
   }
 
-  private void listContacts(JsonRequest request) throws IOException {
+  private void listContacts(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     this.reply("contact_list", m.getContacts(), request.id);
   }
 
-  public void updateContact(JsonRequest request) throws IOException {
+  public void updateContact(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = getManager(request.username);
     if(request.contact == null) {
       this.reply("update_contact_error", new JsonStatusMessage(0, "No contact specificed!", request), request.id);
@@ -521,7 +526,8 @@ public class SocketHandler implements Runnable {
     this.reply("contact_updated", null, request.id);
   }
 
-  private void subscribe(JsonRequest request) throws IOException {
+  private void subscribe(JsonRequest request) throws IOException, NoSuchAccountException {
+    getManager(request.username); // throws an exception if the user doesn't exist
     if(!this.receivers.containsKey(request.username)) {
       MessageReceiver receiver = new MessageReceiver(request.username, this.managers, this.data_path);
       this.receivers.put(request.username, receiver);
@@ -543,7 +549,7 @@ public class SocketHandler implements Runnable {
       this.reply("version", new JsonVersionMessage(), null);
   }
 
-  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException {
+  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException {
       Manager m = getManager(request.username);
       ContactInfo contact = m.getContact(request.recipientNumber);
       if(contact == null || contact.profileKey == null) {
@@ -553,7 +559,7 @@ public class SocketHandler implements Runnable {
       this.reply("profile", new JsonProfile(m.getProfile(request.recipientNumber), Base64.decode(contact.profileKey)), request.id);
   }
 
-  private void setProfile(JsonRequest request) throws IOException {
+  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException {
       Manager m = getManager(request.username);
       m.setProfileName(request.name);
       this.reply("profile_set", null, request.id);

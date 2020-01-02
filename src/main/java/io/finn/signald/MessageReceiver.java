@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2018 Finn Herzfeld
+/*
+ * Copyright (C) 2020 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       return removed;
     }
 
-    private Manager getManager(String username, String data_path) throws IOException {
+    private Manager getManager(String username, String data_path) throws IOException, NoSuchAccountException {
       if(this.managers.containsKey(username)) {
         return this.managers.get(username);
       } else {
@@ -72,6 +72,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           m.init();
         } else {
           logger.warn("Created manager for a user that doesn't exist! (" + username + ")");
+          throw new NoSuchAccountException(username);
         }
         this.managers.put(username, m);
         return m;
