@@ -83,7 +83,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       try {
         Thread.currentThread().setName(this.username + "-manager");
         this.m = getManager(this.username, this.data_path);
-        while(true) {
+        while(this.sockets.size() > 0) {
           double timeout = 3600;
           boolean returnOnTimeout = true;
           if (timeout < 0) {
@@ -94,7 +94,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           try {
             this.m.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
           } catch (IOException e) {
-              continue;
+              logger.debug("probably harmless IOException while receiving messages:" + e.toString());
           } catch (AssertionError e) {
               logger.catching(e);
           }
