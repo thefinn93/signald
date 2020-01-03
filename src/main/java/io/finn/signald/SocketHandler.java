@@ -114,6 +114,7 @@ public class SocketHandler implements Runnable {
           for(Map.Entry<String, MessageReceiver> entry : this.receivers.entrySet()) {
             if(entry.getValue().unsubscribe(this.socket)) {
               logger.info("Unsubscribed from " + entry.getKey());
+              this.receivers.remove(entry.getKey());
             }
           }
           return;
@@ -533,6 +534,8 @@ public class SocketHandler implements Runnable {
       this.receivers.put(request.username, receiver);
       Thread messageReceiverThread = new Thread(receiver);
       messageReceiverThread.start();
+    } else {
+      logger.debug("Additional subscribe request, re-using existing MessageReceiver");
     }
     this.receivers.get(request.username).subscribe(this.socket);
     this.subscribedAccounts.add(request.username);
@@ -541,6 +544,7 @@ public class SocketHandler implements Runnable {
 
   private void unsubscribe(JsonRequest request) throws IOException {
     this.receivers.get(request.username).unsubscribe(this.socket);
+    this.receivers.remove(request.username);
     this.subscribedAccounts.remove(request.username);
     this.reply("unsubscribed", null, request.id);  // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
