@@ -39,7 +39,6 @@ import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
 import org.asamk.signal.storage.protocol.JsonSignalProtocolStore;
 import org.asamk.signal.storage.threads.JsonThreadStore;
 import org.asamk.signal.storage.threads.ThreadInfo;
-import org.asamk.signal.util.Util;
 
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.metadata.ProtocolUntrustedIdentityException;
