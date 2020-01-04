@@ -18,18 +18,28 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
+import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.internal.util.Base64;
-import org.whispersystems.signalservice.api.crypto.ProfileCipher;
+
 import java.io.IOException;
 
 class JsonProfile {
-  public String name;
-  public String avatar;
-  public String unrestrictedUnidentifiedAccess;
+    public String name;
+    public String avatar;
+    public String identity_key;
+    public String unidentified_access;
+    public boolean unrestricted_unidentified_access;
 
-  JsonProfile(SignalServiceProfile p, byte[] profileKey) throws IOException, InvalidCiphertextException {
-    ProfileCipher profileCipher = new ProfileCipher(profileKey);
-    name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
-  }
+    JsonProfile(SignalServiceProfile p, byte[] profileKey) throws IOException, InvalidCiphertextException {
+        ProfileCipher profileCipher = new ProfileCipher(profileKey);
+        name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
+        identity_key = p.getIdentityKey();
+        avatar = p.getAvatar();
+        unidentified_access = p.getUnidentifiedAccess();
+        if (p.isUnrestrictedUnidentifiedAccess()) {
+            unrestricted_unidentified_access = true;
+        }
+
+    }
 }
