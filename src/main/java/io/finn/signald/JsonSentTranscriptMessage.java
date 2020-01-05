@@ -19,6 +19,7 @@ package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,14 +32,14 @@ class JsonSentTranscriptMessage {
     Map<String, Boolean> unidentifiedStatus = new HashMap<>();
     boolean isRecipientUpdate;
 
-    JsonSentTranscriptMessage(SentTranscriptMessage s, Manager m) {
+    JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException {
         if(s.getDestination().isPresent()) {
             destination = s.getDestination().get();
         }
 
         timestamp = s.getTimestamp();
         expirationStartTimestamp = s.getExpirationStartTimestamp();
-        message = new JsonDataMessage(s.getMessage(), m);
+        message = new JsonDataMessage(s.getMessage(), username);
         for(String r : s.getRecipients()) {
             unidentifiedStatus.put(r, s.isUnidentified(r));
         }

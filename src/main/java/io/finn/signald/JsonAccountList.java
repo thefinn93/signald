@@ -17,21 +17,18 @@
 
 package io.finn.signald;
 
-import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Enumeration;
+import java.util.List;
 
 class JsonAccountList {
-  public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
+    public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
-  JsonAccountList(ConcurrentHashMap<String,Manager> managers, ArrayList<String> subscribedAccounts) {
-    Enumeration<String> usernames = managers.keys();
-    while(usernames.hasMoreElements()) {
-      String username = usernames.nextElement();
-      Manager manager = managers.get(username);
-      JsonAccount account = new JsonAccount(manager, subscribedAccounts.contains(username));
-      accounts.add(account);
+    JsonAccountList(ArrayList<String> subscribedAccounts) {
+        for (Manager m : Manager.getAll()) {
+            if (m != null) {
+                accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getUsername())));
+            }
+
+        }
     }
-  }
 }

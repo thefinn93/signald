@@ -105,6 +105,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -116,7 +117,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 class Manager {
-    private static final Logger logger = LogManager.getLogger();
+    private Logger logger;
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
     private final static SignalServiceConfiguration serviceConfiguration = new SignalServiceConfiguration(
             new SignalServiceUrl[]{new SignalServiceUrl(BuildConfig.SIGNAL_URL, TRUST_STORE)},
@@ -129,13 +130,15 @@ class Manager {
     private final static String USER_AGENT = BuildConfig.USER_AGENT;
 
     private final static int PREKEY_MINIMUM_COUNT = 20;
-    private static final int PREKEY_BATCH_SIZE = 100;
-    private static final int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
+    private final static int PREKEY_BATCH_SIZE = 100;
+    private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
 
-    private final String settingsPath;
-    private final String dataPath;
-    private final String attachmentsPath;
-    private final String avatarsPath;
+    private static ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<>();
+
+    private static String settingsPath;
+    private static String dataPath;
+    private static String attachmentsPath;
+    private static String avatarsPath;
 
     private FileChannel fileChannel;
     private FileLock lock;
@@ -161,20 +164,66 @@ class Manager {
 
     private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
-    public Manager(String username, String settingsPath) {
+    public static Manager get(String username) throws IOException, NoSuchAccountException {
+        return get(username, false);
+    }
+
+    public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException {
+         Logger logger = LogManager.getLogger("manager");
+        if(managers.containsKey(username)) {
+            return managers.get(username);
+        }
+
+        logger.info("Creating a manager for " + username);
+        managers.put(username, new Manager(username));
+        Manager m = managers.get(username);
+        if(!newUser) {
+            try {
+                if (m.userExists()) {
+                    m.init();
+                } else {
+                    throw new NoSuchAccountException(username);
+                }
+            } catch(Exception e) {
+                managers.remove(username);
+            }
+        }
+        return m;
+    }
+
+    public static List<Manager> getAll() {
+        Logger logger = LogManager.getLogger("manager");
+        // We have to create a manager for each account that we're listing, which is all of them :/
+        List<Manager> allManagers = new LinkedList<>();
+        for(File account : new File(dataPath).listFiles()) {
+            if(!account.isDirectory()) {
+                try {
+                    allManagers.add(Manager.get(account.getName()));
+                } catch (IOException | NoSuchAccountException e) {
+                    logger.warn("Failed to load account from file: " + account.getAbsolutePath());
+                }
+            }
+        }
+        return allManagers;
+    }
+
+    public Manager(String username) {
+        logger =  LogManager.getLogger("manager-" + username);
         logger.info("Creating new manager for " + username + " (stored at " + settingsPath + ")");
         this.username = username;
-        this.settingsPath = settingsPath;
-        this.dataPath = this.settingsPath + "/data";
-        this.attachmentsPath = this.settingsPath + "/attachments";
-        this.avatarsPath = this.settingsPath + "/avatars";
-
         jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
         jsonProcessor.enable(SerializationFeature.INDENT_OUTPUT); // for pretty print, you can disable it.
         jsonProcessor.enable(SerializationFeature.WRITE_NULL_MAP_VALUES);
         jsonProcessor.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         jsonProcessor.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
         jsonProcessor.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
+    }
+
+    public static void setDataPath(String path) {
+        settingsPath = path;
+        dataPath = settingsPath + "/data";
+        attachmentsPath = settingsPath + "/attachments";
+        avatarsPath = settingsPath + "/avatars";
     }
 
     public String getUsername() {
@@ -259,9 +308,7 @@ class Manager {
         fileChannel = new RandomAccessFile(new File(getFileName()), "rw").getChannel();
         lock = fileChannel.tryLock();
         if (lock == null) {
-            logger.info("Config file is in use by another instance, waiting…");
-            lock = fileChannel.lock();
-            logger.info("Config file lock acquired.");
+            throw new IOException("Config file is in use by another instance of signald");
         }
     }
 
@@ -491,6 +538,7 @@ class Manager {
         requestSyncContacts();
 
         save();
+        managers.put(username, this);
         logger.info("Successfully finished linked to " + username + " as device #" + deviceId);
     }
 
@@ -1511,7 +1559,7 @@ class Manager {
     }
 
     private SignalServiceEnvelope loadEnvelope(File file) throws IOException {
-        logger.debug("Preparing to load cached envelope from " + file.toString());
+        logger.debug("Loading cached envelope from " + file.toString());
         try (FileInputStream f = new FileInputStream(file)) {
             DataInputStream in = new DataInputStream(f);
             int version = in.readInt();

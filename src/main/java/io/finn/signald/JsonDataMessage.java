@@ -20,6 +20,7 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,10 +34,10 @@ class JsonDataMessage {
     List<JsonPreview> previews;
     JsonSticker sticker;
 
-    JsonDataMessage(SignalServiceDataMessage dataMessage, Manager m) {
+    JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
         this.timestamp = dataMessage.getTimestamp();
         if (dataMessage.getGroupInfo().isPresent()) {
-            this.groupInfo = new JsonGroupInfo(dataMessage.getGroupInfo().get(), m);
+            this.groupInfo = new JsonGroupInfo(dataMessage.getGroupInfo().get(), username);
         }
         if (dataMessage.getBody().isPresent()) {
             this.message = dataMessage.getBody().get();
@@ -45,7 +46,7 @@ class JsonDataMessage {
         if (dataMessage.getAttachments().isPresent()) {
             this.attachments = new ArrayList<>(dataMessage.getAttachments().get().size());
             for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
-                this.attachments.add(new JsonAttachment(attachment, m));
+                this.attachments.add(new JsonAttachment(attachment, username));
             }
         } else {
             this.attachments = new ArrayList<>();
@@ -58,12 +59,12 @@ class JsonDataMessage {
         if(dataMessage.getPreviews().isPresent()) {
           previews = new ArrayList<JsonPreview>();
           for(SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
-            previews.add(new JsonPreview(p, m));
+            previews.add(new JsonPreview(p, username));
           }
         }
 
         if(dataMessage.getSticker().isPresent()) {
-          this.sticker = new JsonSticker(dataMessage.getSticker().get(), m);
+          this.sticker = new JsonSticker(dataMessage.getSticker().get(), username);
         }
 
     }

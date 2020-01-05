@@ -25,6 +25,7 @@ import org.whispersystems.signalservice.internal.util.Base64;
 
 import org.asamk.signal.util.Hex;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.LinkedList;
 
@@ -42,19 +43,19 @@ class JsonSyncMessage {
     JsonConfigurationMessage configuration;
     List<JsonStickerPackOperationMessage> stickerPackOperations = new LinkedList<>();
 
-    JsonSyncMessage(SignalServiceSyncMessage syncMessage, Manager m) {
+    JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
         if(syncMessage.getSent().isPresent()) {
-            this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), m);
+            this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
         }
 
         if(syncMessage.getContacts().isPresent()) {
           ContactsMessage c = syncMessage.getContacts().get();
-          contacts = new JsonAttachment(c.getContactsStream(), m);
+          contacts = new JsonAttachment(c.getContactsStream(), username);
           contactsComplete = c.isComplete();
         }
 
         if(syncMessage.getGroups().isPresent()) {
-          groups = new JsonAttachment(syncMessage.getGroups().get(), m);
+          groups = new JsonAttachment(syncMessage.getGroups().get(), username);
         }
 
         if(syncMessage.getBlockedList().isPresent()) {

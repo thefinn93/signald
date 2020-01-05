@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
@@ -46,7 +47,7 @@ class JsonAttachment {
         this.filename = storedFilename;
     }
 
-    JsonAttachment(SignalServiceAttachment attachment, Manager m) {
+    JsonAttachment(SignalServiceAttachment attachment, String username) throws IOException, NoSuchAccountException {
         this.contentType = attachment.getContentType();
         final SignalServiceAttachmentPointer pointer = attachment.asPointer();
         if (attachment.isPointer()) {
@@ -78,13 +79,10 @@ class JsonAttachment {
                 this.blurhash = pointer.getBlurHash().get();
             }
 
-            if( m != null) {
-                File file = m.getAttachmentFile(pointer.getId());
-                if( file.exists()) {
-                    this.storedFilename = file.toString();
-                }
+            File file = Manager.get(username).getAttachmentFile(pointer.getId());
+            if(file.exists()) {
+                this.storedFilename = file.toString();
             }
-
         }
     }
 
@@ -92,6 +90,6 @@ class JsonAttachment {
       if(preview != null) {
           return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
       }
-      return Optional.<byte[]>absent();
+      return Optional.absent();
     }
 }

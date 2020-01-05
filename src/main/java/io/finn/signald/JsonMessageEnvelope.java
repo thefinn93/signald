@@ -21,6 +21,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -48,9 +49,10 @@ class JsonMessageEnvelope {
     JsonTypingMessage typing;
 
 
-    public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, Manager m) {
+    public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
         SignalServiceAddress sourceAddress = envelope.getSourceAddress();
-        username = m.getUsername();
+        this.username = username;
+
         if (envelope.hasUuid()) {
             uuid = envelope.getUuid();
         }
@@ -74,19 +76,17 @@ class JsonMessageEnvelope {
         timestamp = envelope.getTimestamp();
         timestampISO = formatTimestampISO(envelope.getTimestamp());
         serverTimestamp = envelope.getServerTimestamp();
-
         hasLegacyMessage = envelope.hasLegacyMessage();
-
         hasContent = envelope.hasContent();
-
         isReceipt = envelope.isReceipt();
+
         if (c != null) {
             if (c.getDataMessage().isPresent()) {
-                this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), m);
+                this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), username);
             }
 
             if (c.getSyncMessage().isPresent()) {
-                this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), m);
+                this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), username);
             }
 
             if (c.getCallMessage().isPresent()) {

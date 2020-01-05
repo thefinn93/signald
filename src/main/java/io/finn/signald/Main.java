@@ -42,7 +42,6 @@ import io.sentry.Sentry;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
 
@@ -84,7 +83,6 @@ public class Main implements Runnable {
       Security.addProvider(new BouncyCastleProvider());
 
       SocketManager socketmanager = new SocketManager();
-      ConcurrentHashMap<String,Manager> managers = new ConcurrentHashMap<String,Manager>();
       ConcurrentHashMap<String,MessageReceiver> receivers = new ConcurrentHashMap<String,MessageReceiver>();
 
       logger.info("Binding to socket " + socket_path);
@@ -93,14 +91,16 @@ public class Main implements Runnable {
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
       server.bind(new AFUNIXSocketAddress(new File(socket_path)));
 
+      logger.debug("Using data folder " + data_path);
+
+      Manager.setDataPath(data_path);
+
       // Spins up one thread per registered signal number, listens for incoming messages
       File[] users = new File(data_path + "/data").listFiles();
 
       if(users == null) {
          logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
       }
-
-      logger.debug("Using data folder " + data_path);
 
       SignalProtocolLoggerProvider.setProvider(new ProtocolLogger());
 
@@ -112,7 +112,7 @@ public class Main implements Runnable {
           socketmanager.add(socket);
 
           // Kick off the thread to read input
-          Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers, managers, data_path), "socketlistener");
+          Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers), "socketlistener");
           socketHandlerThread.start();
 
         } catch(IOException e) {

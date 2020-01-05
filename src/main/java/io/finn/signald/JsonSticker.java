@@ -23,6 +23,8 @@ import org.thoughtcrime.securesms.util.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
+
 class JsonSticker {
   private static final Logger logger = LogManager.getLogger();
 
@@ -31,10 +33,10 @@ class JsonSticker {
   int stickerID;
   JsonAttachment attachment;
 
-  JsonSticker(SignalServiceDataMessage.Sticker sticker, Manager m) {
+  JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException {
     packID = Hex.toStringCondensed(sticker.getPackId());
     packKey = Hex.toStringCondensed(sticker.getPackKey());
     stickerID = sticker.getStickerId();
-    attachment = new JsonAttachment(sticker.getAttachment(), m);
+    attachment = new JsonAttachment(sticker.getAttachment(), username);
   }
 }
