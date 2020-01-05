@@ -195,7 +195,11 @@ class Manager {
         Logger logger = LogManager.getLogger("manager");
         // We have to create a manager for each account that we're listing, which is all of them :/
         List<Manager> allManagers = new LinkedList<>();
-        for(File account : new File(dataPath).listFiles()) {
+        File[] allAccounts = new File(dataPath).listFiles();
+        if(allAccounts == null) {
+            return allManagers;
+        }
+        for(File account : allAccounts) {
             if(!account.isDirectory()) {
                 try {
                     allManagers.add(Manager.get(account.getName()));
