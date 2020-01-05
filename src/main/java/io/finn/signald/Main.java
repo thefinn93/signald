@@ -22,6 +22,7 @@ import io.finn.signald.BuildConfig;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -85,11 +86,15 @@ public class Main implements Runnable {
       SocketManager socketmanager = new SocketManager();
       ConcurrentHashMap<String,MessageReceiver> receivers = new ConcurrentHashMap<String,MessageReceiver>();
 
-      logger.info("Binding to socket " + socket_path);
-
       // Spins up one thread per inbound connection to the control socket
+      File socketFile = new File(socket_path);
+      if(socketFile.exists()) {
+        logger.debug("Deleting existing socket file");
+        Files.delete(socketFile.toPath());
+      }
+      logger.info("Binding to socket " + socket_path);
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
-      server.bind(new AFUNIXSocketAddress(new File(socket_path)));
+      server.bind(new AFUNIXSocketAddress(socketFile));
 
       logger.debug("Using data folder " + data_path);
 
