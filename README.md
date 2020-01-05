@@ -107,6 +107,7 @@ Begins the process of registering a new number on signal for use with signald. P
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The phone number to register |
+| `captcha` | string | no | The captcha value to use, if you get `CaptchaRequiredException` when trying to register. Unlcear if this option works, see [this issue](https://gitlab.com/thefinn93/signald/issues/8), please update it if you are unable to register without a captcha, so we can know if it works.
 | `voice` | boolean | no | Indicates if the verification code should be sent via a phone call. If `false` or not set the verification is done via SMS |
 
 

@@ -305,7 +305,7 @@ public class SocketHandler implements Runnable {
       m.createNewIdentity();
     }
     logger.info("Registering (voice: " + voice + ")");
-    m.register(voice);
+    m.register(voice, Optional.fromNullable(request.captcha));
     this.reply("verification_required", new JsonAccount(m), request.id);
   }
 

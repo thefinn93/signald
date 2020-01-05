@@ -42,6 +42,7 @@ class JsonRequest {
     public int expiresInSeconds;
     public String fingerprint;
     public ContactInfo contact;
+    public String captcha;
     public String name;
 
     JsonRequest() {}
