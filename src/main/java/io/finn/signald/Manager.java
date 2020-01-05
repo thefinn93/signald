@@ -172,11 +172,8 @@ class Manager {
          Logger logger = LogManager.getLogger("manager");
         if(managers.containsKey(username)) {
             return managers.get(username);
-        } else if(!newUser) {
-            throw new NoSuchAccountException(username);
         }
 
-        logger.info("Creating a manager for " + username);
         managers.put(username, new Manager(username));
         Manager m = managers.get(username);
         if(!newUser) {
@@ -188,8 +185,10 @@ class Manager {
                 }
             } catch(Exception e) {
                 managers.remove(username);
+                throw e;
             }
         }
+        logger.info("Created a manager for " + username);
         return m;
     }
 
