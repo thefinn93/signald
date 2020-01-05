@@ -482,14 +482,18 @@ class Manager {
     }
 
     public void register(boolean voiceVerification) throws IOException {
+        register(voiceVerification, Optional.<String>absent());
+    }
+
+    public void register(boolean voiceVerification, Optional<String> captcha) throws IOException {
         password = Util.getSecret(18);
 
         accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
 
         if (voiceVerification) {
-            accountManager.requestVoiceVerificationCode(Locale.getDefault(), Optional.<String>absent(), Optional.<String>absent());  // TODO: Allow requester to set the locale
+            accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent());  // TODO: Allow requester to set the locale
         } else {
-            accountManager.requestSmsVerificationCode(true, Optional.<String>absent(), Optional.<String>absent()); //  TODO: Allow requester to set challenge
+            accountManager.requestSmsVerificationCode(true, captcha, Optional.absent()); //  TODO: Allow requester to set challenge
         }
 
         registered = false;
