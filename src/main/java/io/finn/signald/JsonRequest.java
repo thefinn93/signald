@@ -44,6 +44,8 @@ class JsonRequest {
     public ContactInfo contact;
     public String captcha;
     public String name;
+    public List<Long> timestamps;
+    public long when;
 
     JsonRequest() {}
 }
