@@ -26,6 +26,7 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
@@ -134,6 +135,9 @@ public class SocketHandler implements Runnable {
     switch(request.type) {
       case "send":
         send(request);
+        break;
+      case "mark_read":
+        markRead(request);
         break;
       case "subscribe":
         subscribe(request);
@@ -283,6 +287,28 @@ public class SocketHandler implements Runnable {
 
       for(NetworkFailureException i: e.getNetworkExceptions()) {
         this.reply("network_failure", new JsonNetworkFailureException(i), request.id);
+      }
+    }
+  }
+
+  private void markRead(JsonRequest request) throws IOException, NoSuchAccountException {
+    logger.info("Mark as Read");
+    Manager m = Manager.get(request.username);
+
+    if(request.when == 0) {
+      request.when = System.currentTimeMillis();
+    }
+
+    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(
+        SignalServiceReceiptMessage.Type.READ,
+        request.timestamps,
+        request.when);
+
+    SendMessageResult result = m.sendReceipt(message, request.recipientNumber);
+    if(result != null) {
+      SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
+      if(identityFailure != null) {
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getNumber(), m, request), request.id);
       }
     }
   }

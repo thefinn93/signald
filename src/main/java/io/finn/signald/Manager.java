@@ -1094,6 +1094,28 @@ class Manager {
         }
     }
 
+    public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, String recipient) throws IOException {
+        SignalServiceAddress address = getSignalServiceAddress(recipient);
+        if (address == null) {
+            save();
+            return null;
+        }
+
+        try {
+            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password, deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
+
+            try {
+                messageSender.sendReceipt(address, getAccessFor(address), message);
+		return null;
+            } catch (UntrustedIdentityException e) {
+                signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                return SendMessageResult.identityFailure(address, e.getIdentityKey());
+            }
+        } finally {
+            save();
+        }
+    }
+
     private List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients) throws IOException {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) {
@@ -1170,17 +1192,24 @@ class Manager {
         }
     }
 
+    private SignalServiceAddress getSignalServiceAddress(String recipient) {
+        try {
+            return getPushAddress(recipient);
+        } catch (InvalidNumberException e) {
+            logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
+            logger.warn("Aborting sending.");
+            save();
+            return null;
+        }
+    }
+
     private Set<SignalServiceAddress> getSignalServiceAddresses(Collection<String> recipients) {
         Set<SignalServiceAddress> recipientsTS = new HashSet<>(recipients.size());
         for (String recipient : recipients) {
-            try {
-                recipientsTS.add(getPushAddress(recipient));
-            } catch (InvalidNumberException e) {
-                logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
-                logger.warn("Aborting sending.");
-                save();
+            SignalServiceAddress addr = getSignalServiceAddress(recipient);
+            if (addr == null)
                 return null;
-            }
+            recipientsTS.add(addr);
         }
         return recipientsTS;
     }

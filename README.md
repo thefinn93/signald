@@ -121,6 +121,18 @@ Completes the registration process, by providing a verification code sent after 
 | `code` | string | yes | The verification code. The `-` in the middle code is optional.
 
 
+### `mark_read`
+
+Mark a received message as "read" by sending a receipt message.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to send the read receipt. |
+| `recipientNumber` | `string` | yes | The full number that sent the original message. |
+| `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
+| `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
+
+
 ### `add_device`
 
 Adds another device to a signal account that signald controls the master device on. Possible values are:
