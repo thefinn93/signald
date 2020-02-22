@@ -1896,8 +1896,9 @@ class Manager {
      *
      * @param name        username of the identity
      * @param fingerprint Fingerprint
+     * @param level       level at with to trust the identity
      */
-    public boolean trustIdentityVerified(String name, byte[] fingerprint) {
+    public boolean trustIdentity(String name, byte[] fingerprint, TrustLevel level) {
         List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
         if (ids == null) {
             return false;
@@ -1907,9 +1908,9 @@ class Manager {
                 continue;
             }
 
-            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), level);
             try {
-                sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+                sendVerifiedMessage(name, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
@@ -1924,8 +1925,9 @@ class Manager {
      *
      * @param name         username of the identity
      * @param safetyNumber Safety number
+     * @param level        level to trust the identity
      */
-    public boolean trustIdentityVerifiedSafetyNumber(String name, String safetyNumber) {
+    public boolean trustIdentitySafetyNumber(String name, String safetyNumber, TrustLevel level) {
         List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
         if (ids == null) {
             return false;
@@ -1935,9 +1937,9 @@ class Manager {
                 continue;
             }
 
-            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), level);
             try {
-                sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+                sendVerifiedMessage(name, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
