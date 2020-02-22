@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import org.asamk.signal.*;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.internal.util.Base64;
@@ -33,10 +34,6 @@ import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserExce
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 
 import org.asamk.signal.storage.contacts.ContactInfo;
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.UserAlreadyExists;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.util.Hex;
 
 import java.io.IOException;
@@ -460,22 +457,32 @@ public class SocketHandler implements Runnable {
 
   private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
+    TrustLevel trustLevel = TrustLevel.TRUSTED_VERIFIED;
     if(request.fingerprint == null) {
       this.reply("input_error", new JsonStatusMessage(0, "Fingerprint must be a string!", request), request.id);
       return;
+    }
+    if(request.trustLevel != null) {
+      try {
+        trustLevel = TrustLevel.valueOf(request.trustLevel.toUpperCase());
+      } catch(IllegalArgumentException e) {
+        this.reply("input_error",
+                new JsonStatusMessage(0, "Invalid TrustLevel", request), request.id);
+        return;
+      }
     }
     String fingerprint = request.fingerprint.replaceAll(" ", "");
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
       fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
-      boolean res = m.trustIdentityVerified(request.recipientNumber, fingerprintBytes);
+      boolean res = m.trustIdentity(request.recipientNumber, fingerprintBytes, trustLevel);
       if (!res) {
         this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request), request.id);
       } else {
         this.reply("trusted_fingerprint", new JsonStatusMessage(0, "Successfully trusted fingerprint", request), request.id);
       }
     } else if (fingerprint.length() == 60) {
-      boolean res = m.trustIdentityVerifiedSafetyNumber(request.recipientNumber, fingerprint);
+      boolean res = m.trustIdentitySafetyNumber(request.recipientNumber, fingerprint, trustLevel);
       if (!res) {
         this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request), request.id);
       } else {

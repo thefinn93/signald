@@ -41,6 +41,7 @@ class JsonRequest {
     public JsonQuote quote;
     public int expiresInSeconds;
     public String fingerprint;
+    public String trustLevel;
     public ContactInfo contact;
     public String captcha;
     public String name;

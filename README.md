@@ -212,7 +212,14 @@ Trust's a safety number or fingerprint.
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
 | `recipientNumber` | `string` | yes | The full number to look up. |
-| `fingerprint` | `string` | yes | the safety number or fingerprint to trust. |
+| `fingerprint` | `string` | yes | The safety number or fingerprint to trust. |
+| `trustLevel` | `string` | no | The level at which to trust the identity. |
+
+If `trustLevel` is not specified, defaults to `TRUSTED_VERIFIED`. Possible values are:
+
+- `TRUSTED_VERIFIED`
+- `TRUSTED_UNVERIFIED`
+- `UNTRUSTED`
 
 ### `version`
 
