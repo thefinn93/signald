@@ -1094,6 +1094,28 @@ class Manager {
         }
     }
 
+    public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, String recipient) throws IOException {
+        SignalServiceAddress address = getSignalServiceAddress(recipient);
+        if (address == null) {
+            save();
+            return null;
+        }
+
+        try {
+            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password, deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
+
+            try {
+                messageSender.sendReceipt(address, getAccessFor(address), message);
+		return null;
+            } catch (UntrustedIdentityException e) {
+                signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                return SendMessageResult.identityFailure(address, e.getIdentityKey());
+            }
+        } finally {
+            save();
+        }
+    }
+
     private List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients) throws IOException {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) {
@@ -1170,17 +1192,24 @@ class Manager {
         }
     }
 
+    private SignalServiceAddress getSignalServiceAddress(String recipient) {
+        try {
+            return getPushAddress(recipient);
+        } catch (InvalidNumberException e) {
+            logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
+            logger.warn("Aborting sending.");
+            save();
+            return null;
+        }
+    }
+
     private Set<SignalServiceAddress> getSignalServiceAddresses(Collection<String> recipients) {
         Set<SignalServiceAddress> recipientsTS = new HashSet<>(recipients.size());
         for (String recipient : recipients) {
-            try {
-                recipientsTS.add(getPushAddress(recipient));
-            } catch (InvalidNumberException e) {
-                logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
-                logger.warn("Aborting sending.");
-                save();
+            SignalServiceAddress addr = getSignalServiceAddress(recipient);
+            if (addr == null)
                 return null;
-            }
+            recipientsTS.add(addr);
         }
         return recipientsTS;
     }
@@ -1867,8 +1896,9 @@ class Manager {
      *
      * @param name        username of the identity
      * @param fingerprint Fingerprint
+     * @param level       level at with to trust the identity
      */
-    public boolean trustIdentityVerified(String name, byte[] fingerprint) {
+    public boolean trustIdentity(String name, byte[] fingerprint, TrustLevel level) {
         List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
         if (ids == null) {
             return false;
@@ -1878,9 +1908,9 @@ class Manager {
                 continue;
             }
 
-            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), level);
             try {
-                sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+                sendVerifiedMessage(name, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
@@ -1895,8 +1925,9 @@ class Manager {
      *
      * @param name         username of the identity
      * @param safetyNumber Safety number
+     * @param level        level to trust the identity
      */
-    public boolean trustIdentityVerifiedSafetyNumber(String name, String safetyNumber) {
+    public boolean trustIdentitySafetyNumber(String name, String safetyNumber, TrustLevel level) {
         List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
         if (ids == null) {
             return false;
@@ -1906,9 +1937,9 @@ class Manager {
                 continue;
             }
 
-            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), level);
             try {
-                sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_VERIFIED);
+                sendVerifiedMessage(name, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }

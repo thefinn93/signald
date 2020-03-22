@@ -121,6 +121,18 @@ Completes the registration process, by providing a verification code sent after 
 | `code` | string | yes | The verification code. The `-` in the middle code is optional.
 
 
+### `mark_read`
+
+Mark a received message as "read" by sending a receipt message.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to send the read receipt. |
+| `recipientNumber` | `string` | yes | The full number that sent the original message. |
+| `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
+| `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
+
+
 ### `add_device`
 
 Adds another device to a signal account that signald controls the master device on. Possible values are:
@@ -200,7 +212,14 @@ Trust's a safety number or fingerprint.
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
 | `recipientNumber` | `string` | yes | The full number to look up. |
-| `fingerprint` | `string` | yes | the safety number or fingerprint to trust. |
+| `fingerprint` | `string` | yes | The safety number or fingerprint to trust. |
+| `trustLevel` | `string` | no | The level at which to trust the identity. |
+
+If `trustLevel` is not specified, defaults to `TRUSTED_VERIFIED`. Possible values are:
+
+- `TRUSTED_VERIFIED`
+- `TRUSTED_UNVERIFIED`
+- `UNTRUSTED`
 
 ### `version`
 
