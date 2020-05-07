@@ -90,40 +90,52 @@ public class SocketHandler implements Runnable {
     logger.info("Client connected");
 
     try {
-      this.reply("version", new JsonVersionMessage(), null);
-    } catch(JsonProcessingException e) {
-      handleError(e, null);
-    }
+      reply("version", new JsonVersionMessage(), null);
 
-    while(true) {
-      String line = null;
-      JsonRequest request;
-      try {
-        line = this.reader.readLine();
-        if(line == null) {
+      while (true) {
+        final String line = reader.readLine();
+
+        /* client disconnected */
+        if (line == null) {
           logger.info("Client disconnected");
-          this.reader.close();
-          this.writer.close();
-          for(Map.Entry<String, MessageReceiver> entry : this.receivers.entrySet()) {
-            if(entry.getValue().unsubscribe(socket)) {
-              logger.info("Unsubscribed from " + entry.getKey());
-              this.receivers.remove(entry.getKey());
-            }
-          }
-          return;
+          break;
         }
-        if(!line.equals("")) {
-            logger.debug(line);
-            request = this.mpr.readValue(line, JsonRequest.class);
-            try {
-                handleRequest(request);
-            } catch(Throwable e) {
-                handleError(e, request);
-            }
+
+        /* client sent whitespace -- ignore */
+        if (line.trim().length() == 0) {
+          continue;
         }
-      } catch(IOException e) {
-        handleError(e, null);
-        break;
+
+        logger.debug(line);
+
+        JsonRequest request = null;
+
+        try {
+          request = mpr.readValue(line, JsonRequest.class);
+          handleRequest(request);
+        } catch(JsonProcessingException e) {
+          handleError(e, null);
+        } catch (Throwable e) {
+          handleError(e, request);
+        }
+      }
+
+    } catch(IOException e) {
+      handleError(e, null);
+    } finally {
+
+      try {
+        reader.close();
+        writer.close();
+      } catch (IOException e) {
+        logger.catching(e);
+      }
+
+      for(Map.Entry<String, MessageReceiver> entry : receivers.entrySet()) {
+        if(entry.getValue().unsubscribe(socket)) {
+          logger.info("Unsubscribed from " + entry.getKey());
+          receivers.remove(entry.getKey());
+        }
       }
     }
   }
