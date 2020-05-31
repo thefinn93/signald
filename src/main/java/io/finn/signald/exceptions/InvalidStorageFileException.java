@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2019 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
-
-import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+package io.finn.signald.exceptions;
 
 import java.io.IOException;
 
-class JsonSticker {
-  String packID;
-  String packKey;
-  int stickerID;
-  JsonAttachment attachment;
-
-  JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException {
-    packID = Hex.toStringCondensed(sticker.getPackId());
-    packKey = Hex.toStringCondensed(sticker.getPackKey());
-    stickerID = sticker.getStickerId();
-    attachment = new JsonAttachment(sticker.getAttachment(), username);
-  }
+public class InvalidStorageFileException extends IOException {
+    public InvalidStorageFileException(String message) {
+        super("Failed to load account data: " + message);
+    }
 }

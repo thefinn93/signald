@@ -17,32 +17,32 @@
 
 package io.finn.signald;
 
-import java.util.List;
+import io.finn.signald.storage.IdentityKeyStore;
+
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
-import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
-
 class JsonIdentityList {
-  public List<JsonIdentity> identities = new ArrayList<JsonIdentity>();
+  public List<JsonIdentity> identities = new ArrayList<>();
 
-  JsonIdentityList(List<JsonIdentityKeyStore.Identity> identities, Manager m) {
-    for(JsonIdentityKeyStore.Identity identity : identities) {
+  JsonIdentityList(List<IdentityKeyStore.Identity> identities, Manager m) {
+    for(IdentityKeyStore.Identity identity : identities) {
       this.identities.add(new JsonIdentity(identity, m));
     }
   }
 
   JsonIdentityList(String number, Manager m) {
     if(number == null) {
-      for (Map.Entry<String, List<JsonIdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
-        for (JsonIdentityKeyStore.Identity identity : keys.getValue()) {
+      for (Map.Entry<String, List<IdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
+        for (IdentityKeyStore.Identity identity : keys.getValue()) {
             this.identities.add(new JsonIdentity(identity, m, keys.getKey()));
         }
       }
     } else {
-      List<JsonIdentityKeyStore.Identity> identities = m.getIdentities(number);
+      List<IdentityKeyStore.Identity> identities = m.getIdentities(number);
       if(identities != null) {
-        for(JsonIdentityKeyStore.Identity identity : m.getIdentities(number)) {
+        for(IdentityKeyStore.Identity identity : m.getIdentities(number)) {
           this.identities.add(new JsonIdentity(identity, m, number));
         }
       }

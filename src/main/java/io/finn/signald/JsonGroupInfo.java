@@ -17,14 +17,13 @@
 
 package io.finn.signald;
 
+import org.asamk.signal.storage.groups.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.internal.util.Base64;
 
-import org.asamk.signal.storage.groups.GroupInfo;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 class JsonGroupInfo {
     String groupId;
@@ -53,8 +52,8 @@ class JsonGroupInfo {
 
     JsonGroupInfo(GroupInfo groupInfo, Manager m) {
         this.groupId = Base64.encodeBytes(groupInfo.groupId);
-	this.name = groupInfo.name;
-	this.members =  new ArrayList<String>(groupInfo.members);
-	this.avatarId = groupInfo.getAvatarId();
+        this.name = groupInfo.name;
+        this.members =  new ArrayList<String>(groupInfo.members);
+        this.avatarId = groupInfo.getAvatarId();
     }
 }

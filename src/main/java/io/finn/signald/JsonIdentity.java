@@ -17,12 +17,7 @@
 
 package io.finn.signald;
 
-import java.util.Base64;
-
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.push.ContactTokenDetails;
-
-import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
+import io.finn.signald.storage.IdentityKeyStore;
 import org.asamk.signal.util.Hex;
 
 class JsonIdentity {
@@ -32,13 +27,13 @@ class JsonIdentity {
   public String safety_number;
   public String username;
 
-  JsonIdentity(JsonIdentityKeyStore.Identity identity, Manager m) {
+  JsonIdentity(IdentityKeyStore.Identity identity, Manager m) {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
   }
 
-  JsonIdentity(JsonIdentityKeyStore.Identity identity, Manager m, String username) {
+  JsonIdentity(IdentityKeyStore.Identity identity, Manager m, String username) {
     this(identity, m);
     this.safety_number = m.computeSafetyNumber(username, identity.getIdentityKey());
     this.username = username;
