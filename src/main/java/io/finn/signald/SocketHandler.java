@@ -17,53 +17,40 @@
 
 package io.finn.signald;
 
-import org.asamk.signal.*;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
-import org.whispersystems.signalservice.internal.util.Base64;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.push.ContactTokenDetails;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
-import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
-import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
-import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
-
-import org.asamk.signal.storage.contacts.ContactInfo;
-import org.asamk.signal.util.Hex;
-
-import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.net.URISyntaxException;
-import java.net.URI;
-import java.nio.file.Files;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeoutException;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Locale;
-import java.io.File;
-import java.io.InputStream;
-import java.io.FileInputStream;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonGenerator;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.asamk.signal.*;
+import org.asamk.signal.storage.contacts.ContactInfo;
+import org.asamk.signal.util.Hex;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.push.ContactTokenDetails;
+import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+import org.whispersystems.signalservice.internal.util.Base64;
+
+import java.io.*;
+import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 
 public class SocketHandler implements Runnable {
   private BufferedReader reader;
@@ -215,7 +202,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, GroupNotFoundException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
+  private void send(JsonRequest request) throws IOException, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Quote quote = null;
@@ -227,7 +214,7 @@ public class SocketHandler implements Runnable {
     if(request.attachmentFilenames != null) {
       logger.warn("Using deprecated attachmentFilenames argument for send! Use attachments instead");
       if(request.attachments == null) {
-        request.attachments = new ArrayList<JsonAttachment>();
+        request.attachments = new ArrayList<>();
       }
       for(String attachmentFilename: request.attachmentFilenames) {
         request.attachments.add(new JsonAttachment(attachmentFilename));
@@ -381,7 +368,7 @@ public class SocketHandler implements Runnable {
 
     List<String> groupMembers = request.members;
     if (groupMembers == null) {
-        groupMembers = new ArrayList<String>();
+        groupMembers = new ArrayList<>();
     }
 
     String groupAvatar = request.avatar;
@@ -398,7 +385,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, UntrustedIdentityException, EncapsulatedExceptions, IOException, NoSuchAccountException {
+  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, UntrustedIdentityException, EncapsulatedExceptions, NoSuchAccountException {
     Manager m = Manager.get(request.username);
 
     if(request.recipientGroupId != null) {
@@ -411,12 +398,12 @@ public class SocketHandler implements Runnable {
     this.reply("expiration_updated", null, request.id);
   }
 
-  private void listGroups(JsonRequest request) throws IOException, JsonProcessingException, NoSuchAccountException {
+  private void listGroups(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
-  private void leaveGroup(JsonRequest request) throws IOException, JsonProcessingException, GroupNotFoundException, UntrustedIdentityException, NotAGroupMemberException, EncapsulatedExceptions, NoSuchAccountException {
+  private void leaveGroup(JsonRequest request) throws IOException, GroupNotFoundException, UntrustedIdentityException, NotAGroupMemberException, EncapsulatedExceptions, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     byte[] groupId = Base64.decode(request.recipientGroupId);
     m.sendQuitGroupMessage(groupId);
@@ -445,8 +432,6 @@ public class SocketHandler implements Runnable {
       this.reply("linking_successful", new JsonAccount(m), request.id);
     } catch(TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
-    } catch(IOException e) {
-      this.reply("linking_error", new JsonStatusMessage(2, e.getMessage(), request), request.id);
     } catch(UserAlreadyExists e) {
       this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", request), request.id);
     }
@@ -548,7 +533,7 @@ public class SocketHandler implements Runnable {
     this.reply("subscribed", null, request.id);  // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
   }
 
-  private void unsubscribe(JsonRequest request) throws IOException, NoSuchAccountException {
+  private void unsubscribe(JsonRequest request) throws IOException {
     this.receivers.get(request.username).unsubscribe(this.socket);
     this.receivers.remove(request.username);
     this.subscribedAccounts.remove(request.username);

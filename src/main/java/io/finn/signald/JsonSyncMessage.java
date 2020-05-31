@@ -23,11 +23,9 @@ import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSy
 import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
 import org.whispersystems.signalservice.internal.util.Base64;
 
-import org.asamk.signal.util.Hex;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.LinkedList;
+import java.util.List;
 
 class JsonSyncMessage {
     JsonSentTranscriptMessage sent;

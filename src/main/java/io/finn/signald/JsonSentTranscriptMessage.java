@@ -20,7 +20,6 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 

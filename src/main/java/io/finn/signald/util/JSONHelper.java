@@ -15,23 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.util;
 
-import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
-import java.io.IOException;
+public class JSONHelper {
+    public static ObjectMapper GetMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT); // does this do anything?
+        return mapper;
+    }
 
-class JsonSticker {
-  String packID;
-  String packKey;
-  int stickerID;
-  JsonAttachment attachment;
-
-  JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException {
-    packID = Hex.toStringCondensed(sticker.getPackId());
-    packKey = Hex.toStringCondensed(sticker.getPackKey());
-    stickerID = sticker.getStickerId();
-    attachment = new JsonAttachment(sticker.getAttachment(), username);
-  }
+    public static ObjectWriter GetWriter() {
+        return GetMapper().writer(new DefaultPrettyPrinter());
+    }
 }
