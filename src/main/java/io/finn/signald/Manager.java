@@ -16,43 +16,19 @@
  */
 package io.finn.signald;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.asamk.signal.TrustLevel;
-import org.asamk.signal.UserAlreadyExists;
+import io.finn.signald.exceptions.InvalidStorageFileException;
+import io.finn.signald.storage.AccountData;
+import io.finn.signald.storage.IdentityKeyStore;
+import io.finn.signald.storage.SignalProtocolStore;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.asamk.signal.*;
 import org.asamk.signal.storage.contacts.ContactInfo;
-import org.asamk.signal.storage.contacts.JsonContactsStore;
 import org.asamk.signal.storage.groups.GroupInfo;
-import org.asamk.signal.storage.groups.JsonGroupStore;
-import org.asamk.signal.storage.protocol.JsonIdentityKeyStore;
-import org.asamk.signal.storage.protocol.JsonSignalProtocolStore;
-import org.asamk.signal.storage.threads.JsonThreadStore;
 import org.asamk.signal.storage.threads.ThreadInfo;
-
+import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
-import org.signal.libsignal.metadata.ProtocolUntrustedIdentityException;
-import org.signal.libsignal.metadata.InvalidMetadataMessageException;
-import org.signal.libsignal.metadata.InvalidMetadataVersionException;
-import org.signal.libsignal.metadata.ProtocolInvalidKeyIdException;
-import org.signal.libsignal.metadata.ProtocolLegacyMessageException;
-import org.signal.libsignal.metadata.ProtocolNoSessionException;
-import org.signal.libsignal.metadata.ProtocolInvalidVersionException;
-import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
-import org.signal.libsignal.metadata.ProtocolInvalidKeyException;
-import org.signal.libsignal.metadata.ProtocolDuplicateMessageException;
-import org.signal.libsignal.metadata.SelfSendException;
-
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -69,9 +45,9 @@ import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
@@ -83,9 +59,9 @@ import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalCdnUrl;
+import org.whispersystems.signalservice.internal.configuration.SignalContactDiscoveryUrl;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceUrl;
-import org.whispersystems.signalservice.internal.configuration.SignalContactDiscoveryUrl;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.util.Base64;
@@ -95,7 +71,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
@@ -110,11 +85,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.nio.file.attribute.PosixFilePermission.*;
-
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 class Manager {
     private Logger logger;
@@ -142,33 +113,21 @@ class Manager {
 
     private FileChannel fileChannel;
     private FileLock lock;
+    private AccountData accountData;
 
-    private final ObjectMapper jsonProcessor = new ObjectMapper();
-    private String username;
-    private int deviceId = SignalServiceAddress.DEFAULT_DEVICE_ID;
-    private String password;
-    private String signalingKey;
-    private int preKeyIdOffset;
-    private int nextSignedPreKeyId;
-    private byte[] profileKey;
+//    private final ObjectMapper jsonProcessor = new ObjectMapper();
 
-    private boolean registered = false;
-
-    private JsonSignalProtocolStore signalProtocolStore;
     private SignalServiceAccountManager accountManager;
-    private JsonGroupStore groupStore;
-    private JsonContactsStore contactStore;
-    private JsonThreadStore threadStore;
     private SignalServiceMessagePipe messagePipe = null;
     private SignalServiceMessagePipe unidentifiedMessagePipe = null;
 
     private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
-    public static Manager get(String username) throws IOException, NoSuchAccountException {
+    public static Manager get(String username) throws IOException, NoSuchAccountException, InvalidStorageFileException {
         return get(username, false);
     }
 
-    public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException {
+    public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException, InvalidStorageFileException {
          Logger logger = LogManager.getLogger("manager");
         if(managers.containsKey(username)) {
             return managers.get(username);
@@ -206,6 +165,7 @@ class Manager {
                     allManagers.add(Manager.get(account.getName()));
                 } catch (IOException | NoSuchAccountException e) {
                     logger.warn("Failed to load account from file: " + account.getAbsolutePath());
+                    e.printStackTrace();
                 }
             }
         }
@@ -215,13 +175,14 @@ class Manager {
     public Manager(String username) {
         logger =  LogManager.getLogger("manager-" + username);
         logger.info("Creating new manager for " + username + " (stored at " + settingsPath + ")");
-        this.username = username;
-        jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
-        jsonProcessor.enable(SerializationFeature.INDENT_OUTPUT); // for pretty print, you can disable it.
-        jsonProcessor.enable(SerializationFeature.WRITE_NULL_MAP_VALUES);
-        jsonProcessor.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        jsonProcessor.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
-        jsonProcessor.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
+        accountData = new AccountData();
+        accountData.username = username;
+//        jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
+//        jsonProcessor.enable(SerializationFeature.INDENT_OUTPUT); // for pretty print, you can disable it.
+//        jsonProcessor.enable(SerializationFeature.WRITE_NULL_MAP_VALUES);
+//        jsonProcessor.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+//        jsonProcessor.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+//        jsonProcessor.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
     }
 
     public static void setDataPath(String path) {
@@ -232,23 +193,23 @@ class Manager {
     }
 
     public String getUsername() {
-        return username;
+        return accountData.username;
     }
 
     private IdentityKey getIdentity() {
-        return signalProtocolStore.getIdentityKeyPair().getPublicKey();
+        return accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey();
     }
 
     public int getDeviceId() {
-        return deviceId;
+        return accountData.deviceId;
     }
 
     public String getFileName() {
-        return dataPath + "/" + username;
+        return dataPath + "/" + accountData.username;
     }
 
     private String getMessageCachePath() {
-        return this.dataPath + "/" + username + ".d/msg-cache";
+        return this.dataPath + "/" + accountData.username + ".d/msg-cache";
     }
 
     private String getMessageCachePath(String sender) {
@@ -282,7 +243,7 @@ class Manager {
     }
 
     public boolean userExists() {
-        if (username == null) {
+        if (accountData.username == null) {
             return false;
         }
         File f = new File(getFileName());
@@ -290,205 +251,39 @@ class Manager {
     }
 
     public boolean userHasKeys() {
-        return signalProtocolStore != null;
-    }
-
-    private JsonNode getNotNullNode(JsonNode parent, String name) throws InvalidObjectException {
-        JsonNode node = parent.get(name);
-        if (node == null) {
-            throw new InvalidObjectException(String.format("Incorrect file format: expected parameter %s not found ", name));
-        }
-
-        return node;
-    }
-
-    private void openFileChannel() throws IOException {
-        if (fileChannel != null)
-            return;
-
-        createPrivateDirectories(dataPath);
-        if (!new File(getFileName()).exists()) {
-            createPrivateFile(getFileName());
-        }
-        fileChannel = new RandomAccessFile(new File(getFileName()), "rw").getChannel();
-        lock = fileChannel.tryLock();
-        if (lock == null) {
-            throw new IOException("Config file is in use by another instance of signald");
-        }
+        return accountData.axolotlStore != null;
     }
 
     public void init() throws IOException {
-        load();
-
-        migrateLegacyConfigs();
-
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, deviceId, USER_AGENT, sleepTimer);
+        accountData = AccountData.load(new File(getFileName()));
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, USER_AGENT, sleepTimer);
         try {
-            if (registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
+            if (accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
                 refreshPreKeys();
-                save();
+                accountData.save();
             }
         } catch (AuthorizationFailedException e) {
             logger.warn("Authorization failed, was the number registered elsewhere?");
-            registered = false;
-        }
-    }
-
-    private void load() throws IOException {
-        openFileChannel();
-        JsonNode rootNode = jsonProcessor.readTree(Channels.newInputStream(fileChannel));
-
-        JsonNode node = rootNode.get("deviceId");
-        if (node != null) {
-            deviceId = node.asInt();
-        }
-        username = getNotNullNode(rootNode, "username").asText();
-        password = getNotNullNode(rootNode, "password").asText();
-        if (rootNode.has("signalingKey")) {
-            signalingKey = getNotNullNode(rootNode, "signalingKey").asText();
-        }
-        if (rootNode.has("preKeyIdOffset")) {
-            preKeyIdOffset = getNotNullNode(rootNode, "preKeyIdOffset").asInt(0);
-        } else {
-            preKeyIdOffset = 0;
-        }
-        if (rootNode.has("nextSignedPreKeyId")) {
-            nextSignedPreKeyId = getNotNullNode(rootNode, "nextSignedPreKeyId").asInt();
-        } else {
-            nextSignedPreKeyId = 0;
-        }
-        if (rootNode.has("profileKey")) {
-            profileKey = Base64.decode(getNotNullNode(rootNode, "profileKey").asText());
-        } else {
-            profileKey = Util.getSecretBytes(32);
-        }
-
-        signalProtocolStore = jsonProcessor.convertValue(getNotNullNode(rootNode, "axolotlStore"), JsonSignalProtocolStore.class);
-        registered = getNotNullNode(rootNode, "registered").asBoolean();
-        JsonNode groupStoreNode = rootNode.get("groupStore");
-        if (groupStoreNode != null) {
-            groupStore = jsonProcessor.convertValue(groupStoreNode, JsonGroupStore.class);
-        }
-        if (groupStore == null) {
-            groupStore = new JsonGroupStore();
-        }
-
-        JsonNode contactStoreNode = rootNode.get("contactStore");
-        if (contactStoreNode != null) {
-            contactStore = jsonProcessor.convertValue(contactStoreNode, JsonContactsStore.class);
-        }
-
-        if (contactStore == null) {
-            logger.info("No contactStore been loaded");
-            contactStore = new JsonContactsStore();
-        }
-
-        JsonNode threadStoreNode = rootNode.get("threadStore");
-        if (threadStoreNode != null) {
-            threadStore = jsonProcessor.convertValue(threadStoreNode, JsonThreadStore.class);
-        }
-
-        if (threadStore == null) {
-            threadStore = new JsonThreadStore();
-        }
-    }
-
-    private void initFullAccount() {
-      if (groupStore == null) {
-          groupStore = new JsonGroupStore();
-      }
-
-      if (contactStore == null) {
-          contactStore = new JsonContactsStore();
-      }
-
-      if (threadStore == null) {
-          threadStore = new JsonThreadStore();
-      }
-    }
-
-    private void migrateLegacyConfigs() {
-        // Copy group avatars that were previously stored in the attachments folder
-        // to the new avatar folder
-        if (JsonGroupStore.groupsWithLegacyAvatarId.size() > 0) {
-            for (GroupInfo g : JsonGroupStore.groupsWithLegacyAvatarId) {
-                File avatarFile = getGroupAvatarFile(g.groupId);
-                File attachmentFile = getAttachmentFile(g.getAvatarId());
-                if (!avatarFile.exists() && attachmentFile.exists()) {
-                    try {
-                        createPrivateDirectories(avatarsPath);
-                        Files.copy(attachmentFile.toPath(), avatarFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    } catch (Exception e) {
-                        // Ignore
-                    }
-                }
-            }
-            JsonGroupStore.groupsWithLegacyAvatarId.clear();
-            save();
-        }
-    }
-
-    private void save() {
-        save(false);
-    }
-
-
-    private void save(boolean allowBlankPassword) {
-        if (username == null) {
-            return;
-        }
-        if(password == null && !allowBlankPassword) {
-            throw new RuntimeException("Refusing to save account with empty password! See https://git.callpipe.com/finn/signald/issues/30 especially if you know how this happened or can reproduce it");
-        }
-        ObjectNode rootNode = jsonProcessor.createObjectNode();
-        rootNode.put("username", username)
-                .put("deviceId", deviceId)
-                .put("password", password)
-                .put("signalingKey", signalingKey)
-                .put("preKeyIdOffset", preKeyIdOffset)
-                .put("nextSignedPreKeyId", nextSignedPreKeyId)
-                .put("registered", registered)
-                .putPOJO("axolotlStore", signalProtocolStore)
-                .putPOJO("groupStore", groupStore)
-                .putPOJO("contactStore", contactStore)
-                .putPOJO("threadStore", threadStore)
-        ;
-        if(profileKey != null) {
-          rootNode.put("profileKey", Base64.encodeBytes(profileKey));
-        }
-        try {
-            openFileChannel();
-            fileChannel.position(0);
-            jsonProcessor.writeValue(Channels.newOutputStream(fileChannel), rootNode);
-            fileChannel.truncate(fileChannel.position());
-            fileChannel.force(false);
-        } catch (Exception e) {
-            logger.warn("Error saving files");
-            logger.catching(e);
+            accountData.registered = false;
         }
     }
 
     public void createNewIdentity() {
         IdentityKeyPair identityKey = KeyHelper.generateIdentityKeyPair();
         int registrationId = KeyHelper.generateRegistrationId(false);
-        signalProtocolStore = new JsonSignalProtocolStore(identityKey, registrationId);
-        registered = false;
-        initFullAccount();
-        save(true);
+        accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId);
+        accountData.registered = false;
+        accountData.init();
     }
 
     public boolean isRegistered() {
-        return registered;
-    }
-
-    public void register(boolean voiceVerification) throws IOException {
-        register(voiceVerification, Optional.<String>absent());
+        return accountData.registered;
     }
 
     public void register(boolean voiceVerification, Optional<String> captcha) throws IOException {
-        password = Util.getSecret(18);
+        accountData.password = Util.getSecret(18);
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, accountData.username, accountData.password, USER_AGENT, sleepTimer);
 
         if (voiceVerification) {
             accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent());  // TODO: Allow requester to set the locale
@@ -496,13 +291,9 @@ class Manager {
             accountManager.requestSmsVerificationCode(true, captcha, Optional.absent()); //  TODO: Allow requester to set challenge
         }
 
-        registered = false;
-        initFullAccount();
-        save();
-    }
-
-    public void updateAccountAttributes() throws IOException {
-        accountManager.setAccountAttributes(signalingKey, signalProtocolStore.getLocalRegistrationId(), true, null, null, false);
+        accountData.registered = false;
+        accountData.init();
+        accountData.save();
     }
 
     public void unregister() throws IOException {
@@ -513,14 +304,14 @@ class Manager {
     }
 
     public URI getDeviceLinkUri() throws TimeoutException, IOException {
-        password = Util.getSecret(18);
+        accountData.password = Util.getSecret(18);
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, username, password, USER_AGENT, sleepTimer);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, accountData.username, accountData.password, USER_AGENT, sleepTimer);
         String uuid = accountManager.getNewDeviceUuid();
 
-        registered = false;
+        accountData.registered = false;
         try {
-            return new URI("tsdevice:/?uuid=" + URLEncoder.encode(uuid, "utf-8") + "&pub_key=" + URLEncoder.encode(Base64.encodeBytesWithoutPadding(signalProtocolStore.getIdentityKeyPair().getPublicKey().serialize()), "utf-8"));
+            return new URI("tsdevice:/?uuid=" + URLEncoder.encode(uuid, "utf-8") + "&pub_key=" + URLEncoder.encode(Base64.encodeBytesWithoutPadding(accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey().serialize()), "utf-8"));
         } catch (URISyntaxException e) {
             // Shouldn't happen
             return null;
@@ -528,27 +319,27 @@ class Manager {
     }
 
     public void finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists {
-        signalingKey = Util.getSecret(52);
-        SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(signalProtocolStore.getIdentityKeyPair(), signalingKey, false, true, signalProtocolStore.getLocalRegistrationId(), deviceName);
-        deviceId = ret.getDeviceId();
-        username = ret.getNumber();
+        accountData.signalingKey = Util.getSecret(52);
+        SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(accountData.axolotlStore.identityKeyStore.getIdentityKeyPair(), accountData.signalingKey, false, true, accountData.axolotlStore.identityKeyStore.getLocalRegistrationId(), deviceName);
+        accountData.deviceId = ret.getDeviceId();
+        accountData.username = ret.getNumber();
         // TODO do this check before actually registering
         if (userExists()) {
-            throw new UserAlreadyExists(username, getFileName());
+            throw new UserAlreadyExists(accountData.username, getFileName());
         }
-        signalProtocolStore = new JsonSignalProtocolStore(ret.getIdentity(), signalProtocolStore.getLocalRegistrationId());
+        accountData.axolotlStore = new SignalProtocolStore(ret.getIdentity(), accountData.axolotlStore.identityKeyStore.getLocalRegistrationId());
 
-        registered = true;
+        accountData.registered = true;
         refreshPreKeys();
 
-        initFullAccount();
+        accountData.init();
 
         requestSyncGroups();
         requestSyncContacts();
 
-        save();
-        managers.put(username, this);
-        logger.info("Successfully finished linked to " + username + " as device #" + deviceId);
+        accountData.save();
+        managers.put(accountData.username, this);
+        logger.info("Successfully finished linked to " + accountData.username + " as device #" + accountData.deviceId);
     }
 
     public List<DeviceInfo> getLinkedDevices() throws IOException {
@@ -595,40 +386,40 @@ class Manager {
     }
 
     private void addDevice(String deviceIdentifier, ECPublicKey deviceKey) throws IOException, InvalidKeyException {
-        IdentityKeyPair identityKeyPair = signalProtocolStore.getIdentityKeyPair();
+        IdentityKeyPair identityKeyPair = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair();
         String verificationCode = accountManager.getNewDeviceVerificationCode();
 
         // TODO send profile key
         accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, Optional.<byte[]>absent(), verificationCode);
     }
 
-    private List<PreKeyRecord> generatePreKeys() {
+    private List<PreKeyRecord> generatePreKeys() throws IOException {
         List<PreKeyRecord> records = new LinkedList<>();
 
         for (int i = 0; i < PREKEY_BATCH_SIZE; i++) {
-            int preKeyId = (preKeyIdOffset + i) % Medium.MAX_VALUE;
+            int preKeyId = (accountData.preKeyIdOffset + i) % Medium.MAX_VALUE;
             ECKeyPair keyPair = Curve.generateKeyPair();
             PreKeyRecord record = new PreKeyRecord(preKeyId, keyPair);
 
-            signalProtocolStore.storePreKey(preKeyId, record);
+            accountData.axolotlStore.preKeys.storePreKey(preKeyId, record);
             records.add(record);
         }
 
-        preKeyIdOffset = (preKeyIdOffset + PREKEY_BATCH_SIZE + 1) % Medium.MAX_VALUE;
-        save();
+        accountData.preKeyIdOffset = (accountData.preKeyIdOffset + PREKEY_BATCH_SIZE + 1) % Medium.MAX_VALUE;
+        accountData.save();
 
         return records;
     }
 
-    private SignedPreKeyRecord generateSignedPreKey(IdentityKeyPair identityKeyPair) {
+    private SignedPreKeyRecord generateSignedPreKey(IdentityKeyPair identityKeyPair) throws IOException {
         try {
             ECKeyPair keyPair = Curve.generateKeyPair();
             byte[] signature = Curve.calculateSignature(identityKeyPair.getPrivateKey(), keyPair.getPublicKey().serialize());
-            SignedPreKeyRecord record = new SignedPreKeyRecord(nextSignedPreKeyId, System.currentTimeMillis(), keyPair, signature);
+            SignedPreKeyRecord record = new SignedPreKeyRecord(accountData.nextSignedPreKeyId, System.currentTimeMillis(), keyPair, signature);
 
-            signalProtocolStore.storeSignedPreKey(nextSignedPreKeyId, record);
-            nextSignedPreKeyId = (nextSignedPreKeyId + 1) % Medium.MAX_VALUE;
-            save();
+            accountData.axolotlStore.storeSignedPreKey(accountData.nextSignedPreKeyId, record);
+            accountData.nextSignedPreKeyId = (accountData.nextSignedPreKeyId + 1) % Medium.MAX_VALUE;
+            accountData.save();
 
             return record;
         } catch (InvalidKeyException e) {
@@ -638,22 +429,22 @@ class Manager {
 
     public void verifyAccount(String verificationCode) throws IOException {
         verificationCode = verificationCode.replace("-", "");
-        signalingKey = Util.getSecret(52);
-        accountManager.verifyAccountWithCode(verificationCode, signalingKey, signalProtocolStore.getLocalRegistrationId(), true, null, null, false);
+        accountData.signalingKey = Util.getSecret(52);
+        accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, false);
 
         //accountManager.setGcmId(Optional.of(GoogleCloudMessaging.getInstance(this).register(REGISTRATION_ID)));
-        registered = true;
+        accountData.registered = true;
 
         refreshPreKeys();
-        initFullAccount();
-        save();
+        accountData.init();
+        accountData.save();
     }
 
     private void refreshPreKeys() throws IOException {
         List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
-        SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(signalProtocolStore.getIdentityKeyPair());
+        SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(accountData.axolotlStore.getIdentityKeyPair());
 
-        accountManager.setPreKeys(signalProtocolStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
+        accountManager.setPreKeys(accountData.axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
     }
 
 
@@ -706,12 +497,12 @@ class Manager {
     }
 
     private GroupInfo getGroupForSending(byte[] groupId) throws GroupNotFoundException, NotAGroupMemberException {
-        GroupInfo g = groupStore.getGroup(groupId);
+        GroupInfo g = accountData.groupStore.getGroup(groupId);
         if (g == null) {
             throw new GroupNotFoundException(groupId);
         }
         for (String member : g.members) {
-            if (member.equals(this.username)) {
+            if (member.equals(accountData.username)) {
                 return g;
             }
         }
@@ -719,7 +510,7 @@ class Manager {
     }
 
     public List<GroupInfo> getGroups() {
-        return groupStore.getGroups();
+        return accountData.groupStore.getGroups();
     }
 
     public List<SendMessageResult> sendGroupMessage(String messageText, List<SignalServiceAttachment> attachments, byte[] groupId, SignalServiceDataMessage.Quote quote)
@@ -737,7 +528,7 @@ class Manager {
         if(quote != null) {
           messageBuilder.withQuote(quote);
         }
-        ThreadInfo thread = threadStore.getThread(Base64.encodeBytes(groupId));
+        ThreadInfo thread = accountData.threadStore.getThread(Base64.encodeBytes(groupId));
         if (thread != null) {
             messageBuilder.withExpiration(thread.messageExpirationTime);
         }
@@ -746,7 +537,7 @@ class Manager {
 
         // Don't send group message to ourself
         final List<String> membersSend = new ArrayList<>(g.members);
-        membersSend.remove(this.username);
+        membersSend.remove(accountData.username);
         return sendMessage(messageBuilder, membersSend);
     }
 
@@ -758,8 +549,8 @@ class Manager {
         SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asGroupMessage(group);
 
         final GroupInfo g = getGroupForSending(groupId);
-        g.members.remove(this.username);
-        groupStore.updateGroup(g);
+        g.members.remove(accountData.username);
+        accountData.groupStore.updateGroup(g);
 
         return sendMessage(messageBuilder, g.members);
     }
@@ -781,7 +572,7 @@ class Manager {
         if (groupId == null) {
             // Create new group
             g = new GroupInfo(Util.getSecretBytes(16));
-            g.members.add(username);
+            g.members.add(accountData.username);
         } else {
             g = getGroupForSending(groupId);
         }
@@ -820,13 +611,13 @@ class Manager {
             Files.copy(Paths.get(avatarFile), aFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
 
-        groupStore.updateGroup(g);
+        accountData.groupStore.updateGroup(g);
 
         SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
 
         // Don't send group message to ourself
         final List<String> membersSend = new ArrayList<>(g.members);
-        membersSend.remove(this.username);
+        membersSend.remove(accountData.username);
         sendMessage(messageBuilder, membersSend);
         return g.groupId;
     }
@@ -882,13 +673,13 @@ class Manager {
     public List<SendMessageResult> setExpiration(String recipient, int expiresInSeconds) throws IOException, UntrustedIdentityException, EncapsulatedExceptions {
         SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
 
-        ThreadInfo thread = threadStore.getThread(recipient);
+        ThreadInfo thread = accountData.threadStore.getThread(recipient);
         if (thread == null) {
             thread = new ThreadInfo();
             thread.id = recipient;
         }
         thread.messageExpirationTime = expiresInSeconds;
-        threadStore.updateThread(thread);
+        accountData.threadStore.updateThread(thread);
 
         messageBuilder.asExpirationUpdate();
 
@@ -940,7 +731,7 @@ class Manager {
     }
 
     public String getContactName(String number) {
-        ContactInfo contact = contactStore.getContact(number);
+        ContactInfo contact = accountData.contactStore.getContact(number);
         if (contact == null) {
             return "";
         } else {
@@ -948,8 +739,8 @@ class Manager {
         }
     }
 
-    public void setContactName(String number, String name) {
-        ContactInfo contact = contactStore.getContact(number);
+    public void setContactName(String number, String name) throws IOException {
+        ContactInfo contact = accountData.contactStore.getContact(number);
         if (contact == null) {
             contact = new ContactInfo();
             contact.number = number;
@@ -958,13 +749,13 @@ class Manager {
             logger.info("Updating contact " + number + " name " + contact.name + " -> " + name);
         }
         contact.name = name;
-        contactStore.updateContact(contact);
-        save();
+        accountData.contactStore.updateContact(contact);
+        accountData.save();
     }
 
-    public void updateContact(ContactInfo contact) {
-        contactStore.updateContact(contact);
-        save();
+    public void updateContact(ContactInfo contact) throws IOException {
+        accountData.contactStore.updateContact(contact);
+        accountData.save();
     }
 
     public String getGroupName(byte[] groupId) {
@@ -1023,12 +814,12 @@ class Manager {
 
     private void sendSyncMessage(SignalServiceSyncMessage message)
             throws IOException, UntrustedIdentityException {
-        SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password,
-                deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
+        SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.username, accountData.password,
+                accountData.deviceId, accountData.axolotlStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
         try {
             messageSender.sendMessage(message, Optional.<UnidentifiedAccessPair>absent());
         } catch (UntrustedIdentityException e) {
-            signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
             throw e;
         }
     }
@@ -1044,20 +835,20 @@ class Manager {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) return;
 
-        if(profileKey != null) {
-            messageBuilder = messageBuilder.withProfileKey(profileKey);
+        if(accountData.profileKey != null) {
+            messageBuilder = messageBuilder.withProfileKey(accountData.getProfileKey());
         }
 
         SignalServiceDataMessage message = null;
         try {
-            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password, deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
+            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.axolotlStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
 
             // Send to all individually, so sync messages are sent correctly
             List<UntrustedIdentityException> untrustedIdentities = new LinkedList<>();
             List<UnregisteredUserException> unregisteredUsers = new LinkedList<>();
             List<NetworkFailureException> networkExceptions = new LinkedList<>();
             for(SignalServiceAddress address: recipientsTS) {
-                ThreadInfo thread = threadStore.getThread(address.getNumber());
+                ThreadInfo thread = accountData.threadStore.getThread(address.getNumber());
                 if(useExistingExpiration) {
                     if (thread != null) {
                         messageBuilder.withExpiration(thread.messageExpirationTime);
@@ -1069,7 +860,7 @@ class Manager {
                 try {
                     messageSender.sendMessage(address, getAccessFor(address), message);
                 } catch(UntrustedIdentityException e) {
-                    signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                    accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     untrustedIdentities.add(e);
                     logger.warn("UntrustedIdentityException sending message to " + e.getE164Number());
                 } catch(UnregisteredUserException e) {
@@ -1090,42 +881,42 @@ class Manager {
                     handleEndSession(recipient.getNumber());
                 }
             }
-            save();
+            accountData.save();
         }
     }
 
     public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, String recipient) throws IOException {
         SignalServiceAddress address = getSignalServiceAddress(recipient);
         if (address == null) {
-            save();
+            accountData.save();
             return null;
         }
 
         try {
-            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password, deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
+            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.axolotlStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
 
             try {
                 messageSender.sendReceipt(address, getAccessFor(address), message);
 		return null;
             } catch (UntrustedIdentityException e) {
-                signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                 return SendMessageResult.identityFailure(address, e.getIdentityKey());
             }
         } finally {
-            save();
+            accountData.save();
         }
     }
 
     private List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients) throws IOException {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) {
-            save();
+            accountData.save();
             return Collections.emptyList();
         }
 
         SignalServiceDataMessage message = null;
         try {
-            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, username, password, deviceId, signalProtocolStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
+            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.axolotlStore, USER_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.<SignalServiceMessageSender.EventListener>absent());
 
             message = messageBuilder.build();
             if (message.getGroupInfo().isPresent()) {
@@ -1134,16 +925,16 @@ class Manager {
                     List<SendMessageResult> result = messageSender.sendMessage(new ArrayList<>(recipientsTS), getAccessFor(recipientsTS), isRecipientUpdate, message);
                     for (SendMessageResult r : result) {
                         if (r.getIdentityFailure() != null) {
-                            signalProtocolStore.saveIdentity(r.getAddress().getNumber(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+                            accountData.axolotlStore.identityKeyStore.saveIdentity(r.getAddress().getNumber(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
                         }
                     }
                     return result;
                 } catch (UntrustedIdentityException e) {
-                    signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                    accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     return Collections.emptyList();
                 }
-            } else if (recipientsTS.size() == 1 && recipientsTS.contains(new SignalServiceAddress(username))) {
-                SignalServiceAddress recipient = new SignalServiceAddress(username);
+            } else if (recipientsTS.size() == 1 && recipientsTS.contains(new SignalServiceAddress(accountData.password))) {
+                SignalServiceAddress recipient = new SignalServiceAddress(accountData.username);
                 final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessFor(recipient);
                 SentTranscriptMessage transcript = new SentTranscriptMessage(recipient.getNumber(),
                         message.getTimestamp(),
@@ -1157,7 +948,7 @@ class Manager {
                 try {
                     messageSender.sendMessage(syncMessage, unidentifiedAccess);
                 } catch (UntrustedIdentityException e) {
-                    signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                    accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
                 }
                 return results;
@@ -1165,7 +956,7 @@ class Manager {
                 // Send to all individually, so sync messages are sent correctly
                 List<SendMessageResult> results = new ArrayList<>(recipientsTS.size());
                 for (SignalServiceAddress address : recipientsTS) {
-                    ThreadInfo thread = threadStore.getThread(address.getNumber());
+                    ThreadInfo thread = accountData.threadStore.getThread(address.getNumber());
                     if (thread != null) {
                         messageBuilder.withExpiration(thread.messageExpirationTime);
                     } else {
@@ -1176,7 +967,7 @@ class Manager {
                         SendMessageResult result = messageSender.sendMessage(address, getAccessFor(address), message);
                         results.add(result);
                     } catch (UntrustedIdentityException e) {
-                        signalProtocolStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                        accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                         results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
                     }
                 }
@@ -1188,22 +979,22 @@ class Manager {
                     handleEndSession(recipient.getNumber());
                 }
             }
-            save();
+            accountData.save();
         }
     }
 
-    private SignalServiceAddress getSignalServiceAddress(String recipient) {
+    private SignalServiceAddress getSignalServiceAddress(String recipient) throws IOException {
         try {
             return getPushAddress(recipient);
         } catch (InvalidNumberException e) {
             logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
             logger.warn("Aborting sending.");
-            save();
+            accountData.save();
             return null;
         }
     }
 
-    private Set<SignalServiceAddress> getSignalServiceAddresses(Collection<String> recipients) {
+    private Set<SignalServiceAddress> getSignalServiceAddresses(Collection<String> recipients) throws IOException {
         Set<SignalServiceAddress> recipientsTS = new HashSet<>(recipients.size());
         for (String recipient : recipients) {
             SignalServiceAddress addr = getSignalServiceAddress(recipient);
@@ -1224,7 +1015,7 @@ class Manager {
     }
 
     private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws NoSessionException, LegacyMessageException, InvalidVersionException, InvalidMessageException, DuplicateMessageException, InvalidKeyException, InvalidKeyIdException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMetadataMessageException, InvalidMetadataVersionException, UntrustedIdentityException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException, ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException, SelfSendException, UnsupportedDataMessageException {
-        SignalServiceCipher cipher = new SignalServiceCipher(new SignalServiceAddress(username), signalProtocolStore, getCertificateValidator());
+        SignalServiceCipher cipher = new SignalServiceCipher(new SignalServiceAddress(accountData.username), accountData.axolotlStore, getCertificateValidator());
         try {
             return cipher.decrypt(envelope);
         } catch (ProtocolUntrustedIdentityException e) {
@@ -1235,19 +1026,19 @@ class Manager {
     }
 
     private void handleEndSession(String source) {
-        signalProtocolStore.deleteAllSessions(source);
+        accountData.axolotlStore.deleteAllSessions(source);
     }
 
     public interface ReceiveMessageHandler {
         void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
     }
 
-    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, String source, String destination, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException {
+    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, String source, String destination, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException {
         String threadId;
         if (message.getGroupInfo().isPresent()) {
             SignalServiceGroup groupInfo = message.getGroupInfo().get();
             threadId = Base64.encodeBytes(groupInfo.getGroupId());
-            GroupInfo group = groupStore.getGroup(groupInfo.getGroupId());
+            GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
             switch (groupInfo.getType()) {
                 case UPDATE:
                     if (group == null) {
@@ -1273,7 +1064,7 @@ class Manager {
                         group.members.addAll(groupInfo.getMembers().get());
                     }
 
-                    groupStore.updateGroup(group);
+                    accountData.groupStore.updateGroup(group);
                     break;
                 case DELIVER:
                     if (group == null) {
@@ -1293,7 +1084,7 @@ class Manager {
                         }
                     } else {
                         group.members.remove(source);
-                        groupStore.updateGroup(group);
+                        accountData.groupStore.updateGroup(group);
                     }
                     break;
                 case REQUEST_INFO:
@@ -1319,14 +1110,14 @@ class Manager {
             handleEndSession(isSync ? destination : source);
         }
         if (message.isExpirationUpdate() || message.getBody().isPresent()) {
-            ThreadInfo thread = threadStore.getThread(threadId);
+            ThreadInfo thread = accountData.threadStore.getThread(threadId);
             if (thread == null) {
                 thread = new ThreadInfo();
                 thread.id = threadId;
             }
             if (thread.messageExpirationTime != message.getExpiresInSeconds()) {
                 thread.messageExpirationTime = message.getExpiresInSeconds();
-                threadStore.updateThread(thread);
+                accountData.threadStore.updateThread(thread);
             }
         }
         if (message.getAttachments().isPresent() && !ignoreAttachments) {
@@ -1342,11 +1133,11 @@ class Manager {
         }
 
         if(message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
-            if(source.equals(username)) {
-                profileKey = message.getProfileKey().get();
-                save();
+            if(source.equals(accountData.username)) {
+                accountData.setProfileKey(message.getProfileKey().get());
+                accountData.save();
             } else {
-                ContactInfo contact = contactStore.getContact(source);
+                ContactInfo contact = accountData.contactStore.getContact(source);
                 if(contact == null) {
                     contact = new ContactInfo();
                     contact.number = source;
@@ -1357,7 +1148,7 @@ class Manager {
         }
     }
 
-    public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException {
+    public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException {
         final File cachePath = new File(getMessageCachePath());
         if (!cachePath.exists()) {
             return;
@@ -1390,7 +1181,7 @@ class Manager {
                     }
                     handleMessage(envelope, content, ignoreAttachments);
                 }
-                save();
+                accountData.save();
                 handler.handleMessage(envelope, content, null);
                 try {
                     Files.delete(fileEntry.toPath());
@@ -1410,7 +1201,7 @@ class Manager {
     public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException {
         retryFailedReceivedMessages(handler, ignoreAttachments);
         // TODO: Do we need anything for that second-to-last argument ("listener")? signal-cli sets it to null
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer);
 
         try {
             if (messagePipe == null) {
@@ -1451,7 +1242,7 @@ class Manager {
                     }
                     handleMessage(envelope, content, ignoreAttachments);
                 }
-                save();
+                accountData.save();
                 handler.handleMessage(envelope, content, exception);
                 if (exception == null || !(exception instanceof org.whispersystems.libsignal.UntrustedIdentityException)) {
                     File cacheFile = null;
@@ -1473,11 +1264,11 @@ class Manager {
         }
     }
 
-    private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws NotAGroupMemberException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, AttachmentInvalidException, UntrustedIdentityException {
+    private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws NotAGroupMemberException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, AttachmentInvalidException, UntrustedIdentityException, IOException {
         if (content != null) {
             if (content.getDataMessage().isPresent()) {
                 SignalServiceDataMessage message = content.getDataMessage().get();
-                handleSignalServiceDataMessage(message, false, envelope.getSource(), username, ignoreAttachments);
+                handleSignalServiceDataMessage(message, false, envelope.getSource(), accountData.username, ignoreAttachments);
             }
             if (content.getSyncMessage().isPresent()) {
                 SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
@@ -1511,7 +1302,7 @@ class Manager {
                             DeviceGroupsInputStream s = new DeviceGroupsInputStream(attachmentAsStream);
                             DeviceGroup g;
                             while ((g = s.read()) != null) {
-                                GroupInfo syncGroup = groupStore.getGroup(g.getId());
+                                GroupInfo syncGroup = accountData.groupStore.getGroup(g.getId());
                                 if (syncGroup == null) {
                                     syncGroup = new GroupInfo(g.getId());
                                 }
@@ -1524,7 +1315,7 @@ class Manager {
                                 if (g.getAvatar().isPresent()) {
                                     retrieveGroupAvatarAttachment(g.getAvatar().get(), syncGroup.groupId);
                                 }
-                                groupStore.updateGroup(syncGroup);
+                                accountData.groupStore.updateGroup(syncGroup);
                             }
                         }
                     } catch (Exception e) {
@@ -1550,11 +1341,11 @@ class Manager {
                         try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
                             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
                             if (contactsMessage.isComplete()) {
-                                contactStore.clear();
+                                accountData.contactStore.clear();
                             }
                             DeviceContact c;
                             while ((c = s.read()) != null) {
-                                ContactInfo contact = contactStore.getContact(c.getNumber());
+                                ContactInfo contact = accountData.contactStore.getContact(c.getNumber());
                                 if (contact == null) {
                                     contact = new ContactInfo();
                                     contact.number = c.getNumber();
@@ -1590,7 +1381,7 @@ class Manager {
                 }
                 if (syncMessage.getVerified().isPresent()) {
                     final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
-                    signalProtocolStore.saveIdentity(verifiedMessage.getDestination(), verifiedMessage.getIdentityKey(), TrustLevel.fromVerifiedState(verifiedMessage.getVerified()));
+                    accountData.axolotlStore.identityKeyStore.saveIdentity(verifiedMessage.getDestination(), verifiedMessage.getIdentityKey(), TrustLevel.fromVerifiedState(verifiedMessage.getVerified()));
                 }
             }
         }
@@ -1733,7 +1524,7 @@ class Manager {
             }
         }
 
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer);
 
         File tmpFile = Util.createTempFile();
         try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE)) {
@@ -1759,12 +1550,12 @@ class Manager {
     }
 
     private InputStream retrieveAttachmentAsStream(SignalServiceAttachmentPointer pointer, File tmpFile) throws IOException, InvalidMessageException {
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer);
         return messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE);
     }
 
     private String canonicalizeNumber(String number) throws InvalidNumberException {
-        String localNumber = username;
+        String localNumber = accountData.username;
         return PhoneNumberFormatter.formatNumber(number, localNumber);
     }
 
@@ -1783,7 +1574,7 @@ class Manager {
         try {
             try (OutputStream fos = new FileOutputStream(groupsFile)) {
                 DeviceGroupsOutputStream out = new DeviceGroupsOutputStream(fos);
-                for (GroupInfo record : groupStore.getGroups()) {
+                for (GroupInfo record : accountData.groupStore.getGroups()) {
                     Optional<Integer> expirationTimer = Optional.<Integer>absent();
                     Optional<String> color = Optional.<String>absent();
                     out.write(new DeviceGroup(record.groupId, Optional.fromNullable(record.name),
@@ -1818,11 +1609,11 @@ class Manager {
         try {
             try (OutputStream fos = new FileOutputStream(contactsFile)) {
                 DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
-                for (ContactInfo record : contactStore.getContacts()) {
+                for (ContactInfo record : accountData.contactStore.getContacts()) {
                     VerifiedMessage verifiedMessage = null;
                     if (getIdentities().containsKey(record.number)) {
-                        JsonIdentityKeyStore.Identity currentIdentity = null;
-                        for (JsonIdentityKeyStore.Identity id : getIdentities().get(record.number)) {
+                        IdentityKeyStore.Identity currentIdentity = null;
+                        for (IdentityKeyStore.Identity id : getIdentities().get(record.number)) {
                             if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
                                 currentIdentity = id;
                             }
@@ -1867,28 +1658,28 @@ class Manager {
     }
 
     public List<ContactInfo> getContacts() {
-      if(contactStore == null) {
+      if(accountData.contactStore == null) {
         logger.warn("contactStore is null what tf!");
         return Collections.<ContactInfo>emptyList();
       }
-      List<ContactInfo> contacts = this.contactStore.getContacts();
+      List<ContactInfo> contacts = this.accountData.contactStore.getContacts();
       return contacts;
     }
 
     public ContactInfo getContact(String number) {
-        return contactStore.getContact(number);
+        return accountData.contactStore.getContact(number);
     }
 
     public GroupInfo getGroup(byte[] groupId) {
-        return groupStore.getGroup(groupId);
+        return accountData.groupStore.getGroup(groupId);
     }
 
-    public Map<String, List<JsonIdentityKeyStore.Identity>> getIdentities() {
-        return signalProtocolStore.getIdentities();
+    public Map<String, List<IdentityKeyStore.Identity>> getIdentities() {
+        return accountData.axolotlStore.identityKeyStore.getIdentities();
     }
 
-    public List<JsonIdentityKeyStore.Identity> getIdentities(String number) {
-        return signalProtocolStore.getIdentities(number);
+    public List<IdentityKeyStore.Identity> getIdentities(String number) {
+        return accountData.axolotlStore.identityKeyStore.getIdentities(number);
     }
 
     /**
@@ -1898,23 +1689,23 @@ class Manager {
      * @param fingerprint Fingerprint
      * @param level       level at with to trust the identity
      */
-    public boolean trustIdentity(String name, byte[] fingerprint, TrustLevel level) {
-        List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
+    public boolean trustIdentity(String name, byte[] fingerprint, TrustLevel level) throws IOException {
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(name);
         if (ids == null) {
             return false;
         }
-        for (JsonIdentityKeyStore.Identity id : ids) {
+        for (IdentityKeyStore.Identity id : ids) {
             if (!Arrays.equals(id.getIdentityKey().serialize(), fingerprint)) {
                 continue;
             }
 
-            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), level);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(name, id.getIdentityKey(), level);
             try {
                 sendVerifiedMessage(name, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
-            save();
+            accountData.save();
             return true;
         }
         return false;
@@ -1927,23 +1718,23 @@ class Manager {
      * @param safetyNumber Safety number
      * @param level        level to trust the identity
      */
-    public boolean trustIdentitySafetyNumber(String name, String safetyNumber, TrustLevel level) {
-        List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
+    public boolean trustIdentitySafetyNumber(String name, String safetyNumber, TrustLevel level) throws IOException {
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(name);
         if (ids == null) {
             return false;
         }
-        for (JsonIdentityKeyStore.Identity id : ids) {
+        for (IdentityKeyStore.Identity id : ids) {
             if (!safetyNumber.equals(computeSafetyNumber(name, id.getIdentityKey()))) {
                 continue;
             }
 
-            signalProtocolStore.saveIdentity(name, id.getIdentityKey(), level);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(name, id.getIdentityKey(), level);
             try {
                 sendVerifiedMessage(name, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
-            save();
+            accountData.save();
             return true;
         }
         return false;
@@ -1954,14 +1745,14 @@ class Manager {
      *
      * @param name username of the identity
      */
-    public boolean trustIdentityAllKeys(String name) {
-        List<JsonIdentityKeyStore.Identity> ids = signalProtocolStore.getIdentities(name);
+    public boolean trustIdentityAllKeys(String name) throws IOException {
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(name);
         if (ids == null) {
             return false;
         }
-        for (JsonIdentityKeyStore.Identity id : ids) {
+        for (IdentityKeyStore.Identity id : ids) {
             if (id.getTrustLevel() == TrustLevel.UNTRUSTED) {
-                signalProtocolStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
+                accountData.axolotlStore.identityKeyStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
                 try {
                     sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
                 } catch (IOException | UntrustedIdentityException e) {
@@ -1969,12 +1760,12 @@ class Manager {
                 }
             }
         }
-        save();
+        accountData.save();
         return true;
     }
 
     public String computeSafetyNumber(String theirUsername, IdentityKey theirIdentityKey) {
-        Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(username, getIdentity(), theirUsername, theirIdentityKey);
+        Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(accountData.username, getIdentity(), theirUsername, theirIdentityKey);
         return fingerprint.getDisplayableFingerprint().getDisplayText();
     }
 
@@ -2005,22 +1796,22 @@ class Manager {
         return Optional.absent();
     }
 
-    public byte[] getProfileKey() {
-        return profileKey;
+    public byte[] getProfileKey() throws IOException {
+        return accountData.getProfileKey();
     }
 
-    public void setProfileKey(final byte[] profileKey) {
-        this.profileKey = profileKey;
-	save();
+    public void setProfileKey(final byte[] profileKey) throws IOException {
+        accountData.setProfileKey(profileKey);
+	    accountData.save();
     }
 
     public void setProfileName(String name) throws IOException {
-        accountManager.setProfileName(profileKey, name);
-	save();
+        accountManager.setProfileName(accountData.getProfileKey(), name);
+	    accountData.save();
     }
 
     public SignalServiceProfile getProfile(String number) throws IOException {
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, username, password, deviceId, signalingKey, USER_AGENT, null, sleepTimer);
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer);
         return messageReceiver.retrieveProfile(new SignalServiceAddress(number), Optional.<UnidentifiedAccess>absent());
     }
 }

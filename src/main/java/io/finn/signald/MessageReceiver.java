@@ -17,22 +17,14 @@
 
 package io.finn.signald;
 
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ConcurrentHashMap;
-import java.net.Socket;
-
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.asamk.signal.storage.contacts.ContactInfo;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+
+import java.io.IOException;
+import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
 class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     final String username;
@@ -69,15 +61,12 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         while(sockets.size() > 0) {
           double timeout = 3600;
           boolean returnOnTimeout = true;
-          if (timeout < 0) {
-            returnOnTimeout = false;
-            timeout = 3600;
-          }
           boolean ignoreAttachments = false;
           try {
             manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
           } catch (IOException e) {
               logger.debug("probably harmless IOException while receiving messages:" + e.toString());
+              e.printStackTrace();
           } catch (AssertionError e) {
               logger.catching(e);
           }

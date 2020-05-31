@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.finn.signald.storage.AccountData;
 import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 
@@ -99,6 +100,7 @@ public class Main implements Runnable {
       logger.debug("Using data folder " + data_path);
 
       Manager.setDataPath(data_path);
+      AccountData.setDataPath(data_path);
 
       // Spins up one thread per registered signal number, listens for incoming messages
       File[] users = new File(data_path + "/data").listFiles();
