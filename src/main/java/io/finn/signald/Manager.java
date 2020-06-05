@@ -16,7 +16,6 @@
  */
 package io.finn.signald;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.IdentityKeyStore;
@@ -1198,8 +1197,12 @@ class Manager {
         this.messagePipe.shutdown();
     }
 
-    public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException {
-        retryFailedReceivedMessages(handler, ignoreAttachments);
+    public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException {
+        try {
+            retryFailedReceivedMessages(handler, ignoreAttachments);
+        } catch (NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
+            logger.catching(e);
+        }
         // TODO: Do we need anything for that second-to-last argument ("listener")? signal-cli sets it to null
         final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer);
 
@@ -1240,7 +1243,11 @@ class Manager {
                     } catch (Exception e) {
                         exception = e;
                     }
-                    handleMessage(envelope, content, ignoreAttachments);
+                    try {
+                        handleMessage(envelope, content, ignoreAttachments);
+                    } catch (NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
+                        logger.catching(e);
+                    }
                 }
                 accountData.save();
                 handler.handleMessage(envelope, content, exception);
