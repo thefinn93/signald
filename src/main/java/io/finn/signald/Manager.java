@@ -63,7 +63,7 @@ import org.whispersystems.signalservice.internal.configuration.SignalServiceConf
 import org.whispersystems.signalservice.internal.configuration.SignalServiceUrl;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.*;
 import java.net.URI;

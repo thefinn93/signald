@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 import org.whispersystems.libsignal.util.guava.Optional;
 
 

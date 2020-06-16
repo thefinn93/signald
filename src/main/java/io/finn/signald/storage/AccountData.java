@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.JSONHelper;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;

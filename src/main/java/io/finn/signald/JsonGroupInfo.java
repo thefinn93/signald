@@ -19,7 +19,7 @@ package io.finn.signald;
 
 import org.asamk.signal.storage.groups.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.ArrayList;

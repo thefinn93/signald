@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.asamk.signal.storage.groups.GroupInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.ArrayList;

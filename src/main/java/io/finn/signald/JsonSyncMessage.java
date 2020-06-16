@@ -21,7 +21,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.LinkedList;

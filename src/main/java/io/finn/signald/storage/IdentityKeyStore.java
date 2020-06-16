@@ -27,7 +27,7 @@ import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.*;
@@ -154,7 +154,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
             try {
                 int localRegistrationId = node.get("registrationId").asInt();
-                IdentityKeyPair identityKeyPair = new IdentityKeyPair(org.whispersystems.signalservice.internal.util.Base64.decode(node.get("identityKey").asText()));
+                IdentityKeyPair identityKeyPair = new IdentityKeyPair(org.whispersystems.util.Base64.decode(node.get("identityKey").asText()));
 
                 IdentityKeyStore keyStore = new IdentityKeyStore(identityKeyPair, localRegistrationId);
 
@@ -163,7 +163,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
                     for (JsonNode trustedKey : trustedKeysNode) {
                         String trustedKeyName = trustedKey.get("name").asText();
                         try {
-                            IdentityKey id = new IdentityKey(org.whispersystems.signalservice.internal.util.Base64.decode(trustedKey.get("identityKey").asText()), 0);
+                            IdentityKey id = new IdentityKey(org.whispersystems.util.Base64.decode(trustedKey.get("identityKey").asText()), 0);
                             TrustLevel trustLevel = trustedKey.has("trustLevel") ? TrustLevel.fromInt(trustedKey.get("trustLevel").asInt()) : TrustLevel.TRUSTED_UNVERIFIED;
                             Date added = trustedKey.has("addedTimestamp") ? new Date(trustedKey.get("addedTimestamp").asLong()) : new Date();
                             keyStore.saveIdentity(trustedKeyName, id, trustLevel, added);
@@ -186,7 +186,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         public void serialize(IdentityKeyStore jsonIdentityKeyStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
             json.writeStartObject();
             json.writeNumberField("registrationId", jsonIdentityKeyStore.getLocalRegistrationId());
-            json.writeStringField("identityKey", org.whispersystems.signalservice.internal.util.Base64.encodeBytes(jsonIdentityKeyStore.getIdentityKeyPair().serialize()));
+            json.writeStringField("identityKey", org.whispersystems.util.Base64.encodeBytes(jsonIdentityKeyStore.getIdentityKeyPair().serialize()));
             json.writeArrayFieldStart("trustedKeys");
             for (Map.Entry<String, List<IdentityKeyStore.Identity>> trustedKey : jsonIdentityKeyStore.trustedKeys.entrySet()) {
                 for (IdentityKeyStore.Identity id : trustedKey.getValue()) {

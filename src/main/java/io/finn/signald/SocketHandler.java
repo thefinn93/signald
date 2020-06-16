@@ -38,7 +38,7 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.*;
 import java.net.Socket;

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.*;
@@ -93,7 +93,7 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
                 for (JsonNode session : node) {
                     String sessionName = session.get("name").asText();
                     try {
-                        sessionMap.put(new SignalProtocolAddress(sessionName, session.get("deviceId").asInt()), org.whispersystems.signalservice.internal.util.Base64.decode(session.get("record").asText()));
+                        sessionMap.put(new SignalProtocolAddress(sessionName, session.get("deviceId").asInt()), org.whispersystems.util.Base64.decode(session.get("record").asText()));
                     } catch (IOException e) {
                         System.out.println(String.format("Error while decoding session for: %s", sessionName));
                     }
