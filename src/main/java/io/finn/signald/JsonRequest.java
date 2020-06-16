@@ -17,7 +17,7 @@
 
 package io.finn.signald;
 
-import org.asamk.signal.storage.contacts.ContactInfo;
+import io.finn.signald.storage.ContactInfo;
 
 import java.util.List;
 

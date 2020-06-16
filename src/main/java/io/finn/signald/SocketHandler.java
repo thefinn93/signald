@@ -24,17 +24,20 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.finn.signald.storage.ContactInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
-import org.asamk.signal.storage.contacts.ContactInfo;
 import org.asamk.signal.util.Hex;
+import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
@@ -234,7 +237,7 @@ public class SocketHandler implements Runnable {
                     mime = "application/octet-stream";
                 }
 
-                attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null));
+                attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
             } catch (IOException e) {
                 throw new AttachmentInvalidException(attachment.filename, e);
             }
@@ -272,7 +275,7 @@ public class SocketHandler implements Runnable {
 
         SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
         if(identityFailure != null) {
-          this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getNumber(), manager, request), request.id);
+          this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getLegacyIdentifier(), manager, request), request.id);
         }
 
       }
@@ -304,7 +307,7 @@ public class SocketHandler implements Runnable {
     if(result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if(identityFailure != null) {
-        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getNumber(), m, request), request.id);
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getLegacyIdentifier(), m, request), request.id);
       }
     }
   }
@@ -472,14 +475,14 @@ public class SocketHandler implements Runnable {
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
       fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
-      boolean res = m.trustIdentity(request.recipientNumber, fingerprintBytes, trustLevel);
+      boolean res = m.trustIdentity(new SignalServiceAddress(null, request.recipientNumber), fingerprintBytes, trustLevel);
       if (!res) {
         this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request), request.id);
       } else {
         this.reply("trusted_fingerprint", new JsonStatusMessage(0, "Successfully trusted fingerprint", request), request.id);
       }
     } else if (fingerprint.length() == 60) {
-      boolean res = m.trustIdentitySafetyNumber(request.recipientNumber, fingerprint, trustLevel);
+      boolean res = m.trustIdentitySafetyNumber(new SignalServiceAddress(null, request.recipientNumber), fingerprint, trustLevel);
       if (!res) {
         this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request), request.id);
       } else {
@@ -544,7 +547,7 @@ public class SocketHandler implements Runnable {
       this.reply("version", new JsonVersionMessage(), null);
   }
 
-  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException {
+  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException {
       Manager m = Manager.get(request.username);
       ContactInfo contact = m.getContact(request.recipientNumber);
       if(contact == null || contact.profileKey == null) {
@@ -554,7 +557,7 @@ public class SocketHandler implements Runnable {
       this.reply("profile", new JsonProfile(m.getProfile(request.recipientNumber), Base64.decode(contact.profileKey)), request.id);
   }
 
-  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException {
+  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
       Manager m = Manager.get(request.username);
       m.setProfileName(request.name);
       this.reply("profile_set", null, request.id);

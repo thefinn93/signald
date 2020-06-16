@@ -17,8 +17,9 @@
 
 package io.finn.signald;
 
-import org.asamk.signal.storage.groups.GroupInfo;
+import io.finn.signald.storage.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
@@ -36,7 +37,10 @@ class JsonGroupInfo {
         Manager manager = Manager.get(username);
         this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
         if (groupInfo.getMembers().isPresent()) {
-            this.members = groupInfo.getMembers().get();
+            this.members = new ArrayList<>();
+            for(SignalServiceAddress member : groupInfo.getMembers().get()) {
+                this.members.add(member.getLegacyIdentifier());
+            }
         }
         if (groupInfo.getName().isPresent()) {
             this.name = groupInfo.getName().get();
@@ -53,7 +57,10 @@ class JsonGroupInfo {
     JsonGroupInfo(GroupInfo groupInfo, Manager m) {
         this.groupId = Base64.encodeBytes(groupInfo.groupId);
         this.name = groupInfo.name;
-        this.members =  new ArrayList<String>(groupInfo.members);
+        this.members = new ArrayList();
+        for(SignalServiceAddress member : groupInfo.members) {
+            this.members.add(member.getLegacyIdentifier());
+        }
         this.avatarId = groupInfo.getAvatarId();
     }
 }
