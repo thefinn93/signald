@@ -32,6 +32,7 @@ import java.io.IOException;
 public class AccountData {
     public String username;
     public String password;
+    public String uuid;
     public int deviceId;
     public String signalingKey;
     public int preKeyIdOffset;

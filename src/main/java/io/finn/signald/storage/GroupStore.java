@@ -22,7 +22,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.asamk.signal.storage.groups.GroupInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.util.Base64;

@@ -22,7 +22,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.asamk.signal.storage.contacts.ContactInfo;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,6 +43,10 @@ public class ContactStore {
 
     public ContactInfo getContact(String number) {
         return contacts.get(number);
+    }
+
+    public ContactInfo getContact(SignalServiceAddress address) {
+        return contacts.get(address.getLegacyIdentifier());
     }
 
     public List<ContactInfo> getContacts() {

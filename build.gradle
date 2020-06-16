@@ -63,6 +63,7 @@ buildConfig {
   buildConfigField 'String', 'SIGNAL_STORAGE_URL', { System.getenv("SIGNAL_STORAGE_URL") ?: "https://storage.signal.org" }
   buildConfigField 'String', 'SIGNAL_CONTACT_DISCOVERY_URL', { System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com" }
   buildConfigField 'String', 'USER_AGENT', { System.getenv("USER_AGENT") ?: "signald-" + version }
+  buildConfigField 'String', 'SIGNAL_AGENT', { System.getenv("SIGNAL_AGENT") ?: "signald" }
   buildConfigField 'String', "UNIDENTIFIED_SENDER_TRUST_ROOT", "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF"
   buildConfigField 'String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX", "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X0=";
 }
