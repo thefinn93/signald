@@ -20,6 +20,7 @@ import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.IdentityKeyStore;
 import io.finn.signald.storage.SignalProtocolStore;
+import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
@@ -57,10 +58,7 @@ import org.whispersystems.signalservice.api.push.exceptions.*;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
-import org.whispersystems.signalservice.internal.configuration.SignalCdnUrl;
-import org.whispersystems.signalservice.internal.configuration.SignalContactDiscoveryUrl;
-import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
-import org.whispersystems.signalservice.internal.configuration.SignalServiceUrl;
+import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.util.Base64;
@@ -89,14 +87,8 @@ import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 class Manager {
     private Logger logger;
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
-    private final static SignalServiceConfiguration serviceConfiguration = new SignalServiceConfiguration(
-            new SignalServiceUrl[]{new SignalServiceUrl(BuildConfig.SIGNAL_URL, TRUST_STORE)},
-            new SignalCdnUrl[]{new SignalCdnUrl(BuildConfig.SIGNAL_CDN_URL, TRUST_STORE)},
-	    new SignalContactDiscoveryUrl[]{new SignalContactDiscoveryUrl(BuildConfig.SIGNAL_CONTACT_DISCOVERY_URL, TRUST_STORE)}
-    );
+    private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
 
-    public final static String PROJECT_NAME = BuildConfig.NAME;
-    public final static String PROJECT_VERSION = BuildConfig.VERSION;
     private final static String USER_AGENT = BuildConfig.USER_AGENT;
 
     private final static int PREKEY_MINIMUM_COUNT = 20;
@@ -121,6 +113,28 @@ class Manager {
     private SignalServiceMessagePipe unidentifiedMessagePipe = null;
 
     private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
+
+    private static SignalServiceConfiguration generateSignalServiceConfiguration() throws IOException {
+        final Interceptor userAgentInterceptor = chain ->
+                chain.proceed(chain.request().newBuilder()
+                        .header("User-Agent", USER_AGENT)
+                        .build());
+
+        Map<Integer, SignalCdnUrl[]> signalCdnUrlMap = new HashMap<>();
+        signalCdnUrlMap.put(0, new SignalCdnUrl[]{new SignalCdnUrl(BuildConfig.SIGNAL_CDN_URL, TRUST_STORE)});
+        signalCdnUrlMap.put(1, new SignalCdnUrl[]{new SignalCdnUrl(BuildConfig.SIGNAL_CDN2_URL, TRUST_STORE)});
+
+        return new SignalServiceConfiguration(
+                new SignalServiceUrl[]{new SignalServiceUrl(BuildConfig.SIGNAL_URL, TRUST_STORE)},
+                signalCdnUrlMap,
+                new SignalContactDiscoveryUrl[]{new SignalContactDiscoveryUrl(BuildConfig.SIGNAL_CONTACT_DISCOVERY_URL, TRUST_STORE)},
+                new SignalKeyBackupServiceUrl[]{new SignalKeyBackupServiceUrl(BuildConfig.SIGNAL_KEY_BACKUP_URL, TRUST_STORE)},
+                new SignalStorageUrl[]{new SignalStorageUrl(BuildConfig.SIGNAL_STORAGE_URL, TRUST_STORE)},
+                Collections.singletonList(userAgentInterceptor),
+                Optional.absent(),
+                Base64.decode(BuildConfig.SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX)
+        );
+    }
 
     public static Manager get(String username) throws IOException, NoSuchAccountException, InvalidStorageFileException {
         return get(username, false);
