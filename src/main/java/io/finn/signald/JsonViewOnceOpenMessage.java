@@ -24,7 +24,7 @@ class JsonViewOnceOpenMessage {
     long timestamp;
 
     JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
-        sender = message.getSender();
+        sender = message.getSender().getLegacyIdentifier();
         timestamp = message.getTimestamp();
     }
 }

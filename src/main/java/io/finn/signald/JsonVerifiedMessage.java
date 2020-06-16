@@ -27,7 +27,7 @@ class JsonVerifiedMessage {
     long timestamp;
 
     JsonVerifiedMessage(VerifiedMessage message) {
-        destination = message.getDestination();
+        destination = message.getDestination().getLegacyIdentifier();
         identityKey = Hex.toStringCondensed(message.getIdentityKey().getPublicKey().serialize());
         verified = message.getVerified().toString();
         timestamp = message.getTimestamp();

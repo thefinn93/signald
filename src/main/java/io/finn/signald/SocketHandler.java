@@ -547,7 +547,7 @@ public class SocketHandler implements Runnable {
       this.reply("version", new JsonVersionMessage(), null);
   }
 
-  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException {
+  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException {
       Manager m = Manager.get(request.username);
       ContactInfo contact = m.getContact(request.recipientNumber);
       if(contact == null || contact.profileKey == null) {

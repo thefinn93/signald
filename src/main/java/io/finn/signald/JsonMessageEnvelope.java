@@ -58,9 +58,9 @@ class JsonMessageEnvelope {
         }
 
         if (envelope.hasSource()) {
-            source = sourceAddress.getNumber();
+            source = sourceAddress.getLegacyIdentifier();
         } else {
-            source = c.getSender();
+            source = c.getSender().getLegacyIdentifier();
         }
 
         if (envelope.hasSourceDevice()) {

@@ -36,8 +36,8 @@ class JsonDataMessage {
 
     JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
         this.timestamp = dataMessage.getTimestamp();
-        if (dataMessage.getGroupInfo().isPresent()) {
-            this.groupInfo = new JsonGroupInfo(dataMessage.getGroupInfo().get(), username);
+        if (dataMessage.getGroupContext().isPresent()) {
+            this.groupInfo = new JsonGroupInfo(dataMessage.getGroupContext().get(), username);
         }
         if (dataMessage.getBody().isPresent()) {
             this.message = dataMessage.getBody().get();

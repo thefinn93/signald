@@ -19,9 +19,9 @@ package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import java.util.List;
+
 import java.util.ArrayList;
-import java.util.stream.Collectors;
+import java.util.List;
 
 
 class JsonQuote {
@@ -35,6 +35,6 @@ class JsonQuote {
     for(JsonQuotedAttachment attachment : this.attachments) {
       quotedAttachments.add(attachment.getAttachment());
     }
-    return new SignalServiceDataMessage.Quote(this.id, new SignalServiceAddress(this.author), this.text, quotedAttachments);
+    return new SignalServiceDataMessage.Quote(this.id, new SignalServiceAddress(null, this.author), this.text, quotedAttachments);
   }
 }

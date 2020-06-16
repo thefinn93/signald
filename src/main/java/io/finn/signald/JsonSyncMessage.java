@@ -21,9 +21,11 @@ import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -57,7 +59,10 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getBlockedList().isPresent()) {
-            blockedNumbers = syncMessage.getBlockedList().get().getNumbers();
+            blockedNumbers = new ArrayList<>();
+            for(SignalServiceAddress a : syncMessage.getBlockedList().get().getAddresses()) {
+                blockedNumbers.add(a.getLegacyIdentifier());
+            }
             for(byte[] groupId : syncMessage.getBlockedList().get().getGroupIds()) {
                 blockedGroups.add(Base64.encodeBytes(groupId));
             }

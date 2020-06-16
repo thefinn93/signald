@@ -17,6 +17,8 @@
 
 package io.finn.signald;
 
+import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
@@ -31,8 +33,8 @@ class JsonProfile {
     public String unidentified_access;
     public boolean unrestricted_unidentified_access;
 
-    JsonProfile(SignalServiceProfile p, byte[] profileKey) throws IOException, InvalidCiphertextException {
-        ProfileCipher profileCipher = new ProfileCipher(profileKey);
+    JsonProfile(SignalServiceProfile p, byte[] profileKey) throws IOException, InvalidCiphertextException, InvalidInputException {
+        ProfileCipher profileCipher = new ProfileCipher(new ProfileKey(profileKey));
         name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
         identity_key = p.getIdentityKey();
         avatar = p.getAvatar();
