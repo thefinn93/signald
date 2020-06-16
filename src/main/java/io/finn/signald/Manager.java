@@ -17,11 +17,8 @@
 package io.finn.signald;
 
 import io.finn.signald.exceptions.InvalidStorageFileException;
-import io.finn.signald.storage.AccountData;
-import io.finn.signald.storage.IdentityKeyStore;
-import io.finn.signald.storage.SignalProtocolStore;
-import io.finn.signald.storage.GroupInfo;
-import io.finn.signald.storage.ContactInfo;
+import io.finn.signald.storage.*;
+import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,12 +26,12 @@ import org.asamk.signal.*;
 import org.asamk.signal.storage.threads.ThreadInfo;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
+import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.fingerprint.Fingerprint;
-import org.whispersystems.libsignal.fingerprint.NumericFingerprintGenerator;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
@@ -59,7 +56,6 @@ import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.*;
-import org.whispersystems.signalservice.internal.push.SendMessageResponse;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.util.Base64;
@@ -214,7 +210,7 @@ class Manager {
         return accountData.username;
     }
 
-    private IdentityKey getIdentity() {
+    public IdentityKey getIdentity() {
         return accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey();
     }
 
@@ -850,17 +846,17 @@ class Manager {
 
 
     private void legacySendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients)
-            throws UntrustedIdentityException, EncapsulatedExceptions, IOException {
+            throws UntrustedIdentityException, EncapsulatedExceptions, IOException, InvalidInputException {
         legacySendMessage(messageBuilder, recipients, true);
     }
 
     private void legacySendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients, boolean useExistingExpiration)
-            throws EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, IOException {
+            throws EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, IOException, InvalidInputException {
         Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
         if (recipientsTS == null) return;
 
         if(accountData.profileKey != null) {
-            messageBuilder = messageBuilder.withProfileKey(accountData.getProfileKey());
+            messageBuilder = messageBuilder.withProfileKey(accountData.getProfileKey().serialize());
         }
 
         SignalServiceDataMessage message = null;
@@ -1060,7 +1056,7 @@ class Manager {
         void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
     }
 
-    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException {
+    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException {
         String threadId;
         if (message.getGroupContext().isPresent()) {
             SignalServiceGroup groupInfo;
@@ -1189,7 +1185,7 @@ class Manager {
         }
     }
 
-    public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException {
+    public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException {
         final File cachePath = new File(getMessageCachePath());
         if (!cachePath.exists()) {
             return;
@@ -1239,7 +1235,7 @@ class Manager {
         this.messagePipe.shutdown();
     }
 
-    public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException {
+    public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, MissingConfigurationException {
         try {
             retryFailedReceivedMessages(handler, ignoreAttachments);
         } catch (NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
@@ -1287,7 +1283,7 @@ class Manager {
                     }
                     try {
                         handleMessage(envelope, content, ignoreAttachments);
-                    } catch (NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
+                    } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
                         logger.catching(e);
                     }
                 }
@@ -1313,7 +1309,7 @@ class Manager {
         }
     }
 
-    private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws NotAGroupMemberException, NotAGroupMemberException, GroupNotFoundException, AttachmentInvalidException, AttachmentInvalidException, UntrustedIdentityException, IOException {
+    private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException {
         if (content != null) {
             if (content.getDataMessage().isPresent()) {
                 SignalServiceDataMessage message = content.getDataMessage().get();
@@ -1510,7 +1506,7 @@ class Manager {
         return new File(avatarsPath, "contact-" + number);
     }
 
-    private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, String number) throws IOException, InvalidMessageException {
+    private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, String number) throws IOException, InvalidMessageException, MissingConfigurationException {
         createPrivateDirectories(avatarsPath);
         if (attachment.isPointer()) {
             SignalServiceAttachmentPointer pointer = attachment.asPointer();
@@ -1525,7 +1521,7 @@ class Manager {
         return new File(avatarsPath, "group-" + Base64.encodeBytes(groupId).replace("/", "_"));
     }
 
-    private File retrieveGroupAvatarAttachment(SignalServiceAttachment attachment, byte[] groupId) throws IOException, InvalidMessageException {
+    private File retrieveGroupAvatarAttachment(SignalServiceAttachment attachment, byte[] groupId) throws IOException, InvalidMessageException, MissingConfigurationException {
         createPrivateDirectories(avatarsPath);
         if (attachment.isPointer()) {
             SignalServiceAttachmentPointer pointer = attachment.asPointer();
@@ -1540,7 +1536,7 @@ class Manager {
         return new File(attachmentsPath, attachmentId + "");
     }
 
-    private File retrieveAttachment(SignalServiceAttachmentPointer pointer) throws IOException, InvalidMessageException {
+    private File retrieveAttachment(SignalServiceAttachmentPointer pointer) throws IOException, InvalidMessageException, MissingConfigurationException {
         createPrivateDirectories(attachmentsPath);
         return retrieveAttachment(pointer, getAttachmentFile(pointer.getRemoteId().getV2().get()), true);
     }
@@ -1669,16 +1665,16 @@ class Manager {
                             }
                         }
                         if (currentIdentity != null) {
-                            verifiedMessage = new VerifiedMessage(record.number, currentIdentity.getIdentityKey(), currentIdentity.getTrustLevel().toVerifiedState(), currentIdentity.getDateAdded().getTime());
+                            verifiedMessage = new VerifiedMessage(new SignalServiceAddress(null, record.number), currentIdentity.getIdentityKey(), currentIdentity.getTrustLevel().toVerifiedState(), currentIdentity.getDateAdded().getTime());
                         }
                     }
 
                     // TODO include profile key
                     // TODO: Don't hard code `false` value for blocked argument
                     Optional<Integer> expirationTimer = Optional.<Integer>absent();
-                    out.write(new DeviceContact(record.number, Optional.fromNullable(record.name),
+                    out.write(new DeviceContact(new SignalServiceAddress(null, record.number), Optional.fromNullable(record.name),
                             createContactAvatarAttachment(record.number), Optional.fromNullable(record.color),
-                            Optional.fromNullable(verifiedMessage), Optional.<byte[]>absent(), false, expirationTimer));
+                            Optional.fromNullable(verifiedMessage), Optional.absent(), false, expirationTimer, Optional.absent(), false));
                 }
             }
 
@@ -1702,7 +1698,7 @@ class Manager {
         }
     }
 
-    private void sendVerifiedMessage(String destination, IdentityKey identityKey, TrustLevel trustLevel) throws IOException, UntrustedIdentityException {
+    private void sendVerifiedMessage(SignalServiceAddress destination, IdentityKey identityKey, TrustLevel trustLevel) throws IOException, UntrustedIdentityException {
         VerifiedMessage verifiedMessage = new VerifiedMessage(destination, identityKey, trustLevel.toVerifiedState(), System.currentTimeMillis());
         sendSyncMessage(SignalServiceSyncMessage.forVerified(verifiedMessage));
     }
@@ -1732,15 +1728,8 @@ class Manager {
         return accountData.axolotlStore.identityKeyStore.getIdentities(number);
     }
 
-    /**
-     * Trust this the identity with this fingerprint
-     *
-     * @param name        username of the identity
-     * @param fingerprint Fingerprint
-     * @param level       level at with to trust the identity
-     */
-    public boolean trustIdentity(String name, byte[] fingerprint, TrustLevel level) throws IOException {
-        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(name);
+    public boolean trustIdentity(SignalServiceAddress address, byte[] fingerprint, TrustLevel level) throws IOException {
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address.getLegacyIdentifier());
         if (ids == null) {
             return false;
         }
@@ -1749,9 +1738,9 @@ class Manager {
                 continue;
             }
 
-            accountData.axolotlStore.identityKeyStore.saveIdentity(name, id.getIdentityKey(), level);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(address.getLegacyIdentifier(), id.getIdentityKey(), level);
             try {
-                sendVerifiedMessage(name, id.getIdentityKey(), level);
+                sendVerifiedMessage(address, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
@@ -1761,26 +1750,19 @@ class Manager {
         return false;
     }
 
-    /**
-     * Trust this the identity with this safety number
-     *
-     * @param name         username of the identity
-     * @param safetyNumber Safety number
-     * @param level        level to trust the identity
-     */
-    public boolean trustIdentitySafetyNumber(String name, String safetyNumber, TrustLevel level) throws IOException {
-        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(name);
+    public boolean trustIdentitySafetyNumber(SignalServiceAddress address, String safetyNumber, TrustLevel level) throws IOException {
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address.getLegacyIdentifier());
         if (ids == null) {
             return false;
         }
         for (IdentityKeyStore.Identity id : ids) {
-            if (!safetyNumber.equals(computeSafetyNumber(name, id.getIdentityKey()))) {
+            if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.username, getIdentity(), address.getLegacyIdentifier(), id.getIdentityKey()))) {
                 continue;
             }
 
-            accountData.axolotlStore.identityKeyStore.saveIdentity(name, id.getIdentityKey(), level);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(address.getLegacyIdentifier(), id.getIdentityKey(), level);
             try {
-                sendVerifiedMessage(name, id.getIdentityKey(), level);
+                sendVerifiedMessage(address, id.getIdentityKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
@@ -1788,49 +1770,10 @@ class Manager {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Trust all keys of this identity without verification
-     *
-     * @param name username of the identity
-     */
-    public boolean trustIdentityAllKeys(String name) throws IOException {
-        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(name);
-        if (ids == null) {
-            return false;
-        }
-        for (IdentityKeyStore.Identity id : ids) {
-            if (id.getTrustLevel() == TrustLevel.UNTRUSTED) {
-                accountData.axolotlStore.identityKeyStore.saveIdentity(name, id.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-                try {
-                    sendVerifiedMessage(name, id.getIdentityKey(), TrustLevel.TRUSTED_UNVERIFIED);
-                } catch (IOException | UntrustedIdentityException e) {
-                    logger.catching(e);
-                }
-            }
-        }
-        accountData.save();
-        return true;
-    }
-
-    public String computeSafetyNumber(String theirUsername, IdentityKey theirIdentityKey) {
-        Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(accountData.username, getIdentity(), theirUsername, theirIdentityKey);
-        return fingerprint.getDisplayableFingerprint().getDisplayText();
     }
 
     public Optional<ContactTokenDetails> getUser(String e164number) throws IOException {
         return accountManager.getContact(e164number);
-    }
-
-    private static byte[] getTargetUnidentifiedAccessKey(SignalServiceAddress recipient) {
-        // TODO implement
-        return null;
-    }
-
-    public Optional<UnidentifiedAccessPair> getAccessForSync() {
-        // TODO implement
-        return Optional.absent();
     }
 
     public List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients) {
@@ -1846,22 +1789,13 @@ class Manager {
         return Optional.absent();
     }
 
-    public byte[] getProfileKey() throws IOException {
-        return accountData.getProfileKey();
-    }
-
-    public void setProfileKey(final byte[] profileKey) throws IOException {
-        accountData.setProfileKey(profileKey);
-	    accountData.save();
-    }
-
-    public void setProfileName(String name) throws IOException {
+    public void setProfileName(String name) throws IOException, InvalidInputException {
         accountManager.setProfileName(accountData.getProfileKey(), name);
 	    accountData.save();
     }
 
-    public SignalServiceProfile getProfile(String number) throws IOException {
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer);
-        return messageReceiver.retrieveProfile(new SignalServiceAddress(number), Optional.<UnidentifiedAccess>absent());
+    public SignalServiceProfile getProfile(String number) throws IOException, VerificationFailedException {
+        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, UUID.fromString(accountData.uuid), accountData.username, accountData.password, accountData.signalingKey, BuildConfig.SIGNAL_AGENT, null, sleepTimer, null);
+        return messageReceiver.retrieveProfile(new SignalServiceAddress(null, number), null, Optional.<UnidentifiedAccess>absent(), null).getProfile();
     }
 }

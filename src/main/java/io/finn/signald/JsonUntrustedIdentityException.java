@@ -16,9 +16,9 @@
  */
 
 package io.finn.signald;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.libsignal.IdentityKey;
+import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
+import org.whispersystems.libsignal.IdentityKey;
 
 
 class JsonUntrustedIdentityException {
@@ -32,7 +32,7 @@ class JsonUntrustedIdentityException {
     this.username = m.getUsername();
     this.number = number;
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
-    this.safety_number = m.computeSafetyNumber(this.number, key);
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getUsername(), m.getIdentity(), this.number, key);
     this.request = request;
   }
 }

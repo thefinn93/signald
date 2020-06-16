@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.storage.IdentityKeyStore;
+import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
 
 class JsonIdentity {
@@ -35,7 +36,7 @@ class JsonIdentity {
 
   JsonIdentity(IdentityKeyStore.Identity identity, Manager m, String username) {
     this(identity, m);
-    this.safety_number = m.computeSafetyNumber(username, identity.getIdentityKey());
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getUsername(), m.getIdentity(), username, identity.getIdentityKey());
     this.username = username;
   }
 }

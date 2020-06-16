@@ -22,6 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.JSONHelper;
+import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.util.Base64;
 
@@ -101,11 +103,11 @@ public class AccountData {
         dataPath = path + "/data";
     }
 
-    public byte[] getProfileKey() throws IOException {
+    public ProfileKey getProfileKey() throws IOException, InvalidInputException {
         if(profileKey == null || profileKey.equals("")) {
             return null;
         }
-        return Base64.decode(profileKey);
+        return new ProfileKey(Base64.decode(profileKey));
     }
 
     public void setProfileKey(byte[] key) {
