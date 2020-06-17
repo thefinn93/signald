@@ -27,6 +27,15 @@ public class JsonAddress {
 
     public String uuid;
 
+    public JsonAddress() {};
+
+    public JsonAddress(String number, UUID uuid) {
+        this.number = number;
+        if(uuid != null) {
+            this.uuid = uuid.toString();
+        }
+    }
+
     @JsonIgnore
     public SignalServiceAddress getSignalServiceAddress() {
         return new SignalServiceAddress(getUUID(), number);

@@ -341,6 +341,7 @@ class Manager {
         SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(accountData.axolotlStore.identityKeyStore.getIdentityKeyPair(), accountData.signalingKey, false, true, accountData.axolotlStore.identityKeyStore.getLocalRegistrationId(), deviceName);
         accountData.deviceId = ret.getDeviceId();
         accountData.username = ret.getNumber();
+        accountData.address = new JsonAddress(ret.getNumber(), ret.getUuid());
         // TODO do this check before actually registering
         if (userExists()) {
             throw new UserAlreadyExists(accountData.username, getFileName());
