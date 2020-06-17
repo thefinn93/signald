@@ -132,6 +132,7 @@ class Manager {
                     Base64.decode(BuildConfig.SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX)
             );
         } catch (IOException e) {
+            LogManager.getLogger("manager").catching(e);
             throw new AssertionError(e);
         }
     }

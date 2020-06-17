@@ -89,19 +89,23 @@ public class AccountData {
     }
 
     public void init() {
-        if (groupStore == null) {
+        if(address == null) {
+            address = new JsonAddress(username);
+        }
+
+        if(groupStore == null) {
             groupStore = new GroupStore();
         }
 
-        if (contactStore == null) {
+        if(contactStore == null) {
             contactStore = new ContactStore();
         }
 
-        if (threadStore == null) {
+        if(threadStore == null) {
             threadStore = new ThreadStore();
         }
 
-        if (profileKey == null) {
+        if(profileKey == null) {
             profileKey = "";
         }
     }
