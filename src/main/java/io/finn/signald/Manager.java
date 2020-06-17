@@ -269,7 +269,7 @@ class Manager {
 
     public void init() throws IOException {
         accountData = AccountData.load(new File(getFileName()));
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        accountManager = getAccountManager();
         try {
             if (accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
                 refreshPreKeys();
@@ -296,7 +296,7 @@ class Manager {
     public void register(boolean voiceVerification, Optional<String> captcha) throws IOException {
         accountData.password = Util.getSecret(18);
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        accountManager = getAccountManager();
 
         if (voiceVerification) {
             accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent());  // TODO: Allow requester to set the locale
@@ -309,6 +309,10 @@ class Manager {
         accountData.save();
     }
 
+    private SignalServiceAccountManager getAccountManager() {
+        return new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, BuildConfig.SIGNAL_AGENT, sleepTimer);
+    }
+
     public void unregister() throws IOException {
         // When setting an empty GCM id, the Signal-Server also sets the fetchesMessages property to false.
         // If this is the master device, other users can't send messages to this number anymore.
@@ -319,7 +323,7 @@ class Manager {
     public URI getDeviceLinkUri() throws TimeoutException, IOException {
         accountData.password = Util.getSecret(18);
 
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        accountManager = getAccountManager();
         String uuid = accountManager.getNewDeviceUuid();
 
         accountData.registered = false;

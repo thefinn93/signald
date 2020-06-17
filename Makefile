@@ -4,11 +4,7 @@ export VERSION ?= $(shell ./version.sh)
 export CI_PROJECT_NAME ?= signald
 export CI_BUILD_REF_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
 export CI_COMMIT_SHA ?= $(shell git rev-parse HEAD)
-GRADLE=gradle
-
-ifeq (, $(shell which $(GRADLE)))
-	GRADLE="./gradlew"
-endif
+GRADLE ?= ./gradlew
 
 all: installDist tar
 
@@ -21,7 +17,7 @@ installDist distTar:
 
 integrationTest:
 	export SIGNAL_URL=https://signal-server.signald.org
-	$(GRADLE) $@
+	$(GRADLE) integrationTest --info
 
 setup:
 	sudo mkdir -p /var/run/signald
