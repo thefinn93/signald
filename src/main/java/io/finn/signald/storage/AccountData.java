@@ -34,7 +34,7 @@ import java.io.IOException;
 public class AccountData {
     public String username;
     public String password;
-    public String uuid;
+    public JsonAddress address;
     public int deviceId;
     public String signalingKey;
     public int preKeyIdOffset;
@@ -56,7 +56,14 @@ public class AccountData {
         // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
         AccountData a = mapper.readValue(storageFile, AccountData.class);
         a.validate(); // Storage path passed for exceptions to include in messages
+        a.update();
         return a;
+    }
+
+    private void update() {
+        if(address == null) {
+            address = new JsonAddress(username);
+        }
     }
 
     public void save() throws IOException {

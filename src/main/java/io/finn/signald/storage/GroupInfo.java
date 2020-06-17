@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GroupInfo {
     @JsonProperty
@@ -15,13 +15,28 @@ public class GroupInfo {
     public String name;
 
     @JsonProperty
-    public Set<SignalServiceAddress> members = new HashSet<>();
+    public List<JsonAddress> members = new ArrayList<>();
 
     private long avatarId;
 
     @JsonIgnore
     public long getAvatarId() {
         return avatarId;
+    }
+
+    @JsonIgnore
+    public List<SignalServiceAddress> getMembers() {
+        List<SignalServiceAddress> l = new ArrayList<>();
+        for(JsonAddress m : members) {
+            l.add(m.getSignalServiceAddress());
+        }
+        return l;
+    }
+
+    public void addMembers(List<SignalServiceAddress> newMembers) {
+        for(SignalServiceAddress m : newMembers) {
+            members.add(new JsonAddress(m));
+        }
     }
 
     @JsonProperty
@@ -31,10 +46,15 @@ public class GroupInfo {
         this.groupId = groupId;
     }
 
-//    public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") Collection<String> members, @JsonProperty("avatarId") long avatarId) {
-//        this.groupId = groupId;
-//        this.name = name;
-//        this.members.addAll(members);
-//        this.avatarId = avatarId;
-//    }
+    // Constructor required for creation from JSON
+    public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") ArrayList<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
+        this.groupId = groupId;
+        this.name = name;
+        this.members = members;
+        this.avatarId = avatarId;
+    }
+
+    public void removeMember(SignalServiceAddress source) {
+        this.members.remove(new JsonAddress(source));
+    }
 }

@@ -60,7 +60,7 @@ class JsonGroupInfo {
         this.groupId = Base64.encodeBytes(groupInfo.groupId);
         this.name = groupInfo.name;
         this.members = new ArrayList();
-        for(SignalServiceAddress member : groupInfo.members) {
+        for(SignalServiceAddress member : groupInfo.getMembers()) {
             this.members.add(member.getLegacyIdentifier());
         }
         this.avatarId = groupInfo.getAvatarId();
