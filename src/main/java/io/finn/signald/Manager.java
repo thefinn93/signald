@@ -188,7 +188,7 @@ class Manager {
 
     public Manager(String username) {
         logger =  LogManager.getLogger("manager-" + username);
-        logger.info("Creating new manager for " + username + " (stored at " + settingsPath + ")");
+        logger.info("Creating new manager for " + username + " (stored in " + settingsPath + ")");
         accountData = new AccountData();
         accountData.username = username;
 //        jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
@@ -287,6 +287,7 @@ class Manager {
         int registrationId = KeyHelper.generateRegistrationId(false);
         accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId);
         accountData.registered = false;
+        logger.info("Generating new identity pair");
         accountData.init();
     }
 
@@ -311,7 +312,11 @@ class Manager {
     }
 
     private SignalServiceAccountManager getAccountManager() {
-        return new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        UUID uuid = null;
+        if(accountData.address != null) {
+            uuid = accountData.address.getUUID();
+        }
+        return new SignalServiceAccountManager(serviceConfiguration, uuid, accountData.username, accountData.password, BuildConfig.SIGNAL_AGENT, sleepTimer);
     }
 
     public void unregister() throws IOException {
@@ -323,16 +328,15 @@ class Manager {
 
     public URI getDeviceLinkUri() throws TimeoutException, IOException {
         accountData.password = Util.getSecret(18);
-
         accountManager = getAccountManager();
         String uuid = accountManager.getNewDeviceUuid();
-
+        IdentityKey deviceKey = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey();
         accountData.registered = false;
         try {
-            return new URI("tsdevice:/?uuid=" + URLEncoder.encode(uuid, "utf-8") + "&pub_key=" + URLEncoder.encode(Base64.encodeBytesWithoutPadding(accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey().serialize()), "utf-8"));
+            return new URI("tsdevice:/?uuid=" + URLEncoder.encode(uuid, "utf-8") + "&pub_key=" + URLEncoder.encode(Base64.encodeBytesWithoutPadding(deviceKey.serialize()), "utf-8"));
         } catch (URISyntaxException e) {
-            // Shouldn't happen
-            return null;
+            // Definitely won't happen
+            throw new AssertionError(e);
         }
     }
 
@@ -342,7 +346,6 @@ class Manager {
         accountData.deviceId = ret.getDeviceId();
         accountData.username = ret.getNumber();
         accountData.address = new JsonAddress(ret.getNumber(), ret.getUuid());
-        // TODO do this check before actually registering
         if (userExists()) {
             throw new UserAlreadyExists(accountData.username, getFileName());
         }

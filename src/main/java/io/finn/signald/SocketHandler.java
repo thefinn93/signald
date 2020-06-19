@@ -424,13 +424,14 @@ public class SocketHandler implements Runnable {
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException {
     Manager m = new Manager(null);
     m.createNewIdentity();
-    String deviceName = "signald"; // TODO: Set this to "signald on <hostname>"
+    String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify
     if(request.deviceName != null) {
       deviceName = request.deviceName;
     }
     try {
-      m.getDeviceLinkUri();
-      this.reply("linking_uri", new JsonLinkingURI(m), request.id);
+      logger.info("Generating linking URI");
+      URI uri = m.getDeviceLinkUri();
+      this.reply("linking_uri", new JsonLinkingURI(uri), request.id);
       m.finishDeviceLink(deviceName);
       this.reply("linking_successful", new JsonAccount(m), request.id);
     } catch(TimeoutException e) {
