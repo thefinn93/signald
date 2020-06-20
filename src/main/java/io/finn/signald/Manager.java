@@ -27,6 +27,7 @@ import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -80,7 +81,7 @@ import static java.nio.file.attribute.PosixFilePermission.*;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 class Manager {
-    private Logger logger;
+    private final Logger logger;
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
     private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
     private final static String USER_AGENT = BuildConfig.USER_AGENT;
@@ -288,14 +289,13 @@ class Manager {
         accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId);
         accountData.registered = false;
         logger.info("Generating new identity pair");
-        accountData.init();
     }
 
     public boolean isRegistered() {
         return accountData.registered;
     }
 
-    public void register(boolean voiceVerification, Optional<String> captcha) throws IOException {
+    public void register(boolean voiceVerification, Optional<String> captcha) throws IOException, InvalidInputException {
         accountData.password = Util.getSecret(18);
 
         accountManager = getAccountManager();
@@ -340,7 +340,7 @@ class Manager {
         }
     }
 
-    public void finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists {
+    public void finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException {
         accountData.signalingKey = Util.getSecret(52);
         SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(accountData.axolotlStore.identityKeyStore.getIdentityKeyPair(), accountData.signalingKey, false, true, accountData.axolotlStore.identityKeyStore.getLocalRegistrationId(), deviceName);
         accountData.deviceId = ret.getDeviceId();
@@ -349,15 +349,26 @@ class Manager {
         if (userExists()) {
             throw new UserAlreadyExists(accountData.username, getFileName());
         }
-        accountData.axolotlStore = new SignalProtocolStore(ret.getIdentity(), accountData.axolotlStore.identityKeyStore.getLocalRegistrationId());
 
+        byte[] profileKeyBytes = ret.getProfileKey();
+        if (profileKeyBytes != null) {
+            try {
+                accountData.setProfileKey(new ProfileKey(profileKeyBytes));
+            } catch (InvalidInputException e) {
+                e.printStackTrace();
+            }
+        }
+
+        accountData.axolotlStore = new SignalProtocolStore(ret.getIdentity(), accountData.axolotlStore.identityKeyStore.getLocalRegistrationId());
         accountData.registered = true;
+
         refreshPreKeys();
 
         accountData.init();
 
         requestSyncGroups();
         requestSyncContacts();
+        requestSyncConfiguration();
 
         accountData.save();
         managers.put(accountData.username, this);
@@ -449,7 +460,7 @@ class Manager {
         }
     }
 
-    public void verifyAccount(String verificationCode) throws IOException {
+    public void verifyAccount(String verificationCode) throws IOException, InvalidInputException {
         verificationCode = verificationCode.replace("-", "");
         accountData.signalingKey = Util.getSecret(52);
         accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, false, SERVICE_CAPABILITIES);
@@ -839,6 +850,16 @@ class Manager {
         }
     }
 
+    public void requestSyncConfiguration() throws IOException {
+        SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION).build();
+        SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
+        try {
+            sendSyncMessage(message);
+        } catch (UntrustedIdentityException e) {
+            logger.catching(e);
+        }
+    }
+
     private void sendSyncMessage(SignalServiceSyncMessage message)
             throws IOException, UntrustedIdentityException {
         SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration,
@@ -1064,7 +1085,7 @@ class Manager {
         void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
     }
 
-    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException {
+    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
         String threadId;
         if (message.getGroupContext().isPresent()) {
             SignalServiceGroup groupInfo;
@@ -1178,7 +1199,9 @@ class Manager {
 
         if(message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
             if(source.equals(accountData.address)) {
-                accountData.setProfileKey(message.getProfileKey().get());
+                if(message.getProfileKey().isPresent()) {
+                    accountData.setProfileKey(message.getProfileKey().get());
+                }
                 accountData.save();
             } else {
                 ContactInfo contact = accountData.contactStore.getContact(source);
@@ -1193,7 +1216,7 @@ class Manager {
         }
     }
 
-    public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException {
+    public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
         final File cachePath = new File(getMessageCachePath());
         if (!cachePath.exists()) {
             return;
@@ -1246,7 +1269,7 @@ class Manager {
     public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, MissingConfigurationException {
         try {
             retryFailedReceivedMessages(handler, ignoreAttachments);
-        } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
+        } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
             logger.catching(e);
         }
 
@@ -1291,7 +1314,7 @@ class Manager {
                     }
                     try {
                         handleMessage(envelope, content, ignoreAttachments);
-                    } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
+                    } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
                         logger.catching(e);
                     }
                 }
@@ -1315,7 +1338,7 @@ class Manager {
         }
     }
 
-    private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException {
+    private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
         if (content != null) {
             if (content.getDataMessage().isPresent()) {
                 SignalServiceDataMessage message = content.getDataMessage().get();
@@ -1547,7 +1570,7 @@ class Manager {
         return retrieveAttachment(pointer, getAttachmentFile(pointer.getRemoteId().getV2().get()), true);
     }
 
-    private File retrieveAttachment(SignalServiceAttachmentStream stream, File outputFile) throws IOException, InvalidMessageException {
+    private File retrieveAttachment(SignalServiceAttachmentStream stream, File outputFile) throws IOException {
         InputStream input = stream.getInputStream();
 
         try (OutputStream output = new FileOutputStream(outputFile)) {
@@ -1627,8 +1650,8 @@ class Manager {
             try (OutputStream fos = new FileOutputStream(groupsFile)) {
                 DeviceGroupsOutputStream out = new DeviceGroupsOutputStream(fos);
                 for (GroupInfo record : accountData.groupStore.getGroups()) {
-                    Optional<Integer> expirationTimer = Optional.<Integer>absent();
-                    Optional<String> color = Optional.<String>absent();
+                    Optional<Integer> expirationTimer = Optional.absent();
+                    Optional<String> color = Optional.absent();
                     out.write(new DeviceGroup(record.groupId, Optional.fromNullable(record.name),
                             record.getMembers(), createGroupAvatarAttachment(record.groupId),
                             record.active, expirationTimer, color, false, Optional.absent(), false));
@@ -1677,7 +1700,7 @@ class Manager {
 
                     // TODO include profile key
                     // TODO: Don't hard code `false` value for blocked argument
-                    Optional<Integer> expirationTimer = Optional.<Integer>absent();
+                    Optional<Integer> expirationTimer = Optional.absent();
                     out.write(new DeviceContact(new SignalServiceAddress(null, record.number), Optional.fromNullable(record.name),
                             createContactAvatarAttachment(record.number), Optional.fromNullable(record.color),
                             Optional.fromNullable(verifiedMessage), Optional.absent(), false, expirationTimer, Optional.absent(), false));
@@ -1711,11 +1734,10 @@ class Manager {
 
     public List<ContactInfo> getContacts() {
       if(accountData.contactStore == null) {
-        logger.warn("contactStore is null what tf!");
-        return Collections.<ContactInfo>emptyList();
+        logger.warn("contactStore is unexpectedly null!");
+        return Collections.emptyList();
       }
-      List<ContactInfo> contacts = this.accountData.contactStore.getContacts();
-      return contacts;
+      return this.accountData.contactStore.getContacts();
     }
 
     public ContactInfo getContact(String number) {
@@ -1784,8 +1806,8 @@ class Manager {
 
     public List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients) {
         List<Optional<UnidentifiedAccessPair>> result = new ArrayList<>(recipients.size());
-        for (SignalServiceAddress recipient : recipients) {
-            result.add(Optional.<UnidentifiedAccessPair>absent());
+        for (SignalServiceAddress ignored : recipients) {
+            result.add(Optional.absent());
         }
         return result;
     }

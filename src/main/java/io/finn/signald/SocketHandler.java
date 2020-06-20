@@ -42,7 +42,6 @@ import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptio
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.util.Base64;
-
 import java.io.*;
 import java.net.Socket;
 import java.net.URI;
@@ -317,7 +316,7 @@ public class SocketHandler implements Runnable {
     this.reply("account_list", accounts, request.id);
   }
 
-  private void register(JsonRequest request) throws IOException, NoSuchAccountException {
+  private void register(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
     logger.info("Register request: " + request);
     Manager m = Manager.get(request.username, true);
     Boolean voice = false;
@@ -334,7 +333,7 @@ public class SocketHandler implements Runnable {
     this.reply("verification_required", new JsonAccount(m), request.id);
   }
 
-  private void verify(JsonRequest request) throws IOException, NoSuchAccountException {
+  private void verify(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
     Manager m = Manager.get(request.username);
     if(!m.userHasKeys()) {
       logger.warn("User has no keys, first call register.");
@@ -421,7 +420,7 @@ public class SocketHandler implements Runnable {
   }
 
 
-  private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException {
+  private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, InvalidInputException {
     Manager m = new Manager(null);
     m.createNewIdentity();
     String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify

@@ -17,11 +17,13 @@
 
 package io.finn.signald.storage;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.JSONHelper;
+import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
@@ -88,7 +90,7 @@ public class AccountData {
         }
     }
 
-    public void init() {
+    public void init() throws InvalidInputException {
         if(address == null) {
             address = new JsonAddress(username);
         }
@@ -106,7 +108,10 @@ public class AccountData {
         }
 
         if(profileKey == null) {
-            profileKey = "";
+            // Generate a profile key if one does not exist
+            byte[] key = new byte[32];
+            RandomUtils.getSecureRandom().nextBytes(key);
+            setProfileKey(key);
         }
     }
 
@@ -114,6 +119,7 @@ public class AccountData {
         dataPath = path + "/data";
     }
 
+    @JsonIgnore
     public ProfileKey getProfileKey() throws IOException, InvalidInputException {
         if(profileKey == null || profileKey.equals("")) {
             return null;
@@ -121,10 +127,17 @@ public class AccountData {
         return new ProfileKey(Base64.decode(profileKey));
     }
 
-    public void setProfileKey(byte[] key) {
+    @JsonIgnore
+    public void setProfileKey(ProfileKey key) {
         if(key == null) {
             profileKey = "";
         }
-        profileKey = Base64.encodeBytes(key);
+        profileKey = Base64.encodeBytes(key.serialize());
+    }
+
+    // sets the profile key by bytes, checking for validity first
+    @JsonIgnore
+    public void setProfileKey(byte[] bytes) throws InvalidInputException {
+        setProfileKey(new ProfileKey(bytes));
     }
 }
