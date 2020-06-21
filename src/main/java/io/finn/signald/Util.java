@@ -47,4 +47,12 @@ public class Util {
     public static File createTempFile() throws IOException {
         return File.createTempFile("signald_tmp_", ".tmp");
     }
+
+    public static String redact(String in) {
+        if(in.length() < 2) {
+            return "*".repeat(in.length());
+        }
+        int unredactAfter = in.length()-2;
+        return "*".repeat(unredactAfter) + in.substring(unredactAfter);
+    }
 }
