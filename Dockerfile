@@ -1,4 +1,4 @@
-FROM gradle:jdk${JAVA_VERSION:-8}
+FROM gradle:jdk${JAVA_VERSION:-12}
 
 COPY . /tmp/src
 WORKDIR /tmp/src
