@@ -14,8 +14,8 @@ cache:
     - .gradle/wrapper
     - .gradle/caches
 
-build-java-9:
-  image: openjdk:9-jdk
+build-java-12:
+  image: openjdk:12-jdk
   stage: build
   before_script:
     - apt update && apt install -y make
