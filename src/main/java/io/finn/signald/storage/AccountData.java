@@ -69,7 +69,6 @@ public class AccountData {
     public static void createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey) throws InvalidInputException, IOException {
         logger.debug("Creating new local account by linking");
         AccountData a = new AccountData();
-        a.username = registration.getNumber();
         a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
         a.password = password;
 
@@ -117,8 +116,12 @@ public class AccountData {
     }
 
     public void init() throws InvalidInputException {
-        if(address == null) {
+        if(address == null && username != null) {
             address = new JsonAddress(username);
+        }
+
+        if(address != null && address.number != null && username == null) {
+            username = address.number;
         }
 
         if(groupStore == null) {
