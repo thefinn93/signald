@@ -21,8 +21,6 @@ import org.whispersystems.signalservice.internal.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
@@ -48,5 +46,13 @@ public class Util {
 
     public static File createTempFile() throws IOException {
         return File.createTempFile("signald_tmp_", ".tmp");
+    }
+
+    public static String redact(String in) {
+        if(in.length() < 2) {
+            return "*".repeat(in.length());
+        }
+        int unredactAfter = in.length()-2;
+        return "*".repeat(unredactAfter) + in.substring(unredactAfter);
     }
 }

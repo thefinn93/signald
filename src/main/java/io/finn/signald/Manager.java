@@ -146,7 +146,7 @@ class Manager {
                 throw e;
             }
         }
-        logger.info("Created a manager for " + username);
+        logger.info("Created a manager for " + Util.redact(username));
         return m;
     }
 
@@ -172,8 +172,8 @@ class Manager {
     }
 
     public Manager(String username) {
-        logger =  LogManager.getLogger("manager-" + username);
-        logger.info("Creating new manager for " + username + " (stored at " + settingsPath + ")");
+        logger =  LogManager.getLogger("manager-" + Util.redact(username));
+        logger.info("Creating new manager for " + Util.redact(username) + " (stored at " + settingsPath + ")");
         accountData = new AccountData();
         accountData.username = username;
 //        jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
@@ -338,7 +338,7 @@ class Manager {
 
         accountData.save();
         managers.put(accountData.username, this);
-        logger.info("Successfully finished linked to " + accountData.username + " as device #" + accountData.deviceId);
+        logger.info("Successfully finished linked to " + Util.redact(accountData.username) + " as device #" + accountData.deviceId);
     }
 
     public List<DeviceInfo> getLinkedDevices() throws IOException {
@@ -586,7 +586,7 @@ class Manager {
                 try {
                     member = canonicalizeNumber(member);
                 } catch (InvalidNumberException e) {
-                    logger.warn("Failed to add member \"" + member + "\" to group: " + e.getMessage());
+                    logger.warn("Failed to add member \"" + Util.redact(member) + "\" to group: " + e.getMessage());
                 }
                 if (g.members.contains(member)) {
                     continue;
@@ -600,7 +600,7 @@ class Manager {
                 for (ContactTokenDetails contact : contacts) {
                     newMembers.remove(contact.getNumber());
                 }
-                logger.warn("Failed to add members " + join(", ", newMembers) + " to group: Not registered on Signal");
+//                logger.warn("Failed to add members " + join(", ", newMembers) + " to group: Not registered on Signal");
             }
         }
 
@@ -743,9 +743,9 @@ class Manager {
         if (contact == null) {
             contact = new ContactInfo();
             contact.number = number;
-            logger.info("Add contact " + number + " named " + name);
+            logger.debug("Add contact " + Util.redact(number));
         } else {
-            logger.info("Updating contact " + number + " name " + contact.name + " -> " + name);
+            logger.debug("Updating contact " + Util.redact(number));
         }
         contact.name = name;
         accountData.contactStore.updateContact(contact);
@@ -861,13 +861,13 @@ class Manager {
                 } catch(UntrustedIdentityException e) {
                     accountData.axolotlStore.identityKeyStore.saveIdentity(e.getE164Number(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     untrustedIdentities.add(e);
-                    logger.warn("UntrustedIdentityException sending message to " + e.getE164Number());
+                    logger.warn("UntrustedIdentityException sending message to " + Util.redact(e.getE164Number()));
                 } catch(UnregisteredUserException e) {
                     unregisteredUsers.add(e);
-                    logger.warn("UnregisteredUserException when sending message to %s" + address.getNumber());
+                    logger.warn("UnregisteredUserException when sending message to %s" + Util.redact(address.getNumber()));
                 } catch(PushNetworkException e) {
                     networkExceptions.add(new NetworkFailureException(address.getNumber(), e));
-                    logger.warn("PushNetworkException when sending message to %s" + address.getNumber());
+                    logger.warn("PushNetworkException when sending message to %s" + Util.redact(address.getNumber()));
                 }
 
                 if (!untrustedIdentities.isEmpty() || !unregisteredUsers.isEmpty() || !networkExceptions.isEmpty()) {
@@ -986,7 +986,7 @@ class Manager {
         try {
             return getPushAddress(recipient);
         } catch (InvalidNumberException e) {
-            logger.warn("Failed to add recipient \"" + recipient + "\": " + e.getMessage());
+            logger.warn("Failed to add recipient \"" + Util.redact(recipient) + "\": " + e.getMessage());
             logger.warn("Aborting sending.");
             accountData.save();
             return null;
@@ -1605,7 +1605,7 @@ class Manager {
             try {
                 Files.delete(groupsFile.toPath());
             } catch (IOException e) {
-                logger.warn("Failed to delete groups temp file “" + groupsFile + "”: " + e.getMessage());
+                logger.warn("Failed to delete groups temp file " + groupsFile + ": " + e.getMessage());
             }
         }
     }
@@ -1654,7 +1654,7 @@ class Manager {
             try {
                 Files.delete(contactsFile.toPath());
             } catch (IOException e) {
-                logger.warn("Failed to delete contacts temp file “" + contactsFile + "”: " + e.getMessage());
+                logger.warn("Failed to delete contacts temp file " + contactsFile + ": " + e.getMessage());
             }
         }
     }
@@ -1666,7 +1666,6 @@ class Manager {
 
     public List<ContactInfo> getContacts() {
       if(accountData.contactStore == null) {
-        logger.warn("contactStore is null what tf!");
         return Collections.<ContactInfo>emptyList();
       }
       List<ContactInfo> contacts = this.accountData.contactStore.getContacts();
