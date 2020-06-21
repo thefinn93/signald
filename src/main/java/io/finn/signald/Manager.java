@@ -338,55 +338,6 @@ class Manager {
         accountManager.setGcmId(Optional.<String>absent());
     }
 
-    public URI getDeviceLinkUri() throws TimeoutException, IOException {
-        accountData.password = Util.getSecret(18);
-        accountManager = getAccountManager();
-        String uuid = accountManager.getNewDeviceUuid();
-        IdentityKey deviceKey = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey();
-        accountData.registered = false;
-        try {
-            return new URI("tsdevice:/?uuid=" + URLEncoder.encode(uuid, "utf-8") + "&pub_key=" + URLEncoder.encode(Base64.encodeBytesWithoutPadding(deviceKey.serialize()), "utf-8"));
-        } catch (URISyntaxException e) {
-            // Definitely won't happen
-            throw new AssertionError(e);
-        }
-    }
-
-    public void finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException {
-        accountData.signalingKey = Util.getSecret(52);
-        SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(accountData.axolotlStore.identityKeyStore.getIdentityKeyPair(), accountData.signalingKey, false, true, accountData.axolotlStore.identityKeyStore.getLocalRegistrationId(), deviceName);
-        accountData.deviceId = ret.getDeviceId();
-        accountData.username = ret.getNumber();
-        accountData.address = new JsonAddress(ret.getNumber(), ret.getUuid());
-        if (userExists()) {
-            throw new UserAlreadyExists(accountData.username, getFileName());
-        }
-
-        byte[] profileKeyBytes = ret.getProfileKey();
-        if (profileKeyBytes != null) {
-            try {
-                accountData.setProfileKey(new ProfileKey(profileKeyBytes));
-            } catch (InvalidInputException e) {
-                e.printStackTrace();
-            }
-        }
-
-        accountData.axolotlStore = new SignalProtocolStore(ret.getIdentity(), accountData.axolotlStore.identityKeyStore.getLocalRegistrationId());
-        accountData.registered = true;
-
-        refreshPreKeys();
-
-        accountData.init();
-
-        requestSyncGroups();
-        requestSyncContacts();
-        requestSyncConfiguration();
-
-        accountData.save();
-        managers.put(accountData.username, this);
-        logger.info("Successfully finished linked to " + Util.redact(accountData.username) + " as device #" + accountData.deviceId);
-    }
-
     public List<DeviceInfo> getLinkedDevices() throws IOException {
         return accountManager.getDevices();
     }
