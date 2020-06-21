@@ -110,7 +110,7 @@ class Manager {
 
     private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
-    private static SignalServiceConfiguration generateSignalServiceConfiguration() {
+    static SignalServiceConfiguration generateSignalServiceConfiguration() {
         final Interceptor userAgentInterceptor = chain ->
                 chain.proceed(chain.request().newBuilder()
                         .header("User-Agent", USER_AGENT)
@@ -220,7 +220,11 @@ class Manager {
     }
 
     public String getFileName() {
-        return dataPath + "/" + accountData.username;
+        return Manager.getFileName(accountData.username);
+    }
+
+    public static String getFileName(String username) {
+        return dataPath + "/" + username;
     }
 
     private String getMessageCachePath() {
@@ -262,6 +266,14 @@ class Manager {
             return false;
         }
         File f = new File(getFileName());
+        return !(!f.exists() || f.isDirectory());
+    }
+
+    public static boolean userExists(String username) {
+        if (username == null) {
+            return false;
+        }
+        File f = new File(Manager.getFileName(username));
         return !(!f.exists() || f.isDirectory());
     }
 
@@ -473,7 +485,7 @@ class Manager {
         accountData.save();
     }
 
-    private void refreshPreKeys() throws IOException {
+    void refreshPreKeys() throws IOException {
         List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
         SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(accountData.axolotlStore.getIdentityKeyPair());
 
@@ -830,7 +842,7 @@ class Manager {
         return sendUpdateGroupMessage(groupId, name, members, avatar);
     }
 
-    private void requestSyncGroups() throws IOException {
+    void requestSyncGroups() throws IOException {
         SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.GROUPS).build();
         SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
         try {

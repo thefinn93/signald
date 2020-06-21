@@ -420,18 +420,18 @@ public class SocketHandler implements Runnable {
   }
 
 
-  private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, InvalidInputException {
-    Manager m = new Manager(null);
-    m.createNewIdentity();
+  private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, URISyntaxException, NoSuchAccountException, InvalidInputException {
+    ProvisioningManager pm = new ProvisioningManager();
     String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify
     if(request.deviceName != null) {
       deviceName = request.deviceName;
     }
     try {
       logger.info("Generating linking URI");
-      URI uri = m.getDeviceLinkUri();
+      URI uri = pm.getDeviceLinkUri();
       this.reply("linking_uri", new JsonLinkingURI(uri), request.id);
-      m.finishDeviceLink(deviceName);
+      String username = pm.finishDeviceLink(deviceName);
+      Manager m = Manager.get(username);
       this.reply("linking_successful", new JsonAccount(m), request.id);
     } catch(TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);

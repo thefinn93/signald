@@ -23,9 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.JSONHelper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.util.Base64;
 
@@ -51,6 +54,7 @@ public class AccountData {
     public ThreadStore threadStore;
 
     private static String dataPath;
+    private static Logger logger = LogManager.getLogger("AccountData");
 
     public static AccountData load(File storageFile) throws IOException {
         ObjectMapper mapper = JSONHelper.GetMapper();
@@ -60,6 +64,26 @@ public class AccountData {
         a.validate(); // Storage path passed for exceptions to include in messages
         a.update();
         return a;
+    }
+
+    public static void createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey) throws InvalidInputException, IOException {
+        logger.debug("Creating new local account by linking");
+        AccountData a = new AccountData();
+        a.username = registration.getNumber();
+        a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
+        a.password = password;
+
+        // if the profileKey returned is null, a new one will be generated when we call a.init()
+        if(registration.getProfileKey() != null) {
+            a.setProfileKey(registration.getProfileKey());
+        }
+
+        a.deviceId = registration.getDeviceId();
+        a.signalingKey = signalingKey;
+        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId);
+        a.registered = true;
+        a.init();
+        a.save();
     }
 
     private void update() {
@@ -81,7 +105,9 @@ public class AccountData {
         if(!dataPathFile.exists()) {
             dataPathFile.mkdirs();
         }
-        writer.writeValue(new File(dataPath + "/" + username), this);
+        File destination = new File(dataPath + "/" + username);
+        logger.debug("Saving to " + destination.toString());
+        writer.writeValue(destination, this);
     }
 
     public void validate() throws InvalidStorageFileException {
@@ -108,13 +134,20 @@ public class AccountData {
         }
 
         if(profileKey == null) {
-            // Generate a profile key if one does not exist
+            generateProfileKey();
+        }
+    }
+
+    // Generates a profile key if one does not exist
+    public void generateProfileKey() throws InvalidInputException {
+        if(profileKey == null) {
             byte[] key = new byte[32];
             RandomUtils.getSecureRandom().nextBytes(key);
             setProfileKey(key);
         }
     }
 
+    @JsonIgnore
     public static void setDataPath(String path) {
         dataPath = path + "/data";
     }
