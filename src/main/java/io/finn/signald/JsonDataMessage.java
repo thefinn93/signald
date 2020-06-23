@@ -55,8 +55,6 @@ class JsonDataMessage {
             for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
                 attachments.add(new JsonAttachment(attachment, username));
             }
-        } else {
-            attachments = new ArrayList<>();
         }
 
         if(dataMessage.getBody().isPresent()) {
