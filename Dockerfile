@@ -11,7 +11,7 @@ FROM gradle:jre${JAVA_VERSION:-8}-alpine AS release
 
 USER root
 WORKDIR /opt
-COPY --from=build /opt/signald .
+COPY --from=build /opt/signald /opt/signald/
 RUN ln -sf /opt/signald/bin/signald /usr/local/bin/
 
 # basically `make setup`
