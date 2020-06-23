@@ -179,6 +179,7 @@ public class AccountData {
         setProfileKey(new ProfileKey(bytes));
     }
 
+    @JsonIgnore
     public byte[] getSelfUnidentifiedAccessKey() throws IOException, InvalidInputException {
         return UnidentifiedAccess.deriveAccessKeyFrom(getProfileKey());
     }
