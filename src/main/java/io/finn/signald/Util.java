@@ -50,9 +50,9 @@ public class Util {
 
     public static String redact(String in) {
         if(in.length() < 2) {
-            return "*".repeat(in.length());
+            return new String(new char[in.length()]).replace("\0", "*");
         }
         int unredactAfter = in.length()-2;
-        return "*".repeat(unredactAfter) + in.substring(unredactAfter);
+        return new String(new char[unredactAfter]).replace("\0", "*") + in.substring(unredactAfter);
     }
 }
