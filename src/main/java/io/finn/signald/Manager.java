@@ -1243,10 +1243,12 @@ class Manager {
                     } catch (Exception e) {
                         exception = e;
                     }
-                    try {
-                        handleMessage(envelope, content, ignoreAttachments);
-                    } catch (NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
-                        logger.catching(e);
+                    if(exception == null) {
+                        try {
+                            handleMessage(envelope, content, ignoreAttachments);
+                        } catch (NotAGroupMemberException | GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException e) {
+                            logger.catching(e);
+                        }
                     }
                 }
                 accountData.save();
