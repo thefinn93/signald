@@ -1282,10 +1282,12 @@ class Manager {
                     } catch (Exception e) {
                         exception = e;
                     }
-                    try {
-                        handleMessage(envelope, content, ignoreAttachments);
-                    } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
-                        logger.catching(e);
+                    if(exception == null) {
+                        try {
+                            handleMessage(envelope, content, ignoreAttachments);
+                        } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
+                            logger.catching(e);
+                        }
                     }
                 }
                 accountData.save();
