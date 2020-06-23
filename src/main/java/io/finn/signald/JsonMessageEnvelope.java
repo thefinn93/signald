@@ -21,6 +21,7 @@ import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -33,14 +34,13 @@ class JsonMessageEnvelope {
     String uuid;
     JsonAddress source;
     int sourceDevice;
-    int type;
+    String type;
     String relay;
     long timestamp;
     String timestampISO;
     long serverTimestamp;
     boolean hasLegacyMessage;
     boolean hasContent;
-    boolean isReceipt;
     boolean isUnidentifiedSender;
     JsonDataMessage dataMessage;
     JsonSyncMessage syncMessage;
@@ -71,13 +71,12 @@ class JsonMessageEnvelope {
             relay = sourceAddress.getRelay().get();
         }
 
-        type = envelope.getType();
+        type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
         timestamp = envelope.getTimestamp();
         timestampISO = formatTimestampISO(envelope.getTimestamp());
         serverTimestamp = envelope.getServerTimestamp();
         hasLegacyMessage = envelope.hasLegacyMessage();
         hasContent = envelope.hasContent();
-        isReceipt = envelope.isReceipt();
 
         if (c != null) {
             if (c.getDataMessage().isPresent()) {
