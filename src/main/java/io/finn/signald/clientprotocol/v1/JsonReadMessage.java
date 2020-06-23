@@ -15,17 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.storage.JsonAddress;
-import org.whispersystems.signalservice.api.messages.multidevice.ViewOnceOpenMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 
-class JsonViewOnceOpenMessage {
+public class JsonReadMessage {
     JsonAddress sender;
     long timestamp;
 
-    JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
-        sender = new JsonAddress(message.getSender());
-        timestamp = message.getTimestamp();
+    public JsonReadMessage(ReadMessage r) {
+        sender = new JsonAddress(r.getSender());
+        timestamp = r.getTimestamp();
     }
 }

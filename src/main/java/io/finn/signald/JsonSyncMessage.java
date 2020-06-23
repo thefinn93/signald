@@ -17,12 +17,10 @@
 
 package io.finn.signald;
 
-import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
+import io.finn.signald.clientprotocol.v1.JsonBlockedListMessage;
+import io.finn.signald.clientprotocol.v1.JsonMessageRequestResponseMessage;
+import io.finn.signald.clientprotocol.v1.JsonReadMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,14 +32,15 @@ class JsonSyncMessage {
     JsonAttachment contacts;
     boolean contactsComplete;
     JsonAttachment groups;
-    List<String> blockedNumbers;
-    List<String> blockedGroups;
+    JsonBlockedListMessage blockedList;
     String requestType;
-    List<ReadMessage> readMessages;
+    List<JsonReadMessage> readMessages;
     JsonViewOnceOpenMessage viewOnceOpen;
     JsonVerifiedMessage verified;
-    JsonConfigurationMessage configuration;
+    ConfigurationMessage configuration;
     List<JsonStickerPackOperationMessage> stickerPackOperations = new LinkedList<>();
+    String fetchType;
+    JsonMessageRequestResponseMessage messageRequestResponse;
 
     JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
         if(syncMessage.getSent().isPresent()) {
@@ -59,13 +58,7 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getBlockedList().isPresent()) {
-            blockedNumbers = new ArrayList<>();
-            for(SignalServiceAddress a : syncMessage.getBlockedList().get().getAddresses()) {
-                blockedNumbers.add(a.getLegacyIdentifier());
-            }
-            for(byte[] groupId : syncMessage.getBlockedList().get().getGroupIds()) {
-                blockedGroups.add(Base64.encodeBytes(groupId));
-            }
+            blockedList = new JsonBlockedListMessage(syncMessage.getBlockedList().get());
         }
 
         if(syncMessage.getRequest().isPresent()) {
@@ -73,21 +66,32 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getRead().isPresent()) {
-            this.readMessages = syncMessage.getRead().get();
+            readMessages = new ArrayList<>();
+            for(ReadMessage r : syncMessage.getRead().get()) {
+             readMessages.add(new JsonReadMessage(r));
+            }
         }
 
         if(syncMessage.getViewOnceOpen().isPresent()) {
-            this.viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
+            viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
         }
 
         if(syncMessage.getVerified().isPresent()) {
-           this.verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
+           verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
+        }
+
+        if(syncMessage.getConfiguration().isPresent()) {
+            configuration = syncMessage.getConfiguration().get();
         }
 
         if(syncMessage.getStickerPackOperations().isPresent()) {
           for(StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
             stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
           }
+        }
+
+        if(syncMessage.getMessageRequestResponse().isPresent()) {
+            messageRequestResponse = new JsonMessageRequestResponseMessage(syncMessage.getMessageRequestResponse().get());
         }
     }
 }
