@@ -59,6 +59,7 @@ import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
+import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
@@ -200,6 +201,12 @@ class Manager {
 //        jsonProcessor.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
     }
 
+    public Manager(AccountData account) {
+        accountData = account;
+        logger =  LogManager.getLogger("manager-" + Util.redact(accountData.username));
+        logger.info("Creating new manager for " + Util.redact(accountData.username) + " (stored at " + settingsPath + ")");
+    }
+
     public static void setDataPath(String path) {
         settingsPath = path;
         dataPath = settingsPath + "/data";
@@ -313,9 +320,9 @@ class Manager {
         accountManager = getAccountManager();
 
         if (voiceVerification) {
-            accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent());  // TODO: Allow requester to set the locale
+            accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent());  // TODO: Allow requester to set the locale and challenge
         } else {
-            accountManager.requestSmsVerificationCode(true, captcha, Optional.absent()); //  TODO: Allow requester to set challenge
+            accountManager.requestSmsVerificationCode(false, captcha, Optional.absent()); //  TODO: Allow requester to set challenge and androidSmsReceiverSupported
         }
 
         accountData.registered = false;
@@ -426,7 +433,7 @@ class Manager {
     public void verifyAccount(String verificationCode) throws IOException, InvalidInputException {
         verificationCode = verificationCode.replace("-", "");
         accountData.signalingKey = Util.getSecret(52);
-        accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, false, SERVICE_CAPABILITIES);
+        VerifyAccountResponse response = accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES);
 
         //accountManager.setGcmId(Optional.of(GoogleCloudMessaging.getInstance(this).register(REGISTRATION_ID)));
         accountData.registered = true;

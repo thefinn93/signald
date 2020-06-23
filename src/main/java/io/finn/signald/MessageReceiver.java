@@ -89,7 +89,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
           this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
         } else {
-            this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
+          this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
         }
       } catch (IOException | NoSuchAccountException e) {
         logger.catching(e);

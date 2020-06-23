@@ -29,6 +29,7 @@ import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.util.Base64;
 
@@ -57,6 +58,7 @@ public class AccountData {
     private static Logger logger = LogManager.getLogger("AccountData");
 
     public static AccountData load(File storageFile) throws IOException {
+        logger.debug("Loading account from file: " + storageFile.toString());
         ObjectMapper mapper = JSONHelper.GetMapper();
 
         // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
@@ -175,5 +177,9 @@ public class AccountData {
     @JsonIgnore
     public void setProfileKey(byte[] bytes) throws InvalidInputException {
         setProfileKey(new ProfileKey(bytes));
+    }
+
+    public byte[] getSelfUnidentifiedAccessKey() throws IOException, InvalidInputException {
+        return UnidentifiedAccess.deriveAccessKeyFrom(getProfileKey());
     }
 }
