@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -30,7 +31,7 @@ import java.util.TimeZone;
 class JsonMessageEnvelope {
     String username;
     String uuid;
-    String source;
+    JsonAddress source;
     int sourceDevice;
     int type;
     String relay;
@@ -39,7 +40,6 @@ class JsonMessageEnvelope {
     long serverTimestamp;
     boolean hasLegacyMessage;
     boolean hasContent;
-    // String content;
     boolean isReceipt;
     boolean isUnidentifiedSender;
     JsonDataMessage dataMessage;
@@ -58,21 +58,20 @@ class JsonMessageEnvelope {
         }
 
         if (envelope.hasSource()) {
-            source = sourceAddress.getLegacyIdentifier();
+            source = new JsonAddress(envelope.getSourceAddress());
         } else {
-            source = c.getSender().getLegacyIdentifier();
+            source = new JsonAddress(c.getSender());
         }
 
         if (envelope.hasSourceDevice()) {
             sourceDevice = envelope.getSourceDevice();
         }
 
-        type = envelope.getType();
-
         if (sourceAddress.getRelay().isPresent()) {
             relay = sourceAddress.getRelay().get();
         }
 
+        type = envelope.getType();
         timestamp = envelope.getTimestamp();
         timestampISO = formatTimestampISO(envelope.getTimestamp());
         serverTimestamp = envelope.getServerTimestamp();

@@ -26,7 +26,7 @@ import java.io.File;
 import java.io.IOException;
 
 
-class JsonAttachment {
+public class JsonAttachment {
     String contentType;
     long id;
     int size;

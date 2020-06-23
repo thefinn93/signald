@@ -144,7 +144,7 @@ class Manager {
     }
 
     public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException {
-         Logger logger = LogManager.getLogger("manager");
+        Logger logger = LogManager.getLogger("manager");
         if(managers.containsKey(username)) {
             return managers.get(username);
         }
