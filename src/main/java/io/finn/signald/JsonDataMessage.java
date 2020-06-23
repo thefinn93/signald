@@ -18,8 +18,6 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonReaction;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.shared.SharedContact;
@@ -29,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 class JsonDataMessage {
-    private final static Logger logger = LogManager.getLogger("JsonDataMessage");
-
     long timestamp;
     List<JsonAttachment> attachments;
     String body;
