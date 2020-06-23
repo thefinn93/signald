@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
@@ -87,6 +88,7 @@ public class JsonAttachment {
         }
     }
 
+    @JsonIgnore
     public Optional<byte[]> getPreview() {
       if(preview != null) {
           return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
