@@ -238,14 +238,15 @@ class Manager {
         return dataPath + "/" + accountData.username + ".d/msg-cache";
     }
 
-    private String getMessageCachePath(SignalServiceAddress sender) {
-        return getMessageCachePath() + "/" + sender.getIdentifier().replace("/", "_");
+    private String getMessageCachePath(String sender) {
+        return getMessageCachePath() + "/" + sender.replace("/", "_");
     }
 
-    private File getMessageCacheFile(SignalServiceAddress sender, long now, long timestamp) throws IOException {
-        String cachePath = getMessageCachePath(sender);
+    private File getMessageCacheFile(SignalServiceEnvelope envelope, long now) throws IOException {
+        String source = envelope.getSourceE164().isPresent() ? envelope.getSourceE164().get() : "";
+        String cachePath = getMessageCachePath(source);
         createPrivateDirectories(cachePath);
-        return new File(cachePath + "/" + now + "_" + timestamp);
+        return new File(cachePath + "/" + now + "_" + envelope.getTimestamp());
     }
 
     private static void createPrivateDirectories(String path) throws IOException {
@@ -1257,7 +1258,7 @@ class Manager {
                         public void onMessage(SignalServiceEnvelope envelope) {
                             // store message on disk, before acknowledging receipt to the server
                             try {
-                                File cacheFile = getMessageCacheFile(envelope.getSourceAddress(), now, envelope.getTimestamp());
+                                File cacheFile = getMessageCacheFile(envelope, now);
                                 storeEnvelope(envelope, cacheFile);
                             } catch (IOException e) {
                                 logger.warn("Failed to store encrypted message in disk cache, ignoring: " + e.getMessage());
@@ -1290,7 +1291,7 @@ class Manager {
                 handler.handleMessage(envelope, content, exception);
                 File cacheFile = null;
                 try {
-                    cacheFile = getMessageCacheFile(envelope.getSourceAddress(), now, envelope.getTimestamp());
+                    cacheFile = getMessageCacheFile(envelope, now);
                     Files.delete(cacheFile.toPath());
                     // Try to delete directory if empty
                     new File(getMessageCachePath()).delete();

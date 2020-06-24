@@ -62,7 +62,7 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getRequest().isPresent()) {
-            requestType = syncMessage.getRequest().get().getRequest().toString();
+            requestType = syncMessage.getRequest().get().getRequest().getType().name();
         }
 
         if(syncMessage.getRead().isPresent()) {
