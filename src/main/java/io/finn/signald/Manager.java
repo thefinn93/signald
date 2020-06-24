@@ -832,7 +832,7 @@ class Manager {
             throws IOException, UntrustedIdentityException {
         SignalServiceMessageSender messageSender = getMessageSender();
         try {
-            messageSender.sendMessage(message, Optional.<UnidentifiedAccessPair>absent());
+            messageSender.sendMessage(message, Optional.absent());
         } catch (UntrustedIdentityException e) {
             accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
             throw e;
