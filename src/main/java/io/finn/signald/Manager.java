@@ -56,6 +56,7 @@ import org.whispersystems.signalservice.api.push.exceptions.*;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
@@ -1309,15 +1310,16 @@ class Manager {
 
     private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
         if (content != null) {
+            SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
             if (content.getDataMessage().isPresent()) {
                 SignalServiceDataMessage message = content.getDataMessage().get();
-                handleSignalServiceDataMessage(message, false, envelope.getSourceAddress(), new SignalServiceAddress(accountData.address.getUUID(), accountData.username), ignoreAttachments);
+                handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments);
             }
             if (content.getSyncMessage().isPresent()) {
                 SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
                 if (syncMessage.getSent().isPresent()) {
                     SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
-                    handleSignalServiceDataMessage(message, true, envelope.getSourceAddress(), syncMessage.getSent().get().getDestination().get(), ignoreAttachments);
+                    handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments);
                 }
                 if (syncMessage.getRequest().isPresent()) {
                     RequestMessage rm = syncMessage.getRequest().get();
@@ -1441,6 +1443,10 @@ class Manager {
             }
             int type = in.readInt();
             String source = in.readUTF();
+            UUID sourceUuid = null;
+            if (version >= 3) {
+                sourceUuid = UuidUtil.parseOrNull(in.readUTF());
+            }
             int sourceDevice = in.readInt();
             if (version == 1) {
                 // read legacy relay field
@@ -1468,7 +1474,10 @@ class Manager {
                     uuid = null;
                 }
             }
-            return new SignalServiceEnvelope(type, Optional.of(new SignalServiceAddress(null, source)), sourceDevice, timestamp, legacyMessage, content, serverTimestamp, uuid);
+            Optional<SignalServiceAddress> sourceAddress = sourceUuid == null && source.isEmpty()
+                    ? Optional.absent()
+                    : Optional.of(new SignalServiceAddress(sourceUuid, source));
+            return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverTimestamp, uuid);
 }
     }
 
@@ -1478,7 +1487,8 @@ class Manager {
             try (DataOutputStream out = new DataOutputStream(f)) {
                 out.writeInt(2); // version
                 out.writeInt(envelope.getType());
-                out.writeUTF(envelope.getSourceAddress().getLegacyIdentifier());
+                out.writeUTF(envelope.getSourceE164().isPresent() ? envelope.getSourceE164().get() : "");
+                out.writeUTF(envelope.getSourceUuid().isPresent() ? envelope.getSourceUuid().get() : "");
                 out.writeInt(envelope.getSourceDevice());
                 out.writeLong(envelope.getTimestamp());
                 if (envelope.hasContent()) {

@@ -20,7 +20,6 @@ package io.finn.signald;
 import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 import java.io.IOException;
@@ -50,7 +49,6 @@ class JsonMessageEnvelope {
 
 
     public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
-        SignalServiceAddress sourceAddress = envelope.getSourceAddress();
         this.username = username;
 
         if (envelope.hasUuid()) {
@@ -67,8 +65,10 @@ class JsonMessageEnvelope {
             sourceDevice = envelope.getSourceDevice();
         }
 
-        if (sourceAddress.getRelay().isPresent()) {
-            relay = sourceAddress.getRelay().get();
+        if(source != null) {
+            if (source.getSignalServiceAddress().getRelay().isPresent()) {
+                relay = source.getSignalServiceAddress().getRelay().get();
+            }
         }
 
         type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();

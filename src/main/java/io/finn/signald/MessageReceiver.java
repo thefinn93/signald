@@ -65,8 +65,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           try {
             manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
           } catch (IOException e) {
-              logger.debug("probably harmless IOException while receiving messages:" + e.toString());
-              e.printStackTrace();
+              logger.debug("probably harmless IOException while receiving messages:", e);
           } catch (AssertionError e) {
               logger.catching(e);
           }
