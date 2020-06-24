@@ -24,7 +24,6 @@ import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.SleepTimer;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -50,7 +49,7 @@ class ProvisioningManager {
         registrationId = KeyHelper.generateRegistrationId(false);
         password = Util.getSecret(18);
         final SleepTimer timer = new UptimeSleepTimer();
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID, BuildConfig.SIGNAL_AGENT, timer);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, null, null, password, BuildConfig.SIGNAL_AGENT, timer);
     }
 
     public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {

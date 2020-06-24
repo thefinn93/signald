@@ -331,11 +331,7 @@ class Manager {
     }
 
     private SignalServiceAccountManager getAccountManager() {
-        UUID uuid = null;
-        if(accountData.address != null) {
-            uuid = accountData.address.getUUID();
-        }
-        return new SignalServiceAccountManager(serviceConfiguration, uuid, accountData.username, accountData.password, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        return new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, BuildConfig.SIGNAL_AGENT, sleepTimer);
     }
 
     public void unregister() throws IOException {
@@ -832,9 +828,7 @@ class Manager {
 
     private void sendSyncMessage(SignalServiceSyncMessage message)
             throws IOException, UntrustedIdentityException {
-        SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration,
-                accountData.address.getUUID(), accountData.username, accountData.password,
-                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+        SignalServiceMessageSender messageSender = getMessageSender();
         try {
             messageSender.sendMessage(message, Optional.<UnidentifiedAccessPair>absent());
         } catch (UntrustedIdentityException e) {
@@ -860,7 +854,7 @@ class Manager {
 
         SignalServiceDataMessage message = null;
         try {
-            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.axolotlStore, USER_AGENT, false, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+            SignalServiceMessageSender messageSender = getMessageSender();
 
             // Send to all individually, so sync messages are sent correctly
             List<UntrustedIdentityException> untrustedIdentities = new LinkedList<>();
@@ -912,7 +906,7 @@ class Manager {
         }
 
         try {
-            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.axolotlStore, USER_AGENT, false, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+            SignalServiceMessageSender messageSender = getMessageSender();
 
             try {
                 messageSender.sendReceipt(address, getAccessFor(address), message);
@@ -934,7 +928,7 @@ class Manager {
 
         SignalServiceDataMessage message = null;
         try {
-            SignalServiceMessageSender messageSender = new SignalServiceMessageSender(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.axolotlStore, USER_AGENT, false, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+            SignalServiceMessageSender messageSender = getMessageSender();
 
             message = messageBuilder.build();
             if (message.getGroupContext().isPresent()) {
@@ -1796,5 +1790,11 @@ class Manager {
     public SignalServiceProfile getProfile(String number) throws IOException, VerificationFailedException {
         final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.signalingKey, BuildConfig.SIGNAL_AGENT, null, sleepTimer, null);
         return messageReceiver.retrieveProfile(new SignalServiceAddress(null, number), null, Optional.absent(), null).getProfile();
+    }
+
+    private SignalServiceMessageSender getMessageSender() {
+        return new SignalServiceMessageSender(serviceConfiguration,
+                accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
+                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
     }
 }
