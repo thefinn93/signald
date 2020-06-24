@@ -49,6 +49,9 @@ public class Util {
     }
 
     public static String redact(String in) {
+        if(in == null) {
+            return "[null]";
+        }
         if(in.length() < 2) {
             return new String(new char[in.length()]).replace("\0", "*");
         }

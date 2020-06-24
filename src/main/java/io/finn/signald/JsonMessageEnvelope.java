@@ -59,7 +59,7 @@ class JsonMessageEnvelope {
 
         if (envelope.hasSource()) {
             source = sourceAddress.getNumber();
-        } else {
+        } else if(c != null) {
             source = c.getSender();
         }
 
