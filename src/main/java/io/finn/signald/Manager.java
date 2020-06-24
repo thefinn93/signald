@@ -1227,7 +1227,9 @@ class Manager {
     }
 
     public void shutdownMessagePipe() {
-        this.messagePipe.shutdown();
+        if(messagePipe != null) {
+            messagePipe.shutdown();
+        }
     }
 
     public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler) throws IOException, MissingConfigurationException {
