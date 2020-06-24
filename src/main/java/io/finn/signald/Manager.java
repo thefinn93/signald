@@ -1237,7 +1237,7 @@ class Manager {
             logger.catching(e);
         }
 
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
+        final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
 
         try {
             if (messagePipe == null) {
@@ -1565,7 +1565,7 @@ class Manager {
             }
         }
 
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password,accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
+        final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
 
         File tmpFile = Util.createTempFile();
         try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE)) {
@@ -1591,7 +1591,7 @@ class Manager {
     }
 
     private InputStream retrieveAttachmentAsStream(SignalServiceAttachmentPointer pointer, File tmpFile) throws IOException, InvalidMessageException, MissingConfigurationException {
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
+        final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
         return messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE);
     }
 
@@ -1788,7 +1788,7 @@ class Manager {
     }
 
     public SignalServiceProfile getProfile(String number) throws IOException, VerificationFailedException {
-        final SignalServiceMessageReceiver messageReceiver = new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.signalingKey, BuildConfig.SIGNAL_AGENT, null, sleepTimer, null);
+        final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
         return messageReceiver.retrieveProfile(new SignalServiceAddress(null, number), null, Optional.absent(), null).getProfile();
     }
 
@@ -1796,5 +1796,9 @@ class Manager {
         return new SignalServiceMessageSender(serviceConfiguration,
                 accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
                 accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+    }
+
+    private SignalServiceMessageReceiver getMessageReceiver() {
+        return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
     }
 }
