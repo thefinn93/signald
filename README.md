@@ -312,6 +312,13 @@ Sets the user's profile. At thie time only the name is available.
 | `username` | `string` | yes      | The account to use. |
 | `name`     | `string` | yes      | The number of the user who's profile is being checked. |
 
+
+### `react`
+
+Reacts or unreacts to a specific message.
+
+[Documented on the wiki](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/react-Command).
+
 ## Transition An Account From signal-cli
 
 signald's on-disk data structures are generally the same as or very similar to signal-cli's. Until recently, signald used the same
