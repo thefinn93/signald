@@ -30,6 +30,7 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.util.Base64;
 
@@ -42,7 +43,7 @@ public class AccountData {
     public String username;
     public String password;
     public JsonAddress address;
-    public int deviceId;
+    public int deviceId = SignalServiceAddress.DEFAULT_DEVICE_ID;
     public String signalingKey;
     public int preKeyIdOffset;
     public int nextSignedPreKeyId;
