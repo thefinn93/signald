@@ -17,7 +17,9 @@
 
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.JsonReaction;
 import io.finn.signald.storage.ContactInfo;
+import io.finn.signald.storage.JsonAddress;
 
 import java.util.List;
 
@@ -29,6 +31,7 @@ class JsonRequest {
     public String messageBody;
     public String recipientNumber;
     public String recipientGroupId;
+    public JsonAddress recipientAddress;
     public Boolean voice;
     public String code;
     public String deviceName;
@@ -47,6 +50,7 @@ class JsonRequest {
     public String name;
     public List<Long> timestamps;
     public long when;
+    public JsonReaction reaction;
 
     JsonRequest() {}
 }

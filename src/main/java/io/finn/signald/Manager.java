@@ -542,6 +542,21 @@ class Manager {
         return sendMessage(messageBuilder, membersSend);
     }
 
+    public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, byte[] groupId) throws IOException, GroupNotFoundException, NotAGroupMemberException {
+        if(groupId == null) {
+            throw new AssertionError("Cannot send group message to null group ID");
+        }
+        SignalServiceGroup group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.DELIVER).withId(groupId).build();
+        message.asGroupMessage(group);
+
+        final GroupInfo g = getGroupForSending(groupId);
+
+        // Don't send group message to ourself
+        final List<SignalServiceAddress> membersSend = g.getMembers();
+        membersSend.remove(accountData.address.getSignalServiceAddress());
+        return sendMessage(message, membersSend);
+    }
+
     public List<SendMessageResult> sendQuitGroupMessage(byte[] groupId) throws GroupNotFoundException, IOException, EncapsulatedExceptions, UntrustedIdentityException, NotAGroupMemberException {
         SignalServiceGroup group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.QUIT)
                 .withId(groupId)
@@ -1803,6 +1818,22 @@ class Manager {
     public SignalServiceProfile getProfile(String number) throws IOException, VerificationFailedException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
         return messageReceiver.retrieveProfile(new SignalServiceAddress(null, number), null, Optional.absent(), null).getProfile();
+    }
+
+    public List<SendMessageResult> react(SignalServiceAddress recipient, SignalServiceDataMessage.Reaction reaction) throws IOException {
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+        messageBuilder.withReaction(reaction);
+
+        List<SignalServiceAddress> recipients = new ArrayList<>(1);
+        recipients.add(recipient);
+
+        return sendMessage(messageBuilder, recipients);
+    }
+
+    public List<SendMessageResult> react(byte[] groupId, SignalServiceDataMessage.Reaction reaction) throws GroupNotFoundException, NotAGroupMemberException, IOException {
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+        messageBuilder.withReaction(reaction);
+        return sendGroupMessage(messageBuilder, groupId);
     }
 
     private SignalServiceMessageSender getMessageSender() {

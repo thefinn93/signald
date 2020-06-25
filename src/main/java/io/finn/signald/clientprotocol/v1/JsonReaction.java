@@ -17,19 +17,27 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 public class JsonReaction {
-    private final String emoji;
-    private final boolean remove;
-    private final JsonAddress targetAuthor;
-    private final long targetSentTimestamp;
+    String emoji;
+    boolean remove;
+    JsonAddress targetAuthor;
+    long targetSentTimestamp;
+
+    public JsonReaction() {}
 
     public JsonReaction(SignalServiceDataMessage.Reaction r) {
         emoji = r.getEmoji();
         remove = r.isRemove();
         targetAuthor = new JsonAddress(r.getTargetAuthor());
         targetSentTimestamp = r.getTargetSentTimestamp();
+    }
+
+    @JsonIgnore
+    public SignalServiceDataMessage.Reaction getReaction() {
+        return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
     }
 }

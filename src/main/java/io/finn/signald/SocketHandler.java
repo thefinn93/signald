@@ -197,6 +197,9 @@ public class SocketHandler implements Runnable {
       case "set_profile":
         setProfile(request);
         break;
+      case "react":
+        react(request);
+        break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
@@ -561,6 +564,17 @@ public class SocketHandler implements Runnable {
       Manager m = Manager.get(request.username);
       m.setProfileName(request.name);
       this.reply("profile_set", null, request.id);
+  }
+
+  private void react(JsonRequest request) throws IOException, NoSuchAccountException, NotAGroupMemberException, GroupNotFoundException {
+    Manager m = Manager.get(request.username);
+    if(request.recipientAddress != null) {
+      m.react(request.recipientAddress.getSignalServiceAddress(), request.reaction.getReaction());
+    } else if(request.recipientGroupId != null) {
+      m.react(Base64.decode(request.recipientGroupId), request.reaction.getReaction());
+    } else {
+      throw new AssertionError("Must provide a recipientGroupId or recipientAddress");
+    }
   }
 
   private void handleError(Throwable error, JsonRequest request) {
