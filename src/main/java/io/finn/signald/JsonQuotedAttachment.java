@@ -18,9 +18,6 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import java.util.List;
-import java.util.ArrayList;
 
 
 class JsonQuotedAttachment {
