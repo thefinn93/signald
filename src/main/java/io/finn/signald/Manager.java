@@ -333,7 +333,7 @@ class Manager {
     }
 
     private SignalServiceAccountManager getAccountManager() {
-        return new SignalServiceAccountManager(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        return new SignalServiceAccountManager(serviceConfiguration, accountData.getUUID(), accountData.username, accountData.password, accountData.deviceId, BuildConfig.SIGNAL_AGENT, sleepTimer);
     }
 
     public void unregister() throws IOException {

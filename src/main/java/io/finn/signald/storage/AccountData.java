@@ -35,6 +35,7 @@ import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AccountData {
@@ -182,5 +183,13 @@ public class AccountData {
     @JsonIgnore
     public byte[] getSelfUnidentifiedAccessKey() throws IOException, InvalidInputException {
         return UnidentifiedAccess.deriveAccessKeyFrom(getProfileKey());
+    }
+
+    @JsonIgnore
+    public UUID getUUID() {
+        if(address == null) {
+            return null;
+        }
+        return address.getUUID();
     }
 }
