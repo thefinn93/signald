@@ -1808,7 +1808,7 @@ class Manager {
     private SignalServiceMessageSender getMessageSender() {
         return new SignalServiceMessageSender(serviceConfiguration,
                 accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
-                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
     }
 
     private SignalServiceMessageReceiver getMessageReceiver() {
