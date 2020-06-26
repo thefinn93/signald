@@ -32,7 +32,7 @@ class JsonSyncMessage {
     boolean contactsComplete;
     JsonAttachment groups;
     JsonBlockedListMessage blockedList;
-    String requestType;
+    String request;
     List<JsonReadMessage> readMessages;
     JsonViewOnceOpenMessage viewOnceOpen;
     JsonVerifiedMessage verified;
@@ -61,7 +61,7 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getRequest().isPresent()) {
-            requestType = syncMessage.getRequest().get().getRequest().getType().name();
+            request = syncMessage.getRequest().get().getRequest().getType().name();
         }
 
         if(syncMessage.getRead().isPresent()) {
@@ -88,6 +88,10 @@ class JsonSyncMessage {
           for(StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
             stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
           }
+        }
+
+        if(syncMessage.getFetchType().isPresent()) {
+            fetchType = syncMessage.getFetchType().get().name();
         }
 
         if(syncMessage.getMessageRequestResponse().isPresent()) {
