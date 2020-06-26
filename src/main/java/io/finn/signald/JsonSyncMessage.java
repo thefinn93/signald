@@ -24,7 +24,6 @@ import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 class JsonSyncMessage {
@@ -38,7 +37,7 @@ class JsonSyncMessage {
     JsonViewOnceOpenMessage viewOnceOpen;
     JsonVerifiedMessage verified;
     ConfigurationMessage configuration;
-    List<JsonStickerPackOperationMessage> stickerPackOperations = new LinkedList<>();
+    List<JsonStickerPackOperationMessage> stickerPackOperations;
     String fetchType;
     JsonMessageRequestResponseMessage messageRequestResponse;
 
@@ -85,6 +84,7 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getStickerPackOperations().isPresent()) {
+            stickerPackOperations = new ArrayList<>();
           for(StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
             stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
           }
