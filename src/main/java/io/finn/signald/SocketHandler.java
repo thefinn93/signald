@@ -257,32 +257,8 @@ public class SocketHandler implements Runnable {
         sendMessageResults = manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
       }
 
-      for(SendMessageResult result: sendMessageResults) {
-        SendMessageResult.Success success = result.getSuccess();
-        if(success != null) {
-          if(success.isUnidentified()) {
-            this.reply("success", new JsonStatusMessage(0, "successfully send unidentified message"), request.id);
-          }
-          if(success.isNeedsSync()) {
-            this.reply("success", new JsonStatusMessage(1, "isNeedsSync = true"), request.id);
-          }
-        }
+      showSendMessageResults(sendMessageResults, request);
 
-        if(result.isNetworkFailure()) {
-          // TODO: Log more info about what message failed, who it failed to, and any other info needed to resend
-          this.reply("network_failure", null, request.id);
-        }
-
-        if(result.isUnregisteredFailure()) {
-          this.reply("unregistered_user", null, request.id);
-        }
-
-        SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
-        if(identityFailure != null) {
-          this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress().getLegacyIdentifier(), manager, request), request.id);
-        }
-
-      }
     } catch(EncapsulatedExceptions e) {
       for(UnregisteredUserException i: e.getUnregisteredUserExceptions()) {
         this.reply("unregistered_user", new JsonUnregisteredUserException(i), request.id);

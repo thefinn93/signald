@@ -926,8 +926,9 @@ class Manager {
             SignalServiceMessageSender messageSender = getMessageSender();
 
             try {
+                // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
                 messageSender.sendReceipt(address, getAccessFor(address), message);
-		return null;
+                return null;
             } catch (UntrustedIdentityException e) {
                 accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                 return SendMessageResult.identityFailure(address, e.getIdentityKey());
@@ -946,8 +947,8 @@ class Manager {
         SignalServiceDataMessage message = null;
         try {
             SignalServiceMessageSender messageSender = getMessageSender();
-
             message = messageBuilder.build();
+
             if (message.getGroupContext().isPresent()) {
                 try {
                     final boolean isRecipientUpdate = false;
@@ -962,8 +963,8 @@ class Manager {
                     accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     return Collections.emptyList();
                 }
-            } else if (recipients.size() == 1 && recipients.contains(new SignalServiceAddress(null, accountData.username))) {
-                SignalServiceAddress recipient = new SignalServiceAddress(null, accountData.username);
+            } else if (recipients.size() == 1 && recipients.contains(accountData.address)) {
+                SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
                 final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessFor(recipient);
                 SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient),
                         message.getTimestamp(),

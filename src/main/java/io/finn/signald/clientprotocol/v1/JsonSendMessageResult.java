@@ -25,13 +25,15 @@ public class JsonSendMessageResult {
     SendMessageResult.Success success;
     boolean networkFailure;
     boolean unregisteredFailure;
-    SendMessageResult.IdentityFailure identityFailure;
+    String identityFailure;
 
     public JsonSendMessageResult(SendMessageResult result) {
         address = new JsonAddress(result.getAddress());
         success = result.getSuccess();
         networkFailure = result.isNetworkFailure();
         unregisteredFailure = result.isUnregisteredFailure();
-        identityFailure = result.getIdentityFailure();
+        if(result.getIdentityFailure() != null) {
+            identityFailure = result.getIdentityFailure().getIdentityKey().getFingerprint();
+        }
     }
 }
