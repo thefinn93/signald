@@ -584,9 +584,11 @@ public class SocketHandler implements Runnable {
   }
 
   private void showSendMessageResults(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {
-    for(SendMessageResult result: sendMessageResults) {
-      this.reply("send_result", new JsonSendMessageResult(result), request.id);
+    List<JsonSendMessageResult> results = new ArrayList<>();
+    for(SendMessageResult r: sendMessageResults) {
+      results.add(new JsonSendMessageResult(r));
     }
+    this.reply("send_results", results, request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
