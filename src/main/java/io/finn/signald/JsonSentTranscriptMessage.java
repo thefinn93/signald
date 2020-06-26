@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -25,7 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 class JsonSentTranscriptMessage {
-    String destination;
+    JsonAddress destination;
     long timestamp;
     long expirationStartTimestamp;
     JsonDataMessage message;
@@ -34,9 +35,8 @@ class JsonSentTranscriptMessage {
 
     JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException {
         if(s.getDestination().isPresent()) {
-            destination = s.getDestination().get().getLegacyIdentifier();
+            destination = new JsonAddress(s.getDestination().get());
         }
-
         timestamp = s.getTimestamp();
         expirationStartTimestamp = s.getExpirationStartTimestamp();
         message = new JsonDataMessage(s.getMessage(), username);

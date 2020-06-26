@@ -34,7 +34,7 @@ class JsonDataMessage {
     boolean endSession;
     int expiresInSeconds;
     boolean profileKeyUpdate;
-    SignalServiceDataMessage.Quote quote;
+    JsonQuote quote;
     List<SharedContact> contacts;
     List<JsonPreview> previews;
     JsonSticker sticker;
@@ -70,7 +70,7 @@ class JsonDataMessage {
         profileKeyUpdate = dataMessage.isProfileKeyUpdate();
 
         if(dataMessage.getQuote().isPresent()) {
-          quote = dataMessage.getQuote().get();
+          quote = new JsonQuote(dataMessage.getQuote().get());
         }
 
         if(dataMessage.getSharedContacts().isPresent()) {
