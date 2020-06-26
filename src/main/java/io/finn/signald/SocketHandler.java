@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.storage.ContactInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,6 +43,7 @@ import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptio
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.util.Base64;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.URI;
@@ -568,12 +570,22 @@ public class SocketHandler implements Runnable {
 
   private void react(JsonRequest request) throws IOException, NoSuchAccountException, NotAGroupMemberException, GroupNotFoundException {
     Manager m = Manager.get(request.username);
-    if(request.recipientAddress != null) {
-      m.react(request.recipientAddress.getSignalServiceAddress(), request.reaction.getReaction());
-    } else if(request.recipientGroupId != null) {
-      m.react(Base64.decode(request.recipientGroupId), request.reaction.getReaction());
-    } else {
+    if(request.recipientAddress == null && request.recipientGroupId == null) {
       throw new AssertionError("Must provide a recipientGroupId or recipientAddress");
+    }
+
+    List<SendMessageResult> results;
+    if(request.recipientAddress != null) {
+      results = m.react(request.recipientAddress.getSignalServiceAddress(), request.reaction.getReaction());
+    } else {
+      results = m.react(Base64.decode(request.recipientGroupId), request.reaction.getReaction());
+    }
+    showSendMessageResults(results, request);
+  }
+
+  private void showSendMessageResults(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {
+    for(SendMessageResult result: sendMessageResults) {
+      this.reply("send_result", new JsonSendMessageResult(result), request.id);
     }
   }
 
