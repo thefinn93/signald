@@ -1128,7 +1128,7 @@ class Manager {
         }
 
         if(message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
-            if(source.equals(accountData.address)) {
+            if(source.equals(accountData.address.getSignalServiceAddress())) {
                 if(message.getProfileKey().isPresent()) {
                     accountData.setProfileKey(message.getProfileKey().get());
                 }
@@ -1767,22 +1767,6 @@ class Manager {
     public SignalServiceProfile getProfile(String number) throws IOException, VerificationFailedException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
         return messageReceiver.retrieveProfile(new SignalServiceAddress(null, number), null, Optional.absent(), null).getProfile();
-    }
-
-    public List<SendMessageResult> react(SignalServiceAddress recipient, SignalServiceDataMessage.Reaction reaction) throws IOException {
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
-        messageBuilder.withReaction(reaction);
-
-        List<SignalServiceAddress> recipients = new ArrayList<>(1);
-        recipients.add(recipient);
-
-        return sendMessage(messageBuilder, recipients);
-    }
-
-    public List<SendMessageResult> react(byte[] groupId, SignalServiceDataMessage.Reaction reaction) throws GroupNotFoundException, NotAGroupMemberException, IOException {
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
-        messageBuilder.withReaction(reaction);
-        return sendGroupMessage(messageBuilder, groupId);
     }
 
     private SignalServiceMessageSender getMessageSender() {
