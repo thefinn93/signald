@@ -40,6 +40,12 @@ public class GroupInfo {
         }
     }
 
+    public void setMembers(List<String> membersNumbers) {
+        for(String m : membersNumbers) {
+            members.add(new JsonAddress(m));
+        }
+    }
+
     @JsonProperty
     public boolean active;
 
