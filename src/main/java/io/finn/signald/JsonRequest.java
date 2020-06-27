@@ -35,7 +35,6 @@ class JsonRequest {
     public Boolean voice;
     public String code;
     public String deviceName;
-    public List<String> attachmentFilenames;
     public List<JsonAttachment> attachments;
     public String uri;
     public String groupName;

@@ -29,6 +29,7 @@ import io.finn.signald.storage.ContactInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
+import org.asamk.signal.storage.threads.ThreadInfo;
 import org.asamk.signal.util.Hex;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
@@ -40,8 +41,6 @@ import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
-import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
-import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
@@ -199,9 +198,6 @@ public class SocketHandler implements Runnable {
       case "set_profile":
         setProfile(request);
         break;
-      case "react":
-        react(request);
-        break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
@@ -212,62 +208,62 @@ public class SocketHandler implements Runnable {
   private void send(JsonRequest request) throws IOException, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
     Manager manager = Manager.get(request.username);
 
-    SignalServiceDataMessage.Quote quote = null;
+    SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+
+    if(request.messageBody != null) {
+      messageBuilder = messageBuilder.withBody(request.messageBody);
+    }
+
+    if(request.attachments != null) {
+      List<SignalServiceAttachment> attachments = new ArrayList<>(request.attachments.size());
+      for (JsonAttachment attachment : request.attachments) {
+        try {
+          File attachmentFile = new File(attachment.filename);
+          InputStream attachmentStream = new FileInputStream(attachmentFile);
+          final long attachmentSize = attachmentFile.length();
+          String mime = Files.probeContentType(attachmentFile.toPath());
+          if (mime == null) {
+            mime = "application/octet-stream";
+          }
+          attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+        } catch (IOException e) {
+          throw new AttachmentInvalidException(attachment.filename, e);
+        }
+      }
+    }
 
     if(request.quote != null) {
-      quote = request.quote.getQuote();
+      messageBuilder.withQuote(request.quote.getQuote());
     }
 
-    if(request.attachmentFilenames != null) {
-      logger.warn("Using deprecated attachmentFilenames argument for send! Use attachments instead");
-      if(request.attachments == null) {
-        request.attachments = new ArrayList<>();
-      }
-      for(String attachmentFilename: request.attachmentFilenames) {
-        request.attachments.add(new JsonAttachment(attachmentFilename));
-      }
+    if(request.reaction != null) {
+      messageBuilder.withReaction(request.reaction.getReaction());
     }
 
-    List<SignalServiceAttachment> attachments = null;
-    if (request.attachments != null) {
-        attachments = new ArrayList<>(request.attachments.size());
-        for (JsonAttachment attachment : request.attachments) {
-            try {
-                File attachmentFile = new File(attachment.filename);
-                InputStream attachmentStream = new FileInputStream(attachmentFile);
-                final long attachmentSize = attachmentFile.length();
-                String mime = Files.probeContentType(attachmentFile.toPath());
-                if (mime == null) {
-                    mime = "application/octet-stream";
-                }
-
-                attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
-            } catch (IOException e) {
-                throw new AttachmentInvalidException(attachment.filename, e);
-            }
-        }
+    ThreadInfo thread;
+    if(request.recipientGroupId != null) {
+      thread = manager.getThread(Base64.decode(request.recipientGroupId));
+    } else {
+      thread = manager.getThread(request.recipientAddress);
     }
 
-    try {
-      List<SendMessageResult> sendMessageResults;
-      if(request.recipientGroupId != null) {
-        byte[] groupId = Base64.decode(request.recipientGroupId);
-        sendMessageResults = manager.sendGroupMessage(request.messageBody, attachments, groupId, quote);
-      } else {
-        sendMessageResults = manager.sendMessage(request.messageBody, attachments, request.recipientNumber, quote);
-      }
-
-      showSendMessageResults(sendMessageResults, request);
-
-    } catch(EncapsulatedExceptions e) {
-      for(UnregisteredUserException i: e.getUnregisteredUserExceptions()) {
-        this.reply("unregistered_user", new JsonUnregisteredUserException(i), request.id);
-      }
-
-      for(NetworkFailureException i: e.getNetworkExceptions()) {
-        this.reply("network_failure", new JsonNetworkFailureException(i), request.id);
-      }
+    if (thread != null) {
+      messageBuilder.withExpiration(thread.messageExpirationTime);
     }
+
+
+    List<SendMessageResult> sendMessageResults;
+    if(request.recipientGroupId != null) {
+      byte[] groupId = Base64.decode(request.recipientGroupId);
+      sendMessageResults = manager.sendGroupMessage(messageBuilder, groupId);
+    } else {
+      List<SignalServiceAddress> r = new ArrayList<>();
+      r.add(request.recipientAddress.getSignalServiceAddress());
+      sendMessageResults = manager.sendMessage(messageBuilder, r);
+    }
+
+    showSendMessageResults(sendMessageResults, request);
+
   }
 
   private void markRead(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -542,21 +538,6 @@ public class SocketHandler implements Runnable {
       Manager m = Manager.get(request.username);
       m.setProfileName(request.name);
       this.reply("profile_set", null, request.id);
-  }
-
-  private void react(JsonRequest request) throws IOException, NoSuchAccountException, NotAGroupMemberException, GroupNotFoundException {
-    Manager m = Manager.get(request.username);
-    if(request.recipientAddress == null && request.recipientGroupId == null) {
-      throw new AssertionError("Must provide a recipientGroupId or recipientAddress");
-    }
-
-    List<SendMessageResult> results;
-    if(request.recipientAddress != null) {
-      results = m.react(request.recipientAddress.getSignalServiceAddress(), request.reaction.getReaction());
-    } else {
-      results = m.react(Base64.decode(request.recipientGroupId), request.reaction.getReaction());
-    }
-    showSendMessageResults(results, request);
   }
 
   private void showSendMessageResults(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {

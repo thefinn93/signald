@@ -516,7 +516,7 @@ class Manager {
     }
 
     public List<SendMessageResult> sendGroupMessage(String messageText, List<SignalServiceAttachment> attachments, byte[] groupId, SignalServiceDataMessage.Quote quote)
-            throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException {
+            throws IOException, GroupNotFoundException, NotAGroupMemberException {
         final SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().withBody(messageText);
         if (attachments != null) {
             messageBuilder.withAttachments(attachments);
@@ -855,67 +855,6 @@ class Manager {
         }
     }
 
-
-    private void legacySendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients)
-            throws UntrustedIdentityException, EncapsulatedExceptions, IOException, InvalidInputException {
-        legacySendMessage(messageBuilder, recipients, true);
-    }
-
-    private void legacySendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<String> recipients, boolean useExistingExpiration)
-            throws EncapsulatedExceptions, UntrustedIdentityException, UntrustedIdentityException, IOException, InvalidInputException {
-        Set<SignalServiceAddress> recipientsTS = getSignalServiceAddresses(recipients);
-        if (recipientsTS == null) return;
-
-        if(accountData.profileKey != null) {
-            messageBuilder = messageBuilder.withProfileKey(accountData.getProfileKey().serialize());
-        }
-
-        SignalServiceDataMessage message = null;
-        try {
-            SignalServiceMessageSender messageSender = getMessageSender();
-
-            // Send to all individually, so sync messages are sent correctly
-            List<UntrustedIdentityException> untrustedIdentities = new LinkedList<>();
-            List<UnregisteredUserException> unregisteredUsers = new LinkedList<>();
-            List<NetworkFailureException> networkExceptions = new LinkedList<>();
-            for(SignalServiceAddress address: recipientsTS) {
-                ThreadInfo thread = accountData.threadStore.getThread(address.getLegacyIdentifier());
-                if(useExistingExpiration) {
-                    if (thread != null) {
-                        messageBuilder.withExpiration(thread.messageExpirationTime);
-                    } else {
-                        messageBuilder.withExpiration(0);
-                    }
-                }
-                message = messageBuilder.build();
-                try {
-                    messageSender.sendMessage(address, getAccessFor(address), message);
-                } catch(UntrustedIdentityException e) {
-                    accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
-                    untrustedIdentities.add(e);
-                    logger.warn("UntrustedIdentityException sending message to " + Util.redact(e.getIdentifier()));
-                } catch(UnregisteredUserException e) {
-                    unregisteredUsers.add(e);
-                    logger.warn("UnregisteredUserException when sending message to %s" + Util.redact(address.getIdentifier()));
-                } catch(PushNetworkException e) {
-                    networkExceptions.add(new NetworkFailureException(address.getIdentifier(), e));
-                    logger.warn("PushNetworkException when sending message to %s" + Util.redact(address.getIdentifier()));
-                }
-
-                if (!untrustedIdentities.isEmpty() || !unregisteredUsers.isEmpty() || !networkExceptions.isEmpty()) {
-                    throw new EncapsulatedExceptions(untrustedIdentities, unregisteredUsers, networkExceptions);
-                }
-            }
-        } finally {
-            if (message != null && message.isEndSession()) {
-                for (SignalServiceAddress recipient : recipientsTS) {
-                    handleEndSession(recipient);
-                }
-            }
-            accountData.save();
-        }
-    }
-
     public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, String recipient) throws IOException {
         SignalServiceAddress address = getSignalServiceAddress(recipient);
         if (address == null) {
@@ -939,7 +878,7 @@ class Manager {
         }
     }
 
-    private List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<SignalServiceAddress> recipients) throws IOException {
+    List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<SignalServiceAddress> recipients) throws IOException {
         if (recipients == null) {
             accountData.save();
             return Collections.emptyList();
@@ -1062,6 +1001,14 @@ class Manager {
 
     private void handleEndSession(String source) {
         accountData.axolotlStore.deleteAllSessions(source);
+    }
+
+    public ThreadInfo getThread(byte[] groupId) {
+        return accountData.threadStore.getThread(Base64.encodeBytes(groupId));
+    }
+
+    public ThreadInfo getThread(JsonAddress address) {
+        return accountData.threadStore.getThread(address.number);
     }
 
     public interface ReceiveMessageHandler {

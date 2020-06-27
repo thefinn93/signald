@@ -63,42 +63,12 @@ Sends a signal message to another user or a group. Possible values are:
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The signal number you are sending *from*. |
-| `recipientNumber` | string | no | The number you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
-| `attachments` | list of `attachment` | no | A list of attachments (see below) |
-| `quote` | quote | no | The message to quote |
-
-**Quote objects** can have these keys:
-
-| Field | Type   | Required? | Description |
-|-------|--------|-----------|-------------|
-| `id`  | number | yes\*      | The timestamp of the original message. |
-| `author` | string | yes\*   | The username (full e164 phone number) of the author of the quoted message. |
-| `text` | string | yes\*     | The text of the quoted message. |
-| `attachments` | list of quoted attachments | no | A list of attachments in the quoted message. |
-
-\* If you don't put these values it will send it but the Signal app doesn't seem to render it (Signal Desktop does though?)
-
-
-**Quoted** attachment objects can have these keys:
-
-| Field | Type   | Required? | Description |
-|-------|--------|-----------|-------------|
-| `contentType` | string | yes | The content type of the quoted attachment |
-| `fileName` | string | no | The original filename of the quoted attachment |
-
-**attachment** objects can have these keys:
-
-| Field       | Type     | Required? | Description |
-|-------------|----------|-----------|-------------|
-| `filename`  | `string` | yes       | The filename of the attachment |
-| `caption`   | `string` | no        | An optional caption |
-| `width`     | `int`    | no        | The width of the image |
-| `height`    | `int`    | no        | The height of the image |
-| `voiceNote` | `bool`   | no        | True if this attachment is a voice note |
-| `preview`   | `string` | no        | The preview data to send, base64 encoded |
-
+| `attachments` | list of [`JsonAttachment`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonAttachment) | no | A list of attachments |
+| `quote` | [`JsonQuote`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonQuote) | no | The message to quote |
+| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | no | the reaction message to send |
 
 ### `register`
 
