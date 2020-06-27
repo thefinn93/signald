@@ -230,6 +230,7 @@ public class SocketHandler implements Runnable {
           throw new AttachmentInvalidException(attachment.filename, e);
         }
       }
+      messageBuilder.withAttachments(attachments);
     }
 
     if(request.quote != null) {
