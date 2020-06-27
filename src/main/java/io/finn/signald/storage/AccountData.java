@@ -19,6 +19,7 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -48,6 +49,8 @@ public class AccountData {
     public String signalingKey;
     public int preKeyIdOffset;
     public int nextSignedPreKeyId;
+
+    @JsonProperty
     public String profileKey;
 
     public boolean registered;
@@ -66,6 +69,7 @@ public class AccountData {
 
         // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
         AccountData a = mapper.readValue(storageFile, AccountData.class);
+        logger.debug("Loaded account data from file. profile key is " + (a.profileKey == null ? "null" : "not null"));
         a.validate(); // Storage path passed for exceptions to include in messages
         a.update();
         return a;
