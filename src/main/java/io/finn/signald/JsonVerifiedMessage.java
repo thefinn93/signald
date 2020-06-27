@@ -17,7 +17,7 @@
 
 package io.finn.signald;
 
-import io.finn.signald.storage.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
 import org.asamk.signal.util.Hex;
 

@@ -17,7 +17,7 @@
 
 package io.finn.signald;
 
-import io.finn.signald.storage.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;

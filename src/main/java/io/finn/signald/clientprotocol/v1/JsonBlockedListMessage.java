@@ -17,7 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.multidevice.BlockedListMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;

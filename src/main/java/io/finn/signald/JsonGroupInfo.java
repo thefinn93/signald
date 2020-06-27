@@ -18,7 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.storage.GroupInfo;
-import io.finn.signald.storage.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;

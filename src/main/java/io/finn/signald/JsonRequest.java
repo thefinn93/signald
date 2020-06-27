@@ -19,7 +19,7 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonReaction;
 import io.finn.signald.storage.ContactInfo;
-import io.finn.signald.storage.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 
 import java.util.List;
 

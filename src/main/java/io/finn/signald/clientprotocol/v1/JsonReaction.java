@@ -18,7 +18,6 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.finn.signald.storage.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 public class JsonReaction {

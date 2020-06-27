@@ -18,7 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.finn.signald.storage.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.util.ArrayList;

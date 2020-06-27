@@ -16,6 +16,7 @@
  */
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
