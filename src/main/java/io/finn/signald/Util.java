@@ -58,6 +58,4 @@ public class Util {
         int unredactAfter = in.length()-2;
         return new String(new char[unredactAfter]).replace("\0", "*") + in.substring(unredactAfter);
     }
-
-
 }
