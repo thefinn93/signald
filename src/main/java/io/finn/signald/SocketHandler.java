@@ -26,10 +26,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.storage.ContactInfo;
+import io.finn.signald.storage.ThreadInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
-import org.asamk.signal.storage.threads.ThreadInfo;
 import org.asamk.signal.util.Hex;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
@@ -490,8 +490,8 @@ public class SocketHandler implements Runnable {
       return;
     }
 
-    if(request.contact.number == null) {
-      this.reply("update_contact_error", new JsonStatusMessage(0, "No number specified! Contact must have a number", request), request.id);
+    if(request.contact.address == null) {
+      this.reply("update_contact_error", new JsonStatusMessage(0, "No address specified! Contact must have an address", request), request.id);
       return;
     }
 

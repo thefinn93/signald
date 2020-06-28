@@ -26,7 +26,6 @@ import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
-import org.asamk.signal.storage.threads.ThreadInfo;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
@@ -489,8 +488,8 @@ class Manager {
         return Optional.of(createAttachment(file));
     }
 
-    private Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(String number) throws IOException {
-        File file = getContactAvatarFile(number);
+    private Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(SignalServiceAddress address) throws IOException {
+        File file = getContactAvatarFile(address);
         if (!file.exists()) {
             return Optional.absent();
         }
@@ -761,8 +760,8 @@ class Manager {
 //        return sendMessage(messageBuilder, recipients);
 //    }
 
-    public String getContactName(String number) {
-        ContactInfo contact = accountData.contactStore.getContact(number);
+    public String getContactName(SignalServiceAddress address) {
+        ContactInfo contact = accountData.contactStore.getContact(address);
         if (contact == null) {
             return "";
         } else {
@@ -770,14 +769,11 @@ class Manager {
         }
     }
 
-    public void setContactName(String number, String name) throws IOException {
-        ContactInfo contact = accountData.contactStore.getContact(number);
+    public void setContactName(SignalServiceAddress address, String name) throws IOException {
+        ContactInfo contact = accountData.contactStore.getContact(address);
         if (contact == null) {
             contact = new ContactInfo();
-            contact.number = number;
-            logger.debug("Add contact " + Util.redact(number));
-        } else {
-            logger.debug("Updating contact " + Util.redact(number));
+            contact.address = new JsonAddress(address);
         }
         contact.name = name;
         accountData.contactStore.updateContact(contact);
@@ -1137,8 +1133,7 @@ class Manager {
                 ContactInfo contact = accountData.contactStore.getContact(source);
                 if(contact == null) {
                     contact = new ContactInfo();
-                    contact.number = source.getLegacyIdentifier();
-                    contact.identifier = source.getIdentifier();
+                    contact.address = new JsonAddress(source);
                 }
                 contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
                 updateContact(contact);
@@ -1357,8 +1352,7 @@ class Manager {
                                 ContactInfo contact = accountData.contactStore.getContact(c.getAddress());
                                 if (contact == null) {
                                     contact = new ContactInfo();
-                                    contact.number = c.getAddress().getLegacyIdentifier();
-                                    contact.identifier = c.getAddress().getIdentifier();
+                                    contact.address = new JsonAddress(c.getAddress());
                                 }
                                 if (c.getName().isPresent()) {
                                     contact.name = c.getName().get();
@@ -1373,7 +1367,7 @@ class Manager {
                                 updateContact(contact);
 
                                 if (c.getAvatar().isPresent()) {
-                                    retrieveContactAvatarAttachment(c.getAvatar().get(), contact.number);
+                                    retrieveContactAvatarAttachment(c.getAvatar().get(), contact.address.getSignalServiceAddress());
                                 }
                             }
                         }
@@ -1474,18 +1468,18 @@ class Manager {
 }
     }
 
-    public File getContactAvatarFile(String number) {
-        return new File(avatarsPath, "contact-" + number);
+    public File getContactAvatarFile(SignalServiceAddress address) {
+        return new File(avatarsPath, "contact-" + address.getNumber());
     }
 
-    private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, String number) throws IOException, InvalidMessageException, MissingConfigurationException {
+    private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, SignalServiceAddress address) throws IOException, InvalidMessageException, MissingConfigurationException {
         createPrivateDirectories(avatarsPath);
         if (attachment.isPointer()) {
             SignalServiceAttachmentPointer pointer = attachment.asPointer();
-            return retrieveAttachment(pointer, getContactAvatarFile(number), false);
+            return retrieveAttachment(pointer, getContactAvatarFile(address), false);
         } else {
             SignalServiceAttachmentStream stream = attachment.asStream();
-            return retrieveAttachment(stream, getContactAvatarFile(number));
+            return retrieveAttachment(stream, getContactAvatarFile(address));
         }
     }
 
@@ -1629,23 +1623,23 @@ class Manager {
                 DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
                 for (ContactInfo record : accountData.contactStore.getContacts()) {
                     VerifiedMessage verifiedMessage = null;
-                    if (getIdentities().containsKey(record.number)) {
+                    if (getIdentities().containsKey(record.address)) {
                         IdentityKeyStore.Identity currentIdentity = null;
-                        for (IdentityKeyStore.Identity id : getIdentities().get(record.number)) {
+                        for (IdentityKeyStore.Identity id : getIdentities().get(record.address)) {
                             if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
                                 currentIdentity = id;
                             }
                         }
                         if (currentIdentity != null) {
-                            verifiedMessage = new VerifiedMessage(new SignalServiceAddress(null, record.number), currentIdentity.getIdentityKey(), currentIdentity.getTrustLevel().toVerifiedState(), currentIdentity.getDateAdded().getTime());
+                            verifiedMessage = new VerifiedMessage(record.address.getSignalServiceAddress(), currentIdentity.getIdentityKey(), currentIdentity.getTrustLevel().toVerifiedState(), currentIdentity.getDateAdded().getTime());
                         }
                     }
 
                     // TODO include profile key
                     // TODO: Don't hard code `false` value for blocked argument
                     Optional<Integer> expirationTimer = Optional.absent();
-                    out.write(new DeviceContact(new SignalServiceAddress(null, record.number), Optional.fromNullable(record.name),
-                            createContactAvatarAttachment(record.number), Optional.fromNullable(record.color),
+                    out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
+                            createContactAvatarAttachment(record.address.getSignalServiceAddress()), Optional.fromNullable(record.color),
                             Optional.fromNullable(verifiedMessage), Optional.absent(), false, expirationTimer, Optional.absent(), false));
                 }
             }

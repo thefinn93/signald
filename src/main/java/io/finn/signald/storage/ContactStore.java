@@ -38,7 +38,7 @@ public class ContactStore {
     private static final ObjectMapper jsonProcessor = new ObjectMapper();
 
     public void updateContact(ContactInfo contact) {
-        contacts.put(contact.number, contact);
+        contacts.put(contact.address.number, contact);
     }
 
     public ContactInfo getContact(String number) {
@@ -76,7 +76,7 @@ public class ContactStore {
             }
             for (JsonNode n : node.get("contacts")) {
                 ContactInfo c = jsonProcessor.treeToValue(n, ContactInfo.class);
-                store.contacts.put(c.number, c);
+                store.contacts.put(c.address.number, c);
             }
 
             return store;
