@@ -420,7 +420,7 @@ public class SocketHandler implements Runnable {
 
   private void getUser(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    Optional<ContactTokenDetails> contact = m.getUser(request.recipientNumber);
+    Optional<ContactTokenDetails> contact = m.getUser(request.recipientAddress.number);
     if(contact.isPresent()) {
       this.reply("user", new JsonContactTokenDetails(contact.get()), request.id);
     } else {
@@ -430,7 +430,7 @@ public class SocketHandler implements Runnable {
 
   private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    this.reply("identities", new JsonIdentityList(request.recipientNumber, m), request.id);
+    this.reply("identities", new JsonIdentityList(request.recipientAddress.getSignalServiceAddress(), m), request.id);
   }
 
   private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -444,8 +444,7 @@ public class SocketHandler implements Runnable {
       try {
         trustLevel = TrustLevel.valueOf(request.trustLevel.toUpperCase());
       } catch(IllegalArgumentException e) {
-        this.reply("input_error",
-                new JsonStatusMessage(0, "Invalid TrustLevel", request), request.id);
+        this.reply("input_error", new JsonStatusMessage(0, "Invalid TrustLevel", request), request.id);
         return;
       }
     }
@@ -453,14 +452,14 @@ public class SocketHandler implements Runnable {
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
       fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
-      boolean res = m.trustIdentity(new SignalServiceAddress(null, request.recipientNumber), fingerprintBytes, trustLevel);
+      boolean res = m.trustIdentity(request.recipientAddress.getSignalServiceAddress(), fingerprintBytes, trustLevel);
       if (!res) {
         this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request), request.id);
       } else {
         this.reply("trusted_fingerprint", new JsonStatusMessage(0, "Successfully trusted fingerprint", request), request.id);
       }
     } else if (fingerprint.length() == 60) {
-      boolean res = m.trustIdentitySafetyNumber(new SignalServiceAddress(null, request.recipientNumber), fingerprint, trustLevel);
+      boolean res = m.trustIdentitySafetyNumber(request.recipientAddress.getSignalServiceAddress(), fingerprint, trustLevel);
       if (!res) {
         this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request), request.id);
       } else {
@@ -527,12 +526,12 @@ public class SocketHandler implements Runnable {
 
   private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException {
       Manager m = Manager.get(request.username);
-      ContactInfo contact = m.getContact(request.recipientNumber);
+      ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
       if(contact == null || contact.profileKey == null) {
           this.reply("profile_not_available", null, request.id);
           return;
       }
-      this.reply("profile", new JsonProfile(m.getProfile(request.recipientNumber), Base64.decode(contact.profileKey)), request.id);
+      this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress()), Base64.decode(contact.profileKey)), request.id);
   }
 
   private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {

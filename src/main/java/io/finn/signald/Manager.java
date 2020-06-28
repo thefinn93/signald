@@ -219,6 +219,10 @@ class Manager {
         return accountData.username;
     }
 
+    public SignalServiceAddress getOwnAddress() {
+        return accountData.address.getSignalServiceAddress();
+    }
+
     public IdentityKey getIdentity() {
         return accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey();
     }
@@ -1657,6 +1661,10 @@ class Manager {
         return accountData.contactStore.getContact(number);
     }
 
+    public ContactInfo getContact(SignalServiceAddress address) {
+        return accountData.contactStore.getContact(address.getNumber().get());
+    }
+
     public GroupInfo getGroup(byte[] groupId) {
         return accountData.groupStore.getGroup(groupId);
     }
@@ -1665,8 +1673,8 @@ class Manager {
         return accountData.axolotlStore.identityKeyStore.getIdentities();
     }
 
-    public List<IdentityKeyStore.Identity> getIdentities(String number) {
-        return accountData.axolotlStore.identityKeyStore.getIdentities(number);
+    public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) {
+        return accountData.axolotlStore.identityKeyStore.getIdentities(address);
     }
 
     public boolean trustIdentity(SignalServiceAddress address, byte[] fingerprint, TrustLevel level) throws IOException {
@@ -1735,9 +1743,9 @@ class Manager {
 	    accountData.save();
     }
 
-    public SignalServiceProfile getProfile(String number) throws IOException, VerificationFailedException {
+    public SignalServiceProfile getProfile(SignalServiceAddress address) throws IOException, VerificationFailedException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-        return messageReceiver.retrieveProfile(new SignalServiceAddress(null, number), null, Optional.absent(), null).getProfile();
+        return messageReceiver.retrieveProfile(address, null, Optional.absent(), null).getProfile();
     }
 
     private SignalServiceMessageSender getMessageSender() {

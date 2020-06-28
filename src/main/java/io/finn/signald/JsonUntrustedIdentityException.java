@@ -16,23 +16,24 @@
  */
 
 package io.finn.signald;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;
 
 
 class JsonUntrustedIdentityException {
-  public String username;
+  public JsonAddress address;
   public String number;
   public String fingerprint;
   public String safety_number;
   public JsonRequest request;
 
   JsonUntrustedIdentityException(IdentityKey key, String number, Manager m, JsonRequest request) {
-    this.username = m.getUsername();
+    this.address = new JsonAddress(m.getOwnAddress());
     this.number = number;
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
-    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getUsername(), m.getIdentity(), this.number, key);
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.address.getSignalServiceAddress(), key);
     this.request = request;
   }
 }

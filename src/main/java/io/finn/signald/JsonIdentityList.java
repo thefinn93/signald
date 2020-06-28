@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.storage.IdentityKeyStore;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,18 +33,18 @@ class JsonIdentityList {
     }
   }
 
-  JsonIdentityList(String number, Manager m) {
-    if(number == null) {
+  JsonIdentityList(SignalServiceAddress address, Manager m) {
+    if(address == null) {
       for (Map.Entry<String, List<IdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
         for (IdentityKeyStore.Identity identity : keys.getValue()) {
-            this.identities.add(new JsonIdentity(identity, m, keys.getKey()));
+            this.identities.add(new JsonIdentity(identity, m, new SignalServiceAddress(null, keys.getKey())));
         }
       }
     } else {
-      List<IdentityKeyStore.Identity> identities = m.getIdentities(number);
+      List<IdentityKeyStore.Identity> identities = m.getIdentities(address);
       if(identities != null) {
-        for(IdentityKeyStore.Identity identity : m.getIdentities(number)) {
-          this.identities.add(new JsonIdentity(identity, m, number));
+        for(IdentityKeyStore.Identity identity : m.getIdentities(address)) {
+          this.identities.add(new JsonIdentity(identity, m, address));
         }
       }
     }

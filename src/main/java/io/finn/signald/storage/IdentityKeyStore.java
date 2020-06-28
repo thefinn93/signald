@@ -27,6 +27,7 @@ import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
@@ -144,6 +145,11 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     public List<IdentityKeyStore.Identity> getIdentities(String name) {
         // TODO deep copy
         return trustedKeys.get(name);
+    }
+
+    public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) {
+        // TODO deep copy
+        return trustedKeys.get(address.getNumber().get());
     }
 
     public static class IdentityKeyStoreDeserializer extends JsonDeserializer<IdentityKeyStore> {

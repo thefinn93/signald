@@ -19,7 +19,7 @@ signald is a daemon that facilitates communication over Signal.
 1. Incoming messages will be sent to the socket and shown on your screen. To send a message, use something like this:
 
 ```json
-{"type": "send", "username": "+12024561414", "recipientNumber": "+14235290302", "messageBody": "Hello, Dave"}
+{"type": "send", "username": "+12024561414", "recipientAddress": {"number": "+14235290302"}, "messageBody": "Hello, Dave"}
 ```
 
 ## Contributing/Feedback/Bugs
@@ -98,7 +98,7 @@ Mark a received message as "read" by sending a receipt message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the read receipt. |
-| `recipientNumber` | `string` | yes | The full number that sent the original message. |
+| ``recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number that sent the original message. |
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
@@ -161,7 +161,7 @@ Checks whether a contact is currently registered with the server. Returns the co
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
-| `recipientNumber` | `string` | yes | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The address of the user to look up. |
 
 
 ### `get_identities`
@@ -171,7 +171,7 @@ Returns all known identities/keys, optionally just for a specific number.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientNumber` | `string` | no | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The full number to look up. |
 
 
 ### `trust`
@@ -181,7 +181,7 @@ Trust's a safety number or fingerprint.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientNumber` | `string` | yes | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to look up. |
 | `fingerprint` | `string` | yes | The safety number or fingerprint to trust. |
 | `trustLevel` | `string` | no | The level at which to trust the identity. |
 
@@ -253,7 +253,7 @@ Create or update a contact in our contact store.
 
 Sets or changes the expiration time for messages in a group or PM.
 
-As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclusive and one of them is required.
+As one might expect, `recipientAddress` and `recipientGroupId` are mutually exclusive and one of them is required.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -270,7 +270,7 @@ Gets a user's profile. At this time only the name is available. Must have the us
 | Field             | Type     | Required | Description |
 |-------------------|----------|----------|-------------|
 | `username`        | `string` | yes      | The account to use. |
-| `recipientNumber` | `string` | yes      | The number of the user who's profile is being checked. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes      | The number of the user who's profile is being checked. |
 
 
 ### `set_profile`

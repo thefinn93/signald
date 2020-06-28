@@ -29,7 +29,6 @@ class JsonRequest {
     public String id;
     public String username;
     public String messageBody;
-    public String recipientNumber;
     public String recipientGroupId;
     public JsonAddress recipientAddress;
     public Boolean voice;

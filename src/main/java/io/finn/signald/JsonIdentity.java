@@ -17,16 +17,19 @@
 
 package io.finn.signald;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.storage.IdentityKeyStore;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 class JsonIdentity {
   public String trust_level;
   public long added;
   public String fingerprint;
   public String safety_number;
-  public String username;
+  public JsonAddress address;
 
   JsonIdentity(IdentityKeyStore.Identity identity, Manager m) {
     this.trust_level = identity.getTrustLevel().name();
@@ -34,9 +37,18 @@ class JsonIdentity {
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
   }
 
-  JsonIdentity(IdentityKeyStore.Identity identity, Manager m, String username) {
+  JsonIdentity(IdentityKeyStore.Identity identity, Manager m, SignalServiceAddress address) {
     this(identity, m);
-    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getUsername(), m.getIdentity(), username, identity.getIdentityKey());
-    this.username = username;
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), address, identity.getIdentityKey());
+    this.address = new JsonAddress(address);
+  }
+
+  @JsonProperty
+  public void setNumber(String number) {
+    if(this.address == null) {
+      this.address = new JsonAddress(number);
+    } else {
+      this.address.number = number;
+    }
   }
 }
