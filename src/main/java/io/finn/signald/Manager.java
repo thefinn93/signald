@@ -52,7 +52,8 @@ import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
-import org.whispersystems.signalservice.api.push.exceptions.*;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
@@ -66,8 +67,6 @@ import org.whispersystems.util.Base64;
 import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -100,8 +99,6 @@ class Manager {
     private static String attachmentsPath;
     private static String avatarsPath;
 
-    private FileChannel fileChannel;
-    private FileLock lock;
     private AccountData accountData;
 
 //    private final ObjectMapper jsonProcessor = new ObjectMapper();
@@ -264,16 +261,6 @@ class Manager {
         }
     }
 
-    private static void createPrivateFile(String path) throws IOException {
-        final Path file = new File(path).toPath();
-        try {
-            Set<PosixFilePermission> perms = EnumSet.of(OWNER_READ, OWNER_WRITE);
-            Files.createFile(file, PosixFilePermissions.asFileAttribute(perms));
-        } catch (UnsupportedOperationException e) {
-            Files.createFile(file);
-        }
-    }
-
     public boolean userExists() {
         if (accountData.username == null) {
             return false;
@@ -340,21 +327,6 @@ class Manager {
         return new SignalServiceAccountManager(serviceConfiguration, accountData.getUUID(), accountData.username, accountData.password, accountData.deviceId, BuildConfig.SIGNAL_AGENT, sleepTimer);
     }
 
-    public void unregister() throws IOException {
-        // When setting an empty GCM id, the Signal-Server also sets the fetchesMessages property to false.
-        // If this is the master device, other users can't send messages to this number anymore.
-        // If this is a linked device, other users can still send messages, but this device doesn't receive them anymore.
-        accountManager.setGcmId(Optional.<String>absent());
-    }
-
-    public List<DeviceInfo> getLinkedDevices() throws IOException {
-        return accountManager.getDevices();
-    }
-
-    public void removeLinkedDevices(int deviceId) throws IOException {
-        accountManager.removeDevice(deviceId);
-    }
-
     public static Map<String, String> getQueryMap(String query) {
         String[] params = query.split("&");
         Map<String, String> map = new HashMap<>();
@@ -395,7 +367,7 @@ class Manager {
         String verificationCode = accountManager.getNewDeviceVerificationCode();
 
         // TODO send profile key
-        accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, Optional.<byte[]>absent(), verificationCode);
+        accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, Optional.absent(), verificationCode);
     }
 
     private List<PreKeyRecord> generatePreKeys() throws IOException {
@@ -452,22 +424,6 @@ class Manager {
         accountManager.setPreKeys(accountData.axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
     }
 
-
-    private static List<SignalServiceAttachment> getSignalServiceAttachments(List<String> attachments) throws AttachmentInvalidException {
-        List<SignalServiceAttachment> SignalServiceAttachments = null;
-        if (attachments != null) {
-            SignalServiceAttachments = new ArrayList<>(attachments.size());
-            for (String attachment : attachments) {
-                try {
-                    SignalServiceAttachments.add(createAttachment(new File(attachment)));
-                } catch (IOException e) {
-                    throw new AttachmentInvalidException(attachment, e);
-                }
-            }
-        }
-        return SignalServiceAttachments;
-    }
-
     private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException {
         return createAttachment(attachmentFile, Optional.absent());
     }
@@ -480,7 +436,7 @@ class Manager {
             mime = "application/octet-stream";
         }
         // TODO mabybe add a parameter to set the voiceNote, preview, and caption option
-        return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, Optional.<byte[]>absent(), 0, 0, System.currentTimeMillis(), caption, Optional.<String>absent(), null, null, Optional.absent());
+        return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, Optional.absent(), 0, 0, System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
     }
 
     private Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
@@ -518,34 +474,6 @@ class Manager {
         return accountData.groupStore.getGroups();
     }
 
-    public List<SendMessageResult> sendGroupMessage(String messageText, List<SignalServiceAttachment> attachments, byte[] groupId, SignalServiceDataMessage.Quote quote)
-            throws IOException, GroupNotFoundException, NotAGroupMemberException {
-        final SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().withBody(messageText);
-        if (attachments != null) {
-            messageBuilder.withAttachments(attachments);
-        }
-        if (groupId != null) {
-            SignalServiceGroup group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.DELIVER)
-                    .withId(groupId)
-                    .build();
-            messageBuilder.asGroupMessage(group);
-        }
-        if(quote != null) {
-          messageBuilder.withQuote(quote);
-        }
-        ThreadInfo thread = accountData.threadStore.getThread(Base64.encodeBytes(groupId));
-        if (thread != null) {
-            messageBuilder.withExpiration(thread.messageExpirationTime);
-        }
-
-        final GroupInfo g = getGroupForSending(groupId);
-
-        // Don't send group message to ourself
-        final List<SignalServiceAddress> membersSend = g.getMembers();
-        membersSend.remove(accountData.address.getSignalServiceAddress());
-        return sendMessage(messageBuilder, membersSend);
-    }
-
     public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, byte[] groupId) throws IOException, GroupNotFoundException, NotAGroupMemberException {
         if(groupId == null) {
             throw new AssertionError("Cannot send group message to null group ID");
@@ -561,7 +489,7 @@ class Manager {
         return sendMessage(message, membersSend);
     }
 
-    public List<SendMessageResult> sendQuitGroupMessage(byte[] groupId) throws GroupNotFoundException, IOException, EncapsulatedExceptions, UntrustedIdentityException, NotAGroupMemberException {
+    public List<SendMessageResult> sendQuitGroupMessage(byte[] groupId) throws GroupNotFoundException, IOException, NotAGroupMemberException {
         SignalServiceGroup group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.QUIT)
                 .withId(groupId)
                 .build();
@@ -587,7 +515,7 @@ class Manager {
         return buf.toString();
     }
 
-    public byte[] sendUpdateGroupMessage(byte[] groupId, String name, Collection<String> members, String avatarFile) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+    public byte[] sendUpdateGroupMessage(byte[] groupId, String name, Collection<String> members, String avatarFile) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
         GroupInfo g;
         if (groupId == null) {
             // Create new group
@@ -609,7 +537,7 @@ class Manager {
                 } catch (InvalidNumberException e) {
                     logger.warn("Failed to add member \"" + Util.redact(member) + "\" to group: " + e.getMessage());
                 }
-                if (g.members.contains(member)) {
+                if (g.members.contains(new JsonAddress(member))) {
                     continue;
                 }
                 newMembers.add(member);
@@ -637,22 +565,18 @@ class Manager {
 
         // Don't send group message to ourself
         final List<SignalServiceAddress> membersSend = g.getMembers();
-        membersSend.remove(accountData.username);
+        membersSend.remove(accountData.address.getSignalServiceAddress());
         sendMessage(messageBuilder, membersSend);
         return g.groupId;
     }
 
-    private List<SendMessageResult> sendUpdateGroupMessage(byte[] groupId, String recipient) throws AttachmentInvalidException, GroupNotFoundException, IOException, NotAGroupMemberException, EncapsulatedExceptions, UntrustedIdentityException {
-        return sendUpdateGroupMessage(groupId, new SignalServiceAddress(null, recipient));
-    }
-
-    private List<SendMessageResult> sendUpdateGroupMessage(byte[] groupId, SignalServiceAddress recipient) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException {
+    private List<SendMessageResult> sendUpdateGroupMessage(byte[] groupId, SignalServiceAddress recipient) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException {
         if (groupId == null) {
             return null;
         }
         GroupInfo g = getGroupForSending(groupId);
 
-        if (!g.members.contains(recipient)) {
+        if (!g.members.contains(new JsonAddress(recipient))) {
             return null;
         }
 
@@ -713,10 +637,6 @@ class Manager {
         return sendMessage(messageBuilder, recipients);
     }
 
-    private List<SendMessageResult> sendGroupInfoRequest(byte[] groupId, String recipient) throws IOException {
-        return sendGroupInfoRequest(groupId, new SignalServiceAddress(null, recipient));
-    }
-
     private List<SendMessageResult> sendGroupInfoRequest(byte[] groupId, SignalServiceAddress recipient) throws IOException {
         if (groupId == null) {
             return null;
@@ -733,72 +653,12 @@ class Manager {
         return sendMessage(messageBuilder, membersSend);
     }
 
-    public List<SendMessageResult> sendMessage(String message, List<SignalServiceAttachment> attachments, String recipient, SignalServiceDataMessage.Quote quote)
-            throws EncapsulatedExceptions, UntrustedIdentityException, AttachmentInvalidException, IOException {
-        List<String> recipients = new ArrayList<>(1);
-        recipients.add(recipient);
-        return sendMessage(message, attachments, recipients, quote);
-    }
-
-    public List<SendMessageResult> sendMessage(String messageText, List<SignalServiceAttachment> attachments, List<String> recipients, SignalServiceDataMessage.Quote quote)
-            throws IOException {
-        final SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().withBody(messageText);
-        if (attachments != null) {
-            messageBuilder.withAttachments(attachments);
-        }
-        if(quote != null) {
-          messageBuilder.withQuote(quote);
-        }
-
-        List<SignalServiceAddress> recipientsAddresses = new ArrayList();
-        for(String r : recipients) {
-            recipientsAddresses.add(new SignalServiceAddress(null, r));
-        }
-
-        return sendMessage(messageBuilder, recipientsAddresses);
-    }
-
-//    public List<SendMessageResult> sendEndSessionMessage(List<String> recipients) throws IOException, EncapsulatedExceptions, UntrustedIdentityException {
-//        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
-//
-//        return sendMessage(messageBuilder, recipients);
-//    }
-
-    public String getContactName(SignalServiceAddress address) {
-        ContactInfo contact = accountData.contactStore.getContact(address);
-        if (contact == null) {
-            return "";
-        } else {
-            return contact.name;
-        }
-    }
-
-    public void setContactName(SignalServiceAddress address, String name) throws IOException {
-        ContactInfo contact = accountData.contactStore.getContact(address);
-        if (contact == null) {
-            contact = new ContactInfo();
-            contact.address = new JsonAddress(address);
-        }
-        contact.name = name;
-        accountData.contactStore.updateContact(contact);
-        accountData.save();
-    }
-
     public void updateContact(ContactInfo contact) throws IOException {
         accountData.contactStore.updateContact(contact);
         accountData.save();
     }
 
-    public String getGroupName(byte[] groupId) {
-        GroupInfo group = getGroup(groupId);
-        if (group == null) {
-            return "";
-        } else {
-            return group.name;
-        }
-    }
-
-    public byte[] updateGroup(byte[] groupId, String name, List<String> members, String avatar) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+    public byte[] updateGroup(byte[] groupId, String name, List<String> members, String avatar) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
         if (groupId.length == 0) {
             groupId = null;
         }
@@ -976,10 +836,6 @@ class Manager {
         accountData.axolotlStore.deleteAllSessions(source.getLegacyIdentifier());
     }
 
-    private void handleEndSession(String source) {
-        accountData.axolotlStore.deleteAllSessions(source);
-    }
-
     public ThreadInfo getThread(byte[] groupId) {
         return accountData.threadStore.getThread(Base64.encodeBytes(groupId));
     }
@@ -992,7 +848,7 @@ class Manager {
         void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
     }
 
-    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
+    private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException, InvalidInputException, IOException {
         String threadId;
         if (message.getGroupContext().isPresent()) {
             SignalServiceGroup groupInfo;
@@ -1063,7 +919,7 @@ class Manager {
                     if (group != null) {
                         try {
                             sendUpdateGroupMessage(groupInfo.getGroupId(), source);
-                        } catch (IOException | EncapsulatedExceptions e) {
+                        } catch (IOException e) {
                             logger.catching(e);
                         } catch (NotAGroupMemberException e) {
                             // We have left this group, so don't send a group update message
@@ -1552,15 +1408,6 @@ class Manager {
         return PhoneNumberFormatter.formatNumber(number, localNumber);
     }
 
-    private SignalServiceAddress getPushAddress(String number) throws InvalidNumberException {
-        String e164number = canonicalizeNumber(number);
-        return new SignalServiceAddress(null, e164number);
-    }
-
-    public boolean isRemote() {
-        return false;
-    }
-
     private void sendGroups() throws IOException, UntrustedIdentityException {
         File groupsFile = Util.createTempFile();
 
@@ -1604,9 +1451,9 @@ class Manager {
                 DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
                 for (ContactInfo record : accountData.contactStore.getContacts()) {
                     VerifiedMessage verifiedMessage = null;
-                    if (getIdentities().containsKey(record.address)) {
+                    if (getIdentities().containsKey(record.address.number)) {
                         IdentityKeyStore.Identity currentIdentity = null;
-                        for (IdentityKeyStore.Identity id : getIdentities().get(record.address)) {
+                        for (IdentityKeyStore.Identity id : getIdentities().get(record.address.number)) {
                             if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
                                 currentIdentity = id;
                             }
@@ -1655,10 +1502,6 @@ class Manager {
         return Collections.emptyList();
       }
       return this.accountData.contactStore.getContacts();
-    }
-
-    public ContactInfo getContact(String number) {
-        return accountData.contactStore.getContact(number);
     }
 
     public ContactInfo getContact(SignalServiceAddress address) {

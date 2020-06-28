@@ -205,7 +205,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request) throws IOException, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
+  private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -297,7 +297,7 @@ public class SocketHandler implements Runnable {
   private void register(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
     logger.info("Register request: " + request);
     Manager m = Manager.get(request.username, true);
-    Boolean voice = false;
+    boolean voice = false;
     if(request.voice != null) {
       voice = request.voice;
     }
@@ -365,16 +365,17 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, UntrustedIdentityException, EncapsulatedExceptions, NoSuchAccountException {
+  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-
+    List<SendMessageResult> results;
     if(request.recipientGroupId != null) {
       byte[] groupId = Base64.decode(request.recipientGroupId);
-      m.setExpiration(groupId, request.expiresInSeconds);
+      results = m.setExpiration(groupId, request.expiresInSeconds);
     } else {
-      m.setExpiration(request.recipientAddress.getSignalServiceAddress(), request.expiresInSeconds);
+      results = m.setExpiration(request.recipientAddress.getSignalServiceAddress(), request.expiresInSeconds);
     }
 
+    showSendMessageResults(results, request);
     this.reply("expiration_updated", null, request.id);
   }
 
