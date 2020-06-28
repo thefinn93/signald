@@ -258,7 +258,7 @@ As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclu
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use. |
-| `recipientNumber` | `string` | no | The PM to change expiration for. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address to change the expiration with. |
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
 | `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
 
@@ -281,13 +281,6 @@ Sets the user's profile. At thie time only the name is available.
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
 | `name`     | `string` | yes      | The number of the user who's profile is being checked. |
-
-
-### `react`
-
-Reacts or unreacts to a specific message.
-
-[Documented on the wiki](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/react-Command).
 
 ## Transition An Account From signal-cli
 

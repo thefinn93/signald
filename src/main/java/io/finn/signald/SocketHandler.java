@@ -280,7 +280,7 @@ public class SocketHandler implements Runnable {
         request.timestamps,
         request.when);
 
-    SendMessageResult result = m.sendReceipt(message, request.recipientNumber);
+    SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
     if(result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if(identityFailure != null) {
@@ -372,7 +372,7 @@ public class SocketHandler implements Runnable {
       byte[] groupId = Base64.decode(request.recipientGroupId);
       m.setExpiration(groupId, request.expiresInSeconds);
     } else {
-      m.setExpiration(request.recipientNumber, request.expiresInSeconds);
+      m.setExpiration(request.recipientAddress.getSignalServiceAddress(), request.expiresInSeconds);
     }
 
     this.reply("expiration_updated", null, request.id);

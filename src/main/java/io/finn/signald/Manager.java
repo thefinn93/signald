@@ -690,13 +690,13 @@ class Manager {
         return sendMessage(messageBuilder, g.getMembers());
     }
 
-    public List<SendMessageResult> setExpiration(String recipient, int expiresInSeconds) throws IOException {
+    public List<SendMessageResult> setExpiration(SignalServiceAddress address, int expiresInSeconds) throws IOException {
         SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
 
-        ThreadInfo thread = accountData.threadStore.getThread(recipient);
+        ThreadInfo thread = accountData.threadStore.getThread(address.getNumber().get());
         if (thread == null) {
             thread = new ThreadInfo();
-            thread.id = recipient;
+            thread.id = address.getNumber().get();
         }
         thread.messageExpirationTime = expiresInSeconds;
         accountData.threadStore.updateThread(thread);
@@ -704,7 +704,7 @@ class Manager {
         messageBuilder.asExpirationUpdate();
 
         List<SignalServiceAddress> recipients = new ArrayList<>(1);
-        recipients.add(new SignalServiceAddress(null, recipient));
+        recipients.add(address);
 
         return sendMessage(messageBuilder, recipients);
     }
@@ -851,8 +851,7 @@ class Manager {
         }
     }
 
-    public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, String recipient) throws IOException {
-        SignalServiceAddress address = getSignalServiceAddress(recipient);
+    public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, SignalServiceAddress address) throws IOException {
         if (address == null) {
             accountData.save();
             return null;
@@ -899,7 +898,7 @@ class Manager {
                     accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                     return Collections.emptyList();
                 }
-            } else if (recipients.size() == 1 && recipients.contains(accountData.address)) {
+            } else if (recipients.size() == 1 && recipients.contains(accountData.address.getSignalServiceAddress())) {
                 SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
                 final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessFor(recipient);
                 SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient),
@@ -947,28 +946,6 @@ class Manager {
             }
             accountData.save();
         }
-    }
-
-    private SignalServiceAddress getSignalServiceAddress(String recipient) throws IOException {
-        try {
-            return getPushAddress(recipient);
-        } catch (InvalidNumberException e) {
-            logger.warn("Failed to add recipient \"" + Util.redact(recipient) + "\": " + e.getMessage());
-            logger.warn("Aborting sending.");
-            accountData.save();
-            return null;
-        }
-    }
-
-    private Set<SignalServiceAddress> getSignalServiceAddresses(Collection<String> recipients) throws IOException {
-        Set<SignalServiceAddress> recipientsTS = new HashSet<>(recipients.size());
-        for (String recipient : recipients) {
-            SignalServiceAddress addr = getSignalServiceAddress(recipient);
-            if (addr == null)
-                return null;
-            recipientsTS.add(addr);
-        }
-        return recipientsTS;
     }
 
     private static CertificateValidator getCertificateValidator() {
@@ -1396,7 +1373,7 @@ class Manager {
         try (FileInputStream f = new FileInputStream(file)) {
             DataInputStream in = new DataInputStream(f);
             int version = in.readInt();
-            if (version > 2) {
+            if (version > 3) {
                 return null;
             }
             int type = in.readInt();
