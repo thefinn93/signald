@@ -68,7 +68,6 @@ Sends a signal message to another user or a group. Possible values are:
 | `messageBody` | string | no | The text of the message. |
 | `attachments` | list of [`JsonAttachment`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonAttachment) | no | A list of attachments |
 | `quote` | [`JsonQuote`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonQuote) | no | The message to quote |
-| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | no | the reaction message to send |
 
 ### `register`
 
@@ -275,12 +274,21 @@ Gets a user's profile. At this time only the name is available. Must have the us
 
 ### `set_profile`
 
-Sets the user's profile. At thie time only the name is available.
+Sets the user's profile. At this time only the name is available.
 
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
 | `name`     | `string` | yes      | The number of the user who's profile is being checked. |
+
+### `react`
+
+React to a message. For details see the [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) wiki page.
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `username` | `string` | yes      | The account to use. |
+| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | no | the reaction message to send |
 
 ## Transition An Account From signal-cli
 

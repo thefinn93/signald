@@ -24,7 +24,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import java.util.List;
 
 
-class JsonRequest {
+public class JsonRequest {
     public String type;
     public String id;
     public String username;

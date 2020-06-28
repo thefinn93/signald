@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
+import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.ContactInfo;
 import io.finn.signald.storage.ThreadInfo;
 import org.apache.logging.log4j.LogManager;
@@ -39,7 +40,6 @@ import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.util.Base64;
 
@@ -198,6 +198,9 @@ public class SocketHandler implements Runnable {
       case "set_profile":
         setProfile(request);
         break;
+      case "react":
+        react(request);
+        break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
@@ -205,7 +208,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
+  private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException, InvalidRecipientException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -252,19 +255,7 @@ public class SocketHandler implements Runnable {
       messageBuilder.withExpiration(thread.messageExpirationTime);
     }
 
-
-    List<SendMessageResult> sendMessageResults;
-    if(request.recipientGroupId != null) {
-      byte[] groupId = Base64.decode(request.recipientGroupId);
-      sendMessageResults = manager.sendGroupMessage(messageBuilder, groupId);
-    } else {
-      List<SignalServiceAddress> r = new ArrayList<>();
-      r.add(request.recipientAddress.getSignalServiceAddress());
-      sendMessageResults = manager.sendMessage(messageBuilder, r);
-    }
-
-    showSendMessageResults(sendMessageResults, request);
-
+    showSendMessageResults(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
   }
 
   private void markRead(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -539,6 +530,13 @@ public class SocketHandler implements Runnable {
       Manager m = Manager.get(request.username);
       m.setProfileName(request.name);
       this.reply("profile_set", null, request.id);
+  }
+
+  private void react(JsonRequest request) throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException {
+    Manager manager = Manager.get(request.username);
+    SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+    messageBuilder.withReaction(request.reaction.getReaction());
+    showSendMessageResults(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
   }
 
   private void showSendMessageResults(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {

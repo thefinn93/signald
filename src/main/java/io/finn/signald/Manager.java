@@ -17,6 +17,7 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
@@ -840,6 +841,19 @@ class Manager {
 
     public ThreadInfo getThread(JsonAddress address) {
         return accountData.threadStore.getThread(address.number);
+    }
+
+    public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId) throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException {
+        if(recipientGroupId != null && recipientAddress == null) {
+            byte[] groupId = Base64.decode(recipientGroupId);
+            return sendGroupMessage(messageBuilder, groupId);
+        } else if(recipientAddress != null && recipientGroupId == null) {
+            List<SignalServiceAddress> r = new ArrayList<>();
+            r.add(recipientAddress.getSignalServiceAddress());
+            return sendMessage(messageBuilder, r);
+        } else {
+            throw new InvalidRecipientException();
+        }
     }
 
     public interface ReceiveMessageHandler {
