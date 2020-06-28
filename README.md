@@ -302,4 +302,4 @@ If you have installed the `.deb` and are using the system-wide signald service, 
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
 ## Contributing
-I would like to get this to the point that anything one can do in the signal app can also be done via signald. There should be open issues for all missing features. If you have a feature you want feel free to work on it and submit a pull request. If you don't want to work on it, follow the relevant issue and get notified when there is progress.
+Contributions are welcome and appreciated. for larger changes, consider reaching out first (via the issue tracker, IRC or email).  
