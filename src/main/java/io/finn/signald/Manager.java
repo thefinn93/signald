@@ -101,8 +101,6 @@ class Manager {
 
     private AccountData accountData;
 
-//    private final ObjectMapper jsonProcessor = new ObjectMapper();
-
     private SignalServiceAccountManager accountManager;
     private SignalServiceMessagePipe messagePipe = null;
     private SignalServiceMessagePipe unidentifiedMessagePipe = null;
@@ -497,7 +495,7 @@ class Manager {
         SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asGroupMessage(group);
 
         final GroupInfo g = getGroupForSending(groupId);
-        g.members.remove(accountData.username);
+        g.members.remove(accountData.address);
         accountData.groupStore.updateGroup(g);
 
         return sendMessage(messageBuilder, g.getMembers());
