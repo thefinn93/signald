@@ -97,7 +97,7 @@ Mark a received message as "read" by sending a receipt message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the read receipt. |
-| ``recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number that sent the original message. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number that sent the original message. |
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
@@ -288,7 +288,7 @@ React to a message. For details see the [`JsonReaction`](https://gitlab.com/thef
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
-| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | no | the reaction message to send |
+| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | yes | the reaction message to send |
 
 ## Transition An Account From signal-cli
 
