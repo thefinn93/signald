@@ -44,6 +44,7 @@ signald's protocol can be somewhat annoying to interact with, and several librar
 * Python:
   * [pysignald](https://pypi.org/project/pysignald/) - a third party signald library in python
   * [Janky Signal Bot Framework](https://github.com/JankySolutions/SignalBotFramework) - a janky framework for writing simple call and response bots
+  * [Semaphore](https://github.com/lwesterhof/semaphore) - a simple (rule-based) bot library for Signal Private Messenger in Python
 * Go:
   * [signald-go](https://git.callpipe.com/finn/signald-go) - a signald library in go
 
