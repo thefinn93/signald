@@ -422,7 +422,7 @@ public class SocketHandler implements Runnable {
 
   private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    this.reply("identities", new JsonIdentityList(request.recipientAddress.getSignalServiceAddress(), m), request.id);
+    this.reply("identities", new JsonIdentityList(request.recipientAddress == null ? null : request.recipientAddress.getSignalServiceAddress(), m), request.id);
   }
 
   private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
