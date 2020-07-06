@@ -255,7 +255,7 @@ public class SocketHandler implements Runnable {
       messageBuilder.withExpiration(thread.messageExpirationTime);
     }
 
-    showSendMessageResults(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+    handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
   }
 
   private void markRead(JsonRequest request) throws IOException, NoSuchAccountException {
@@ -366,7 +366,7 @@ public class SocketHandler implements Runnable {
       results = m.setExpiration(request.recipientAddress.getSignalServiceAddress(), request.expiresInSeconds);
     }
 
-    showSendMessageResults(results, request);
+    handleSendMessage(results, request);
     this.reply("expiration_updated", null, request.id);
   }
 
@@ -536,10 +536,10 @@ public class SocketHandler implements Runnable {
     Manager manager = Manager.get(request.username);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(request.reaction.getReaction());
-    showSendMessageResults(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+    handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
   }
 
-  private void showSendMessageResults(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {
+  private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {
     List<JsonSendMessageResult> results = new ArrayList<>();
     for(SendMessageResult r: sendMessageResults) {
       results.add(new JsonSendMessageResult(r));

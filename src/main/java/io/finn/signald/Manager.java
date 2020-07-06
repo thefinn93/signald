@@ -462,7 +462,7 @@ class Manager {
             throw new GroupNotFoundException(groupId);
         }
         for (SignalServiceAddress member : g.getMembers()) {
-            if(member.equals(accountData.address.getSignalServiceAddress())) {
+            if(member.equals(accountData.address)) {
                 return g;
             }
         }
