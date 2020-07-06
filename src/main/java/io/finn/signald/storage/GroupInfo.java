@@ -3,6 +3,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import org.apache.logging.log4j.LogManager;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
@@ -36,13 +37,18 @@ public class GroupInfo {
 
     public void addMembers(List<SignalServiceAddress> newMembers) {
         for(SignalServiceAddress m : newMembers) {
-            members.add(new JsonAddress(m));
+            addMember(m);
         }
     }
 
-    public void setMembers(List<String> membersNumbers) {
-        for(String m : membersNumbers) {
-            members.add(new JsonAddress(m));
+    public void addMember(SignalServiceAddress member) {
+        addMember(new JsonAddress(member));
+    }
+
+    public void addMember(JsonAddress member) {
+        LogManager.getLogger("GroupInfo").debug("adding member " + member.toString());
+        if(!members.contains(member)) {
+            members.add(member);
         }
     }
 
@@ -57,7 +63,11 @@ public class GroupInfo {
     public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") ArrayList<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
         this.groupId = groupId;
         this.name = name;
-        this.members = members;
+        for(JsonAddress member : members) {
+            if(!members.contains(member)) {
+                members.add(member);
+            }
+        }
         this.avatarId = avatarId;
     }
 

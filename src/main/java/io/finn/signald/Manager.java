@@ -519,7 +519,7 @@ class Manager {
         if (groupId == null) {
             // Create new group
             g = new GroupInfo(Util.getSecretBytes(16));
-            g.members.add(accountData.address);
+            g.addMember(accountData.address);
         } else {
             g = getGroupForSending(groupId);
         }
@@ -540,7 +540,7 @@ class Manager {
                     continue;
                 }
                 newMembers.add(member);
-                g.members.add(new JsonAddress(member));
+                g.addMember(new JsonAddress(member));
             }
             final List<ContactTokenDetails> contacts = accountManager.getContacts(newMembers);
             if (contacts.size() != newMembers.size()) {
