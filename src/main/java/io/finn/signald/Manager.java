@@ -1210,7 +1210,6 @@ class Manager {
                                     retrieveContactAvatarAttachment(c.getAvatar().get(), contact.address.getSignalServiceAddress());
                                 }
                             }
-                            accountData.validate();
                         }
                     } catch (Exception e) {
                         logger.catching(e);

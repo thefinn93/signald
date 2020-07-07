@@ -3,6 +3,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import org.apache.logging.log4j.LogManager;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -59,6 +60,7 @@ public class GroupInfo {
     }
 
     public void addMember(JsonAddress member) {
+        LogManager.getLogger("GroupInfo").debug("adding member " + member.toRedactedString() + " to " + groupId);
         if(!isMember(member)) {
             members.add(member);
         }

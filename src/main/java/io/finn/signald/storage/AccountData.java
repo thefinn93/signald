@@ -94,20 +94,9 @@ public class AccountData {
         a.save();
     }
 
-    public void update() {
+    private void update() {
         if(address == null) {
             address = new JsonAddress(username);
-        }
-
-        if(address.uuid == null) {
-            logger.debug("No UUID for this account, searching contact list.");
-            ContactInfo c = contactStore.getContact(address.number);
-            if(c != null && c.address.uuid != null && c.address.number.equals(address.number)) {
-                logger.debug("Found contact with same number as account, assuming their UUID is our UUID.");
-                address.uuid = c.address.uuid;
-            } else {
-                logger.debug("This account's number does not appear in the contact list.");
-            }
         }
     }
 
