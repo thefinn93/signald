@@ -283,6 +283,10 @@ class Manager {
     public void init() throws IOException {
         accountData = AccountData.load(new File(getFileName()));
         accountManager = getAccountManager();
+        if(accountData.address.uuid == null) {
+            accountData.address.uuid = accountManager.getOwnUuid().toString();
+            accountData.save();
+        }
         try {
             if (accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
                 refreshPreKeys();
