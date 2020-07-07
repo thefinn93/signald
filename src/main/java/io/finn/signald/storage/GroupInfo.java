@@ -35,6 +35,19 @@ public class GroupInfo {
         return l;
     }
 
+    public boolean isMember(JsonAddress address) {
+        for(JsonAddress member : members) {
+            if(member.equals(address)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isMember(SignalServiceAddress address) {
+        return isMember(new JsonAddress(address));
+    }
+
     public void addMembers(List<SignalServiceAddress> newMembers) {
         for(SignalServiceAddress m : newMembers) {
             addMember(m);
@@ -47,7 +60,7 @@ public class GroupInfo {
 
     public void addMember(JsonAddress member) {
         LogManager.getLogger("GroupInfo").debug("adding member " + member.toString());
-        if(!members.contains(member)) {
+        if(!isMember(member)) {
             members.add(member);
         }
     }
@@ -60,13 +73,11 @@ public class GroupInfo {
     }
 
     // Constructor required for creation from JSON
-    public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") ArrayList<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
+    public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") List<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
         this.groupId = groupId;
         this.name = name;
         for(JsonAddress member : members) {
-            if(!members.contains(member)) {
-                members.add(member);
-            }
+            addMember(member);
         }
         this.avatarId = avatarId;
     }

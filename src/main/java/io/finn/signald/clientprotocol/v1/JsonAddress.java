@@ -27,7 +27,7 @@ public class JsonAddress {
 
     public String uuid;
 
-    public int relay;
+    public String relay;
 
     public JsonAddress() {};
 
@@ -58,6 +58,10 @@ public class JsonAddress {
 
         if(address.getUuid().isPresent()) {
             uuid = address.getUuid().get().toString();
+        }
+
+        if(address.getRelay().isPresent()) {
+            relay = address.getRelay().get();
         }
     }
 
@@ -91,6 +95,9 @@ public class JsonAddress {
             out += "null";
         } else {
             out += uuid;
+        }
+        if(relay != null) {
+            out += " (relay " + relay + ")";
         }
         return out;
     }

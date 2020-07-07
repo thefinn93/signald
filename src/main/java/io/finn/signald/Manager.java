@@ -461,12 +461,12 @@ class Manager {
         if (g == null) {
             throw new GroupNotFoundException(groupId);
         }
-        for (SignalServiceAddress member : g.getMembers()) {
-            if(member.equals(accountData.address.getSignalServiceAddress())) {
-                return g;
-            }
+
+        if(!g.isMember(accountData.address)) {
+            throw new NotAGroupMemberException(groupId, g.name);
         }
-        throw new NotAGroupMemberException(groupId, g.name);
+
+        return g;
     }
 
     public List<GroupInfo> getGroups() {
