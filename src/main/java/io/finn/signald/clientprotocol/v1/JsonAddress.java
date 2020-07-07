@@ -44,7 +44,6 @@ public class JsonAddress {
         return new SignalServiceAddress(getUUID(), number);
     }
 
-    @JsonIgnore
     public UUID getUUID() {
         if(uuid == null) {
             return null;

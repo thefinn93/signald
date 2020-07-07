@@ -1156,20 +1156,10 @@ class Manager {
                             DeviceGroup g;
                             logger.debug("Sync message included new groups!");
                             while ((g = s.read()) != null) {
-                                GroupInfo syncGroup = accountData.groupStore.getGroup(g.getId());
-                                if (syncGroup == null) {
-                                    syncGroup = new GroupInfo(g.getId());
-                                }
-                                if (g.getName().isPresent()) {
-                                    syncGroup.name = g.getName().get();
-                                }
-                                syncGroup.addMembers(g.getMembers());
-                                syncGroup.active = g.isActive();
-
+                                accountData.groupStore.updateGroup(new GroupInfo(g));
                                 if (g.getAvatar().isPresent()) {
-                                    retrieveGroupAvatarAttachment(g.getAvatar().get(), syncGroup.groupId);
+                                    retrieveGroupAvatarAttachment(g.getAvatar().get(), g.getId());
                                 }
-                                accountData.groupStore.updateGroup(syncGroup);
                             }
                         }
                     } catch (Exception e) {

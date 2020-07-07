@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.apache.logging.log4j.LogManager;
+import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
@@ -72,6 +73,16 @@ public class GroupInfo {
         this.groupId = groupId;
     }
 
+    public GroupInfo(DeviceGroup g) {
+        groupId = g.getId();
+        if(g.getName().isPresent()) {
+            name = g.getName().get();
+        }
+        addMembers(g.getMembers());
+        // TODO: Avatar support
+    }
+
+
     // Constructor required for creation from JSON
     public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") List<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
         this.groupId = groupId;
@@ -84,5 +95,9 @@ public class GroupInfo {
 
     public void removeMember(SignalServiceAddress source) {
         this.members.remove(new JsonAddress(source));
+    }
+
+    public String toString() {
+        return name + " (" + groupId + ")";
     }
 }
