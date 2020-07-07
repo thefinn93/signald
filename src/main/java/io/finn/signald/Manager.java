@@ -1154,6 +1154,7 @@ class Manager {
                         try (InputStream attachmentAsStream = retrieveAttachmentAsStream(syncMessage.getGroups().get().asPointer(), tmpFile)) {
                             DeviceGroupsInputStream s = new DeviceGroupsInputStream(attachmentAsStream);
                             DeviceGroup g;
+                            logger.debug("Sync message included new groups!");
                             while ((g = s.read()) != null) {
                                 GroupInfo syncGroup = accountData.groupStore.getGroup(g.getId());
                                 if (syncGroup == null) {

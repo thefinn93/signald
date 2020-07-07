@@ -212,6 +212,36 @@ Unsubscribes from messages to the specified account. See `subscribe` for more de
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The user to unsubscribe to messages for. |
 
+### `sync_contacts`
+
+Sends a contact sync request to the other devices on this account.
+
+**NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
+### `sync_groups`
+
+Sends a group sync request to the other devices on this account.
+
+**NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
+### `sync_configuration`
+
+Sends a configuration sync request to the other devices on this account.
+
+**NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
 ### `list_contacts`
 
 Lists all of the contacts in the contact store for the specified user.
@@ -219,16 +249,6 @@ Lists all of the contacts in the contact store for the specified user.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to list the contacts of |
-
-### `sync_contacts`
-
-Sends a contact sync request to the other devices on this account.
-
-**NOTE**: Contact sync responses are received like all other messages, and won't come in until that account is subscribed.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `username` | `string` | yes | The account to sync contacts for. |
 
 
 ### `update_contact`

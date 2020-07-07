@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.Util;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.UUID;
@@ -95,6 +96,27 @@ public class JsonAddress {
             out += "null";
         } else {
             out += uuid;
+        }
+        if(relay != null) {
+            out += " (relay " + relay + ")";
+        }
+        return out;
+    }
+
+    public String toRedactedString() {
+        String out = "";
+        if(number == null) {
+            out += "null";
+        } else {
+            out += Util.redact(number);
+        }
+
+        out += "/";
+
+        if(uuid == null) {
+            out += "null";
+        } else {
+            out += Util.redact(uuid);
         }
         if(relay != null) {
             out += " (relay " + relay + ")";

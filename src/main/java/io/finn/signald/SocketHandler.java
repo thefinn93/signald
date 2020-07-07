@@ -183,6 +183,12 @@ public class SocketHandler implements Runnable {
       case "sync_contacts":
         syncContacts(request);
         break;
+      case "sync_groups":
+        syncGroups(request);
+        break;
+      case "sync_configuration":
+        syncConfiguration(request);
+        break;
       case "list_contacts":
         listContacts(request);
         break;
@@ -466,6 +472,18 @@ public class SocketHandler implements Runnable {
   private void syncContacts(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     m.requestSyncContacts();
+    this.reply("sync_requested", null, request.id);
+  }
+
+  private void syncGroups(JsonRequest request) throws IOException, NoSuchAccountException {
+    Manager m = Manager.get(request.username);
+    m.requestSyncGroups();
+    this.reply("sync_requested", null, request.id);
+  }
+
+  private void syncConfiguration(JsonRequest request) throws IOException, NoSuchAccountException {
+    Manager m = Manager.get(request.username);
+    m.requestSyncConfiguration();
     this.reply("sync_requested", null, request.id);
   }
 

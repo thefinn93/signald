@@ -59,7 +59,7 @@ public class GroupInfo {
     }
 
     public void addMember(JsonAddress member) {
-        LogManager.getLogger("GroupInfo").debug("adding member " + member.toString());
+        LogManager.getLogger("GroupInfo").debug("adding member " + member.toRedactedString() + " to " + groupId);
         if(!isMember(member)) {
             members.add(member);
         }
