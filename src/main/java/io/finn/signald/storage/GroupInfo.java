@@ -40,6 +40,8 @@ public class GroupInfo {
         for(JsonAddress member : members) {
             if(member.equals(address)) {
                 return true;
+            } else if(member.number.equals(address.number) && member.uuid == null) {
+                return true;
             }
         }
         return false;
