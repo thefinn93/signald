@@ -1019,16 +1019,23 @@ class Manager {
                     continue;
                 }
                 SignalServiceContent content = null;
+                Exception exception = null;
                 if (!envelope.isReceipt()) {
                     try {
                         content = decryptMessage(envelope);
                     } catch (Exception e) {
-                        continue;
+                        exception = e;
                     }
-                    handleMessage(envelope, content, ignoreAttachments);
+                    if(exception == null) {
+                        try {
+                            handleMessage(envelope, content, ignoreAttachments);
+                        } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
+                            logger.catching(e);
+                        }
+                    }
                 }
                 accountData.save();
-                handler.handleMessage(envelope, content, null);
+                handler.handleMessage(envelope, content, exception);
                 try {
                     Files.delete(fileEntry.toPath());
                 } catch (IOException e) {
