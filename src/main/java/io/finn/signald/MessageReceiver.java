@@ -56,7 +56,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
     public void run() {
       try {
-        Thread.currentThread().setName(username + "-receiver");
+        Thread.currentThread().setName(Util.redact(username) + "-receiver");
         Manager manager = Manager.get(username);
         while(sockets.size() > 0) {
           double timeout = 3600;
