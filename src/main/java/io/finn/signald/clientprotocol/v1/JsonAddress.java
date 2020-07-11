@@ -127,4 +127,8 @@ public class JsonAddress {
     public int hashCode() {
         return getSignalServiceAddress().hashCode();
     }
+
+    public boolean matches(SignalServiceAddress other) {
+        return getSignalServiceAddress().matches(other);
+    }
 }

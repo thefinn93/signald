@@ -25,6 +25,7 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.List;
 
@@ -120,6 +121,10 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
     @Override
     public void deleteAllSessions(String name) {
         sessionStore.deleteAllSessions(name);
+    }
+
+    public void deleteAllSessions(SignalServiceAddress address) {
+        sessionStore.deleteAllSessions(address);
     }
 
     @Override

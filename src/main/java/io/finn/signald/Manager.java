@@ -835,8 +835,8 @@ class Manager {
         }
     }
 
-    private void handleEndSession(SignalServiceAddress source) {
-        accountData.axolotlStore.deleteAllSessions(source.getLegacyIdentifier());
+    private void handleEndSession(SignalServiceAddress address) {
+        accountData.axolotlStore.deleteAllSessions(address);
     }
 
     public ThreadInfo getThread(byte[] groupId) {

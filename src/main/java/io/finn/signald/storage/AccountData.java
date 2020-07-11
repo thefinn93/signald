@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidStorageFileException;
-import io.finn.signald.util.JSONHelper;
+import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.util.RandomUtils;
@@ -65,7 +65,7 @@ public class AccountData {
 
     public static AccountData load(File storageFile) throws IOException {
         logger.debug("Loading account from file: " + storageFile.toString());
-        ObjectMapper mapper = JSONHelper.GetMapper();
+        ObjectMapper mapper = JSONUtil.GetMapper();
 
         // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
         AccountData a = mapper.readValue(storageFile, AccountData.class);
@@ -107,7 +107,7 @@ public class AccountData {
     public void save(boolean allowBlankPassword) throws IOException {
         validate();
 
-        ObjectWriter writer = JSONHelper.GetWriter();
+        ObjectWriter writer = JSONUtil.GetWriter();
 
         File dataPathFile = new File(dataPath);
         if(!dataPathFile.exists()) {

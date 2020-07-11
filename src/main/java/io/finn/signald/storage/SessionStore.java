@@ -22,101 +22,176 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.util.AddressUtil;
+import io.finn.signald.util.JSONUtil;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.util.Base64;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 
-@JsonDeserialize(using=SessionStore.SessionStoreDeserializer.class)
+
 @JsonSerialize(using=SessionStore.SessionStoreSerializer.class)
+@JsonDeserialize(using=SessionStore.SessionStoreDeserializer.class)
 public class SessionStore implements org.whispersystems.libsignal.state.SessionStore {
-    private final Map<SignalProtocolAddress, byte[]> sessions = new HashMap<>();
+    private AddressResolver resolver;
+    private static ObjectMapper mapper = JSONUtil.GetMapper();
 
-    @Override
-    public synchronized SessionRecord loadSession(SignalProtocolAddress remoteAddress) {
-        try {
-            if (containsSession(remoteAddress)) {
-                return new SessionRecord(sessions.get(remoteAddress));
-            } else {
-                return new SessionRecord();
-            }
-        } catch (IOException e) {
-            throw new AssertionError(e);
+    public List<SessionInfo> sessions = new ArrayList<>();
+
+    public SessionStore() {
+    }
+
+    public void setResolver(final AddressResolver resolver) {
+        this.resolver = resolver;
+    }
+
+    private SignalServiceAddress resolveSignalServiceAddress(String identifier) {
+        if (resolver != null) {
+            return resolver.resolveSignalServiceAddress(identifier);
+        } else {
+            return AddressUtil.fromIdentifier(identifier);
         }
     }
 
     @Override
-    public synchronized List<Integer> getSubDeviceSessions(String name) {
-        List<Integer> deviceIds = new LinkedList<>();
-        for (SignalProtocolAddress key : sessions.keySet()) {
-            if (key.getName().equals(name) &&
-                    key.getDeviceId() != 1) {
-                deviceIds.add(key.getDeviceId());
+    public synchronized SessionRecord loadSession(SignalProtocolAddress address) {
+        SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
+        for (SessionInfo info : sessions) {
+            if (info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId()) {
+                try {
+                    return new SessionRecord(info.record);
+                } catch (IOException e) {
+                    final SessionRecord sessionRecord = new SessionRecord();
+                    info.record = sessionRecord.serialize();
+                    return sessionRecord;
+                }
             }
         }
+
+        return new SessionRecord();
+    }
+
+    public synchronized List<SessionInfo> getSessions() {
+        return sessions;
+    }
+
+    @Override
+    public synchronized List<Integer> getSubDeviceSessions(String name) {
+        SignalServiceAddress serviceAddress = resolveSignalServiceAddress(name);
+
+        List<Integer> deviceIds = new LinkedList<>();
+        for (SessionInfo info : sessions) {
+            if (info.address.matches(serviceAddress) && info.deviceId != 1) {
+                deviceIds.add(info.deviceId);
+            }
+        }
+
         return deviceIds;
     }
 
     @Override
     public synchronized void storeSession(SignalProtocolAddress address, SessionRecord record) {
-        sessions.put(address, record.serialize());
+        SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
+        for (SessionInfo info : sessions) {
+            if (info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId()) {
+                if (!info.address.getUuid().isPresent() || !info.address.getNumber().isPresent()) {
+                    info.address = serviceAddress;
+                }
+                info.record = record.serialize();
+                return;
+            }
+        }
+
+        sessions.add(new SessionInfo(serviceAddress, address.getDeviceId(), record.serialize()));
     }
 
     @Override
     public synchronized boolean containsSession(SignalProtocolAddress address) {
-        return sessions.containsKey(address);
+        SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
+        for (SessionInfo info : sessions) {
+            if (info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public synchronized void deleteSession(SignalProtocolAddress address) {
-        sessions.remove(address);
+        SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
+        sessions.removeIf(info -> info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId());
     }
 
     @Override
     public synchronized void deleteAllSessions(String name) {
-        for (SignalProtocolAddress key : new ArrayList<>(sessions.keySet())) {
-            if (key.getName().equals(name)) {
-                sessions.remove(key);
-            }
-        }
+        SignalServiceAddress serviceAddress = resolveSignalServiceAddress(name);
+        deleteAllSessions(serviceAddress);
+    }
+
+    public synchronized void deleteAllSessions(SignalServiceAddress serviceAddress) {
+        sessions.removeIf(info -> info.address.matches(serviceAddress));
     }
 
     public static class SessionStoreDeserializer extends JsonDeserializer<SessionStore> {
+
         @Override
         public SessionStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-            Map<SignalProtocolAddress, byte[]> sessionMap = new HashMap<>();
-            if (node.isArray()) {
-                for (JsonNode session : node) {
-                    String sessionName = session.get("name").asText();
-                    try {
-                        sessionMap.put(new SignalProtocolAddress(sessionName, session.get("deviceId").asInt()), org.whispersystems.util.Base64.decode(session.get("record").asText()));
-                    } catch (IOException e) {
-                        System.out.println(String.format("Error while decoding session for: %s", sessionName));
-                    }
+            JsonNode tree = jsonParser.getCodec().readTree(jsonParser);
+
+            SessionStore sessionStore = new SessionStore();
+
+            if (tree.isArray()) {
+                for (JsonNode node : tree) {
+                    SessionInfo sessionInfo = mapper.treeToValue(node, SessionInfo.class);
+                    sessionStore.sessions.add(sessionInfo);
                 }
             }
-            SessionStore sessionStore = new SessionStore();
-            sessionStore.sessions.putAll(sessionMap);
+
             return sessionStore;
         }
     }
 
     public static class SessionStoreSerializer extends JsonSerializer<SessionStore> {
+
         @Override
         public void serialize(SessionStore jsonSessionStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
             json.writeStartArray();
-            for (Map.Entry<SignalProtocolAddress, byte[]> preKey : jsonSessionStore.sessions.entrySet()) {
-                json.writeStartObject();
-                json.writeStringField("name", preKey.getKey().getName());
-                json.writeNumberField("deviceId", preKey.getKey().getDeviceId());
-                json.writeStringField("record", Base64.encodeBytes(preKey.getValue()));
-                json.writeEndObject();
+            for (SessionInfo sessionInfo : jsonSessionStore.sessions) {
+                json.writeObject(sessionInfo);
             }
             json.writeEndArray();
+        }
+    }
+
+    public static class SessionInfo {
+        public SignalServiceAddress address;
+        public int deviceId;
+        public byte[] record;
+
+        public SessionInfo() {}
+
+        public SessionInfo(final SignalServiceAddress address, final int deviceId, final byte[] sessionRecord) {
+            this.address = address;
+            this.deviceId = deviceId;
+            this.record = sessionRecord;
+        }
+
+        public JsonAddress getAddress() {
+            return new JsonAddress(address);
+        }
+
+        public void setAddress(JsonAddress a) {
+            address = a.getSignalServiceAddress();
+        }
+
+        public void setName(String name) {
+            address = new SignalServiceAddress(null, name);
         }
     }
 }
