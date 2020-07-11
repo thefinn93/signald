@@ -122,4 +122,9 @@ public class JsonAddress {
         }
         return out;
     }
+
+    @Override
+    public int hashCode() {
+        return getSignalServiceAddress().hashCode();
+    }
 }
