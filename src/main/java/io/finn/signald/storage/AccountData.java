@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidStorageFileException;
+import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,6 +39,8 @@ import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -59,6 +62,7 @@ public class AccountData {
     public GroupStore groupStore;
     public ContactStore contactStore;
     public ThreadStore threadStore;
+    public List<JsonAddress> recipientStore = new ArrayList<>();
 
     private static String dataPath;
     private static Logger logger = LogManager.getLogger("AccountData");
@@ -69,8 +73,9 @@ public class AccountData {
 
         // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
         AccountData a = mapper.readValue(storageFile, AccountData.class);
-        logger.debug("Loaded account data from file. profile key is " + (a.profileKey == null ? "null" : "not null"));
-        a.validate(); // Storage path passed for exceptions to include in messages
+        logger.debug("Loaded account data from file.");
+        a.validate();
+        a.initSessionStore();
         a.update();
         return a;
     }
@@ -88,10 +93,14 @@ public class AccountData {
 
         a.deviceId = registration.getDeviceId();
         a.signalingKey = signalingKey;
-        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId);
+        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId, a::resolveSignalServiceAddress);
         a.registered = true;
         a.init();
         a.save();
+    }
+
+    public void initSessionStore() {
+        axolotlStore.sessionStore.setResolver(this::resolveSignalServiceAddress);
     }
 
     private void update() {
@@ -197,5 +206,26 @@ public class AccountData {
             return null;
         }
         return address.getUUID();
+    }
+
+
+    public SignalServiceAddress resolveSignalServiceAddress(String identifier) {
+        SignalServiceAddress address = AddressUtil.fromIdentifier(identifier);
+        return resolveSignalServiceAddress(address);
+    }
+
+    public SignalServiceAddress resolveSignalServiceAddress(SignalServiceAddress a) {
+        if (a.matches(address.getSignalServiceAddress())) {
+            return address.getSignalServiceAddress();
+        }
+
+        for(JsonAddress i : recipientStore) {
+            if(i.getSignalServiceAddress().matches(a)) {
+                i.update(a);
+                return i.getSignalServiceAddress();
+            }
+        }
+
+        return a;
     }
 }

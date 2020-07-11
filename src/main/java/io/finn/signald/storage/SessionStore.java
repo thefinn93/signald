@@ -47,6 +47,10 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
     public SessionStore() {
     }
 
+    public SessionStore(AddressResolver r) {
+        resolver = r;
+    }
+
     public void setResolver(final AddressResolver resolver) {
         this.resolver = resolver;
     }

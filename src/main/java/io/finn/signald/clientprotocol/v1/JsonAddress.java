@@ -131,4 +131,14 @@ public class JsonAddress {
     public boolean matches(SignalServiceAddress other) {
         return getSignalServiceAddress().matches(other);
     }
+
+    public void update(SignalServiceAddress a) {
+        if(uuid == null && a.getUuid().isPresent()) {
+            uuid = a.getUuid().get().toString();
+        }
+
+        if(number == null && a.getNumber().isPresent()) {
+            number = a.getNumber().get();
+        }
+    }
 }
