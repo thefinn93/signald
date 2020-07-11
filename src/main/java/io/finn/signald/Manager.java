@@ -301,7 +301,7 @@ class Manager {
     public void createNewIdentity() {
         IdentityKeyPair identityKey = KeyHelper.generateIdentityKeyPair();
         int registrationId = KeyHelper.generateRegistrationId(false);
-        accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId, accountData::resolveSignalServiceAddress);
+        accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId, accountData::resolveAddress);
         accountData.registered = false;
         logger.info("Generating new identity pair");
     }
@@ -724,6 +724,8 @@ class Manager {
             return null;
         }
 
+        address = accountData.resolveAddress(address);
+
         try {
             SignalServiceMessageSender messageSender = getMessageSender();
 
@@ -745,6 +747,8 @@ class Manager {
             accountData.save();
             return Collections.emptyList();
         }
+
+        recipients = accountData.resolveAddresses(recipients);
 
         SignalServiceDataMessage message = null;
         try {

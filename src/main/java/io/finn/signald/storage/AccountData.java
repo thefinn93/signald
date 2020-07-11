@@ -40,6 +40,7 @@ import org.whispersystems.util.Base64;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -93,14 +94,14 @@ public class AccountData {
 
         a.deviceId = registration.getDeviceId();
         a.signalingKey = signalingKey;
-        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId, a::resolveSignalServiceAddress);
+        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId, a::resolveAddress);
         a.registered = true;
         a.init();
         a.save();
     }
 
     public void initSessionStore() {
-        axolotlStore.sessionStore.setResolver(this::resolveSignalServiceAddress);
+        axolotlStore.sessionStore.setResolver(this::resolveAddress);
     }
 
     private void update() {
@@ -209,12 +210,12 @@ public class AccountData {
     }
 
 
-    public SignalServiceAddress resolveSignalServiceAddress(String identifier) {
+    public SignalServiceAddress resolveAddress(String identifier) {
         SignalServiceAddress address = AddressUtil.fromIdentifier(identifier);
-        return resolveSignalServiceAddress(address);
+        return resolveAddress(address);
     }
 
-    public SignalServiceAddress resolveSignalServiceAddress(SignalServiceAddress a) {
+    public SignalServiceAddress resolveAddress(SignalServiceAddress a) {
         if (a.matches(address.getSignalServiceAddress())) {
             return address.getSignalServiceAddress();
         }
@@ -227,5 +228,13 @@ public class AccountData {
         }
 
         return a;
+    }
+
+    public Collection<SignalServiceAddress> resolveAddresses(Collection<SignalServiceAddress> partials) {
+        Collection <SignalServiceAddress> full = new ArrayList<>();
+        for(SignalServiceAddress p : partials) {
+            full.add(resolveAddress(p));
+        }
+        return full;
     }
 }
