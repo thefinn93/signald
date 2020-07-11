@@ -128,6 +128,10 @@ public class JsonAddress {
         return getSignalServiceAddress().hashCode();
     }
 
+    public boolean matches(JsonAddress other) {
+        return matches(other.getSignalServiceAddress());
+    }
+
     public boolean matches(SignalServiceAddress other) {
         return getSignalServiceAddress().matches(other);
     }
