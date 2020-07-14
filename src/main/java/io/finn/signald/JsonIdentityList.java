@@ -22,7 +22,6 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<>();
@@ -35,10 +34,8 @@ class JsonIdentityList {
 
   JsonIdentityList(SignalServiceAddress address, Manager m) {
     if(address == null) {
-      for (Map.Entry<String, List<IdentityKeyStore.Identity>> keys : m.getIdentities().entrySet()) {
-        for (IdentityKeyStore.Identity identity : keys.getValue()) {
-            this.identities.add(new JsonIdentity(identity, m, new SignalServiceAddress(null, keys.getKey())));
-        }
+      for (IdentityKeyStore.Identity identity : m.getIdentities()) {
+          this.identities.add(new JsonIdentity(identity, m));
       }
     } else {
       List<IdentityKeyStore.Identity> identities = m.getIdentities(address);

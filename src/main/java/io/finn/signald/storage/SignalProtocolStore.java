@@ -41,7 +41,7 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
         preKeys = new PreKeyStore();
         sessionStore = new SessionStore(resolver);
         signedPreKeyStore = new SignedPreKeyStore();
-        identityKeyStore = new IdentityKeyStore(identityKey, registrationId);
+        identityKeyStore = new IdentityKeyStore(identityKey, registrationId, resolver);
     }
 
     @Override

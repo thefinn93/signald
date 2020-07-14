@@ -76,7 +76,7 @@ public class AccountData {
         AccountData a = mapper.readValue(storageFile, AccountData.class);
         logger.debug("Loaded account data from file.");
         a.validate();
-        a.initSessionStore();
+        a.initProtocolStore();
         a.update();
         return a;
     }
@@ -100,8 +100,9 @@ public class AccountData {
         a.save();
     }
 
-    public void initSessionStore() {
+    public void initProtocolStore() {
         axolotlStore.sessionStore.setResolver(this::resolveAddress);
+        axolotlStore.identityKeyStore.setResolver(this::resolveAddress);
     }
 
     private void update() {

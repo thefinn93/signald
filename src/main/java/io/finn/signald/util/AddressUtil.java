@@ -22,7 +22,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class AddressUtil {
     public static SignalServiceAddress fromIdentifier(String identifier) {
-        if (UuidUtil.isUuid(identifier)) {
+        if(UuidUtil.isUuid(identifier)) {
             return new SignalServiceAddress(UuidUtil.parseOrNull(identifier), null);
         } else {
             return new SignalServiceAddress(null, identifier);

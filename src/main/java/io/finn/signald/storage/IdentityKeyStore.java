@@ -17,11 +17,13 @@
 
 package io.finn.signald.storage;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.util.AddressUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -31,80 +33,112 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
-
-@JsonSerialize(using=IdentityKeyStore.IdentityKeyStoreSerializer.class)
-@JsonDeserialize(using=IdentityKeyStore.IdentityKeyStoreDeserializer.class)
 public class IdentityKeyStore implements org.whispersystems.libsignal.state.IdentityKeyStore {
+    private static Logger log = LogManager.getLogger(IdentityKeyStore.class.getName());
+    private AddressResolver resolver;
 
-    Map<String, List<IdentityKeyStore.Identity>> trustedKeys = new HashMap<>();
-
+    public List<IdentityKeyStore.Identity> trustedKeys = new ArrayList<>();
     IdentityKeyPair identityKeyPair;
-    int registrationId;
+    public int registrationId;
 
     public IdentityKeyStore() {}
 
-    public IdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId) {
+    public IdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId, AddressResolver resolver) {
         this.identityKeyPair = identityKeyPair;
         this.registrationId = localRegistrationId;
+        this.resolver = resolver;
+    }
+
+    public void setResolver(final AddressResolver resolver) {
+        this.resolver = resolver;
     }
 
     @Override
+    @JsonIgnore
     public IdentityKeyPair getIdentityKeyPair() {
         return identityKeyPair;
     }
 
     @Override
+    @JsonIgnore
     public int getLocalRegistrationId() {
         return registrationId;
     }
 
     @Override
-    public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-        return saveIdentity(address.getName(), identityKey, TrustLevel.TRUSTED_UNVERIFIED, null);
+    public boolean saveIdentity(SignalProtocolAddress protocolAddress, IdentityKey identityKey) {
+        return saveIdentity(protocolAddress.getName(), identityKey, TrustLevel.TRUSTED_UNVERIFIED);
     }
 
-    public boolean saveIdentity(String address, IdentityKey identityKey, TrustLevel trustLevel) {
+    public boolean saveIdentity(String identifier, IdentityKey identityKey, TrustLevel trustLevel) {
+        return saveIdentity(AddressUtil.fromIdentifier(identifier), identityKey, trustLevel);
+    }
+    public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel) {
         return saveIdentity(address, identityKey, trustLevel, null);
+    }
+
+    private List<Identity> getKeys(SignalProtocolAddress address) {
+        return getKeys(address.getName());
+    }
+
+    private List<Identity> getKeys(String identifier) {
+        return getKeys(resolver.resolveSignalServiceAddress(identifier));
+    }
+
+    private List<Identity> getKeys(SignalServiceAddress other) {
+        List<Identity> matches = new ArrayList<>();
+        for(Identity key : trustedKeys) {
+            if(key.address == null) {
+                log.warn("Key has no address! This may indicate a corrupt data file.");
+                continue;
+            }
+            if(key.address.matches(other)) {
+                matches.add(key);
+            }
+        }
+        return matches;
     }
 
     /**
      * Adds or updates the given identityKey for the user name and sets the trustLevel and added timestamp.
      *
-     * @param name        User name, i.e. phone number
+     * @param address     the user's address
      * @param identityKey The user's public key
      * @param trustLevel
      * @param added       Added timestamp, if null and the key is newly added, the current time is used.
      */
-    public boolean saveIdentity(String name, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
-        List<IdentityKeyStore.Identity> identities = trustedKeys.get(name);
-        if (identities == null) {
-            identities = new ArrayList<>();
-            trustedKeys.put(name, identities);
-        } else {
-            for (IdentityKeyStore.Identity id : identities) {
-                if (!id.identityKey.equals(identityKey))
-                    continue;
-
-                if (id.trustLevel.compareTo(trustLevel) < 0) {
-                    id.trustLevel = trustLevel;
-                }
-                if (added != null) {
-                    id.added = added;
-                }
-                return true;
-            }
+    public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
+        List<IdentityKeyStore.Identity> identities = getKeys(address);
+        if(identities.size() == 0) {
+            trustedKeys.add(new Identity(address, identityKey, trustLevel, added != null ? added : new Date()));
+            return false;
         }
-        identities.add(new IdentityKeyStore.Identity(identityKey, trustLevel, added != null ? added : new Date()));
+
+        for(IdentityKeyStore.Identity id : identities) {
+            if(!id.identityKey.equals(identityKey)) {
+                continue;
+            }
+            if(id.trustLevel.compareTo(trustLevel) < 0) {
+                id.trustLevel = trustLevel;
+            }
+            if(added != null) {
+                id.added = added;
+            }
+
+            return true;
+        }
         return false;
     }
 
     @Override
     public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
         // TODO implement possibility for different handling of incoming/outgoing trust decisions
-        List<IdentityKeyStore.Identity> identities = trustedKeys.get(address.getName());
-        if (identities == null) {
+        List<IdentityKeyStore.Identity> identities = getKeys(address);
+        if (identities.size() == 0) {
             // Trust on first use
             return true;
         }
@@ -120,8 +154,8 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
     @Override
     public IdentityKey getIdentity(SignalProtocolAddress address) {
-        List<IdentityKeyStore.Identity> identities = trustedKeys.get(address.getName());
-        if (identities == null || identities.size() == 0) {
+        List<IdentityKeyStore.Identity> identities = getKeys(address);
+        if (identities.size() == 0) {
             return null;
         }
 
@@ -134,86 +168,46 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
                 maxIdentity = id;
             }
         }
-        return maxIdentity.getIdentityKey();
+        return maxIdentity.getKey();
     }
 
-    public Map<String, List<IdentityKeyStore.Identity>> getIdentities() {
-        // TODO deep copy
+    @JsonIgnore
+    public List<Identity> getIdentities() {
         return trustedKeys;
     }
 
     public List<IdentityKeyStore.Identity> getIdentities(String name) {
-        // TODO deep copy
-        return trustedKeys.get(name);
+        return getKeys(name);
     }
 
     public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) {
-        // TODO deep copy
-        return trustedKeys.get(address.getNumber().get());
+        return getKeys(address);
     }
 
-    public static class IdentityKeyStoreDeserializer extends JsonDeserializer<IdentityKeyStore> {
 
-        @Override
-        public IdentityKeyStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+    // Getters and setters for Jackson
+    @JsonSetter("identityKey")
+    public void setIdentityKey(String identityKey) throws IOException, InvalidKeyException {
+        identityKeyPair = new IdentityKeyPair(org.whispersystems.util.Base64.decode(identityKey));
+    }
 
-            try {
-                int localRegistrationId = node.get("registrationId").asInt();
-                IdentityKeyPair identityKeyPair = new IdentityKeyPair(org.whispersystems.util.Base64.decode(node.get("identityKey").asText()));
-
-                IdentityKeyStore keyStore = new IdentityKeyStore(identityKeyPair, localRegistrationId);
-
-                JsonNode trustedKeysNode = node.get("trustedKeys");
-                if (trustedKeysNode.isArray()) {
-                    for (JsonNode trustedKey : trustedKeysNode) {
-                        String trustedKeyName = trustedKey.get("name").asText();
-                        try {
-                            IdentityKey id = new IdentityKey(org.whispersystems.util.Base64.decode(trustedKey.get("identityKey").asText()), 0);
-                            TrustLevel trustLevel = trustedKey.has("trustLevel") ? TrustLevel.fromInt(trustedKey.get("trustLevel").asInt()) : TrustLevel.TRUSTED_UNVERIFIED;
-                            Date added = trustedKey.has("addedTimestamp") ? new Date(trustedKey.get("addedTimestamp").asLong()) : new Date();
-                            keyStore.saveIdentity(trustedKeyName, id, trustLevel, added);
-                        } catch (InvalidKeyException | IOException e) {
-                            System.out.println(String.format("Error while decoding key for: %s", trustedKeyName));
-                        }
-                    }
-                }
-
-                return keyStore;
-            } catch (InvalidKeyException e) {
-                throw new IOException(e);
-            }
+    @JsonGetter("identityKey")
+    public String getIdentityKeyPairJSON() {
+        if(identityKeyPair == null) {
+            return null;
         }
+        return org.whispersystems.util.Base64.encodeBytes(identityKeyPair.serialize());
     }
 
-    public static class IdentityKeyStoreSerializer extends JsonSerializer<IdentityKeyStore> {
+    public static class Identity {
+        private Logger log = LogManager.getLogger(Identity.class.getPackageName());
 
-        @Override
-        public void serialize(IdentityKeyStore jsonIdentityKeyStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
-            json.writeStartObject();
-            json.writeNumberField("registrationId", jsonIdentityKeyStore.getLocalRegistrationId());
-            json.writeStringField("identityKey", org.whispersystems.util.Base64.encodeBytes(jsonIdentityKeyStore.getIdentityKeyPair().serialize()));
-            json.writeArrayFieldStart("trustedKeys");
-            for (Map.Entry<String, List<IdentityKeyStore.Identity>> trustedKey : jsonIdentityKeyStore.trustedKeys.entrySet()) {
-                for (IdentityKeyStore.Identity id : trustedKey.getValue()) {
-                    json.writeStartObject();
-                    json.writeStringField("name", trustedKey.getKey());
-                    json.writeStringField("identityKey", Base64.encodeBytes(id.identityKey.serialize()));
-                    json.writeNumberField("trustLevel", id.trustLevel.ordinal());
-                    json.writeNumberField("addedTimestamp", id.added.getTime());
-                    json.writeEndObject();
-                }
-            }
-            json.writeEndArray();
-            json.writeEndObject();
-        }
-    }
-
-    public class Identity {
-
+        JsonAddress address;
         IdentityKey identityKey;
         TrustLevel trustLevel;
         Date added;
+
+        public Identity() {}
 
         public Identity(IdentityKey identityKey, TrustLevel trustLevel) {
             this.identityKey = identityKey;
@@ -221,7 +215,8 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
             this.added = new Date();
         }
 
-        Identity(IdentityKey identityKey, TrustLevel trustLevel, Date added) {
+        Identity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
+            this.address = new JsonAddress(address);
             this.identityKey = identityKey;
             this.trustLevel = trustLevel;
             this.added = added;
@@ -232,20 +227,66 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
                     trustLevel == TrustLevel.TRUSTED_VERIFIED;
         }
 
-        public IdentityKey getIdentityKey() {
+        @JsonIgnore
+        public IdentityKey getKey() {
             return this.identityKey;
         }
 
+        @JsonIgnore
         public TrustLevel getTrustLevel() {
             return this.trustLevel;
         }
 
+        @JsonIgnore
         public Date getDateAdded() {
             return this.added;
         }
 
+        @JsonIgnore
         public byte[] getFingerprint() {
             return identityKey.getPublicKey().serialize();
+        }
+
+        public JsonAddress getAddress() {
+            return address;
+        }
+
+        // Jackson getters and setters
+        public void setName(String name) {
+            address = new JsonAddress(AddressUtil.fromIdentifier(name));
+        }
+
+        @JsonSetter("identityKey")
+        public void setIdentityKey(String identityKey) throws IOException, InvalidKeyException {
+            this.identityKey = new IdentityKey(org.whispersystems.util.Base64.decode(identityKey), 0);
+        }
+
+        @JsonSetter("identityKey")
+        public String getIdentityKey() {
+            return Base64.encodeBytes(identityKey.serialize());
+        }
+
+        public void setAddedTimestamp(long added) {
+            this.added = new Date(added);
+        }
+
+        public long getAddedTimestamp() {
+            return added.getTime();
+        }
+
+        @JsonGetter("trustLevel")
+        public String getTrustLevelJSON() {
+            return trustLevel.name();
+        }
+
+        @JsonSetter("trustLevel")
+        public void setTrustLevel(int level) {
+            trustLevel = TrustLevel.fromInt(level);
+        }
+
+        @JsonSetter("trustLevel")
+        public void setTrustLevel(String level) {
+            trustLevel = TrustLevel.valueOf(level);
         }
     }
 }

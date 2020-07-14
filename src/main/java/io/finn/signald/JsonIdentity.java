@@ -35,12 +35,22 @@ class JsonIdentity {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
+    if(identity.getAddress() != null) {
+      this.address = identity.getAddress();
+      generateSafetyNumber(identity, m);
+    }
   }
 
   JsonIdentity(IdentityKeyStore.Identity identity, Manager m, SignalServiceAddress address) {
     this(identity, m);
-    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), address, identity.getIdentityKey());
     this.address = new JsonAddress(address);
+    generateSafetyNumber(identity, m);
+  }
+
+  private void generateSafetyNumber(IdentityKeyStore.Identity identity, Manager m) {
+    if(address != null) {
+      safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), address.getSignalServiceAddress(), identity.getKey());
+    }
   }
 
   @JsonProperty

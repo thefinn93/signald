@@ -761,7 +761,7 @@ class Manager {
                     List<SendMessageResult> result = messageSender.sendMessage(new ArrayList<>(recipients), getAccessFor(recipients), isRecipientUpdate, message);
                     for (SendMessageResult r : result) {
                         if (r.getIdentityFailure() != null) {
-                            accountData.axolotlStore.identityKeyStore.saveIdentity(r.getAddress().getNumber().get(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+                            accountData.axolotlStore.identityKeyStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
                         }
                     }
                     return result;
@@ -1240,7 +1240,7 @@ class Manager {
                 }
                 if (syncMessage.getVerified().isPresent()) {
                     final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
-                    accountData.axolotlStore.identityKeyStore.saveIdentity(verifiedMessage.getDestination().getLegacyIdentifier(), verifiedMessage.getIdentityKey(), TrustLevel.fromVerifiedState(verifiedMessage.getVerified()));
+                    accountData.axolotlStore.identityKeyStore.saveIdentity(verifiedMessage.getDestination(), verifiedMessage.getIdentityKey(), TrustLevel.fromVerifiedState(verifiedMessage.getVerified()));
                 }
             }
         }
@@ -1469,16 +1469,19 @@ class Manager {
                 DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
                 for (ContactInfo record : accountData.contactStore.getContacts()) {
                     VerifiedMessage verifiedMessage = null;
-                    if (getIdentities().containsKey(record.address.number)) {
-                        IdentityKeyStore.Identity currentIdentity = null;
-                        for (IdentityKeyStore.Identity id : getIdentities().get(record.address.number)) {
-                            if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
-                                currentIdentity = id;
-                            }
+                    List<IdentityKeyStore.Identity> identities = accountData.axolotlStore.identityKeyStore.getIdentities(record.address.getSignalServiceAddress());
+                    if(identities.size() == 0) {
+                        continue;
+                    }
+                    IdentityKeyStore.Identity currentIdentity = null;
+                    for(IdentityKeyStore.Identity id : identities) {
+                        if(currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
+                            currentIdentity = id;
                         }
-                        if (currentIdentity != null) {
-                            verifiedMessage = new VerifiedMessage(record.address.getSignalServiceAddress(), currentIdentity.getIdentityKey(), currentIdentity.getTrustLevel().toVerifiedState(), currentIdentity.getDateAdded().getTime());
-                        }
+                    }
+
+                    if (currentIdentity != null) {
+                        verifiedMessage = new VerifiedMessage(record.address.getSignalServiceAddress(), currentIdentity.getKey(), currentIdentity.getTrustLevel().toVerifiedState(), currentIdentity.getDateAdded().getTime());
                     }
 
                     // TODO include profile key
@@ -1530,7 +1533,7 @@ class Manager {
         return accountData.groupStore.getGroup(groupId);
     }
 
-    public Map<String, List<IdentityKeyStore.Identity>> getIdentities() {
+    public List<IdentityKeyStore.Identity> getIdentities() {
         return accountData.axolotlStore.identityKeyStore.getIdentities();
     }
 
@@ -1544,13 +1547,13 @@ class Manager {
             return false;
         }
         for (IdentityKeyStore.Identity id : ids) {
-            if (!Arrays.equals(id.getIdentityKey().serialize(), fingerprint)) {
+            if (!Arrays.equals(id.getKey().serialize(), fingerprint)) {
                 continue;
             }
 
-            accountData.axolotlStore.identityKeyStore.saveIdentity(address.getLegacyIdentifier(), id.getIdentityKey(), level);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
             try {
-                sendVerifiedMessage(address, id.getIdentityKey(), level);
+                sendVerifiedMessage(address, id.getKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
@@ -1566,13 +1569,13 @@ class Manager {
             return false;
         }
         for (IdentityKeyStore.Identity id : ids) {
-            if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.username, getIdentity(), address.getLegacyIdentifier(), id.getIdentityKey()))) {
+            if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.username, getIdentity(), address.getLegacyIdentifier(), id.getKey()))) {
                 continue;
             }
 
-            accountData.axolotlStore.identityKeyStore.saveIdentity(address.getLegacyIdentifier(), id.getIdentityKey(), level);
+            accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
             try {
-                sendVerifiedMessage(address, id.getIdentityKey(), level);
+                sendVerifiedMessage(address, id.getKey(), level);
             } catch (IOException | UntrustedIdentityException e) {
                 logger.catching(e);
             }
