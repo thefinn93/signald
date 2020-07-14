@@ -275,18 +275,13 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         }
 
         @JsonGetter("trustLevel")
-        public String getTrustLevelJSON() {
-            return trustLevel.name();
+        public int getTrustLevelJSON() {
+            return trustLevel.ordinal();
         }
 
         @JsonSetter("trustLevel")
         public void setTrustLevel(int level) {
             trustLevel = TrustLevel.fromInt(level);
-        }
-
-        @JsonSetter("trustLevel")
-        public void setTrustLevel(String level) {
-            trustLevel = TrustLevel.valueOf(level);
         }
     }
 }
