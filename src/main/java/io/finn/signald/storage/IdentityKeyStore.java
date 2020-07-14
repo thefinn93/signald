@@ -207,12 +207,6 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
         public Identity() {}
 
-        public Identity(IdentityKey identityKey, TrustLevel trustLevel) {
-            this.identityKey = identityKey;
-            this.trustLevel = trustLevel;
-            this.added = new Date();
-        }
-
         Identity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
             this.address = new JsonAddress(address);
             this.identityKey = identityKey;
