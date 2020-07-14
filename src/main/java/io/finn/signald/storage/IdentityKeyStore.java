@@ -214,6 +214,10 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
             this.added = added;
         }
 
+        public Identity(IdentityKey key) {
+            identityKey = key;
+        }
+
         boolean isTrusted() {
             return trustLevel == TrustLevel.TRUSTED_UNVERIFIED ||
                     trustLevel == TrustLevel.TRUSTED_VERIFIED;

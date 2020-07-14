@@ -17,6 +17,7 @@
 
 package io.finn.signald.util;
 
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -27,5 +28,17 @@ public class AddressUtil {
         } else {
             return new SignalServiceAddress(null, identifier);
         }
+    }
+
+    public static JsonAddress update(JsonAddress old, JsonAddress update) {
+        assert old.matches(update);
+        JsonAddress result = new JsonAddress(old.getSignalServiceAddress());
+        if(update.number != null) {
+            result.number = update.number;
+        }
+        if(update.uuid != null) {
+            result.uuid = update.uuid;
+        }
+        return old;
     }
 }

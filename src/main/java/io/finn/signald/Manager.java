@@ -614,29 +614,21 @@ class Manager {
             return null;
         }
         GroupInfo g = getGroupForSending(groupId);
-
+        g.messageExpirationTime = expiresInSeconds;
+        accountData.groupStore.updateGroup(g);
+        accountData.save();
         SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
-
         messageBuilder.asExpirationUpdate().withExpiration(expiresInSeconds);
         return sendMessage(messageBuilder, g.getMembers());
     }
 
     public List<SendMessageResult> setExpiration(SignalServiceAddress address, int expiresInSeconds) throws IOException {
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
-
-        ThreadInfo thread = accountData.threadStore.getThread(address.getNumber().get());
-        if (thread == null) {
-            thread = new ThreadInfo();
-            thread.id = address.getNumber().get();
-        }
-        thread.messageExpirationTime = expiresInSeconds;
-        accountData.threadStore.updateThread(thread);
-
-        messageBuilder.asExpirationUpdate();
-
+        ContactStore.ContactInfo contact = accountData.contactStore.getContact(address);
+        contact.messageExpirationTime = expiresInSeconds;
+        accountData.contactStore.updateContact(contact);
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate();
         List<SignalServiceAddress> recipients = new ArrayList<>(1);
         recipients.add(address);
-
         return sendMessage(messageBuilder, recipients);
     }
 
@@ -656,7 +648,7 @@ class Manager {
         return sendMessage(messageBuilder, membersSend);
     }
 
-    public void updateContact(ContactInfo contact) throws IOException {
+    public void updateContact(ContactStore.ContactInfo contact) throws IOException {
         accountData.contactStore.updateContact(contact);
         accountData.save();
     }
@@ -792,12 +784,8 @@ class Manager {
                 // Send to all individually, so sync messages are sent correctly
                 List<SendMessageResult> results = new ArrayList<>(recipients.size());
                 for (SignalServiceAddress address : recipients) {
-                    ThreadInfo thread = accountData.threadStore.getThread(address.getLegacyIdentifier());
-                    if (thread != null) {
-                        messageBuilder.withExpiration(thread.messageExpirationTime);
-                    } else {
-                        messageBuilder.withExpiration(0);
-                    }
+                    ContactStore.ContactInfo contact = accountData.contactStore.getContact(address);
+                    messageBuilder.withExpiration(contact.messageExpirationTime);
                     message = messageBuilder.build();
                     try {
                         SendMessageResult result = messageSender.sendMessage(address, getAccessFor(address), message);
@@ -843,14 +831,6 @@ class Manager {
         accountData.axolotlStore.deleteAllSessions(address);
     }
 
-    public ThreadInfo getThread(byte[] groupId) {
-        return accountData.threadStore.getThread(Base64.encodeBytes(groupId));
-    }
-
-    public ThreadInfo getThread(JsonAddress address) {
-        return accountData.threadStore.getThread(address.number);
-    }
-
     public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId) throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException {
         if(recipientGroupId != null && recipientAddress == null) {
             byte[] groupId = Base64.decode(recipientGroupId);
@@ -869,7 +849,6 @@ class Manager {
     }
 
     private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException, InvalidInputException, IOException {
-        String threadId;
         if (message.getGroupContext().isPresent()) {
             SignalServiceGroup groupInfo;
             SignalServiceGroupContext groupContext = message.getGroupContext().get();
@@ -885,8 +864,16 @@ class Manager {
 //            }
 
             groupInfo = groupContext.getGroupV1().get();
-            threadId = Base64.encodeBytes(groupInfo.getGroupId());
             GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
+
+            if (message.isExpirationUpdate()) {
+                if(group.messageExpirationTime != message.getExpiresInSeconds()) {
+                    group.messageExpirationTime = message.getExpiresInSeconds();
+                }
+                accountData.groupStore.updateGroup(group);
+                accountData.save();
+            }
+
             switch (groupInfo.getType()) {
                 case UPDATE:
                     if (group == null) {
@@ -948,26 +935,15 @@ class Manager {
                     break;
             }
         } else {
-            if (isSync) {
-                threadId = destination.getLegacyIdentifier();
-            } else {
-                threadId = source.getLegacyIdentifier();
-            }
+            ContactStore.ContactInfo c = accountData.contactStore.getContact(isSync ? destination : source);
+            c.messageExpirationTime = message.getExpiresInSeconds();
+            accountData.contactStore.updateContact(c);
         }
+
         if (message.isEndSession()) {
             handleEndSession(isSync ? destination : source);
         }
-        if (message.isExpirationUpdate() || message.getBody().isPresent()) {
-            ThreadInfo thread = accountData.threadStore.getThread(threadId);
-            if (thread == null) {
-                thread = new ThreadInfo();
-                thread.id = threadId;
-            }
-            if (thread.messageExpirationTime != message.getExpiresInSeconds()) {
-                thread.messageExpirationTime = message.getExpiresInSeconds();
-                accountData.threadStore.updateThread(thread);
-            }
-        }
+
         if (message.getAttachments().isPresent() && !ignoreAttachments) {
             for (SignalServiceAttachment attachment : message.getAttachments().get()) {
                 if (attachment.isPointer()) {
@@ -987,9 +963,9 @@ class Manager {
                 }
                 accountData.save();
             } else {
-                ContactInfo contact = accountData.contactStore.getContact(source);
+                ContactStore.ContactInfo contact = accountData.contactStore.getContact(source);
                 if(contact == null) {
-                    contact = new ContactInfo();
+                    contact = new ContactStore.ContactInfo();
                     contact.address = new JsonAddress(source);
                 }
                 contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
@@ -1204,23 +1180,9 @@ class Manager {
                             }
                             DeviceContact c;
                             while ((c = s.read()) != null) {
-                                ContactInfo contact = accountData.contactStore.getContact(c.getAddress());
-                                if (contact == null) {
-                                    contact = new ContactInfo();
-                                    contact.address = new JsonAddress(c.getAddress());
-                                }
-                                if (c.getName().isPresent()) {
-                                    contact.name = c.getName().get();
-                                }
-                                if (c.getColor().isPresent()) {
-                                    contact.color = c.getColor().get();
-                                }
-
-                                if(c.getProfileKey().isPresent()) {
-                                    contact.profileKey = Base64.encodeBytes(c.getProfileKey().get().serialize());
-                                }
+                                ContactStore.ContactInfo contact = accountData.contactStore.getContact(c.getAddress());
+                                contact.update(c);
                                 updateContact(contact);
-
                                 if (c.getAvatar().isPresent()) {
                                     retrieveContactAvatarAttachment(c.getAvatar().get(), contact.address.getSignalServiceAddress());
                                 }
@@ -1467,7 +1429,7 @@ class Manager {
         try {
             try (OutputStream fos = new FileOutputStream(contactsFile)) {
                 DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
-                for (ContactInfo record : accountData.contactStore.getContacts()) {
+                for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
                     VerifiedMessage verifiedMessage = null;
                     List<IdentityKeyStore.Identity> identities = accountData.axolotlStore.identityKeyStore.getIdentities(record.address.getSignalServiceAddress());
                     if(identities.size() == 0) {
@@ -1518,14 +1480,14 @@ class Manager {
         sendSyncMessage(SignalServiceSyncMessage.forVerified(verifiedMessage));
     }
 
-    public List<ContactInfo> getContacts() {
+    public List<ContactStore.ContactInfo> getContacts() {
       if(accountData.contactStore == null) {
         return Collections.emptyList();
       }
       return this.accountData.contactStore.getContacts();
     }
 
-    public ContactInfo getContact(SignalServiceAddress address) {
+    public ContactStore.ContactInfo getContact(SignalServiceAddress address) {
         return accountData.contactStore.getContact(address.getNumber().get());
     }
 

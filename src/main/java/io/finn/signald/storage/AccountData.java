@@ -62,7 +62,6 @@ public class AccountData {
     public SignalProtocolStore axolotlStore;
     public GroupStore groupStore;
     public ContactStore contactStore;
-    public ThreadStore threadStore;
     public List<JsonAddress> recipientStore = new ArrayList<>();
 
     private static String dataPath;
@@ -152,10 +151,6 @@ public class AccountData {
             contactStore = new ContactStore();
         }
 
-        if(threadStore == null) {
-            threadStore = new ThreadStore();
-        }
-
         if(profileKey == null) {
             generateProfileKey();
         }
@@ -237,5 +232,26 @@ public class AccountData {
             full.add(resolveAddress(p));
         }
         return full;
+    }
+
+
+    // Jackson getters and setters
+
+    // migrate old threadStore which tracked expiration timers, now moved to groups and contacts
+    public void setThreadStore(LegacyThreadStore threadStore) {
+        logger.info("Migrating thread store");
+        for(LegacyThreadInfo t : threadStore.getThreads()) {
+            GroupInfo g = groupStore.getGroup(t.id);
+            if(g != null) {
+                // thread ID matches a known group
+                g.messageExpirationTime = t.messageExpirationTime;
+                groupStore.updateGroup(g);
+            } else {
+                // thread ID does not match a known group. Assume it's a PM
+                ContactStore.ContactInfo c = contactStore.getContact(t.id);
+                c.messageExpirationTime = t.messageExpirationTime;
+                contactStore.updateContact(c);
+            }
+        }
     }
 }

@@ -26,8 +26,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.storage.ContactInfo;
-import io.finn.signald.storage.ThreadInfo;
+import io.finn.signald.storage.ContactStore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
@@ -250,17 +249,6 @@ public class SocketHandler implements Runnable {
       messageBuilder.withReaction(request.reaction.getReaction());
     }
 
-    ThreadInfo thread;
-    if(request.recipientGroupId != null) {
-      thread = manager.getThread(Base64.decode(request.recipientGroupId));
-    } else {
-      thread = manager.getThread(request.recipientAddress);
-    }
-
-    if (thread != null) {
-      messageBuilder.withExpiration(thread.messageExpirationTime);
-    }
-
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
   }
 
@@ -381,7 +369,7 @@ public class SocketHandler implements Runnable {
     this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
-  private void leaveGroup(JsonRequest request) throws IOException, GroupNotFoundException, UntrustedIdentityException, NotAGroupMemberException, EncapsulatedExceptions, NoSuchAccountException {
+  private void leaveGroup(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     byte[] groupId = Base64.decode(request.recipientGroupId);
     m.sendQuitGroupMessage(groupId);
@@ -536,7 +524,7 @@ public class SocketHandler implements Runnable {
 
   private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException {
       Manager m = Manager.get(request.username);
-      ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
+      ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
       if(contact == null || contact.profileKey == null) {
           this.reply("profile_not_available", null, request.id);
           return;

@@ -17,12 +17,17 @@
 
 package io.finn.signald.storage;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
 
-public class ThreadInfo {
-    @JsonProperty
-    public String id;
+public class JsonVerifiedState {
+    IdentityKeyStore.Identity identity;
+    long timestamp;
+    String state;
 
-    @JsonProperty
-    public int messageExpirationTime;
+    public JsonVerifiedState(VerifiedMessage verifiedMessage) {
+        identity = new IdentityKeyStore.Identity(verifiedMessage.getIdentityKey());
+        timestamp = verifiedMessage.getTimestamp();
+        state = verifiedMessage.getVerified().name();
+    }
+
 }

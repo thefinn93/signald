@@ -19,6 +19,9 @@ public class GroupInfo {
     @JsonProperty
     public List<JsonAddress> members = new ArrayList<>();
 
+    @JsonProperty
+    public int messageExpirationTime;
+
     private long avatarId;
 
     @JsonIgnore
@@ -85,6 +88,9 @@ public class GroupInfo {
     public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") List<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
         this.groupId = groupId;
         this.name = name;
+        if(members == null) {
+            members = new ArrayList<>();
+        }
         for(JsonAddress member : members) {
             addMember(member);
         }

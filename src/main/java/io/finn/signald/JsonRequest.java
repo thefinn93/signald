@@ -17,9 +17,9 @@
 
 package io.finn.signald;
 
-import io.finn.signald.clientprotocol.v1.JsonReaction;
-import io.finn.signald.storage.ContactInfo;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonReaction;
+import io.finn.signald.storage.ContactStore;
 
 import java.util.List;
 
@@ -43,7 +43,7 @@ public class JsonRequest {
     public int expiresInSeconds;
     public String fingerprint;
     public String trustLevel;
-    public ContactInfo contact;
+    public ContactStore.ContactInfo contact;
     public String captcha;
     public String name;
     public List<Long> timestamps;

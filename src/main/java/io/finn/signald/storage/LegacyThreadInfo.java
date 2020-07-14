@@ -18,37 +18,11 @@
 package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.clientprotocol.v1.JsonAddress;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-import java.util.UUID;
-
-public class ContactInfo {
+public class LegacyThreadInfo {
     @JsonProperty
-    public String name;
+    public String id;
 
     @JsonProperty
-    public JsonAddress address;
-
-    @JsonProperty
-    public String color;
-
-    @JsonProperty
-    public String profileKey;
-
-    public void setNumber(@JsonProperty String number) {
-        if(address == null) {
-            address = new JsonAddress(number);
-        } else {
-            address.number = number;
-        }
-    }
-
-    public void setIdentifier(@JsonProperty String identifier) {
-        if(address == null) {
-            address = new JsonAddress(new SignalServiceAddress(UUID.fromString(identifier), null));
-        } else {
-            address.uuid = identifier;
-        }
-    }
+    public int messageExpirationTime;
 }

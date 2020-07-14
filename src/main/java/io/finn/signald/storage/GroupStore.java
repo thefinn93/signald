@@ -45,8 +45,12 @@ public class GroupStore {
         groups.put(Base64.encodeBytes(group.groupId), group);
     }
 
+    public GroupInfo getGroup(String groupId) {
+        return groups.get(groupId);
+    }
+
     public GroupInfo getGroup(byte[] groupId) {
-        return groups.get(Base64.encodeBytes(groupId));
+        return getGroup(Base64.encodeBytes(groupId));
     }
 
     public List<GroupInfo> getGroups() {
