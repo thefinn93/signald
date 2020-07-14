@@ -24,10 +24,11 @@ import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ContactStore {
-    public List<ContactInfo> contacts;
+    public List<ContactInfo> contacts = new ArrayList<>();
 
     public void updateContact(ContactInfo contact) {
         for(ContactInfo c : contacts) {
@@ -112,6 +113,9 @@ public class ContactStore {
             }
             if(other.profileKey != null) {
                 profileKey = other.profileKey;
+            }
+            if(other.verified != null) {
+                verified = other.verified;
             }
             messageExpirationTime = other.messageExpirationTime;
         }

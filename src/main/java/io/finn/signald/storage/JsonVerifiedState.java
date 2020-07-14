@@ -20,9 +20,11 @@ package io.finn.signald.storage;
 import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
 
 public class JsonVerifiedState {
-    IdentityKeyStore.Identity identity;
-    long timestamp;
-    String state;
+    public IdentityKeyStore.Identity identity;
+    public long timestamp;
+    public String state;
+
+    public JsonVerifiedState() {}
 
     public JsonVerifiedState(VerifiedMessage verifiedMessage) {
         identity = new IdentityKeyStore.Identity(verifiedMessage.getIdentityKey());

@@ -259,15 +259,24 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         }
 
         public void setAddedTimestamp(long added) {
+            if(added == 0) {
+                return;
+            }
             this.added = new Date(added);
         }
 
         public long getAddedTimestamp() {
+            if(added == null) {
+                return 0;
+            }
             return added.getTime();
         }
 
         @JsonGetter("trustLevel")
         public int getTrustLevelJSON() {
+            if(trustLevel == null) {
+                return trustLevel.TRUSTED_UNVERIFIED.ordinal();
+            }
             return trustLevel.ordinal();
         }
 
