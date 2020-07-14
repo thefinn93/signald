@@ -200,8 +200,6 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     }
 
     public static class Identity {
-        private Logger log = LogManager.getLogger(Identity.class.getPackageName());
-
         JsonAddress address;
         IdentityKey identityKey;
         TrustLevel trustLevel;
