@@ -69,7 +69,7 @@ public class AccountData {
     private static Logger logger = LogManager.getLogger("AccountData");
 
     public static AccountData load(File storageFile) throws IOException {
-        logger.debug("Loading account from file: " + storageFile.toString());
+        logger.debug("Loading account from disk.");
         ObjectMapper mapper = JSONUtil.GetMapper();
 
         // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
@@ -125,7 +125,7 @@ public class AccountData {
             dataPathFile.mkdirs();
         }
         File destination = new File(dataPath + "/" + username);
-        logger.debug("Saving to " + destination.toString());
+        logger.debug("Saving account to disk");
         writer.writeValue(destination, this);
     }
 

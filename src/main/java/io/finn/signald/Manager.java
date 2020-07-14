@@ -1295,7 +1295,7 @@ class Manager {
     }
 
     private void storeEnvelope(SignalServiceEnvelope envelope, File file) throws IOException {
-        logger.debug("Storing envelope to " + file.toString());
+        logger.debug("Storing envelope to disk.");
         try (FileOutputStream f = new FileOutputStream(file)) {
             try (DataOutputStream out = new DataOutputStream(f)) {
                 out.writeInt(2); // version
