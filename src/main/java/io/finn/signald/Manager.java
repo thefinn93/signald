@@ -1504,7 +1504,7 @@ class Manager {
     }
 
     public boolean trustIdentity(SignalServiceAddress address, byte[] fingerprint, TrustLevel level) throws IOException {
-        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address.getLegacyIdentifier());
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address);
         if (ids == null) {
             return false;
         }
@@ -1526,12 +1526,12 @@ class Manager {
     }
 
     public boolean trustIdentitySafetyNumber(SignalServiceAddress address, String safetyNumber, TrustLevel level) throws IOException {
-        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address.getLegacyIdentifier());
+        List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address);
         if (ids == null) {
             return false;
         }
         for (IdentityKeyStore.Identity id : ids) {
-            if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.username, getIdentity(), address.getLegacyIdentifier(), id.getKey()))) {
+            if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.address.getSignalServiceAddress(), getIdentity(), address, id.getKey()))) {
                 continue;
             }
 

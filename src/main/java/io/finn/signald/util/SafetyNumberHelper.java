@@ -21,6 +21,7 @@ import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.libsignal.fingerprint.NumericFingerprintGenerator;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class SafetyNumberHelper {
 
@@ -30,20 +31,20 @@ public class SafetyNumberHelper {
         byte[] ownId;
         byte[] theirId;
 
-//        if (ServiceConfig.capabilities.isUuid() && ownAddress.getUuid().isPresent() && theirAddress.getUuid().isPresent()) {
-//            // Version 2: UUID user
-//            version = 2;
-//            ownId = UuidUtil.toByteArray(ownAddress.getUuid().get());
-//            theirId = UuidUtil.toByteArray(theirAddress.getUuid().get());
-//        } else {
-        // Version 1: E164 user
-        version = 1;
-        if (!ownAddress.getNumber().isPresent() || !theirAddress.getNumber().isPresent()) {
-            return "INVALID ID";
+        if(ownAddress.getUuid().isPresent() && theirAddress.getUuid().isPresent()) {
+            // Version 2: UUID user
+            version = 2;
+            ownId = UuidUtil.toByteArray(ownAddress.getUuid().get());
+            theirId = UuidUtil.toByteArray(theirAddress.getUuid().get());
+        } else {
+            // Version 1: E164 user
+            version = 1;
+            if (!ownAddress.getNumber().isPresent() || !theirAddress.getNumber().isPresent()) {
+                return "INVALID ID";
+            }
+            ownId = ownAddress.getNumber().get().getBytes();
+            theirId = theirAddress.getNumber().get().getBytes();
         }
-        ownId = ownAddress.getNumber().get().getBytes();
-        theirId = theirAddress.getNumber().get().getBytes();
-//        }
 
         Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(version, ownId, ownIdentityKey, theirId, theirIdentityKey);
         return fingerprint.getDisplayableFingerprint().getDisplayText();

@@ -176,10 +176,6 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         return trustedKeys;
     }
 
-    public List<IdentityKeyStore.Identity> getIdentities(String name) {
-        return getKeys(name);
-    }
-
     public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) {
         return getKeys(address);
     }
