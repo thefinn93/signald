@@ -1488,7 +1488,7 @@ class Manager {
     }
 
     public ContactStore.ContactInfo getContact(SignalServiceAddress address) {
-        return accountData.contactStore.getContact(address.getNumber().get());
+        return accountData.contactStore.getContact(address);
     }
 
     public GroupInfo getGroup(byte[] groupId) {
