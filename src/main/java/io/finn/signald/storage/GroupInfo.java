@@ -11,7 +11,7 @@ import java.util.List;
 
 public class GroupInfo {
     @JsonProperty
-    public final byte[] groupId;
+    public byte[] groupId;
 
     @JsonProperty
     public String name;
@@ -21,6 +21,15 @@ public class GroupInfo {
 
     @JsonProperty
     public int messageExpirationTime;
+
+    @JsonProperty
+    public int inboxPosition;
+
+    @JsonProperty
+    public String color;
+
+    @JsonProperty
+    public boolean active;
 
     private long avatarId;
 
@@ -67,8 +76,7 @@ public class GroupInfo {
         }
     }
 
-    @JsonProperty
-    public boolean active;
+    public GroupInfo() {}
 
     public GroupInfo(byte[] groupId) {
         this.groupId = groupId;
@@ -80,21 +88,18 @@ public class GroupInfo {
             name = g.getName().get();
         }
         addMembers(g.getMembers());
+
         // TODO: Avatar support
-    }
 
+        if(g.getInboxPosition().isPresent()) {
+            inboxPosition = g.getInboxPosition().get();
+        }
 
-    // Constructor required for creation from JSON
-    public GroupInfo(@JsonProperty("groupId") byte[] groupId, @JsonProperty("name") String name, @JsonProperty("members") List<JsonAddress> members, @JsonProperty("avatarId") long avatarId) {
-        this.groupId = groupId;
-        this.name = name;
-        if(members == null) {
-            members = new ArrayList<>();
+        if(g.getColor().isPresent()) {
+            color = g.getColor().get();
         }
-        for(JsonAddress member : members) {
-            addMember(member);
-        }
-        this.avatarId = avatarId;
+
+        active = g.isActive();
     }
 
     public void removeMember(SignalServiceAddress source) {

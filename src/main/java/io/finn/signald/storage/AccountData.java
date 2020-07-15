@@ -44,7 +44,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class AccountData {
     public String username;
     public String password;

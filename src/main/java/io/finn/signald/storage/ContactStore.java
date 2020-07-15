@@ -105,6 +105,7 @@ public class ContactStore {
 
         public void update(ContactInfo other) {
             address = AddressUtil.update(address, other.address);
+            messageExpirationTime = other.messageExpirationTime;
             if(other.name != null) {
                 name = other.name;
             }
@@ -114,10 +115,12 @@ public class ContactStore {
             if(other.profileKey != null) {
                 profileKey = other.profileKey;
             }
+            if(other.inboxPosition != 0) {
+                inboxPosition = other.inboxPosition;
+            }
             if(other.verified != null) {
                 verified = other.verified;
             }
-            messageExpirationTime = other.messageExpirationTime;
         }
 
         public boolean matches(SignalServiceAddress other) {
