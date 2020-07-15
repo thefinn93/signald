@@ -79,8 +79,6 @@ public class ContactStore {
 
         public Integer inboxPosition;
 
-        public JsonVerifiedState verified;
-
         public ContactInfo() {}
 
         public ContactInfo(SignalServiceAddress a) {
@@ -118,9 +116,6 @@ public class ContactStore {
             if(other.inboxPosition != 0) {
                 inboxPosition = other.inboxPosition;
             }
-            if(other.verified != null) {
-                verified = other.verified;
-            }
         }
 
         public boolean matches(SignalServiceAddress other) {
@@ -149,9 +144,6 @@ public class ContactStore {
                 inboxPosition = c.getInboxPosition().get();
             }
 
-            if(c.getVerified().isPresent()) {
-                verified = new JsonVerifiedState(c.getVerified().get());
-            }
         }
     }
 
