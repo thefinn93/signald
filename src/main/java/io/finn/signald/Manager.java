@@ -486,6 +486,10 @@ class Manager {
 
         final GroupInfo g = getGroupForSending(groupId);
 
+        if(g.messageExpirationTime != 0) {
+            message.withExpiration(g.messageExpirationTime);
+        }
+
         // Don't send group message to ourself
         final List<SignalServiceAddress> membersSend = g.getMembers();
         membersSend.remove(accountData.address.getSignalServiceAddress());

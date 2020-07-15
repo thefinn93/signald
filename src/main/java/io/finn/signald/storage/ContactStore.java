@@ -113,7 +113,8 @@ public class ContactStore {
             if(other.profileKey != null) {
                 profileKey = other.profileKey;
             }
-            if(other.inboxPosition != 0) {
+
+            if(other.inboxPosition != null) {
                 inboxPosition = other.inboxPosition;
             }
         }
@@ -145,6 +146,7 @@ public class ContactStore {
             }
 
         }
-    }
 
+        public void setVerified(JsonVerifiedState v) {}
+    }
 }
