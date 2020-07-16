@@ -17,6 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import org.asamk.signal.util.Hex;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 
 public class JsonSendMessageResult {
@@ -32,7 +33,7 @@ public class JsonSendMessageResult {
         networkFailure = result.isNetworkFailure();
         unregisteredFailure = result.isUnregisteredFailure();
         if(result.getIdentityFailure() != null) {
-            identityFailure = result.getIdentityFailure().getIdentityKey().getFingerprint();
+            identityFailure = Hex.toStringCondensed(result.getIdentityFailure().getIdentityKey().serialize()).trim();
         }
     }
 }
