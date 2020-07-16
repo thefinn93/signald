@@ -17,7 +17,19 @@
 
 package io.finn.signald;
 
-import io.finn.signald.BuildConfig;
+import io.finn.signald.storage.AccountData;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.asamk.signal.util.SecurityProvider;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.newsclub.net.unix.AFUNIXServerSocket;
+import org.newsclub.net.unix.AFUNIXSocketAddress;
+import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,27 +37,6 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
-
-import io.finn.signald.storage.AccountData;
-import org.newsclub.net.unix.AFUNIXServerSocket;
-import org.newsclub.net.unix.AFUNIXSocketAddress;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
-
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import org.asamk.signal.util.SecurityProvider;
-
-import io.sentry.Sentry;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-
-import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
 
 
 @Command(name=BuildConfig.NAME, mixinStandardHelpOptions=true, version=BuildConfig.NAME + " " + BuildConfig.VERSION)
@@ -75,11 +66,6 @@ public class Main implements Runnable {
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
     try {
-      Sentry.init();
-      Sentry.getContext().addExtra("release", BuildConfig.VERSION);
-      Sentry.getContext().addExtra("signal_url", BuildConfig.SIGNAL_URL);
-      Sentry.getContext().addExtra("signal_cdn_url", BuildConfig.SIGNAL_CDN_URL);
-
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
       Security.addProvider(new BouncyCastleProvider());
