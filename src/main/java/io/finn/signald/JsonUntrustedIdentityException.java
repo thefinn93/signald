@@ -23,34 +23,34 @@ import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
+import java.io.IOException;
+
 
 class JsonUntrustedIdentityException {
-  // address is the local account
-  public JsonAddress address;
-
-  // number is the remote account
-  public JsonAddress number;
-
-  // fingerprint is the legacy fingerprint of the untrusted identity
+  public JsonAddress local_address;
+  public JsonAddress remote_address;
   public String fingerprint;
-
-  // safety_number is the safety number between the local identity and the new remote identity
   public String safety_number;
-
   public JsonRequest request;
 
   JsonUntrustedIdentityException(IdentityKey key, SignalServiceAddress address, Manager m, JsonRequest request) {
-    this.address = new JsonAddress(m.getOwnAddress());
-    this.number = new JsonAddress(address);
+    this.local_address = new JsonAddress(m.getOwnAddress());
+    this.remote_address = new JsonAddress(address);
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
-    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.address.getSignalServiceAddress(), key);
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), key);
     this.request = request;
   }
 
   public JsonUntrustedIdentityException(UntrustedIdentityException exception, String username) {
-    this.address = new JsonAddress(username);
-    this.number = new JsonAddress(exception.getName());
+    this.local_address = new JsonAddress(username);
+    this.remote_address = new JsonAddress(exception.getName());
     this.fingerprint = Hex.toStringCondensed(exception.getUntrustedIdentity().getPublicKey().serialize());
-    // TODO: compute the safety_number
+    try {
+      Manager m = Manager.get(username);
+      this.local_address = new JsonAddress(m.getOwnAddress());
+      this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
+    } catch (IOException | NoSuchAccountException e) {
+      e.printStackTrace();
+    }
   }
 }
