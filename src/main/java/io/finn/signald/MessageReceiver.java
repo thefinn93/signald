@@ -85,7 +85,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
       try {
           if(exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-              JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException) exception);
+              JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException) exception, username);
               this.sockets.broadcast(new JsonMessageWrapper("inbound_identity_failure", message, (Throwable)null));
           }
           if(envelope != null) {

@@ -25,10 +25,18 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 
 class JsonUntrustedIdentityException {
+  // address is the local account
   public JsonAddress address;
+
+  // number is the remote account
   public JsonAddress number;
+
+  // fingerprint is the legacy fingerprint of the untrusted identity
   public String fingerprint;
+
+  // safety_number is the safety number between the local identity and the new remote identity
   public String safety_number;
+
   public JsonRequest request;
 
   JsonUntrustedIdentityException(IdentityKey key, SignalServiceAddress address, Manager m, JsonRequest request) {
@@ -39,8 +47,10 @@ class JsonUntrustedIdentityException {
     this.request = request;
   }
 
-  public JsonUntrustedIdentityException(UntrustedIdentityException exception) {
+  public JsonUntrustedIdentityException(UntrustedIdentityException exception, String username) {
+    this.address = new JsonAddress(username);
     this.number = new JsonAddress(exception.getName());
     this.fingerprint = Hex.toStringCondensed(exception.getUntrustedIdentity().getPublicKey().serialize());
+    // TODO: compute the safety_number
   }
 }
