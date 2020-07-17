@@ -20,6 +20,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 
@@ -36,5 +37,10 @@ class JsonUntrustedIdentityException {
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
     this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.address.getSignalServiceAddress(), key);
     this.request = request;
+  }
+
+  public JsonUntrustedIdentityException(UntrustedIdentityException exception) {
+    this.number = new JsonAddress(exception.getName());
+    this.fingerprint = Hex.toStringCondensed(exception.getUntrustedIdentity().getPublicKey().serialize());
   }
 }

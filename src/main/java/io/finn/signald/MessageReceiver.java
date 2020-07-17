@@ -79,19 +79,23 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
       String type = "message";
       if(exception != null) {
-        logger.catching(exception);
-        type = "unreadable_message";
+          logger.catching(exception);
+          type = "unreadable_message";
       }
 
       try {
-        if(envelope != null) {
-          JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
-          this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
-        } else {
-          this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
-        }
+          if(exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+              JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException) exception);
+              this.sockets.broadcast(new JsonMessageWrapper("inbound_identity_failure", message, (Throwable)null));
+          }
+          if(envelope != null) {
+              JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
+              this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
+          } else {
+              this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
+          }
       } catch (IOException | NoSuchAccountException e) {
-        logger.catching(e);
+          logger.catching(e);
       }
     }
 }

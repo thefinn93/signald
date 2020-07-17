@@ -122,7 +122,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
             if(!id.identityKey.equals(identityKey)) {
                 continue;
             }
-            if(id.trustLevel.compareTo(trustLevel) < 0) {
+            if(id.trustLevel != null && id.trustLevel.compareTo(trustLevel) < 0) {
                 id.trustLevel = trustLevel;
             }
             if(added != null) {
