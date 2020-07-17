@@ -75,7 +75,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     }
 
     public boolean saveIdentity(String identifier, IdentityKey identityKey, TrustLevel trustLevel) {
-        return saveIdentity(AddressUtil.fromIdentifier(identifier), identityKey, trustLevel);
+        return saveIdentity(resolver.resolve(identifier), identityKey, trustLevel);
     }
     public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel) {
         return saveIdentity(address, identityKey, trustLevel, null);
@@ -86,7 +86,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     }
 
     private List<Identity> getKeys(String identifier) {
-        return getKeys(resolver.resolveSignalServiceAddress(identifier));
+        return getKeys(resolver.resolve(identifier));
     }
 
     private List<Identity> getKeys(SignalServiceAddress other) {

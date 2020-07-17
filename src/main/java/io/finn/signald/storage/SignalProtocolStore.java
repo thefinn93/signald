@@ -18,6 +18,7 @@
 package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyIdException;
@@ -59,6 +60,10 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
     @Override
     public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
         return identityKeyStore.saveIdentity(address, identityKey);
+    }
+
+    public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) {
+        return identityKeyStore.saveIdentity(identifier, key, level);
     }
 
     @Override

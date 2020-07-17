@@ -93,15 +93,20 @@ public class AccountData {
 
         a.deviceId = registration.getDeviceId();
         a.signalingKey = signalingKey;
-        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId, a::resolveAddress);
+        a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId, a.getResolver());
         a.registered = true;
         a.init();
         a.save();
     }
 
+    @JsonIgnore
+    public AddressResolver getResolver() {
+        return new Resolver();
+    }
+
     public void initProtocolStore() {
-        axolotlStore.sessionStore.setResolver(this::resolveAddress);
-        axolotlStore.identityKeyStore.setResolver(this::resolveAddress);
+        axolotlStore.sessionStore.setResolver(getResolver());
+        axolotlStore.identityKeyStore.setResolver(getResolver());
     }
 
     private void update() {
@@ -182,6 +187,7 @@ public class AccountData {
     public void setProfileKey(ProfileKey key) {
         if(key == null) {
             profileKey = "";
+            return;
         }
         profileKey = Base64.encodeBytes(key.serialize());
     }
@@ -205,36 +211,6 @@ public class AccountData {
         return address.getUUID();
     }
 
-
-    public SignalServiceAddress resolveAddress(String identifier) {
-        SignalServiceAddress address = AddressUtil.fromIdentifier(identifier);
-        return resolveAddress(address);
-    }
-
-    public SignalServiceAddress resolveAddress(SignalServiceAddress a) {
-        if (a.matches(address.getSignalServiceAddress())) {
-            return address.getSignalServiceAddress();
-        }
-
-        for(JsonAddress i : recipientStore) {
-            if(i.getSignalServiceAddress().matches(a)) {
-                i.update(a);
-                return i.getSignalServiceAddress();
-            }
-        }
-
-        return a;
-    }
-
-    public Collection<SignalServiceAddress> resolveAddresses(Collection<SignalServiceAddress> partials) {
-        Collection <SignalServiceAddress> full = new ArrayList<>();
-        for(SignalServiceAddress p : partials) {
-            full.add(resolveAddress(p));
-        }
-        return full;
-    }
-
-
     // Jackson getters and setters
 
     // migrate old threadStore which tracked expiration timers, now moved to groups and contacts
@@ -252,6 +228,37 @@ public class AccountData {
                 c.messageExpirationTime = t.messageExpirationTime;
                 contactStore.updateContact(c);
             }
+        }
+    }
+
+    public class Resolver implements AddressResolver {
+
+        public SignalServiceAddress resolve(String identifier) {
+            SignalServiceAddress address = AddressUtil.fromIdentifier(identifier);
+            return resolve(address);
+        }
+
+        public SignalServiceAddress resolve(SignalServiceAddress a) {
+            if (a.matches(address.getSignalServiceAddress())) {
+                return address.getSignalServiceAddress();
+            }
+
+            for(JsonAddress i : recipientStore) {
+                if(i.getSignalServiceAddress().matches(a)) {
+                    i.update(a);
+                    return i.getSignalServiceAddress();
+                }
+            }
+
+            return a;
+        }
+
+        public Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials) {
+            Collection <SignalServiceAddress> full = new ArrayList<>();
+            for(SignalServiceAddress p : partials) {
+                full.add(resolve(p));
+            }
+            return full;
         }
     }
 }

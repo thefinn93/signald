@@ -301,7 +301,7 @@ class Manager {
     public void createNewIdentity() {
         IdentityKeyPair identityKey = KeyHelper.generateIdentityKeyPair();
         int registrationId = KeyHelper.generateRegistrationId(false);
-        accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId, accountData::resolveAddress);
+        accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId, accountData.getResolver());
         accountData.registered = false;
         logger.info("Generating new identity pair");
     }
@@ -720,7 +720,7 @@ class Manager {
             return null;
         }
 
-        address = accountData.resolveAddress(address);
+        address = accountData.getResolver().resolve(address);
 
         try {
             SignalServiceMessageSender messageSender = getMessageSender();
@@ -744,7 +744,7 @@ class Manager {
             return Collections.emptyList();
         }
 
-        recipients = accountData.resolveAddresses(recipients);
+        recipients = accountData.getResolver().resolve(recipients);
 
         SignalServiceDataMessage message = null;
         try {
@@ -820,13 +820,16 @@ class Manager {
         }
     }
 
-    private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException, ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException, SelfSendException, UnsupportedDataMessageException {
+    private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope) throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException, ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException, SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException {
         SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, getCertificateValidator());
         try {
             return cipher.decrypt(envelope);
         } catch (ProtocolUntrustedIdentityException e) {
-            // TODO We don't get the new untrusted identity from ProtocolUntrustedIdentityException anymore ... we need to get it from somewhere else
-            // signalProtocolStore.saveIdentity(e.getSource(), e, TrustLevel.UNTRUSTED);
+            if(e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+                org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException) e.getCause();
+                accountData.axolotlStore.saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.UNTRUSTED);
+                throw identityException;
+            }
             throw e;
         }
     }

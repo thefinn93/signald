@@ -57,7 +57,7 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
 
     private SignalServiceAddress resolveSignalServiceAddress(String identifier) {
         if (resolver != null) {
-            return resolver.resolveSignalServiceAddress(identifier);
+            return resolver.resolve(identifier);
         } else {
             return AddressUtil.fromIdentifier(identifier);
         }
