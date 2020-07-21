@@ -131,6 +131,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
             return true;
         }
+        trustedKeys.add(new Identity(address, identityKey, trustLevel, added != null ? added : new Date()));
         return false;
     }
 
