@@ -18,10 +18,14 @@
 package io.finn.signald.util;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.storage.AddressResolver;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
-public class AddressUtil {
+import java.util.ArrayList;
+import java.util.Collection;
+
+public class AddressUtil implements AddressResolver {
     public static SignalServiceAddress fromIdentifier(String identifier) {
         if(UuidUtil.isUuid(identifier)) {
             return new SignalServiceAddress(UuidUtil.parseOrNull(identifier), null);
@@ -40,5 +44,25 @@ public class AddressUtil {
             result.uuid = update.uuid;
         }
         return old;
+    }
+
+
+    @Override
+    public SignalServiceAddress resolve(String identifier) {
+        return fromIdentifier(identifier);
+    }
+
+    @Override
+    public SignalServiceAddress resolve(SignalServiceAddress partial) {
+        return partial;
+    }
+
+    @Override
+    public Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials) {
+        Collection <SignalServiceAddress> full = new ArrayList<>();
+        for(SignalServiceAddress p : partials) {
+            full.add(resolve(p));
+        }
+        return full;
     }
 }

@@ -65,7 +65,7 @@ public class AccountData {
     public List<JsonAddress> recipientStore = new ArrayList<>();
 
     private static String dataPath;
-    private static Logger logger = LogManager.getLogger("AccountData");
+    private static final Logger logger = LogManager.getLogger();
 
     public static AccountData load(File storageFile) throws IOException {
         logger.debug("Loading account from disk.");
@@ -113,6 +113,7 @@ public class AccountData {
         if(address == null) {
             address = new JsonAddress(username);
         }
+        axolotlStore.sessionStore.resolveAll();
     }
 
     public void save() throws IOException {

@@ -19,11 +19,16 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.util.UUID;
 
 public class JsonAddress {
+    private static final Logger logger = LogManager.getLogger();
+
     public String number;
 
     public String uuid;
@@ -32,8 +37,13 @@ public class JsonAddress {
 
     public JsonAddress() {};
 
-    public JsonAddress(String number, UUID uuid) {
-        this.number = number;
+    public JsonAddress(String n, UUID uuid) {
+        if(!n.startsWith("+") && UuidUtil.isUuid(n)) {
+            logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
+            uuid = UUID.fromString(n);
+        } else {
+            number = n;
+        }
         if(uuid != null) {
             this.uuid = uuid.toString();
         }
@@ -53,7 +63,13 @@ public class JsonAddress {
 
     public JsonAddress(SignalServiceAddress address) {
         if(address.getNumber().isPresent()) {
-            number = address.getNumber().get();
+            String n = address.getNumber().get();
+            if(!n.startsWith("+") && UuidUtil.isUuid(n)) {
+                logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
+                uuid = n;
+            } else {
+                number = n;
+            }
         }
 
         if(address.getUuid().isPresent()) {

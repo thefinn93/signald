@@ -55,10 +55,9 @@ public class Main implements Runnable {
   @Option(names={"-d", "--data"}, description="Data storage location")
   private String data_path = System.getProperty("user.home") + "/.config/signald";
 
-  private static final Logger logger = LogManager.getLogger("signald");
+  private static final Logger logger = LogManager.getLogger();
 
   public void run() {
-    Logger logger = LogManager.getLogger("signald");
     if(verbose) {
       Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
     }

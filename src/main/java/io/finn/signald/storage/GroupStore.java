@@ -35,7 +35,8 @@ import java.util.Map;
 @JsonSerialize(using=GroupStore.GroupStoreSerializer.class)
 @JsonDeserialize(using=GroupStore.GroupStoreDeserializer.class)
 public class GroupStore {
-    static final Logger logger = LogManager.getLogger(GroupStore.class);
+    static final Logger logger = LogManager.getLogger();
+
     private static final ObjectMapper jsonProcessor = new ObjectMapper();
 
     private Map<String, GroupInfo> groups = new HashMap<>();

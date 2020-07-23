@@ -38,7 +38,8 @@ import java.util.Date;
 import java.util.List;
 
 public class IdentityKeyStore implements org.whispersystems.libsignal.state.IdentityKeyStore {
-    private static Logger log = LogManager.getLogger(IdentityKeyStore.class.getName());
+    private static final Logger logger = LogManager.getLogger();
+
     private AddressResolver resolver;
 
     public List<IdentityKeyStore.Identity> trustedKeys = new ArrayList<>();
@@ -93,7 +94,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         List<Identity> matches = new ArrayList<>();
         for(Identity key : trustedKeys) {
             if(key.address == null) {
-                log.warn("Key has no address! This may indicate a corrupt data file.");
+                logger.warn("Key has no address! This may indicate a corrupt data file.");
                 continue;
             }
             if(key.address.matches(other)) {

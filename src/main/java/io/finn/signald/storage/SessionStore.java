@@ -142,6 +142,12 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
         sessions.removeIf(info -> info.address.matches(serviceAddress));
     }
 
+    public void resolveAll() {
+        for(SessionInfo s : sessions) {
+            s.address = resolver.resolve(s.address);
+        }
+    }
+
     public static class SessionStoreDeserializer extends JsonDeserializer<SessionStore> {
 
         @Override
