@@ -114,6 +114,7 @@ public class AccountData {
             address = new JsonAddress(username);
         }
         axolotlStore.sessionStore.resolveAll();
+        axolotlStore.identityKeyStore.dedup();
     }
 
     public void save() throws IOException {
