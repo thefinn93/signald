@@ -109,12 +109,14 @@ public class AccountData {
         axolotlStore.identityKeyStore.setResolver(getResolver());
     }
 
-    private void update() {
+    private void update() throws IOException {
         if(address == null) {
             address = new JsonAddress(username);
         }
         axolotlStore.sessionStore.resolveAll();
-        axolotlStore.identityKeyStore.dedup();
+        if(axolotlStore.identityKeyStore.dedup()) {
+            save();
+        }
     }
 
     public void save() throws IOException {

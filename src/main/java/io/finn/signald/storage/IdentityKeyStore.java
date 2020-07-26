@@ -173,7 +173,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         return maxIdentity.getKey();
     }
 
-    public void dedup() {
+    public boolean dedup() {
         List<Identity> duplicates = new ArrayList<>();
 
         // this is a hell of a lot of nested loops...
@@ -195,6 +195,8 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
             logger.warn("Found duplicate identity key with address " + dup.address.toRedactedString());
             trustedKeys.remove(dup);
         }
+
+        return duplicates.size() > 0;
     }
 
     @JsonIgnore
