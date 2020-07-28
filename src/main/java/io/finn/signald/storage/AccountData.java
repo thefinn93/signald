@@ -113,7 +113,6 @@ public class AccountData {
         if(address == null) {
             address = new JsonAddress(username);
         }
-        axolotlStore.sessionStore.resolveAll();
         if(axolotlStore.identityKeyStore.dedup()) {
             save();
         }
@@ -239,13 +238,15 @@ public class AccountData {
         }
 
         public SignalServiceAddress resolve(SignalServiceAddress a) {
-            if (a.matches(address.getSignalServiceAddress())) {
+            if(a.matches(address.getSignalServiceAddress())) {
                 return address.getSignalServiceAddress();
             }
 
             for(JsonAddress i : recipientStore) {
                 if(i.getSignalServiceAddress().matches(a)) {
+                    logger.debug("Updating " + i.toRedactedString());
                     i.update(a);
+                    logger.debug("Updated to " + i.toRedactedString());
                     return i.getSignalServiceAddress();
                 }
             }
