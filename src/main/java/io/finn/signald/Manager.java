@@ -1111,6 +1111,7 @@ class Manager {
                 messagePipe.shutdown();
                 messagePipe = null;
             }
+            accountData.save();
         }
     }
 

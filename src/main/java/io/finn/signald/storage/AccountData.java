@@ -120,10 +120,6 @@ public class AccountData {
     }
 
     public void save() throws IOException {
-        save(false);
-    }
-
-    public void save(boolean allowBlankPassword) throws IOException {
         validate();
 
         ObjectWriter writer = JSONUtil.GetWriter();
