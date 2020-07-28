@@ -113,9 +113,6 @@ public class AccountData {
         if(address == null) {
             address = new JsonAddress(username);
         }
-        if(axolotlStore.identityKeyStore.dedup()) {
-            save();
-        }
     }
 
     public void save() throws IOException {

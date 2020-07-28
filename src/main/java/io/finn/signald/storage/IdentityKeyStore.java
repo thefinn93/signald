@@ -169,32 +169,6 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
         return maxIdentity.getKey();
     }
 
-    public boolean dedup() {
-        List<Identity> duplicates = new ArrayList<>();
-
-        // this is a hell of a lot of nested loops...
-        for(Identity i : trustedKeys) {
-            for(Identity j : trustedKeys) {
-                if(i.identityKey.equals(j.identityKey)) {
-                    for(Identity dup : duplicates) {
-                        if(dup.address.matches(i.address)) {
-                            i.address.update(dup.address.getSignalServiceAddress());
-                            continue;
-                        }
-                    }
-                    duplicates.add(i);
-                }
-            }
-        }
-
-        for(Identity dup : duplicates) {
-            logger.warn("Found duplicate identity key with address " + dup.address.toRedactedString());
-            trustedKeys.remove(dup);
-        }
-
-        return duplicates.size() > 0;
-    }
-
     @JsonIgnore
     public List<Identity> getIdentities() {
         return trustedKeys;
