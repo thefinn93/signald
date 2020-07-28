@@ -153,9 +153,7 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
         @Override
         public SessionStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
             JsonNode tree = jsonParser.getCodec().readTree(jsonParser);
-
             SessionStore sessionStore = new SessionStore();
-
             if (tree.isArray()) {
                 for (JsonNode node : tree) {
                     SessionInfo sessionInfo = mapper.treeToValue(node, SessionInfo.class);

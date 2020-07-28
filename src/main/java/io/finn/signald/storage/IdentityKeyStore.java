@@ -114,10 +114,6 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
      */
     public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
         List<IdentityKeyStore.Identity> identities = getKeys(address);
-        if(identities.size() == 0) {
-            trustedKeys.add(new Identity(address, identityKey, trustLevel, added != null ? added : new Date()));
-            return false;
-        }
 
         for(IdentityKeyStore.Identity id : identities) {
             if(!id.identityKey.equals(identityKey)) {
