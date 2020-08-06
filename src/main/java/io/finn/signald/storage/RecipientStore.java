@@ -54,9 +54,7 @@ public class RecipientStore {
     public SignalServiceAddress resolve(SignalServiceAddress partial) {
         for(JsonAddress i : addresses) {
             if(i.getSignalServiceAddress().matches(partial)) {
-                logger.debug("Updating " + i.toRedactedString());
                 i.update(partial);
-                logger.debug("Updated to " + i.toRedactedString());
                 return i.getSignalServiceAddress();
             }
         }
