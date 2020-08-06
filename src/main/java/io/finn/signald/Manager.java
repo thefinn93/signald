@@ -1086,6 +1086,10 @@ class Manager {
                     logger.info("Ignoring error: " + e.getMessage());
                     continue;
                 }
+                if(envelope.hasSource()) {
+                    // Store uuid if we don't have it already
+                    accountData.getResolver().resolve(envelope.getSourceAddress());
+                }
                 if (!envelope.isReceipt()) {
                     try {
                         content = decryptMessage(envelope);
