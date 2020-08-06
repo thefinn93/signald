@@ -78,6 +78,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import static java.nio.file.attribute.PosixFilePermission.*;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
@@ -902,8 +903,13 @@ class Manager {
                         group.name = groupInfo.getName().get();
                     }
 
-                    if (groupInfo.getMembers().isPresent()) {
-                        group.addMembers(groupInfo.getMembers().get());
+                    if(groupInfo.getMembers().isPresent()) {
+                        AddressResolver resolver = accountData.getResolver();
+                        Set<SignalServiceAddress> members = groupInfo.getMembers().get()
+                                .stream()
+                                .map(resolver::resolve)
+                                .collect(Collectors.toSet());
+                        group.addMembers(members);
                     }
 
                     accountData.groupStore.updateGroup(group);
@@ -1118,6 +1124,8 @@ class Manager {
     private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
         if (content != null) {
             SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
+            AddressResolver resolver = accountData.getResolver();
+            resolver.resolve(source);
             if (content.getDataMessage().isPresent()) {
                 SignalServiceDataMessage message = content.getDataMessage().get();
                 handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments);
@@ -1159,6 +1167,7 @@ class Manager {
                                 if (g.getAvatar().isPresent()) {
                                     retrieveGroupAvatarAttachment(g.getAvatar().get(), g.getId());
                                 }
+                                g.getMembers().stream().map(resolver::resolve);
                             }
                         }
                     } catch (Exception e) {
@@ -1188,7 +1197,10 @@ class Manager {
                             }
                             DeviceContact c;
                             while ((c = s.read()) != null) {
-                                ContactStore.ContactInfo contact = accountData.contactStore.getContact(c.getAddress());
+                                if(accountData.address.matches(c.getAddress()) && c.getProfileKey().isPresent()) {
+                                    accountData.setProfileKey(c.getProfileKey().get());
+                                }
+                                ContactStore.ContactInfo contact = accountData.contactStore.getContact(resolver.resolve(c.getAddress()));
                                 contact.update(c);
                                 updateContact(contact);
                                 if (c.getAvatar().isPresent()) {
@@ -1210,7 +1222,9 @@ class Manager {
                 }
                 if (syncMessage.getVerified().isPresent()) {
                     final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
-                    accountData.axolotlStore.identityKeyStore.saveIdentity(verifiedMessage.getDestination(), verifiedMessage.getIdentityKey(), TrustLevel.fromVerifiedState(verifiedMessage.getVerified()));
+                    SignalServiceAddress destination = resolver.resolve(verifiedMessage.getDestination());
+                    TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
+                    accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
                 }
             }
         }

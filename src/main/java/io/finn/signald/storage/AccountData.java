@@ -41,7 +41,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
@@ -62,7 +61,7 @@ public class AccountData {
     public SignalProtocolStore axolotlStore;
     public GroupStore groupStore;
     public ContactStore contactStore;
-    public List<JsonAddress> recipientStore = new ArrayList<>();
+    public RecipientStore recipientStore = new RecipientStore();
 
     private static String dataPath;
     private static final Logger logger = LogManager.getLogger();
@@ -239,16 +238,7 @@ public class AccountData {
                 return address.getSignalServiceAddress();
             }
 
-            for(JsonAddress i : recipientStore) {
-                if(i.getSignalServiceAddress().matches(a)) {
-                    logger.debug("Updating " + i.toRedactedString());
-                    i.update(a);
-                    logger.debug("Updated to " + i.toRedactedString());
-                    return i.getSignalServiceAddress();
-                }
-            }
-
-            return a;
+            return recipientStore.resolve(a);
         }
 
         public Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials) {

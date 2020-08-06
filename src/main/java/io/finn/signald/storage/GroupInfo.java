@@ -7,6 +7,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class GroupInfo {
@@ -60,7 +61,7 @@ public class GroupInfo {
         return isMember(new JsonAddress(address));
     }
 
-    public void addMembers(List<SignalServiceAddress> newMembers) {
+    public void addMembers(Collection<SignalServiceAddress> newMembers) {
         for(SignalServiceAddress m : newMembers) {
             addMember(m);
         }
