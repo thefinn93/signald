@@ -123,9 +123,10 @@ public class AccountData {
         if(!dataPathFile.exists()) {
             dataPathFile.mkdirs();
         }
-        File destination = new File(dataPath + "/" + username);
+        File destination = new File(dataPath + "/.tmp-" + username);
         logger.debug("Saving account to disk");
         writer.writeValue(destination, this);
+        destination.renameTo(new File(dataPath + "/" + username));
     }
 
     public void validate() throws InvalidStorageFileException {
