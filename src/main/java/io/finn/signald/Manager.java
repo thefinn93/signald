@@ -19,6 +19,7 @@ package io.finn.signald;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.*;
+import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
@@ -49,20 +50,19 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
-import org.whispersystems.signalservice.api.util.InvalidNumberException;
-import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
-import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
-import org.whispersystems.signalservice.api.util.UuidUtil;
+import org.whispersystems.signalservice.api.util.*;
 import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
+import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
@@ -76,6 +76,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -440,7 +441,7 @@ class Manager {
             mime = "application/octet-stream";
         }
         // TODO mabybe add a parameter to set the voiceNote, preview, and caption option
-        return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, Optional.absent(), 0, 0, System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
+        return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, Optional.absent(), 0, 0, System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
     }
 
     private Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
@@ -1239,7 +1240,7 @@ class Manager {
         try (FileInputStream f = new FileInputStream(file)) {
             DataInputStream in = new DataInputStream(f);
             int version = in.readInt();
-            if (version > 3) {
+            if (version > 4) {
                 return null;
             }
             int type = in.readInt();
@@ -1266,19 +1267,23 @@ class Manager {
                 legacyMessage = new byte[legacyMessageLen];
                 in.readFully(legacyMessage);
             }
-            long serverTimestamp = 0;
+            long serverReceivedTimestamp = 0;
             String uuid = null;
-            if (version == 2) {
-                serverTimestamp = in.readLong();
+            if (version >= 2) {
+                serverReceivedTimestamp = in.readLong();
                 uuid = in.readUTF();
                 if ("".equals(uuid)) {
                     uuid = null;
                 }
             }
+            long serverDeliveredTimestamp = 0;
+            if (version >= 4) {
+                serverDeliveredTimestamp = in.readLong();
+            }
             Optional<SignalServiceAddress> sourceAddress = sourceUuid == null && source.isEmpty()
                     ? Optional.absent()
                     : Optional.of(new SignalServiceAddress(sourceUuid, source));
-            return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverTimestamp, uuid);
+            return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
 }
     }
 
@@ -1304,9 +1309,10 @@ class Manager {
                 } else {
                     out.writeInt(0);
                 }
-                out.writeLong(envelope.getServerTimestamp());
+                out.writeLong(envelope.getServerReceivedTimestamp());
                 String uuid = envelope.getUuid();
                 out.writeUTF(uuid == null ? "" : uuid);
+                out.writeLong(envelope.getServerDeliveredTimestamp());
             }
 }
     }
@@ -1590,20 +1596,22 @@ class Manager {
         return Optional.absent();
     }
 
-    public void setProfileName(String name) throws IOException, InvalidInputException {
-        accountManager.setProfileName(accountData.getProfileKey(), name);
-	    accountData.save();
+    public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
+        try(final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
+            accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, streamDetails);
+        }
     }
 
-    public SignalServiceProfile getProfile(SignalServiceAddress address) throws IOException, VerificationFailedException {
+    public SignalServiceProfile getProfile(SignalServiceAddress address) throws IOException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-        return messageReceiver.retrieveProfile(address, null, Optional.absent(), null).getProfile();
+        ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, null, Optional.absent(), null);
+        return profile.get(10, TimeUnit.SECONDS).getProfile();
     }
 
     private SignalServiceMessageSender getMessageSender() {
         return new SignalServiceMessageSender(serviceConfiguration,
                 accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
-                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null);
+                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null, null);
     }
 
     private SignalServiceMessageReceiver getMessageReceiver() {

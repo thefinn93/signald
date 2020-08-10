@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 public class SocketHandler implements Runnable {
@@ -233,7 +234,7 @@ public class SocketHandler implements Runnable {
           if (mime == null) {
             mime = "application/octet-stream";
           }
-          attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+          attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
         } catch (IOException e) {
           throw new AttachmentInvalidException(attachment.filename, e);
         }
@@ -522,7 +523,7 @@ public class SocketHandler implements Runnable {
       this.reply("version", new JsonVersionMessage(), null);
   }
 
-  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException {
+  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException {
       Manager m = Manager.get(request.username);
       ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
       if(contact == null || contact.profileKey == null) {
@@ -534,7 +535,7 @@ public class SocketHandler implements Runnable {
 
   private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
       Manager m = Manager.get(request.username);
-      m.setProfileName(request.name);
+      m.setProfile(request.name, null);
       this.reply("profile_set", null, request.id);
   }
 

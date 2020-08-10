@@ -30,6 +30,7 @@ class JsonQuote {
   public JsonAddress author;
   public String text;
   public List<JsonQuotedAttachment> attachments;
+  public List<SignalServiceDataMessage.Mention> mentions;
 
   public JsonQuote() {}
 
@@ -54,6 +55,6 @@ class JsonQuote {
         quotedAttachments.add(attachment.getAttachment());
       }
     }
-    return new SignalServiceDataMessage.Quote(this.id, this.author.getSignalServiceAddress(), this.text, quotedAttachments);
+    return new SignalServiceDataMessage.Quote(this.id, this.author.getSignalServiceAddress(), this.text, quotedAttachments, mentions);
   }
 }

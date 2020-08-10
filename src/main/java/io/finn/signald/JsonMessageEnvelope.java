@@ -37,7 +37,8 @@ class JsonMessageEnvelope {
     String relay;
     long timestamp;
     String timestampISO;
-    long serverTimestamp;
+    long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
+    long serverDeliveredTimestamp;
     boolean hasLegacyMessage;
     boolean hasContent;
     boolean isUnidentifiedSender;
@@ -74,7 +75,8 @@ class JsonMessageEnvelope {
         type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
         timestamp = envelope.getTimestamp();
         timestampISO = formatTimestampISO(envelope.getTimestamp());
-        serverTimestamp = envelope.getServerTimestamp();
+        serverTimestamp = envelope.getServerReceivedTimestamp();
+        serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
         hasLegacyMessage = envelope.hasLegacyMessage();
         hasContent = envelope.hasContent();
 
