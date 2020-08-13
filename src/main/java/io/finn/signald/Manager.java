@@ -794,8 +794,22 @@ class Manager {
                     messageBuilder.withExpiration(contact.messageExpirationTime);
                     message = messageBuilder.build();
                     try {
-                        SendMessageResult result = messageSender.sendMessage(address, getAccessFor(address), message);
-                        results.add(result);
+                        if(accountData.address.matches(address)) {
+                            SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
+
+                            final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessFor(recipient);
+                            SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient),
+                                    message.getTimestamp(),
+                                    message,
+                                    message.getExpiresInSeconds(),
+                                    Collections.singletonMap(recipient, unidentifiedAccess.isPresent()),
+                                    false);
+                            SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
+                            messageSender.sendMessage(syncMessage, unidentifiedAccess);
+                            results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false));
+                        } else {
+                            results.add(messageSender.sendMessage(address, getAccessFor(address), message));
+                        }
                     } catch (UntrustedIdentityException e) {
                         accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
                         results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
