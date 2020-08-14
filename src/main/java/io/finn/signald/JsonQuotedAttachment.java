@@ -18,15 +18,23 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import java.util.List;
-import java.util.ArrayList;
 
 
 class JsonQuotedAttachment {
   public String contentType;
   public String fileName;
-  public String thumbnail;
+  public JsonAttachment thumbnail;
+
+  public JsonQuotedAttachment() {};
+
+  public JsonQuotedAttachment(SignalServiceDataMessage.Quote.QuotedAttachment attachment) {
+    contentType = attachment.getContentType();
+    fileName = attachment.getFileName();
+    // Can't do thumbnails because we can't create a JsonAttachment without the username of the user making the request
+//    if(attachment.getThumbnail() != null) {
+//      thumbnail = new JsonAttachment(attachment.getThumbnail());
+//    }
+  }
 
   public SignalServiceDataMessage.Quote.QuotedAttachment getAttachment() {
     // FileInputStream thumbnailFile = new FileInputStream(this.thumbnail);

@@ -7,8 +7,7 @@ WORKDIR /tmp/src
 RUN gradle -Dorg.gradle.daemon=false build
 RUN tar xf build/distributions/signald.tar -C /opt
 
-FROM gradle:jre${JAVA_VERSION:-8}-alpine AS release
-
+FROM gradle:jre${JAVA_VERSION:-8} AS release
 USER root
 WORKDIR /opt
 COPY --from=build /opt/signald /opt/signald/

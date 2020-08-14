@@ -17,7 +17,7 @@
 
 package io.finn.signald;
 
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;

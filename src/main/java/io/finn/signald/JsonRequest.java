@@ -17,22 +17,23 @@
 
 package io.finn.signald;
 
-import org.asamk.signal.storage.contacts.ContactInfo;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonReaction;
+import io.finn.signald.storage.ContactStore;
 
 import java.util.List;
 
 
-class JsonRequest {
+public class JsonRequest {
     public String type;
     public String id;
     public String username;
     public String messageBody;
-    public String recipientNumber;
     public String recipientGroupId;
+    public JsonAddress recipientAddress;
     public Boolean voice;
     public String code;
     public String deviceName;
-    public List<String> attachmentFilenames;
     public List<JsonAttachment> attachments;
     public String uri;
     public String groupName;
@@ -42,11 +43,12 @@ class JsonRequest {
     public int expiresInSeconds;
     public String fingerprint;
     public String trustLevel;
-    public ContactInfo contact;
+    public ContactStore.ContactInfo contact;
     public String captcha;
     public String name;
     public List<Long> timestamps;
     public long when;
+    public JsonReaction reaction;
 
     JsonRequest() {}
 }

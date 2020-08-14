@@ -18,6 +18,7 @@
 package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyIdException;
@@ -25,6 +26,7 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.List;
 
@@ -36,11 +38,11 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
 
     public SignalProtocolStore() {}
 
-    public SignalProtocolStore(IdentityKeyPair identityKey, int registrationId) {
+    public SignalProtocolStore(IdentityKeyPair identityKey, int registrationId, AddressResolver resolver) {
         preKeys = new PreKeyStore();
-        sessionStore = new SessionStore();
+        sessionStore = new SessionStore(resolver);
         signedPreKeyStore = new SignedPreKeyStore();
-        identityKeyStore = new IdentityKeyStore(identityKey, registrationId);
+        identityKeyStore = new IdentityKeyStore(identityKey, registrationId, resolver);
     }
 
     @Override
@@ -58,6 +60,10 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
     @Override
     public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
         return identityKeyStore.saveIdentity(address, identityKey);
+    }
+
+    public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) {
+        return identityKeyStore.saveIdentity(identifier, key, level);
     }
 
     @Override
@@ -120,6 +126,10 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
     @Override
     public void deleteAllSessions(String name) {
         sessionStore.deleteAllSessions(name);
+    }
+
+    public void deleteAllSessions(SignalServiceAddress address) {
+        sessionStore.deleteAllSessions(address);
     }
 
     @Override

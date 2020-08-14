@@ -17,19 +17,22 @@
 
 package io.finn.signald.util;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import org.whispersystems.signalservice.api.util.StreamDetails;
 
-public class JSONHelper {
-    public static ObjectMapper GetMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT); // does this do anything?
-        return mapper;
-    }
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 
-    public static ObjectWriter GetWriter() {
-        return GetMapper().writer(new DefaultPrettyPrinter());
+public class AttachmentUtil {
+    public static StreamDetails createStreamDetailsFromFile(File file) throws IOException {
+        InputStream stream = new FileInputStream(file);
+        final long size = file.length();
+        String mime = Files.probeContentType(file.toPath());
+        if (mime == null) {
+            mime = "application/octet-stream";
+        }
+        return new StreamDetails(stream, mime, size);
     }
 }

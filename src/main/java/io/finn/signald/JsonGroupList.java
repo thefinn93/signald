@@ -17,9 +17,10 @@
 
 package io.finn.signald;
 
-import java.util.List;
+import io.finn.signald.storage.GroupInfo;
+
 import java.util.ArrayList;
-import org.asamk.signal.storage.groups.GroupInfo;
+import java.util.List;
 
 class JsonGroupList {
     List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();

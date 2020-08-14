@@ -56,7 +56,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
     public void run() {
       try {
-        Thread.currentThread().setName(username + "-receiver");
+        Thread.currentThread().setName(Util.redact(username) + "-receiver");
         Manager manager = Manager.get(username);
         while(sockets.size() > 0) {
           double timeout = 3600;
@@ -65,8 +65,9 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           try {
             manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
           } catch (IOException e) {
-              logger.debug("probably harmless IOException while receiving messages:" + e.toString());
-              e.printStackTrace();
+              if(sockets.size() > 0) {
+                  throw e;
+              }
           } catch (AssertionError e) {
               logger.catching(e);
           }
@@ -80,19 +81,23 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
       String type = "message";
       if(exception != null) {
-        logger.catching(exception);
-        type = "unreadable_message";
+          logger.catching(exception);
+          type = "unreadable_message";
       }
 
       try {
-        if(envelope != null) {
-          JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
-          this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
-        } else {
-            this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
-        }
+          if(exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+              JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException) exception, username);
+              this.sockets.broadcast(new JsonMessageWrapper("inbound_identity_failure", message, (Throwable)null));
+          }
+          if(envelope != null) {
+              JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
+              this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
+          } else {
+              this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
+          }
       } catch (IOException | NoSuchAccountException e) {
-        logger.catching(e);
+          logger.catching(e);
       }
     }
 }

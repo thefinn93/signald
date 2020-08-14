@@ -22,10 +22,9 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.asamk.signal.storage.groups.GroupInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +35,8 @@ import java.util.Map;
 @JsonSerialize(using=GroupStore.GroupStoreSerializer.class)
 @JsonDeserialize(using=GroupStore.GroupStoreDeserializer.class)
 public class GroupStore {
-    static final Logger logger = LoggerFactory.getLogger(GroupStore.class);
+    static final Logger logger = LogManager.getLogger();
+
     private static final ObjectMapper jsonProcessor = new ObjectMapper();
 
     private Map<String, GroupInfo> groups = new HashMap<>();
@@ -46,8 +46,12 @@ public class GroupStore {
         groups.put(Base64.encodeBytes(group.groupId), group);
     }
 
+    public GroupInfo getGroup(String groupId) {
+        return groups.get(groupId);
+    }
+
     public GroupInfo getGroup(byte[] groupId) {
-        return groups.get(Base64.encodeBytes(groupId));
+        return getGroup(Base64.encodeBytes(groupId));
     }
 
     public List<GroupInfo> getGroups() {
@@ -72,7 +76,6 @@ public class GroupStore {
                 return store;
             }
             for (JsonNode n : node.get("groups")) {
-                logger.debug("Loading node %s", n.asText());
                 GroupInfo g = jsonProcessor.treeToValue(n, GroupInfo.class);
                 // Check if a legacy avatarId exists
                 if (g.getAvatarId() != 0) {

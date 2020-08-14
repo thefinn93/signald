@@ -16,23 +16,41 @@
  */
 
 package io.finn.signald;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.libsignal.IdentityKey;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+
+import java.io.IOException;
 
 
 class JsonUntrustedIdentityException {
-  public String username;
-  public String number;
+  public JsonAddress local_address;
+  public JsonAddress remote_address;
   public String fingerprint;
   public String safety_number;
   public JsonRequest request;
 
-  JsonUntrustedIdentityException(IdentityKey key, String number, Manager m, JsonRequest request) {
-    this.username = m.getUsername();
-    this.number = number;
+  JsonUntrustedIdentityException(IdentityKey key, SignalServiceAddress address, Manager m, JsonRequest request) {
+    this.local_address = new JsonAddress(m.getOwnAddress());
+    this.remote_address = new JsonAddress(address);
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
-    this.safety_number = m.computeSafetyNumber(this.number, key);
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), key);
     this.request = request;
+  }
+
+  public JsonUntrustedIdentityException(UntrustedIdentityException exception, String username) {
+    this.local_address = new JsonAddress(username);
+    this.remote_address = new JsonAddress(exception.getName());
+    this.fingerprint = Hex.toStringCondensed(exception.getUntrustedIdentity().getPublicKey().serialize());
+    try {
+      Manager m = Manager.get(username);
+      this.local_address = new JsonAddress(m.getOwnAddress());
+      this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
+    } catch (IOException | NoSuchAccountException e) {
+      e.printStackTrace();
+    }
   }
 }

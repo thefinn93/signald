@@ -14,12 +14,12 @@ signald is a daemon that facilitates communication over Signal.
 
 1. Startup signald depending on your installation method
 1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock` (Debian users will need to have `netcat-openbsd` installed)
-1. Register a new number on signal by typing this: `{"type": "register", "username": "+12024561414"}` (replace `+12024561414` with your own number)
+1. Register a new number on signal by sending something like this : `{"type": "register", "username": "+12024561414"}` (see [link](#link) to add signald as another device on your existing signal account)
 1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
 1. Incoming messages will be sent to the socket and shown on your screen. To send a message, use something like this:
 
 ```json
-{"type": "send", "username": "+12024561414", "recipientNumber": "+14235290302", "messageBody": "Hello, Dave"}
+{"type": "send", "username": "+12024561414", "recipientAddress": {"number": "+14235290302"}, "messageBody": "Hello, Dave"}
 ```
 
 ## Contributing/Feedback/Bugs
@@ -64,42 +64,11 @@ Sends a signal message to another user or a group. Possible values are:
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The signal number you are sending *from*. |
-| `recipientNumber` | string | no | The number you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
-| `attachments` | list of `attachment` | no | A list of attachments (see below) |
-| `quote` | quote | no | The message to quote |
-
-**Quote objects** can have these keys:
-
-| Field | Type   | Required? | Description |
-|-------|--------|-----------|-------------|
-| `id`  | number | yes\*      | The timestamp of the original message. |
-| `author` | string | yes\*   | The username (full e164 phone number) of the author of the quoted message. |
-| `text` | string | yes\*     | The text of the quoted message. |
-| `attachments` | list of quoted attachments | no | A list of attachments in the quoted message. |
-
-\* If you don't put these values it will send it but the Signal app doesn't seem to render it (Signal Desktop does though?)
-
-
-**Quoted** attachment objects can have these keys:
-
-| Field | Type   | Required? | Description |
-|-------|--------|-----------|-------------|
-| `contentType` | string | yes | The content type of the quoted attachment |
-| `fileName` | string | no | The original filename of the quoted attachment |
-
-**attachment** objects can have these keys:
-
-| Field       | Type     | Required? | Description |
-|-------------|----------|-----------|-------------|
-| `filename`  | `string` | yes       | The filename of the attachment |
-| `caption`   | `string` | no        | An optional caption |
-| `width`     | `int`    | no        | The width of the image |
-| `height`    | `int`    | no        | The height of the image |
-| `voiceNote` | `bool`   | no        | True if this attachment is a voice note |
-| `preview`   | `string` | no        | The preview data to send, base64 encoded |
-
+| `attachments` | list of [`JsonAttachment`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonAttachment) | no | A list of attachments |
+| `quote` | [`JsonQuote`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonQuote) | no | The message to quote |
 
 ### `register`
 
@@ -129,7 +98,7 @@ Mark a received message as "read" by sending a receipt message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the read receipt. |
-| `recipientNumber` | `string` | yes | The full number that sent the original message. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number that sent the original message. |
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
@@ -192,7 +161,7 @@ Checks whether a contact is currently registered with the server. Returns the co
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
-| `recipientNumber` | `string` | yes | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The address of the user to look up. |
 
 
 ### `get_identities`
@@ -202,7 +171,7 @@ Returns all known identities/keys, optionally just for a specific number.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientNumber` | `string` | no | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The full number to look up. |
 
 
 ### `trust`
@@ -212,7 +181,7 @@ Trust's a safety number or fingerprint.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientNumber` | `string` | yes | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to look up. |
 | `fingerprint` | `string` | yes | The safety number or fingerprint to trust. |
 | `trustLevel` | `string` | no | The level at which to trust the identity. |
 
@@ -243,6 +212,36 @@ Unsubscribes from messages to the specified account. See `subscribe` for more de
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The user to unsubscribe to messages for. |
 
+### `sync_contacts`
+
+Sends a contact sync request to the other devices on this account.
+
+**NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
+### `sync_groups`
+
+Sends a group sync request to the other devices on this account.
+
+**NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
+### `sync_configuration`
+
+Sends a configuration sync request to the other devices on this account.
+
+**NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The account to sync contacts for. |
+
 ### `list_contacts`
 
 Lists all of the contacts in the contact store for the specified user.
@@ -250,16 +249,6 @@ Lists all of the contacts in the contact store for the specified user.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to list the contacts of |
-
-### `sync_contacts`
-
-Sends a contact sync request to the other devices on this account.
-
-**NOTE**: Contact sync responses are received like all other messages, and won't come in until that account is subscribed.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `username` | `string` | yes | The account to sync contacts for. |
 
 
 ### `update_contact`
@@ -284,12 +273,12 @@ Create or update a contact in our contact store.
 
 Sets or changes the expiration time for messages in a group or PM.
 
-As one might expect, `recipientNumber` and `recipientGroupId` are mutually exclusive and one of them is required.
+As one might expect, `recipientAddress` and `recipientGroupId` are mutually exclusive and one of them is required.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use. |
-| `recipientNumber` | `string` | no | The PM to change expiration for. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address to change the expiration with. |
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
 | `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
 
@@ -301,17 +290,26 @@ Gets a user's profile. At this time only the name is available. Must have the us
 | Field             | Type     | Required | Description |
 |-------------------|----------|----------|-------------|
 | `username`        | `string` | yes      | The account to use. |
-| `recipientNumber` | `string` | yes      | The number of the user who's profile is being checked. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes      | The number of the user who's profile is being checked. |
 
 
 ### `set_profile`
 
-Sets the user's profile. At thie time only the name is available.
+Sets the user's profile. At this time only the name is available.
 
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
 | `name`     | `string` | yes      | The number of the user who's profile is being checked. |
+
+### `react`
+
+React to a message. For details see the [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) wiki page.
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `username` | `string` | yes      | The account to use. |
+| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | yes | the reaction message to send |
 
 ## Transition An Account From signal-cli
 
@@ -326,4 +324,4 @@ If you have installed the `.deb` and are using the system-wide signald service, 
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
 ## Contributing
-I would like to get this to the point that anything one can do in the signal app can also be done via signald. There should be open issues for all missing features. If you have a feature you want feel free to work on it and submit a pull request. If you don't want to work on it, follow the relevant issue and get notified when there is progress.
+Contributions are welcome and appreciated. for larger changes, consider reaching out first (via the issue tracker, IRC or email).  

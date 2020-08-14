@@ -17,16 +17,17 @@
 
 package io.finn.signald;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
+import org.whispersystems.util.Base64;
+
 import java.io.File;
 import java.io.IOException;
 
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
-import org.whispersystems.signalservice.internal.util.Base64;
-import org.whispersystems.libsignal.util.guava.Optional;
 
-
-class JsonAttachment {
+public class JsonAttachment {
     String contentType;
     long id;
     int size;
@@ -51,7 +52,8 @@ class JsonAttachment {
         this.contentType = attachment.getContentType();
         final SignalServiceAttachmentPointer pointer = attachment.asPointer();
         if (attachment.isPointer()) {
-            this.id = pointer.getId();
+            // unclear if this is the correct identifier or the right way to be storing attachments anymore
+            this.id = pointer.getRemoteId().getV2().get();
             this.key = Base64.encodeBytes(pointer.getKey());
 
             if (pointer.getSize().isPresent()) {
@@ -79,13 +81,14 @@ class JsonAttachment {
                 this.blurhash = pointer.getBlurHash().get();
             }
 
-            File file = Manager.get(username).getAttachmentFile(pointer.getId());
+            File file = Manager.get(username).getAttachmentFile(this.id);
             if(file.exists()) {
                 this.storedFilename = file.toString();
             }
         }
     }
 
+    @JsonIgnore
     public Optional<byte[]> getPreview() {
       if(preview != null) {
           return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));

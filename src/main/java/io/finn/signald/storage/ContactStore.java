@@ -17,65 +17,136 @@
 
 package io.finn.signald.storage;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.asamk.signal.storage.contacts.ContactInfo;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.util.AddressUtil;
+import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.util.Base64;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-@JsonSerialize(using=ContactStore.ContactStoreSerializer.class)
-@JsonDeserialize(using=ContactStore.ContactStoreDeserializer.class)
 public class ContactStore {
-    private Map<String, ContactInfo> contacts = new HashMap<>();
-
-    private static final ObjectMapper jsonProcessor = new ObjectMapper();
+    public List<ContactInfo> contacts = new ArrayList<>();
 
     public void updateContact(ContactInfo contact) {
-        contacts.put(contact.number, contact);
+        for(ContactInfo c : contacts) {
+            if(c.address.matches(contact.address)) {
+                c.update(contact);
+                return;
+            }
+        }
+        contacts.add(contact);
     }
 
-    public ContactInfo getContact(String number) {
-        return contacts.get(number);
+    public ContactInfo getContact(String identifier) {
+        return getContact(AddressUtil.fromIdentifier(identifier));
+    }
+
+    public ContactInfo getContact(SignalServiceAddress address) {
+        for(ContactInfo c : contacts) {
+            if(c.matches(address)) {
+                return c;
+            }
+        }
+        return new ContactInfo(address);
     }
 
     public List<ContactInfo> getContacts() {
-        return new ArrayList<>(contacts.values());
+        return contacts;
     }
 
     public void clear() {
         contacts.clear();
     }
 
-    public static class ContactStoreSerializer extends JsonSerializer<ContactStore> {
-        @Override
-        public void serialize(final ContactStore value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
-            jgen.writeStartObject();
-            jgen.writeObjectField("contacts", value.contacts.values());
-            jgen.writeEndObject();
-        }
-    }
+    public static class ContactInfo {
+        @JsonProperty
+        public String name;
 
-    public static class ContactStoreDeserializer extends JsonDeserializer<ContactStore> {
-        @Override
-        public ContactStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-            ContactStore store = new ContactStore();
-            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-            if(!node.has("contacts")) {
-                return store;
+        @JsonProperty
+        public JsonAddress address;
+
+        @JsonProperty
+        public String color;
+
+        @JsonProperty
+        public String profileKey;
+
+        @JsonProperty
+        public int messageExpirationTime;
+
+        public Integer inboxPosition;
+
+        public ContactInfo() {}
+
+        public ContactInfo(SignalServiceAddress a) {
+            address = new JsonAddress(a);
+        }
+
+        public void setNumber(@JsonProperty String number) {
+            if(address == null) {
+                address = new JsonAddress(number);
+            } else {
+                address.number = number;
             }
-            for (JsonNode n : node.get("contacts")) {
-                ContactInfo c = jsonProcessor.treeToValue(n, ContactInfo.class);
-                store.contacts.put(c.number, c);
+        }
+
+        public void setIdentifier(@JsonProperty String identifier) {
+            if(address == null) {
+                address = new JsonAddress(AddressUtil.fromIdentifier(identifier));
+            } else {
+                address.uuid = identifier;
+            }
+        }
+
+        public void update(ContactInfo other) {
+            address = AddressUtil.update(address, other.address);
+            messageExpirationTime = other.messageExpirationTime;
+            if(other.name != null) {
+                name = other.name;
+            }
+            if(other.color != null) {
+                color = other.color;
+            }
+            if(other.profileKey != null) {
+                profileKey = other.profileKey;
             }
 
-            return store;
+            if(other.inboxPosition != null) {
+                inboxPosition = other.inboxPosition;
+            }
         }
+
+        public boolean matches(SignalServiceAddress other) {
+            return address.matches(other);
+        }
+
+        public void update(DeviceContact c) {
+            address = new JsonAddress(c.getAddress());
+
+            if (c.getName().isPresent()) {
+                name = c.getName().get();
+            }
+            if (c.getColor().isPresent()) {
+                color = c.getColor().get();
+            }
+
+            if(c.getProfileKey().isPresent()) {
+                profileKey = Base64.encodeBytes(c.getProfileKey().get().serialize());
+            }
+
+            if(c.getExpirationTimer().isPresent()) {
+                messageExpirationTime = c.getExpirationTimer().get();
+            }
+
+            if(c.getInboxPosition().isPresent()) {
+                inboxPosition = c.getInboxPosition().get();
+            }
+
+        }
+
+        public void setVerified(JsonVerifiedState v) {}
     }
 }

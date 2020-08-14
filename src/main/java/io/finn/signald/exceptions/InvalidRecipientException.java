@@ -15,17 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.exceptions;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
-import org.whispersystems.signalservice.api.messages.multidevice.ViewOnceOpenMessage;
-
-class JsonViewOnceOpenMessage {
-    JsonAddress sender;
-    long timestamp;
-
-    JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
-        sender = new JsonAddress(message.getSender());
-        timestamp = message.getTimestamp();
+public class InvalidRecipientException extends Exception {
+    public InvalidRecipientException() {
+        super("request must specify either recipientGroupId or recipientAddress");
     }
 }

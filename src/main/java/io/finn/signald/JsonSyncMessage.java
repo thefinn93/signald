@@ -17,14 +17,13 @@
 
 package io.finn.signald;
 
-import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
-import org.whispersystems.signalservice.internal.util.Base64;
+import io.finn.signald.clientprotocol.v1.JsonBlockedListMessage;
+import io.finn.signald.clientprotocol.v1.JsonMessageRequestResponseMessage;
+import io.finn.signald.clientprotocol.v1.JsonReadMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 class JsonSyncMessage {
@@ -32,14 +31,15 @@ class JsonSyncMessage {
     JsonAttachment contacts;
     boolean contactsComplete;
     JsonAttachment groups;
-    List<String> blockedNumbers;
-    List<String> blockedGroups;
-    String requestType;
-    List<ReadMessage> readMessages;
+    JsonBlockedListMessage blockedList;
+    String request;
+    List<JsonReadMessage> readMessages;
     JsonViewOnceOpenMessage viewOnceOpen;
     JsonVerifiedMessage verified;
-    JsonConfigurationMessage configuration;
-    List<JsonStickerPackOperationMessage> stickerPackOperations = new LinkedList<>();
+    ConfigurationMessage configuration;
+    List<JsonStickerPackOperationMessage> stickerPackOperations;
+    String fetchType;
+    JsonMessageRequestResponseMessage messageRequestResponse;
 
     JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
         if(syncMessage.getSent().isPresent()) {
@@ -57,32 +57,45 @@ class JsonSyncMessage {
         }
 
         if(syncMessage.getBlockedList().isPresent()) {
-            blockedNumbers = syncMessage.getBlockedList().get().getNumbers();
-            for(byte[] groupId : syncMessage.getBlockedList().get().getGroupIds()) {
-                blockedGroups.add(Base64.encodeBytes(groupId));
-            }
+            blockedList = new JsonBlockedListMessage(syncMessage.getBlockedList().get());
         }
 
         if(syncMessage.getRequest().isPresent()) {
-            requestType = syncMessage.getRequest().get().getRequest().toString();
+            request = syncMessage.getRequest().get().getRequest().getType().name();
         }
 
         if(syncMessage.getRead().isPresent()) {
-            this.readMessages = syncMessage.getRead().get();
+            readMessages = new ArrayList<>();
+            for(ReadMessage r : syncMessage.getRead().get()) {
+             readMessages.add(new JsonReadMessage(r));
+            }
         }
 
         if(syncMessage.getViewOnceOpen().isPresent()) {
-            this.viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
+            viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
         }
 
         if(syncMessage.getVerified().isPresent()) {
-           this.verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
+           verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
+        }
+
+        if(syncMessage.getConfiguration().isPresent()) {
+            configuration = syncMessage.getConfiguration().get();
         }
 
         if(syncMessage.getStickerPackOperations().isPresent()) {
+            stickerPackOperations = new ArrayList<>();
           for(StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
             stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
           }
+        }
+
+        if(syncMessage.getFetchType().isPresent()) {
+            fetchType = syncMessage.getFetchType().get().name();
+        }
+
+        if(syncMessage.getMessageRequestResponse().isPresent()) {
+            messageRequestResponse = new JsonMessageRequestResponseMessage(syncMessage.getMessageRequestResponse().get());
         }
     }
 }

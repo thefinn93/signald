@@ -17,9 +17,10 @@
 
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -30,17 +31,16 @@ import java.util.TimeZone;
 class JsonMessageEnvelope {
     String username;
     String uuid;
-    String source;
+    JsonAddress source;
     int sourceDevice;
-    int type;
+    String type;
     String relay;
     long timestamp;
     String timestampISO;
-    long serverTimestamp;
+    long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
+    long serverDeliveredTimestamp;
     boolean hasLegacyMessage;
     boolean hasContent;
-    // String content;
-    boolean isReceipt;
     boolean isUnidentifiedSender;
     JsonDataMessage dataMessage;
     JsonSyncMessage syncMessage;
@@ -50,7 +50,6 @@ class JsonMessageEnvelope {
 
 
     public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
-        SignalServiceAddress sourceAddress = envelope.getSourceAddress();
         this.username = username;
 
         if (envelope.hasUuid()) {
@@ -58,27 +57,28 @@ class JsonMessageEnvelope {
         }
 
         if (envelope.hasSource()) {
-            source = sourceAddress.getNumber();
-        } else if(c != null) {
-            source = c.getSender();
+            source = new JsonAddress(envelope.getSourceAddress());
+        } else if(c != null){
+            source = new JsonAddress(c.getSender());
         }
 
         if (envelope.hasSourceDevice()) {
             sourceDevice = envelope.getSourceDevice();
         }
 
-        type = envelope.getType();
-
-        if (sourceAddress.getRelay().isPresent()) {
-            relay = sourceAddress.getRelay().get();
+        if(source != null) {
+            if (source.getSignalServiceAddress().getRelay().isPresent()) {
+                relay = source.getSignalServiceAddress().getRelay().get();
+            }
         }
 
+        type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
         timestamp = envelope.getTimestamp();
         timestampISO = formatTimestampISO(envelope.getTimestamp());
-        serverTimestamp = envelope.getServerTimestamp();
+        serverTimestamp = envelope.getServerReceivedTimestamp();
+        serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
         hasLegacyMessage = envelope.hasLegacyMessage();
         hasContent = envelope.hasContent();
-        isReceipt = envelope.isReceipt();
 
         if (c != null) {
             if (c.getDataMessage().isPresent()) {

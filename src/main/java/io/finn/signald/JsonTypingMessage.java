@@ -18,7 +18,7 @@
 package io.finn.signald;
 
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 
 class JsonTypingMessage {

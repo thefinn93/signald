@@ -75,7 +75,7 @@ deb:publish:
   tags:
     - package-signer
   before_script:
-    - mc config host add minio "${S3_URL}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+    - mc config host add minio "${S3_URL}" "${DO_ACCESS_KEY_ID}" "${DO_SECRET_ACCESS_KEY}"
     - export SUITE=$(get-suite)
     - export VERSION=$(./version.sh)
     - mkdir -p public/dists/${SUITE}/
@@ -115,7 +115,7 @@ deb:cleanup:
   only:
     - schedules
   before_script:
-    - mc config host add minio "${S3_URL}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+    - mc config host add minio "${S3_URL}" "${DO_ACCESS_KEY_ID}" "${DO_SECRET_ACCESS_KEY}"
   script:
     - repo-cron "minio/${S3_BUCKET}"
   variables:

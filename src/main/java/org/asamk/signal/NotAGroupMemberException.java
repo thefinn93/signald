@@ -1,6 +1,6 @@
 package org.asamk.signal;
 
-import org.whispersystems.signalservice.internal.util.Base64;
+import org.whispersystems.util.Base64;
 
 public class NotAGroupMemberException extends Exception {
 

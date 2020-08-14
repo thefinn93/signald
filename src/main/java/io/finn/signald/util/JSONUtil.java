@@ -15,17 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.util;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
-import org.whispersystems.signalservice.api.messages.multidevice.ViewOnceOpenMessage;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
-class JsonViewOnceOpenMessage {
-    JsonAddress sender;
-    long timestamp;
+public class JSONUtil {
+    public static ObjectMapper GetMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT); // does this do anything?
+        return mapper;
+    }
 
-    JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
-        sender = new JsonAddress(message.getSender());
-        timestamp = message.getTimestamp();
+    public static ObjectWriter GetWriter() {
+        return GetMapper().writer(new DefaultPrettyPrinter());
     }
 }

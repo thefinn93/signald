@@ -21,7 +21,6 @@ import org.whispersystems.signalservice.api.messages.multidevice.ConfigurationMe
 
 class JsonConfigurationMessage {
 
-
     boolean readReceipts;
     boolean unidentifiedDeliveryIndicators;
     boolean typingIndicators;
