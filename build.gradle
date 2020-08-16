@@ -35,13 +35,13 @@ configurations {
 
 dependencies {
     compile 'com.github.turasa:signal-service-java:2.15.3_unofficial_12'
-    compile 'org.bouncycastle:bcprov-jdk15on:1.65.01'
+    compile 'org.bouncycastle:bcprov-jdk15on:1.66'
     compile 'com.kohlschutter.junixsocket:junixsocket-common:2.3.2'
     compile 'com.kohlschutter.junixsocket:junixsocket-native-common:2.3.2'
     compile 'org.apache.logging.log4j:log4j-api:2.13.3'
     compile 'org.apache.logging.log4j:log4j-core:2.13.3'
     compile 'org.slf4j:slf4j-nop:1.8.0-beta4'
-    compile 'info.picocli:picocli:4.3.2'
+    compile 'info.picocli:picocli:4.5.0'
     testCompile 'org.junit.jupiter:junit-jupiter-api:5.3.1'
     testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 }
