@@ -29,7 +29,7 @@ import java.io.IOException;
 
 public class JsonAttachment {
     String contentType;
-    long id;
+    String id;
     int size;
     String storedFilename;
     String filename;
@@ -53,7 +53,7 @@ public class JsonAttachment {
         final SignalServiceAttachmentPointer pointer = attachment.asPointer();
         if (attachment.isPointer()) {
             // unclear if this is the correct identifier or the right way to be storing attachments anymore
-            this.id = pointer.getRemoteId().getV2().get();
+            this.id = pointer.getRemoteId().toString();
             this.key = Base64.encodeBytes(pointer.getKey());
 
             if (pointer.getSize().isPresent()) {
@@ -81,7 +81,7 @@ public class JsonAttachment {
                 this.blurhash = pointer.getBlurHash().get();
             }
 
-            File file = Manager.get(username).getAttachmentFile(this.id);
+            File file = Manager.get(username).getAttachmentFile(id);
             if(file.exists()) {
                 this.storedFilename = file.toString();
             }

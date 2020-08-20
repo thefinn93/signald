@@ -1361,13 +1361,13 @@ class Manager {
         }
     }
 
-    public File getAttachmentFile(long attachmentId) {
-        return new File(attachmentsPath, attachmentId + "");
+    public File getAttachmentFile(String attachmentId) {
+        return new File(attachmentsPath, attachmentId);
     }
 
     private File retrieveAttachment(SignalServiceAttachmentPointer pointer) throws IOException, InvalidMessageException, MissingConfigurationException {
         createPrivateDirectories(attachmentsPath);
-        return retrieveAttachment(pointer, getAttachmentFile(pointer.getRemoteId().getV2().get()), true);
+        return retrieveAttachment(pointer, getAttachmentFile(pointer.getRemoteId().toString()), true);
     }
 
     private File retrieveAttachment(SignalServiceAttachmentStream stream, File outputFile) throws IOException {
