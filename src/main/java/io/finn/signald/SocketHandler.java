@@ -40,6 +40,7 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
 
@@ -561,7 +562,13 @@ public class SocketHandler implements Runnable {
   }
 
   private void handleError(Throwable error, JsonRequest request) {
-    logger.catching(error);
+    if(error instanceof NoSuchAccountException) {
+      logger.warn("unable to process request for non-existent account");
+    } else if(error instanceof UnregisteredUserException) {
+      logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
+    } else {
+      logger.error(error);
+    }
     String requestid = "";
     if(request != null) {
         requestid = request.id;
