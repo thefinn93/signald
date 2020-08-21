@@ -40,6 +40,7 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
@@ -305,8 +306,13 @@ public class SocketHandler implements Runnable {
       logger.warn("User is already verified");
     } else {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
-      m.verifyAccount(request.code);
-      this.reply("verification_succeeded", new JsonAccount(m), request.id);
+      try {
+        m.verifyAccount(request.code);
+        this.reply("verification_succeeded", new JsonAccount(m), request.id);
+      } catch(LockedException e) {
+        logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/thefinn93/signald/-/issues/47");
+        this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/thefinn93/signald/-/issues/47", request.id);
+      }
     }
   }
 
