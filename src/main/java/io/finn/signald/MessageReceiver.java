@@ -19,8 +19,8 @@ package io.finn.signald;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.libsignal.metadata.ProtocolDuplicateMessageException;
 import org.signal.libsignal.metadata.SelfSendException;
+import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
@@ -85,8 +85,8 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       if(exception != null) {
           if(exception instanceof SelfSendException) {
               logger.debug("ignoring SelfSendException (see https://gitlab.com/thefinn93/signald/-/issues/24)");
-          } else if(exception instanceof ProtocolDuplicateMessageException) {
-              logger.warn("ignoring duplicateMessageException (see https://gitlab.com/thefinn93/signald/-/issues/50): " + exception.toString());
+          } else if(exception instanceof DuplicateMessageException || exception.getCause() instanceof DuplicateMessageException) {
+              logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/thefinn93/signald/-/issues/50): " + exception.toString());
           } else {
               logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
           }
