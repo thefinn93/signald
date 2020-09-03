@@ -567,7 +567,7 @@ public class SocketHandler implements Runnable {
     } else if(error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
     } else {
-      logger.error(error);
+      logger.catching(error);
     }
     String requestid = "";
     if(request != null) {
@@ -576,7 +576,7 @@ public class SocketHandler implements Runnable {
     try {
         this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
     } catch(JsonProcessingException e) {
-        logger.catching(error);
+        logger.catching(e);
     }
   }
 }
