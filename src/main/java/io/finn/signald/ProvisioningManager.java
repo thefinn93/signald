@@ -18,15 +18,18 @@
 package io.finn.signald;
 
 import io.finn.signald.storage.AccountData;
+import io.finn.signald.util.GroupsUtil;
 import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.SleepTimer;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
@@ -49,7 +52,8 @@ class ProvisioningManager {
         registrationId = KeyHelper.generateRegistrationId(false);
         password = Util.getSecret(18);
         final SleepTimer timer = new UptimeSleepTimer();
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, null, null, password, BuildConfig.SIGNAL_AGENT, timer);
+        DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, null, SignalServiceAddress.DEFAULT_DEVICE_ID);
+        accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), timer);
     }
 
     public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {

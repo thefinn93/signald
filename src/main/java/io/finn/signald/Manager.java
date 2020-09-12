@@ -20,6 +20,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
+import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
@@ -62,6 +63,7 @@ import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
+import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
@@ -329,7 +331,8 @@ class Manager {
     }
 
     private SignalServiceAccountManager getAccountManager() {
-        return new SignalServiceAccountManager(serviceConfiguration, accountData.getUUID(), accountData.username, accountData.password, accountData.deviceId, BuildConfig.SIGNAL_AGENT, sleepTimer);
+        DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, null, accountData.deviceId);
+        return new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
     }
 
     public static Map<String, String> getQueryMap(String query) {
