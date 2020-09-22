@@ -309,6 +309,8 @@ React to a message. For details see the [`JsonReaction`](https://gitlab.com/thef
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address you are sending to. Required if not sending to a group |
+| `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | yes | the reaction message to send |
 
 ## Transition An Account From signal-cli
