@@ -152,7 +152,10 @@ Leaves a group
 Adds a new account to signald by linking to another signal device that has already registered. Provides a URI that should be used to
 link. To link with the Signal app, encode the URI as a QR code, open the Signal app, go to settings -> Linked Devices, tap the + button
 in the bottom right and scan the QR code.
-*Takes no argument*
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `deviceName` | string | no | The device name to show in the "Linked Devices" section in the Signal app. Defaults to "signald" |
 
 ### `get_user`
 
