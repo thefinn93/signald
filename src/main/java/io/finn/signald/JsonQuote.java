@@ -30,7 +30,7 @@ class JsonQuote {
   public JsonAddress author;
   public String text;
   public List<JsonQuotedAttachment> attachments;
-  public List<SignalServiceDataMessage.Mention> mentions;
+  public List<SignalServiceDataMessage.Mention> mentions = new ArrayList<>();
 
   public JsonQuote() {}
 
