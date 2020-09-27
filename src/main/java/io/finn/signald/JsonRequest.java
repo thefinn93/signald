@@ -49,6 +49,7 @@ public class JsonRequest {
     public List<Long> timestamps;
     public long when;
     public JsonReaction reaction;
+    public Long timestamp;
 
     JsonRequest() {}
 }

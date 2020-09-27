@@ -252,6 +252,10 @@ public class SocketHandler implements Runnable {
       messageBuilder.withReaction(request.reaction.getReaction());
     }
 
+    if (request.timestamp != null) {
+      messageBuilder.withTimestamp(request.timestamp);
+    }
+
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
   }
 
