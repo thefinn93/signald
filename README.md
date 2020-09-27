@@ -69,6 +69,7 @@ Sends a signal message to another user or a group. Possible values are:
 | `messageBody` | string | no | The text of the message. |
 | `attachments` | list of [`JsonAttachment`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonAttachment) | no | A list of attachments |
 | `quote` | [`JsonQuote`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonQuote) | no | The message to quote |
+| `timestamp` | int | The timestamp (in milliseconds) for the message, which also acts as the message identifier. Defaults to the current time. |
 
 ### `register`
 
