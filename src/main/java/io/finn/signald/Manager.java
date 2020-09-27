@@ -219,6 +219,10 @@ class Manager {
         return accountData.username;
     }
 
+    public UUID getUUID() {
+        return accountData.getUUID();
+    }
+
     public SignalServiceAddress getOwnAddress() {
         return accountData.address.getSignalServiceAddress();
     }
