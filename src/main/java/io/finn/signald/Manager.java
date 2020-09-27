@@ -33,6 +33,7 @@ import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -1623,9 +1624,9 @@ class Manager {
         }
     }
 
-    public SignalServiceProfile getProfile(SignalServiceAddress address) throws IOException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException {
+    public SignalServiceProfile getProfile(SignalServiceAddress address, byte[] profileKeyBytes) throws IOException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-        ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, null, Optional.absent(), null);
+        ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, Optional.of(new ProfileKey(profileKeyBytes)), Optional.absent(), null);
         return profile.get(10, TimeUnit.SECONDS).getProfile();
     }
 

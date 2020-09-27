@@ -541,7 +541,8 @@ public class SocketHandler implements Runnable {
           this.reply("profile_not_available", null, request.id);
           return;
       }
-      this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress()), Base64.decode(contact.profileKey)), request.id);
+      byte[] profileKeyBytes = Base64.decode(contact.profileKey);
+      this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress(), profileKeyBytes), profileKeyBytes), request.id);
   }
 
   private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
