@@ -21,6 +21,7 @@ class JsonAccount {
   public int deviceId;
   public String username;
   public String filename;
+  public String uuid;
   public boolean registered;
   public boolean has_keys;
   public boolean subscribed;
@@ -29,6 +30,9 @@ class JsonAccount {
     this.username = m.getUsername();
     this.deviceId = m.getDeviceId();
     this.filename = m.getFileName();
+    if (m.getUUID() != null) {
+      this.uuid = m.getUUID().toString();
+    }
     this.registered = m.isRegistered();
     this.has_keys = m.userHasKeys();
   }
