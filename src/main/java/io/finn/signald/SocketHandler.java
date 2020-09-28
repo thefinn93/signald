@@ -236,7 +236,11 @@ public class SocketHandler implements Runnable {
           if (mime == null) {
             mime = "application/octet-stream";
           }
-          attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), attachment.voiceNote, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+          String customFilename = attachmentFile.getName();
+          if (attachment.customFilename != null) {
+            customFilename = attachment.customFilename;
+          }
+          attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
         } catch (IOException e) {
           throw new AttachmentInvalidException(attachment.filename, e);
         }
