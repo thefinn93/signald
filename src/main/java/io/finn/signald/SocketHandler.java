@@ -232,15 +232,17 @@ public class SocketHandler implements Runnable {
           File attachmentFile = new File(attachment.filename);
           InputStream attachmentStream = new FileInputStream(attachmentFile);
           final long attachmentSize = attachmentFile.length();
-          String mime = Files.probeContentType(attachmentFile.toPath());
-          if (mime == null) {
-            mime = "application/octet-stream";
+          if (attachment.contentType == null) {
+            attachment.contentType = Files.probeContentType(attachmentFile.toPath());
+            if (attachment.contentType == null) {
+              attachment.contentType = "application/octet-stream";
+            }
           }
           String customFilename = attachmentFile.getName();
           if (attachment.customFilename != null) {
             customFilename = attachment.customFilename;
           }
-          attachments.add(new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+          attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
         } catch (IOException e) {
           throw new AttachmentInvalidException(attachment.filename, e);
         }
