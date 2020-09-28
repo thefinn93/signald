@@ -10,7 +10,11 @@ signald is a daemon that facilitates communication over Signal.
  - [Debian](./docs/install/debian.md)
  - [Docker](./docs/install/docker.md)
 
-## Quick Start
+## signald clients
+* [libpurple](https://github.com/hoehermann/libpurple-signald)
+* [matrix](https://github.com/tulir/mautrix-signal)
+
+## Quick Start for developers
 
 1. Startup signald depending on your installation method
 1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock` (Debian users will need to have `netcat-openbsd` installed)
@@ -42,8 +46,7 @@ Breaking changes that have been made:
 signald's protocol can be somewhat annoying to interact with, and several libraries are available to assist with that:
 
 * Python:
-  * [pysignald](https://pypi.org/project/pysignald/) - a third party signald library in python
-  * [Janky Signal Bot Framework](https://github.com/JankySolutions/SignalBotFramework) - a janky framework for writing simple call and response bots
+  * [pysignald](https://pypi.org/project/pysignald/) - general purpose signald library
   * [Semaphore](https://github.com/lwesterhof/semaphore) - a simple (rule-based) bot library for Signal Private Messenger in Python
 * Go:
   * [signald-go](https://git.callpipe.com/finn/signald-go) - a signald library in go
