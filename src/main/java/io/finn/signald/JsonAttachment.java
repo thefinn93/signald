@@ -33,6 +33,7 @@ public class JsonAttachment {
     int size;
     String storedFilename;
     String filename;
+    String customFilename;
     String caption;
     int width;
     int height;
@@ -79,6 +80,10 @@ public class JsonAttachment {
 
             if(pointer.getBlurHash().isPresent()) {
                 this.blurhash = pointer.getBlurHash().get();
+            }
+
+            if (pointer.getFileName().isPresent()) {
+                this.customFilename = pointer.getFileName().get();
             }
 
             File file = Manager.get(username).getAttachmentFile(id);
