@@ -15,33 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.JsonBlockedListMessage;
-import io.finn.signald.clientprotocol.v1.JsonMessageRequestResponseMessage;
-import io.finn.signald.clientprotocol.v1.JsonReadMessage;
+import io.finn.signald.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-class JsonSyncMessage {
-  JsonSentTranscriptMessage sent;
-  JsonAttachment contacts;
-  boolean contactsComplete;
-  JsonAttachment groups;
-  JsonBlockedListMessage blockedList;
-  String request;
-  List<JsonReadMessage> readMessages;
-  JsonViewOnceOpenMessage viewOnceOpen;
-  JsonVerifiedMessage verified;
-  ConfigurationMessage configuration;
-  List<JsonStickerPackOperationMessage> stickerPackOperations;
-  String fetchType;
-  JsonMessageRequestResponseMessage messageRequestResponse;
+public class JsonSyncMessage {
+  public JsonSentTranscriptMessage sent;
+  public JsonAttachment contacts;
+  public boolean contactsComplete;
+  public JsonAttachment groups;
+  public JsonBlockedListMessage blockedList;
+  public String request;
+  public List<JsonReadMessage> readMessages;
+  public JsonViewOnceOpenMessage viewOnceOpen;
+  public JsonVerifiedMessage verified;
+  public ConfigurationMessage configuration;
+  public List<JsonStickerPackOperationMessage> stickerPackOperations;
+  public String fetchType;
+  public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
     }

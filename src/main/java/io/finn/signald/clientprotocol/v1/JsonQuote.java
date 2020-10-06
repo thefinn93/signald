@@ -15,16 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.JsonQuotedAttachment;
+import io.finn.signald.annotations.Doc;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.util.ArrayList;
 import java.util.List;
 
-class JsonQuote {
+@Doc("A quote is a reply to a previous message. ID is the sent time of the message being replied to")
+public class JsonQuote {
   public long id;
   public JsonAddress author;
   public String text;

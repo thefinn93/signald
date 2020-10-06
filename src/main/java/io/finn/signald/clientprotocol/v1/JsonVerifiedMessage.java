@@ -17,23 +17,19 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
-import org.whispersystems.util.Base64;
+import org.asamk.signal.util.Hex;
+import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
 
-public class JsonMessageRequestResponseMessage {
-  public JsonAddress person;
-  public String groupId;
-  public String type;
+public class JsonVerifiedMessage {
+  public JsonAddress destination;
+  public String identityKey;
+  public String verified;
+  public long timestamp;
 
-  public JsonMessageRequestResponseMessage(MessageRequestResponseMessage m) {
-    if (m.getPerson().isPresent()) {
-      person = new JsonAddress(m.getPerson().get());
-    }
-
-    if (m.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(m.getGroupId().get());
-    }
-
-    type = m.getType().toString();
+  public JsonVerifiedMessage(VerifiedMessage message) {
+    destination = new JsonAddress(message.getDestination());
+    identityKey = Hex.toStringCondensed(message.getIdentityKey().getPublicKey().serialize());
+    verified = message.getVerified().toString();
+    timestamp = message.getTimestamp();
   }
 }

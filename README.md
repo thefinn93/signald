@@ -85,11 +85,11 @@ Sends a signal message to another user or a group. Possible values are:
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The signal number you are sending *from*. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
-| `attachments` | list of [`JsonAttachment`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonAttachment) | no | A list of attachments |
-| `quote` | [`JsonQuote`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/JsonQuote) | no | The message to quote |
+| `attachments` | list of [`JsonAttachment`](https://docs.signald.org/structures/v0/JsonAttachment.html) | no | A list of attachments |
+| `quote` | [`JsonQuote`](https://docs.signald.org/structures/v1/JsonQuote.html) | no | The message to quote |
 | `timestamp` | int | The timestamp (in milliseconds) for the message, which also acts as the message identifier. Defaults to the current time. |
 
 ### `register`
@@ -120,7 +120,7 @@ Send a typing started message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the typing message. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to send typing message to. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes | The full number to send typing message to. |
 | `recipientGroupId` | string | no | The base64 encoded group ID. |
 
 
@@ -131,7 +131,7 @@ Send a typing stopped message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the typing message. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to send typing message to. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes | The full number to send typing message to. |
 | `recipientGroupId` | string | no | The base64 encoded group ID. |
 
 
@@ -142,7 +142,7 @@ Mark a received message as "read" by sending a receipt message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the read receipt. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number that sent the original message. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes | The full number that sent the original message. |
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
@@ -208,7 +208,7 @@ Checks whether a contact is currently registered with the server. Returns the co
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The address of the user to look up. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes | The address of the user to look up. |
 
 
 ### `get_identities`
@@ -218,7 +218,7 @@ Returns all known identities/keys, optionally just for a specific number.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | no | The full number to look up. |
 
 
 ### `trust`
@@ -228,7 +228,7 @@ Trust's a safety number or fingerprint.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes | The full number to look up. |
 | `fingerprint` | `string` | yes | The safety number or fingerprint to trust. |
 | `trustLevel` | `string` | no | The level at which to trust the identity. |
 
@@ -325,7 +325,7 @@ As one might expect, `recipientAddress` and `recipientGroupId` are mutually excl
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address to change the expiration with. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | no | The address to change the expiration with. |
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
 | `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
 
@@ -337,7 +337,7 @@ Gets a user's profile. At this time only the name is available. Must have the us
 | Field             | Type     | Required | Description |
 |-------------------|----------|----------|-------------|
 | `username`        | `string` | yes      | The account to use. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes      | The number of the user who's profile is being checked. |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes      | The number of the user who's profile is being checked. |
 
 
 ### `set_profile`
@@ -351,14 +351,14 @@ Sets the user's profile. At this time only the name is available.
 
 ### `react`
 
-React to a message. For details see the [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) wiki page.
+React to a message. For details see the [`JsonReaction`](https://docs.signald.org/structures/v1/JsonReaction.html) wiki page.
 
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
-| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | no | The address you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
-| `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | yes | the reaction message to send |
+| `reaction` | [`JsonReaction`](https://docs.signald.org/structures/v1/JsonReaction.html) | yes | the reaction message to send |
 
 ### `group_link_info`
 
@@ -369,17 +369,13 @@ Get information about a v2 group from a signal.group link
 | `username` | `string` | yes      | The account to use. |
 | `uri`      | `string` | yes      | The signal.group link |
 
-## Transition An Account From signal-cli
 
-signald's on-disk data structures are generally the same as or very similar to signal-cli's. Until recently, signald used the same
-location to store the accounts on the disk. To transition all of your accounts from signal-cli to signald, simply rename `~/.config/signal`
-to `~/.config/signald`. Please note that you should **not** copy and use the same account with both programs. Link them to the same user
-if you would like to use both signald and signal-cli.
+### `protocol`
 
-If you have installed the `.deb` and are using the system-wide signald service, copy to `/var/lib/signald`
+returns a JSON document that describes the next generation of the signald protocol. For more information, see [docs.signald.org](https://docs.signald.org)
 
 ## License
-This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
+This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli).
 
 ## Contributing
 Contributions are welcome and appreciated. for larger changes, consider reaching out first (via the issue tracker, IRC or email).

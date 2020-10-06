@@ -15,19 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
-import io.finn.signald.BuildConfig;
+package io.finn.signald.clientprotocol.v1;
 
-class JsonVersionMessage {
-  public String name;
-  public String version;
-  public String branch;
-  public String commit;
+import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.clientprotocol.RequestType;
 
-  JsonVersionMessage() {
-    this.name = BuildConfig.NAME;
-    this.version = BuildConfig.VERSION;
-    this.branch = BuildConfig.BRANCH;
-    this.commit = BuildConfig.COMMIT;
+@SignaldClientRequest(type = "version", ResponseClass = JsonVersionMessage.class)
+public class VersionRequest implements RequestType {
+  @Override
+  public void run(Request request) throws Throwable {
+    request.reply(new JsonVersionMessage());
   }
 }

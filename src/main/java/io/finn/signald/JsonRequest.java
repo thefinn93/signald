@@ -17,7 +17,9 @@
 
 package io.finn.signald;
 
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonQuote;
 import io.finn.signald.clientprotocol.v1.JsonReaction;
 import io.finn.signald.storage.ContactStore;
 
@@ -25,12 +27,12 @@ import java.util.List;
 
 public class JsonRequest {
   public String type;
-  public String id;
-  public String username;
-  public String messageBody;
-  public String recipientGroupId;
-  public JsonAddress recipientAddress;
-  public Boolean voice;
+  @Doc("the request type") public String id;
+  @Doc("if included in a request, all responses will also include an id field with the same value") public String username;
+  @Doc("the full e164 phone number of the account being interacted with") public String messageBody;
+  @Doc("the text of the outbound message") public String recipientGroupId;
+  @Doc("the group ID to send to or interact with") public JsonAddress recipientAddress;
+  @Doc("the address of the remote user to send to or interact with") public Boolean voice;
   public String code;
   public String deviceName;
   public List<JsonAttachment> attachments;
@@ -40,15 +42,16 @@ public class JsonRequest {
   public String avatar;
   public JsonQuote quote;
   public int expiresInSeconds;
-  public String fingerprint;
+  @Doc("override the expiration time of the message. If left blank signald will use the correct expiration time for the thread") public String fingerprint;
   public String trustLevel;
   public ContactStore.ContactInfo contact;
   public String captcha;
   public String name;
   public List<Long> timestamps;
-  public long when;
-  public JsonReaction reaction;
+  @Doc("a list of timestamps being marked as read") public long when;
+  @Doc("the timestamp, for some types of requests") public JsonReaction reaction;
   public Long timestamp;
+  @Doc("the timestamp, for other types of requests") public String version = "v0";
 
   JsonRequest() {}
 }

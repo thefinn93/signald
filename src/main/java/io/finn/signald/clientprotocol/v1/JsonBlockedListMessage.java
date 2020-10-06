@@ -25,8 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JsonBlockedListMessage {
-  List<JsonAddress> addresses;
-  List<String> groupIds;
+  public List<JsonAddress> addresses;
+  public List<String> groupIds;
   public JsonBlockedListMessage(BlockedListMessage blocklist) {
     if (!blocklist.getAddresses().isEmpty()) {
       addresses = new ArrayList<>();

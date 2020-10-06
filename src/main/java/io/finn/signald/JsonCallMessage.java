@@ -21,16 +21,16 @@ import org.whispersystems.signalservice.api.messages.calls.*;
 
 import java.util.List;
 
-class JsonCallMessage {
-  OfferMessage offerMessage;
-  AnswerMessage answerMessage;
-  BusyMessage busyMessage;
-  HangupMessage hangupMessage;
-  List<IceUpdateMessage> iceUpdateMessages;
-  Integer destinationDeviceId;
-  boolean isMultiRing;
+public class JsonCallMessage {
+  public OfferMessage offerMessage;
+  public AnswerMessage answerMessage;
+  public BusyMessage busyMessage;
+  public HangupMessage hangupMessage;
+  public List<IceUpdateMessage> iceUpdateMessages;
+  public int destinationDeviceId;
+  public boolean isMultiRing;
 
-  JsonCallMessage(SignalServiceCallMessage callMessage) {
+  public JsonCallMessage(SignalServiceCallMessage callMessage) {
     if (callMessage.getOfferMessage().isPresent()) {
       offerMessage = callMessage.getOfferMessage().get();
     }

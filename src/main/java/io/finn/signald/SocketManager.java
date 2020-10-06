@@ -17,32 +17,20 @@
 
 package io.finn.signald;
 
-import java.io.PrintWriter;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Iterator;
-import java.util.ArrayList;
-import java.net.Socket;
-
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.core.JsonGenerator;
+import io.finn.signald.util.JSONUtil;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 class SocketManager {
-  private List<Socket> sockets = Collections.synchronizedList(new ArrayList<Socket>());
-  private ObjectMapper mpr = new ObjectMapper();
-
-  public SocketManager() {
-    this.mpr.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY); // disable autodetect
-    this.mpr.setSerializationInclusion(Include.NON_NULL);
-    this.mpr.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-    this.mpr.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-  }
+  private final static ObjectMapper mapper = JSONUtil.GetMapper();
+  private final List<Socket> sockets = Collections.synchronizedList(new ArrayList<>());
 
   public void add(Socket s) { this.sockets.add(s); }
 
@@ -50,7 +38,7 @@ class SocketManager {
 
   public int size() { return this.sockets.size(); }
 
-  public void broadcast(JsonMessageWrapper message) throws JsonProcessingException, IOException {
+  public void broadcast(JsonMessageWrapper message) throws IOException {
     synchronized (this.sockets) {
       Iterator i = this.sockets.iterator();
       while (i.hasNext()) {
@@ -64,9 +52,9 @@ class SocketManager {
     }
   }
 
-  public void send(JsonMessageWrapper message, Socket s) throws JsonProcessingException, IOException {
-    String jsonmessage = this.mpr.writeValueAsString(message);
+  public void send(JsonMessageWrapper message, Socket s) throws IOException {
+    String JSONMessage = mapper.writeValueAsString(message);
     PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-    out.println(jsonmessage);
+    out.println(JSONMessage);
   }
 }

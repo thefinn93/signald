@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.Manager;
+import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.storage.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -27,12 +28,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-class JsonGroupInfo {
-  String groupId;
-  List<JsonAddress> members;
-  String name;
-  String type;
-  Long avatarId;
+public class JsonGroupInfo {
+  public String groupId;
+  public List<JsonAddress> members;
+  public String name;
+  public String type;
+  public long avatarId;
 
   JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccountException {
     Manager manager = Manager.get(username);
@@ -55,7 +56,7 @@ class JsonGroupInfo {
     this.type = groupInfo.getType().toString();
   }
 
-  JsonGroupInfo(GroupInfo groupInfo, Manager m) {
+  public JsonGroupInfo(GroupInfo groupInfo, Manager m) {
     this.groupId = Base64.encodeBytes(groupInfo.groupId);
     this.name = groupInfo.name;
     this.members = new ArrayList<>();

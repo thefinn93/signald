@@ -15,25 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.clientprotocol.v1;
+package io.finn.signald.clientprotocol.v1alpha1;
 
-import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
-import org.whispersystems.util.Base64;
+public class RequestProcessingError {
+  public String message;
 
-public class JsonMessageRequestResponseMessage {
-  public JsonAddress person;
-  public String groupId;
-  public String type;
-
-  public JsonMessageRequestResponseMessage(MessageRequestResponseMessage m) {
-    if (m.getPerson().isPresent()) {
-      person = new JsonAddress(m.getPerson().get());
-    }
-
-    if (m.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(m.getGroupId().get());
-    }
-
-    type = m.getType().toString();
-  }
+  public RequestProcessingError(Throwable throwable) { message = throwable.getMessage(); }
 }

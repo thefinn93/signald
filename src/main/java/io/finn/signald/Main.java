@@ -17,7 +17,9 @@
 
 package io.finn.signald;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.finn.signald.storage.AccountData;
+import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,6 +51,8 @@ public class Main implements Runnable {
 
   @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
 
+  @Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit") private boolean dumpProtocol = false;
+
   private static final Logger logger = LogManager.getLogger();
 
   public void run() {
@@ -58,6 +62,15 @@ public class Main implements Runnable {
 
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
+    if (dumpProtocol) {
+      try {
+        System.out.println(JSONUtil.GetMapper().writeValueAsString(ProtocolDocumentor.GetProtocolDocumentation()));
+        System.exit(0);
+      } catch (JsonProcessingException e) {
+        logger.catching(e);
+      }
+      System.exit(1);
+    }
     try {
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);

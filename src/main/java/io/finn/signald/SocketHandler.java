@@ -23,8 +23,11 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
+import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.ContactStore;
 import org.apache.logging.log4j.LogManager;
@@ -103,8 +106,21 @@ public class SocketHandler implements Runnable {
         JsonRequest request = null;
 
         try {
-          request = mpr.readValue(line, JsonRequest.class);
-          handleRequest(request);
+          JsonNode rawRequest = mpr.readTree(line);
+          String version = "v0";
+          if (rawRequest.has("version")) {
+            version = rawRequest.get("version").asText();
+          } else if (rawRequest.has("type") && Request.defaultVersions.containsKey(rawRequest.get("type").asText())) {
+            String type = rawRequest.get("type").asText();
+            version = Request.defaultVersions.get(type);
+          }
+
+          if (version.equals("v0")) {
+            request = mpr.convertValue(rawRequest, JsonRequest.class);
+            handleRequest(request);
+          } else {
+            new Request(rawRequest, socket);
+          }
         } catch (JsonProcessingException e) {
           handleError(e, null);
         } catch (Throwable e) {
@@ -205,9 +221,6 @@ public class SocketHandler implements Runnable {
       break;
     case "update_contact":
       updateContact(request);
-      break;
-    case "version":
-      version();
       break;
     case "get_profile":
       getProfile(request);
@@ -601,8 +614,6 @@ public class SocketHandler implements Runnable {
     this.subscribedAccounts.remove(request.username);
     this.reply("unsubscribed", null, request.id); // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
-
-  private void version() throws IOException { this.reply("version", new JsonVersionMessage(), null); }
 
   private void getProfile(JsonRequest request)
       throws IOException, NoSuchAccountException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException, VerificationFailedException {

@@ -94,7 +94,7 @@ import java.util.stream.Collectors;
 import static java.nio.file.attribute.PosixFilePermission.*;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
-class Manager {
+public class Manager {
   private final Logger logger;
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
   private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();

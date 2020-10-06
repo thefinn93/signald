@@ -21,13 +21,12 @@ import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage
 
 import java.util.List;
 
-class JsonReceiptMessage {
+public class JsonReceiptMessage {
+  public String type;
+  public List<Long> timestamps;
+  public long when;
 
-  String type;
-  List<Long> timestamps;
-  long when;
-
-  JsonReceiptMessage(SignalServiceReceiptMessage receiptMessage) {
+  public JsonReceiptMessage(SignalServiceReceiptMessage receiptMessage) {
     type = receiptMessage.getType().name();
     timestamps = receiptMessage.getTimestamps();
     when = receiptMessage.getWhen();

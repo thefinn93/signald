@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.NoSuchAccountException;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -25,13 +25,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-class JsonSentTranscriptMessage {
-  JsonAddress destination;
-  long timestamp;
-  long expirationStartTimestamp;
-  JsonDataMessage message;
-  Map<String, Boolean> unidentifiedStatus = new HashMap<>();
-  boolean isRecipientUpdate;
+public class JsonSentTranscriptMessage {
+  public JsonAddress destination;
+  public long timestamp;
+  public long expirationStartTimestamp;
+  public JsonDataMessage message;
+  public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
+  public boolean isRecipientUpdate;
 
   JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException {
     if (s.getDestination().isPresent()) {

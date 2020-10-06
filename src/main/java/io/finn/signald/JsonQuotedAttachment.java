@@ -17,9 +17,10 @@
 
 package io.finn.signald;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
-class JsonQuotedAttachment {
+public class JsonQuotedAttachment {
   public String contentType;
   public String fileName;
   public JsonAttachment thumbnail;
@@ -35,6 +36,7 @@ class JsonQuotedAttachment {
     //    }
   }
 
+  @JsonIgnore
   public SignalServiceDataMessage.Quote.QuotedAttachment getAttachment() {
     // FileInputStream thumbnailFile = new FileInputStream(this.thumbnail);
     // SignalServiceAttachmentStream thumbnail = new SignalServiceAttachmentStream(thumbnailFile, this.contentType, thumbnailFile.length,this.Filename, false, null, 0, 0, null,

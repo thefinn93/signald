@@ -21,11 +21,11 @@ import org.asamk.signal.util.Hex;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 
 public class JsonSendMessageResult {
-  JsonAddress address;
-  SendMessageResult.Success success;
-  boolean networkFailure;
-  boolean unregisteredFailure;
-  String identityFailure;
+  public JsonAddress address;
+  public SendMessageResult.Success success;
+  public boolean networkFailure;
+  public boolean unregisteredFailure;
+  public String identityFailure;
 
   public JsonSendMessageResult(SendMessageResult result) {
     address = new JsonAddress(result.getAddress());

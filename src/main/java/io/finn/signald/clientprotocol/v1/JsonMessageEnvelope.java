@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -28,25 +28,25 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-class JsonMessageEnvelope {
-  String username;
-  String uuid;
-  JsonAddress source;
-  int sourceDevice;
-  String type;
-  String relay;
-  long timestamp;
-  String timestampISO;
-  long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
-  long serverDeliveredTimestamp;
-  boolean hasLegacyMessage;
-  boolean hasContent;
-  boolean isUnidentifiedSender;
-  JsonDataMessage dataMessage;
-  JsonSyncMessage syncMessage;
-  JsonCallMessage callMessage;
-  JsonReceiptMessage receipt;
-  JsonTypingMessage typing;
+public class JsonMessageEnvelope {
+  public String username;
+  public String uuid;
+  public JsonAddress source;
+  public int sourceDevice;
+  public String type;
+  public String relay;
+  public long timestamp;
+  public String timestampISO;
+  public long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
+  public long serverDeliveredTimestamp;
+  public boolean hasLegacyMessage;
+  public boolean hasContent;
+  public boolean isUnidentifiedSender;
+  public JsonDataMessage dataMessage;
+  public JsonSyncMessage syncMessage;
+  public JsonCallMessage callMessage;
+  public JsonReceiptMessage receipt;
+  public JsonTypingMessage typing;
 
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
     this.username = username;

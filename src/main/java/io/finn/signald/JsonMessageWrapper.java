@@ -21,11 +21,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @JsonInclude(Include.NON_NULL)
-class JsonMessageWrapper {
-  String id;
-  String type;
-  Object data;
-  String exception;
+public class JsonMessageWrapper {
+  public String id;
+  public String type;
+  public Object data;
+  public Object error;
+  public String exception;
 
   public JsonMessageWrapper(String type, Object data, String id) {
     this.type = type;
@@ -39,5 +40,11 @@ class JsonMessageWrapper {
     if (e != null) {
       this.exception = e.toString();
     }
+  }
+
+  public static JsonMessageWrapper error(String type, Object error, String id) {
+    JsonMessageWrapper j = new JsonMessageWrapper(type, null, id);
+    j.error = error;
+    return j;
   }
 }

@@ -20,12 +20,12 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 import org.whispersystems.util.Base64;
 
-class JsonTypingMessage {
-  String action;
-  long timestamp;
-  String groupId;
+public class JsonTypingMessage {
+  public String action;
+  public long timestamp;
+  public String groupId;
 
-  JsonTypingMessage(SignalServiceTypingMessage typingMessage) {
+  public JsonTypingMessage(SignalServiceTypingMessage typingMessage) {
     action = typingMessage.getAction().name();
     timestamp = typingMessage.getTimestamp();
     if (typingMessage.getGroupId().isPresent()) {

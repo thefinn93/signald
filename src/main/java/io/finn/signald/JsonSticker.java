@@ -22,13 +22,13 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.io.IOException;
 
-class JsonSticker {
-  String packID;
-  String packKey;
-  int stickerID;
-  JsonAttachment attachment;
+public class JsonSticker {
+  public String packID;
+  public String packKey;
+  public int stickerID;
+  public JsonAttachment attachment;
 
-  JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException {
+  public JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException {
     packID = Hex.toStringCondensed(sticker.getPackId());
     packKey = Hex.toStringCondensed(sticker.getPackKey());
     stickerID = sticker.getStickerId();

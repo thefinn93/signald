@@ -6,7 +6,7 @@ export CI_BUILD_REF_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
 export CI_COMMIT_SHA ?= $(shell git rev-parse HEAD)
 GRADLE ?= ./gradlew
 
-all: installDist tar
+all: installDist
 
 deb:
 	gbp dch --verbose --ignore-branch --debian-tag="%(version)s" --git-author --new-version=$(VERSION)

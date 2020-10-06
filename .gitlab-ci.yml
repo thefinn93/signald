@@ -2,6 +2,8 @@ stages:
   - lint
   - build
   - test
+  - docs
+  - downstreams
 
 clang-format:
   image: debian:latest
@@ -17,7 +19,7 @@ build-java-8:
   stage: build
   needs: []
   before_script:
-    - apt update && apt install -y make
+    - apt-get update && apt-get install -y make
   except:
     - schedules
   script:
@@ -31,7 +33,7 @@ build-java-11:
   stage: build
   needs: []
   before_script:
-    - apt update && apt install -y make
+    - apt-get update && apt-get install -y make
   except:
     - schedules
   script:
@@ -73,3 +75,20 @@ test:integration:
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
+
+documentation:
+  image: openjdk:11-jdk
+  stage: docs
+  script:
+    - build/install/signald/bin/signald --dump-protocol > protocol.json
+  needs: [build-java-11]
+  artifacts:
+    paths:
+      - protocol.json
+
+docs.signald.org:
+  stage: downstreams
+  needs: [documentation]
+  trigger: signald/docs.signald.org
+  only:
+    - master

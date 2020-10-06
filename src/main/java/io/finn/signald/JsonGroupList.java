@@ -17,9 +17,11 @@
 
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.JsonGroupInfo;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.storage.GroupInfo;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +29,7 @@ class JsonGroupList {
   List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
   List<JsonGroupV2Info> groupsv2 = new ArrayList<>();
 
-  JsonGroupList(Manager m) {
+  JsonGroupList(Manager m) throws IOException, NoSuchAccountException {
     for (GroupInfo group : m.getGroups()) {
       if (group != null) {
         this.groups.add(new JsonGroupInfo(group, m));

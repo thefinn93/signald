@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.storage.AddressResolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,9 +31,9 @@ import java.util.UUID;
 public class JsonAddress {
   private static final Logger logger = LogManager.getLogger();
 
-  public String number;
+  @Doc("An e164 phone number, starting with +. Currently the only available user-facing Signal identifier.") public String number;
 
-  public String uuid;
+  @Doc("A UUID, the unique identifier for a particular Signal account.") public String uuid;
 
   public String relay;
 

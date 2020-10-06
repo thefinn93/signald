@@ -20,12 +20,12 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
 import org.thoughtcrime.securesms.util.Hex;
 
-class JsonStickerPackOperationMessage {
-  String packID;
-  String packKey;
-  String type;
+public class JsonStickerPackOperationMessage {
+  public String packID;
+  public String packKey;
+  public String type;
 
-  JsonStickerPackOperationMessage(StickerPackOperationMessage message) {
+  public JsonStickerPackOperationMessage(StickerPackOperationMessage message) {
     if (message.getPackId().isPresent()) {
       packID = Hex.toStringCondensed(message.getPackId().get());
     }

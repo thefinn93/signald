@@ -15,10 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.clientprotocol.v1.JsonReaction;
+import io.finn.signald.JsonAttachment;
+import io.finn.signald.JsonPreview;
+import io.finn.signald.JsonSticker;
+import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.annotations.Doc;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
@@ -28,24 +31,41 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-class JsonDataMessage {
-  long timestamp;
-  List<JsonAttachment> attachments;
-  String body;
-  JsonGroupInfo group;
-  JsonGroupV2Info groupV2;
-  boolean endSession;
-  int expiresInSeconds;
-  boolean profileKeyUpdate;
-  JsonQuote quote;
-  List<SharedContact> contacts;
-  List<JsonPreview> previews;
-  JsonSticker sticker;
-  boolean viewOnce;
-  JsonReaction reaction;
-  SignalServiceDataMessage.RemoteDelete remoteDelete;
+public class JsonDataMessage {
+  @Doc("the (unix) timestamp that the message was sent at, according to the sender's device. This is used to uniquely identify this message for things like reactions and quotes.")
+  public long timestamp;
 
-  JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
+  @Doc("files attached to the incoming message") public List<JsonAttachment> attachments;
+
+  @Doc("the text body of the incoming message.") public String body;
+
+  @Doc("if the incoming message was sent to a v1 group, information about that group will be here") public JsonGroupInfo group;
+
+  @Doc("is the incoming message was sent to a v2 group, basic identifying information about that group will be here. For full information, use list_groups")
+  public JsonGroupV2Info groupV2;
+
+  public boolean endSession;
+
+  @Doc("the expiry timer on the incoming message. Clients should delete records of the message within this number of seconds") public int expiresInSeconds;
+  public boolean profileKeyUpdate;
+
+  @Doc("if the incoming message is a quote or reply to another message, this will contain information about that message") public JsonQuote quote;
+
+  @Doc("if the incoming message has a shared contact, the contact's information will be here") public List<SharedContact> contacts;
+
+  @Doc("if the incoming message has a link preview, information about that preview will be here") public List<JsonPreview> previews;
+
+  @Doc("if the incoming message is a sticker, information about the sicker will be here") public JsonSticker sticker;
+
+  @Doc(
+      "indicates the message is a view once message. View once messages typically include no body and a single image attachment. Official Signal clients will prevent the user from saving the image, and once the user has viewed the image once they will destroy the image.")
+  public boolean viewOnce;
+
+  @Doc("if the message adds or removes a reaction to another message, this will indicate what change is being made") public JsonReaction reaction;
+
+  @Doc("if the inbound message is deleting a previously sent message, indicates which message should be deleted") public SignalServiceDataMessage.RemoteDelete remoteDelete;
+
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {

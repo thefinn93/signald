@@ -17,23 +17,14 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestResponseMessage;
-import org.whispersystems.util.Base64;
+import java.util.List;
 
-public class JsonMessageRequestResponseMessage {
-  public JsonAddress person;
-  public String groupId;
-  public String type;
+public class SendResponse {
+  public List<JsonSendMessageResult> results;
+  public long timestamp;
 
-  public JsonMessageRequestResponseMessage(MessageRequestResponseMessage m) {
-    if (m.getPerson().isPresent()) {
-      person = new JsonAddress(m.getPerson().get());
-    }
-
-    if (m.getGroupId().isPresent()) {
-      groupId = Base64.encodeBytes(m.getGroupId().get());
-    }
-
-    type = m.getType().toString();
+  public SendResponse(List<JsonSendMessageResult> r, long t) {
+    results = r;
+    timestamp = t;
   }
 }

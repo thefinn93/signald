@@ -21,12 +21,12 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.io.IOException;
 
-class JsonPreview {
-  String url;
-  String title;
-  JsonAttachment attachment;
+public class JsonPreview {
+  public String url;
+  public String title;
+  public JsonAttachment attachment;
 
-  JsonPreview(SignalServiceDataMessage.Preview preview, String username) throws IOException, NoSuchAccountException {
+  public JsonPreview(SignalServiceDataMessage.Preview preview, String username) throws IOException, NoSuchAccountException {
     url = preview.getUrl();
     title = preview.getTitle();
     if (preview.getImage().isPresent()) {

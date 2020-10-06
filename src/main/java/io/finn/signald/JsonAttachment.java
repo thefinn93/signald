@@ -27,26 +27,26 @@ import java.io.File;
 import java.io.IOException;
 
 public class JsonAttachment {
-  String contentType;
-  String id;
-  int size;
-  String storedFilename;
-  String filename;
-  String customFilename;
-  String caption;
-  int width;
-  int height;
-  boolean voiceNote;
-  String preview;
-  String key;
-  String digest;
-  String blurhash;
+  public String contentType;
+  public String id;
+  public int size;
+  public String storedFilename;
+  public String filename;
+  public String customFilename;
+  public String caption;
+  public int width;
+  public int height;
+  public boolean voiceNote;
+  public String preview;
+  public String key;
+  public String digest;
+  public String blurhash;
 
   JsonAttachment() {}
 
   JsonAttachment(String storedFilename) { this.filename = storedFilename; }
 
-  JsonAttachment(SignalServiceAttachment attachment, String username) throws IOException, NoSuchAccountException {
+  public JsonAttachment(SignalServiceAttachment attachment, String username) throws IOException, NoSuchAccountException {
     this.contentType = attachment.getContentType();
     final SignalServiceAttachmentPointer pointer = attachment.asPointer();
     if (attachment.isPointer()) {
