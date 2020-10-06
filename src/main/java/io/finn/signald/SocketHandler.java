@@ -137,6 +137,9 @@ public class SocketHandler implements Runnable {
       case "send":
         send(request);
         break;
+      case "mark_delivered":
+        markDelivered(request);
+        break;
       case "mark_read":
         markRead(request);
         break;
@@ -263,6 +266,28 @@ public class SocketHandler implements Runnable {
     }
 
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+  }
+
+  private void markDelivered(JsonRequest request) throws IOException, NoSuchAccountException {
+    logger.info("Mark as Delivered");
+    Manager m = Manager.get(request.username);
+
+    if(request.when == 0) {
+      request.when = System.currentTimeMillis();
+    }
+
+    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(
+        SignalServiceReceiptMessage.Type.DELIVERY,
+        request.timestamps,
+        request.when);
+
+    SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
+    if(result != null) {
+      SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
+      if(identityFailure != null) {
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
+      }
+    }
   }
 
   private void markRead(JsonRequest request) throws IOException, NoSuchAccountException {
