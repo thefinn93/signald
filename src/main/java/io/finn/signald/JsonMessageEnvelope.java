@@ -56,10 +56,11 @@ class JsonMessageEnvelope {
             uuid = envelope.getUuid();
         }
 
-        if (envelope.hasSource()) {
-            source = new JsonAddress(envelope.getSourceAddress());
-        } else if(c != null){
-            source = new JsonAddress(c.getSender());
+        Manager m = Manager.get(username);
+        if(envelope.hasSource()) {
+            source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+        } else if(c != null) {
+            source = new JsonAddress(m.getResolver().resolve(c.getSender()));
         }
 
         if (envelope.hasSourceDevice()) {

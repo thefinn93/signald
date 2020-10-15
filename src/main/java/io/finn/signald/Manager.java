@@ -1639,4 +1639,8 @@ class Manager {
     private SignalServiceMessageReceiver getMessageReceiver() {
         return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
     }
+
+    public AddressResolver getResolver() {
+        return accountData.getResolver();
+    }
 }
