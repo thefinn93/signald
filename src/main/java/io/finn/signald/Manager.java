@@ -640,7 +640,7 @@ class Manager {
         ContactStore.ContactInfo contact = accountData.contactStore.getContact(address);
         contact.messageExpirationTime = expiresInSeconds;
         accountData.contactStore.updateContact(contact);
-        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate();
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate().withExpiration(expiresInSeconds);
         List<SignalServiceAddress> recipients = new ArrayList<>(1);
         recipients.add(address);
         return sendMessage(messageBuilder, recipients);
