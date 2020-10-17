@@ -137,6 +137,12 @@ public class SocketHandler implements Runnable {
       case "send":
         send(request);
         break;
+      case "typing_started":
+        typingStarted(request);
+        break;
+      case "typing_stopped":
+        typingStopped(request);
+        break;
       case "mark_delivered":
         markDelivered(request);
         break;
@@ -266,6 +272,45 @@ public class SocketHandler implements Runnable {
     }
 
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+  }
+
+  private void typing(JsonRequest request, SignalServiceTypingMessage.Action action) throws IOException, NoSuchAccountException {
+    Manager m = Manager.get(request.username);
+
+    byte[] groupId = null;
+    if(request.recipientGroupId != null) {
+      groupId = Base64.decode(request.recipientGroupId);
+    }
+    if (groupId == null) {
+        groupId = new byte[0];
+    }
+
+    if(request.when == 0) {
+      request.when = System.currentTimeMillis();
+    }
+
+    SignalServiceTypingMessage message = new SignalServiceTypingMessage(
+        action,
+        request.when,
+        Optional.fromNullable(groupId));
+
+    SendMessageResult result = m.sendTypingMessage(message, request.recipientAddress.getSignalServiceAddress());
+    if(result != null) {
+      SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
+      if(identityFailure != null) {
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
+      }
+    }
+  }
+
+  private void typingStarted(JsonRequest request) throws IOException, NoSuchAccountException {
+    logger.info("Typing started");
+    typing(request, SignalServiceTypingMessage.Action.STARTED);
+  }
+
+  private void typingStopped(JsonRequest request) throws IOException, NoSuchAccountException {
+    logger.info("Typing stopped");
+    typing(request, SignalServiceTypingMessage.Action.STOPPED);
   }
 
   private void markDelivered(JsonRequest request) throws IOException, NoSuchAccountException {
