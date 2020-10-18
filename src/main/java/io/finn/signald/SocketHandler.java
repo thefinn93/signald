@@ -138,10 +138,10 @@ public class SocketHandler implements Runnable {
         send(request);
         break;
       case "typing_started":
-        typingStarted(request);
+        typing(request, SignalServiceTypingMessage.Action.STARTED);
         break;
       case "typing_stopped":
-        typingStopped(request);
+        typing(request, SignalServiceTypingMessage.Action.STOPPED);
         break;
       case "mark_delivered":
         markDelivered(request);
@@ -275,6 +275,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void typing(JsonRequest request, SignalServiceTypingMessage.Action action) throws IOException, NoSuchAccountException {
+    logger.info("Typing");
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
@@ -301,16 +302,6 @@ public class SocketHandler implements Runnable {
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
       }
     }
-  }
-
-  private void typingStarted(JsonRequest request) throws IOException, NoSuchAccountException {
-    logger.info("Typing started");
-    typing(request, SignalServiceTypingMessage.Action.STARTED);
-  }
-
-  private void typingStopped(JsonRequest request) throws IOException, NoSuchAccountException {
-    logger.info("Typing stopped");
-    typing(request, SignalServiceTypingMessage.Action.STOPPED);
   }
 
   private void markDelivered(JsonRequest request) throws IOException, NoSuchAccountException {
