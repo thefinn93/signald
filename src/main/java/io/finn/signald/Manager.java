@@ -724,6 +724,30 @@ class Manager {
         }
     }
 
+    public SendMessageResult sendTypingMessage(SignalServiceTypingMessage message, SignalServiceAddress address) throws IOException {
+        if (address == null) {
+            accountData.save();
+            return null;
+        }
+
+        address = accountData.getResolver().resolve(address);
+
+        try {
+            SignalServiceMessageSender messageSender = getMessageSender();
+
+            try {
+                // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
+                messageSender.sendTyping(address, getAccessFor(address), message);
+                return null;
+            } catch (UntrustedIdentityException e) {
+                accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+                return SendMessageResult.identityFailure(address, e.getIdentityKey());
+            }
+        } finally {
+            accountData.save();
+        }
+    }
+
     public SendMessageResult sendReceipt(SignalServiceReceiptMessage message, SignalServiceAddress address) throws IOException {
         if (address == null) {
             accountData.save();
