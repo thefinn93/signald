@@ -95,6 +95,28 @@ Completes the registration process, by providing a verification code sent after 
 | `code` | string | yes | The verification code. The `-` in the middle code is optional.
 
 
+### `typing_started`
+
+Send a typing started message.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to send the typing message. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to send typing message to. |
+| `recipientGroupId` | string | no | The base64 encoded group ID. |
+
+
+### `typing_stopped`
+
+Send a typing stopped message.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | `string` | yes | The local account to use to send the typing message. |
+| `recipientAddress` | [`JsonAddress`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonAddress) | yes | The full number to send typing message to. |
+| `recipientGroupId` | string | no | The base64 encoded group ID. |
+
+
 ### `mark_read`
 
 Mark a received message as "read" by sending a receipt message.
