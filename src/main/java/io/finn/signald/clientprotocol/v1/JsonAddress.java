@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
+import io.finn.signald.storage.AddressResolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -160,5 +161,9 @@ public class JsonAddress {
         if(number == null && a.getNumber().isPresent()) {
             number = a.getNumber().get();
         }
+    }
+
+    public void resolve(AddressResolver resolver) {
+        update(resolver.resolve(getSignalServiceAddress()));
     }
 }

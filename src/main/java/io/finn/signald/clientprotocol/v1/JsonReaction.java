@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.storage.AddressResolver;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 public class JsonReaction {
@@ -38,5 +39,9 @@ public class JsonReaction {
     @JsonIgnore
     public SignalServiceDataMessage.Reaction getReaction() {
         return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
+    }
+
+    public void resolve(AddressResolver resolver) {
+        targetAuthor.resolve(resolver);
     }
 }

@@ -620,6 +620,12 @@ public class SocketHandler implements Runnable {
 
   private void react(JsonRequest request) throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException {
     Manager manager = Manager.get(request.username);
+
+    if(request.recipientAddress != null) {
+      request.recipientAddress.resolve(manager.getResolver());
+    }
+    request.reaction.resolve(manager.getResolver());
+
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(request.reaction.getReaction());
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
