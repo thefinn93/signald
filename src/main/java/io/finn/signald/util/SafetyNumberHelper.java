@@ -24,14 +24,16 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class SafetyNumberHelper {
+    // It seems like the official Signal apps don't use v2 safety numbers yet, so this is disabled for now.
+    public static boolean UseV2SafetyNumbers = false;
 
     // computeSafetyNumber derived from signal-cli (computeSafetyNumber in src/main/java/org/asamk/signal/manager/Utils.java)
-    public static String computeSafetyNumber(SignalServiceAddress ownAddress, IdentityKey ownIdentityKey, SignalServiceAddress theirAddress, IdentityKey theirIdentityKey) {
+    public static Fingerprint computeFingerprint(SignalServiceAddress ownAddress, IdentityKey ownIdentityKey, SignalServiceAddress theirAddress, IdentityKey theirIdentityKey) {
         int version;
         byte[] ownId;
         byte[] theirId;
 
-        if(ownAddress.getUuid().isPresent() && theirAddress.getUuid().isPresent()) {
+        if(UseV2SafetyNumbers && ownAddress.getUuid().isPresent() && theirAddress.getUuid().isPresent()) {
             // Version 2: UUID user
             version = 2;
             ownId = UuidUtil.toByteArray(ownAddress.getUuid().get());
@@ -40,13 +42,20 @@ public class SafetyNumberHelper {
             // Version 1: E164 user
             version = 1;
             if (!ownAddress.getNumber().isPresent() || !theirAddress.getNumber().isPresent()) {
-                return "INVALID ID";
+                return null;
             }
             ownId = ownAddress.getNumber().get().getBytes();
             theirId = theirAddress.getNumber().get().getBytes();
         }
 
-        Fingerprint fingerprint = new NumericFingerprintGenerator(5200).createFor(version, ownId, ownIdentityKey, theirId, theirIdentityKey);
+        return new NumericFingerprintGenerator(5200).createFor(version, ownId, ownIdentityKey, theirId, theirIdentityKey);
+    }
+
+    public static String computeSafetyNumber(SignalServiceAddress ownAddress, IdentityKey ownIdentityKey, SignalServiceAddress theirAddress, IdentityKey theirIdentityKey) {
+        Fingerprint fingerprint = computeFingerprint(ownAddress, ownIdentityKey, theirAddress, theirIdentityKey);
+        if (fingerprint == null) {
+            return "INVALID ID";
+        }
         return fingerprint.getDisplayableFingerprint().getDisplayText();
     }
 

@@ -22,13 +22,16 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.storage.IdentityKeyStore;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
+import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.util.Base64;
 
 class JsonIdentity {
   public String trust_level;
   public long added;
   public String fingerprint;
   public String safety_number;
+  public String qr_code_data;
   public JsonAddress address;
 
   JsonIdentity(IdentityKeyStore.Identity identity, Manager m) {
@@ -49,7 +52,13 @@ class JsonIdentity {
 
   private void generateSafetyNumber(IdentityKeyStore.Identity identity, Manager m) {
     if(address != null) {
-      safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), address.getSignalServiceAddress(), identity.getKey());
+      Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnAddress(), m.getIdentity(), address.getSignalServiceAddress(), identity.getKey());
+      if (fingerprint == null) {
+        safety_number = "INVALID ID";
+      } else {
+        safety_number = fingerprint.getDisplayableFingerprint().getDisplayText();
+        qr_code_data = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+      }
     }
   }
 
