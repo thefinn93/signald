@@ -35,7 +35,6 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
@@ -601,7 +600,7 @@ public class SocketHandler implements Runnable {
       this.reply("version", new JsonVersionMessage(), null);
   }
 
-  private void getProfile(JsonRequest request) throws IOException, InvalidCiphertextException, NoSuchAccountException, VerificationFailedException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException {
+  private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException, VerificationFailedException {
       Manager m = Manager.get(request.username);
       ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
       if(contact == null || contact.profileKey == null) {
