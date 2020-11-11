@@ -32,8 +32,8 @@ import org.asamk.signal.TrustLevel;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -65,7 +65,6 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
-import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
@@ -92,7 +91,7 @@ class Manager {
     private final static TrustStore TRUST_STORE = new WhisperTrustStore();
     private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
     private final static String USER_AGENT = BuildConfig.USER_AGENT;
-    private static final SignalServiceProfile.Capabilities SERVICE_CAPABILITIES = new SignalServiceProfile.Capabilities(true, false, false);
+    private static final SignalServiceProfile.Capabilities SERVICE_CAPABILITIES = new SignalServiceProfile.Capabilities(true, true, true);
 
     private final static int PREKEY_MINIMUM_COUNT = 20;
     private final static int PREKEY_BATCH_SIZE = 100;
@@ -297,11 +296,11 @@ class Manager {
             accountData.save();
         }
         try {
-            if (accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
+            if(accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
                 refreshPreKeys();
                 accountData.save();
             }
-        } catch (AuthorizationFailedException e) {
+        } catch(AuthorizationFailedException e) {
             logger.warn("Authorization failed, was the number registered elsewhere?");
             accountData.registered = false;
         }
@@ -780,6 +779,8 @@ class Manager {
 
         recipients = accountData.getResolver().resolve(recipients);
 
+        messageBuilder.withProfileKey(accountData.getProfileKeyBytes());
+
         SignalServiceDataMessage message = null;
         try {
             SignalServiceMessageSender messageSender = getMessageSender();
@@ -1018,19 +1019,15 @@ class Manager {
 
         if(message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
             if(source.equals(accountData.address.getSignalServiceAddress())) {
-                if(message.getProfileKey().isPresent()) {
-                    accountData.setProfileKey(message.getProfileKey().get());
-                }
-                accountData.save();
-            } else {
-                ContactStore.ContactInfo contact = accountData.contactStore.getContact(source);
-                if(contact == null) {
-                    contact = new ContactStore.ContactInfo();
-                    contact.address = new JsonAddress(source);
-                }
-                contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
-                updateContact(contact);
+                accountData.setProfileKey(message.getProfileKey().get());
             }
+            ContactStore.ContactInfo contact = accountData.contactStore.getContact(source);
+            if(contact == null) {
+                contact = new ContactStore.ContactInfo();
+                contact.address = new JsonAddress(source);
+            }
+            contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
+            updateContact(contact);
         }
     }
 
@@ -1648,10 +1645,15 @@ class Manager {
         }
     }
 
-    public SignalServiceProfile getProfile(SignalServiceAddress address, byte[] profileKeyBytes) throws IOException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
+    public SignalServiceProfile getProfile(SignalServiceAddress address, byte[] profileKeyBytes) throws InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-        ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, Optional.of(new ProfileKey(profileKeyBytes)), Optional.absent(), null);
-        return profile.get(10, TimeUnit.SECONDS).getProfile();
+        ProfileAndCredential profileAndCredential = messageReceiver.retrieveProfile(address, Optional.of(new ProfileKey(profileKeyBytes)), Optional.absent(), null).get(10, TimeUnit.SECONDS);
+        Optional<ProfileKeyCredential> credential = profileAndCredential.getProfileKeyCredential();
+        if(credential.isPresent()) {
+            ProfileKeyCredential c = credential.get();
+
+        }
+        return profileAndCredential.getProfile();
     }
 
     private SignalServiceMessageSender getMessageSender() {
@@ -1666,5 +1668,14 @@ class Manager {
 
     public AddressResolver getResolver() {
         return accountData.getResolver();
+    }
+
+    public void refreshAccount() throws IOException {
+        SignalServiceAccountManager signalAccountManager = getAccountManager();
+        signalAccountManager.setAccountAttributes(accountData.signalingKey,
+                accountData.axolotlStore.getLocalRegistrationId(),
+                true, null, null,
+                null, true,
+                SERVICE_CAPABILITIES, true);
     }
 }

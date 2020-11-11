@@ -42,7 +42,7 @@ class JsonProfile {
         identity_key = p.getIdentityKey();
         avatar = p.getAvatar();
         unidentified_access = p.getUnidentifiedAccess();
-        if (p.isUnrestrictedUnidentifiedAccess()) {
+        if(p.isUnrestrictedUnidentifiedAccess()) {
             unrestricted_unidentified_access = true;
         }
         capabilities = new JsonCapabilities(p.getCapabilities());

@@ -217,6 +217,9 @@ public class SocketHandler implements Runnable {
       case "react":
         react(request);
         break;
+      case "refresh_account":
+        refreshAccount(request);
+        break;
       default:
         logger.warn("Unknown command type " + request.type);
         this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
@@ -628,6 +631,12 @@ public class SocketHandler implements Runnable {
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(request.reaction.getReaction());
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+  }
+
+  private void refreshAccount(JsonRequest request) throws IOException, NoSuchAccountException {
+    Manager m = Manager.get(request.username);
+    m.refreshAccount();
+    this.reply("account_refreshed", null, request.id);
   }
 
   private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {

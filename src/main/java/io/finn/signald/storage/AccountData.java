@@ -60,6 +60,7 @@ public class AccountData {
 
     public SignalProtocolStore axolotlStore;
     public GroupStore groupStore;
+    public GroupsV2Storage groupsV2;
     public ContactStore contactStore;
     public RecipientStore recipientStore = new RecipientStore();
 
@@ -148,6 +149,10 @@ public class AccountData {
             groupStore = new GroupStore();
         }
 
+        if(groupsV2 == null) {
+            groupsV2 = new GroupsV2Storage();
+        }
+
         if(contactStore == null) {
             contactStore = new ContactStore();
         }
@@ -169,6 +174,15 @@ public class AccountData {
     @JsonIgnore
     public static void setDataPath(String path) {
         dataPath = path + "/data";
+    }
+
+    @JsonIgnore
+    public byte[] getProfileKeyBytes() {
+        try {
+            return Base64.decode(profileKey);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     @JsonIgnore
