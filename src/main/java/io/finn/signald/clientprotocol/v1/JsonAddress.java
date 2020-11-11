@@ -36,7 +36,7 @@ public class JsonAddress {
 
   public String relay;
 
-  public JsonAddress(){};
+  public JsonAddress() {}
 
   public JsonAddress(String n, UUID uuid) {
     if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
@@ -49,6 +49,12 @@ public class JsonAddress {
     if (uuid != null) {
       this.uuid = uuid.toString();
     }
+  }
+
+  public JsonAddress(JsonAddress other) {
+    number = other.number;
+    uuid = other.uuid;
+    relay = other.relay;
   }
 
   @JsonIgnore
@@ -90,7 +96,7 @@ public class JsonAddress {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null || !(other instanceof JsonAddress))
+    if (!(other instanceof JsonAddress))
       return false;
 
     JsonAddress that = (JsonAddress)other;
@@ -158,5 +164,8 @@ public class JsonAddress {
     }
   }
 
-  public void resolve(AddressResolver resolver) { update(resolver.resolve(getSignalServiceAddress())); }
+  public JsonAddress resolve(AddressResolver resolver) {
+    update(resolver.resolve(getSignalServiceAddress()));
+    return this;
+  }
 }

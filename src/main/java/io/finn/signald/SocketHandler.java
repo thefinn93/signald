@@ -36,6 +36,7 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
@@ -217,6 +218,12 @@ public class SocketHandler implements Runnable {
     case "react":
       react(request);
       break;
+    case "refresh_account":
+      refreshAccount(request);
+      break;
+    case "group_link_info":
+      groupLinkInfo(request);
+      break;
     default:
       logger.warn("Unknown command type " + request.type);
       this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
@@ -225,7 +232,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void send(JsonRequest request)
-      throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException, InvalidRecipientException {
+      throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException, InvalidRecipientException, InvalidInputException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -615,7 +622,8 @@ public class SocketHandler implements Runnable {
     this.reply("profile_set", null, request.id);
   }
 
-  private void react(JsonRequest request) throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException {
+  private void react(JsonRequest request)
+      throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException {
     Manager manager = Manager.get(request.username);
 
     if (request.recipientAddress != null) {
@@ -626,6 +634,18 @@ public class SocketHandler implements Runnable {
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(request.reaction.getReaction());
     handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+  }
+
+  private void refreshAccount(JsonRequest request) throws IOException, NoSuchAccountException {
+    Manager m = Manager.get(request.username);
+    m.refreshAccount();
+    this.reply("account_refreshed", null, request.id);
+  }
+
+  private void groupLinkInfo(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, VerificationFailedException, GroupLinkNotActiveException {
+    Manager m = Manager.get(request.username);
+    GroupsV2Manager groupsv2Manager = m.getGroupsV2();
+    this.reply("group_join_ino", groupsv2Manager.getGroupJoinInfo(request.uri), request.id);
   }
 
   private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {

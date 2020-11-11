@@ -17,9 +17,11 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
+import io.finn.signald.util.ExpandedPushServiceSocket;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
@@ -50,6 +52,9 @@ import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
@@ -59,6 +64,8 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
+import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
+import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 import org.whispersystems.signalservice.api.util.*;
 import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -92,7 +99,7 @@ class Manager {
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
   private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final SignalServiceProfile.Capabilities SERVICE_CAPABILITIES = new SignalServiceProfile.Capabilities(true, false, false);
+  private static final SignalServiceProfile.Capabilities SERVICE_CAPABILITIES = new SignalServiceProfile.Capabilities(true, true, false);
 
   private final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
@@ -107,6 +114,7 @@ class Manager {
 
   private AccountData accountData;
 
+  private GroupsV2Manager groupsV2Manager;
   private SignalServiceAccountManager accountManager;
   private SignalServiceMessagePipe messagePipe = null;
   private SignalServiceMessagePipe unidentifiedMessagePipe = null;
@@ -262,15 +270,23 @@ class Manager {
 
   public void init() throws IOException {
     accountData = AccountData.load(new File(getFileName()));
-    accountManager = getAccountManager();
     if (accountData.address.uuid == null) {
       accountData.address.uuid = accountManager.getOwnUuid().toString();
       accountData.save();
     }
+    accountManager = getAccountManager();
+    groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.getUUID());
     try {
-      if (accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
-        refreshPreKeys();
-        accountData.save();
+      if (accountData.registered) {
+        if (accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
+          refreshPreKeys();
+          accountData.save();
+        }
+        if (!accountData.groupsV2Supported) {
+          setGroupsV2Supported();
+          accountData.groupsV2Supported = true;
+          accountData.save();
+        }
       }
     } catch (AuthorizationFailedException e) {
       logger.warn("Authorization failed, was the number registered elsewhere?");
@@ -305,8 +321,10 @@ class Manager {
   }
 
   private SignalServiceAccountManager getAccountManager() {
-    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, null, accountData.deviceId);
-    return new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
+    DynamicCredentialsProvider dynamicCredentialsProvider =
+        new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, accountData.signalingKey, accountData.deviceId);
+    return new SignalServiceAccountManager(serviceConfiguration, dynamicCredentialsProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
+                                           sleepTimer);
   }
 
   public static Map<String, String> getQueryMap(String query) {
@@ -453,6 +471,23 @@ class Manager {
   }
 
   public List<GroupInfo> getGroups() { return accountData.groupStore.getGroups(); }
+
+  public List<JsonGroupV2Info> getGroupsV2Info() { return accountData.groupsV2.groups; }
+
+  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException {
+    message.asGroupMessage(group);
+
+    JsonGroupV2Info g = accountData.groupsV2.get(group);
+    if (g.timer != 0) {
+      message.withExpiration(g.timer);
+    }
+
+    g.resolveMembers(getResolver());
+    final List<SignalServiceAddress> membersSend = g.getMembers();
+    // don't send to self
+    membersSend.remove(accountData.address.getSignalServiceAddress());
+    return sendMessage(message, membersSend);
+  }
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, byte[] groupId) throws IOException, GroupNotFoundException, NotAGroupMemberException {
     if (groupId == null) {
@@ -744,6 +779,8 @@ class Manager {
 
     recipients = accountData.getResolver().resolve(recipients);
 
+    messageBuilder.withProfileKey(accountData.getProfileKeyBytes());
+
     SignalServiceDataMessage message = null;
     try {
       SignalServiceMessageSender messageSender = getMessageSender();
@@ -844,10 +881,18 @@ class Manager {
   private void handleEndSession(SignalServiceAddress address) { accountData.axolotlStore.deleteAllSessions(address); }
 
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId)
-      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException {
+      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException, InvalidInputException {
     if (recipientGroupId != null && recipientAddress == null) {
-      byte[] groupId = Base64.decode(recipientGroupId);
-      return sendGroupMessage(messageBuilder, groupId);
+      if (recipientGroupId.length() == 44) {
+        JsonGroupV2Info group = accountData.groupsV2.get(recipientGroupId);
+        if (group == null) {
+          throw new GroupNotFoundException("Unknown group requsted");
+        }
+        return sendGroupV2Message(messageBuilder, group.getSignalServiceGroupV2());
+      } else {
+        byte[] groupId = Base64.decode(recipientGroupId);
+        return sendGroupMessage(messageBuilder, groupId);
+      }
     } else if (recipientAddress != null && recipientGroupId == null) {
       List<SignalServiceAddress> r = new ArrayList<>();
       r.add(recipientAddress.getSignalServiceAddress());
@@ -860,94 +905,92 @@ class Manager {
   public interface ReceiveMessageHandler { void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e); }
 
   private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
-                                              boolean ignoreAttachments)
-      throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException, InvalidInputException, IOException {
+                                              boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException,
+                                                                                InvalidInputException, IOException, InvalidGroupStateException, VerificationFailedException {
     if (message.getGroupContext().isPresent()) {
       SignalServiceGroup groupInfo;
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
 
-      if (!groupContext.getGroupV1().isPresent()) {
-        logger.warn("Failing to handle data message with a group context but no v1 group");
-        return;
+      if (groupContext.getGroupV2().isPresent()) {
+        if (groupsV2Manager.handleIncomingDataMessage(message)) {
+          accountData.save();
+        }
       }
 
-      // TODO: handle groups v2
-      //            if (groupContext.getGroupV2().isPresent()) {
-      //                groupInfo = groupContext.getGroupV2().get();
-      //            }
+      if (groupContext.getGroupV1().isPresent()) {
+        groupInfo = groupContext.getGroupV1().get();
+        GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
 
-      groupInfo = groupContext.getGroupV1().get();
-      GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
-
-      if (message.isExpirationUpdate()) {
-        if (group.messageExpirationTime != message.getExpiresInSeconds()) {
-          group.messageExpirationTime = message.getExpiresInSeconds();
-        }
-        accountData.groupStore.updateGroup(group);
-        accountData.save();
-      }
-
-      switch (groupInfo.getType()) {
-      case UPDATE:
-        if (group == null) {
-          group = new GroupInfo(groupInfo.getGroupId());
+        if (message.isExpirationUpdate()) {
+          if (group.messageExpirationTime != message.getExpiresInSeconds()) {
+            group.messageExpirationTime = message.getExpiresInSeconds();
+          }
+          accountData.groupStore.updateGroup(group);
+          accountData.save();
         }
 
-        if (groupInfo.getAvatar().isPresent()) {
-          SignalServiceAttachment avatar = groupInfo.getAvatar().get();
-          if (avatar.isPointer()) {
-            try {
-              retrieveGroupAvatarAttachment(avatar.asPointer(), group.groupId);
-            } catch (IOException | InvalidMessageException e) {
-              logger.warn("Failed to retrieve group avatar (" + avatar.asPointer().getRemoteId() + "): " + e.getMessage());
+        switch (groupInfo.getType()) {
+        case UPDATE:
+          if (group == null) {
+            group = new GroupInfo(groupInfo.getGroupId());
+          }
+
+          if (groupInfo.getAvatar().isPresent()) {
+            SignalServiceAttachment avatar = groupInfo.getAvatar().get();
+            if (avatar.isPointer()) {
+              try {
+                retrieveGroupAvatarAttachment(avatar.asPointer(), group.groupId);
+              } catch (IOException | InvalidMessageException e) {
+                logger.warn("Failed to retrieve group avatar (" + avatar.asPointer().getRemoteId() + "): " + e.getMessage());
+              }
             }
           }
-        }
 
-        if (groupInfo.getName().isPresent()) {
-          group.name = groupInfo.getName().get();
-        }
-
-        if (groupInfo.getMembers().isPresent()) {
-          AddressResolver resolver = accountData.getResolver();
-          Set<SignalServiceAddress> members = groupInfo.getMembers().get().stream().map(resolver::resolve).collect(Collectors.toSet());
-          group.addMembers(members);
-        }
-
-        accountData.groupStore.updateGroup(group);
-        break;
-      case DELIVER:
-        if (group == null) {
-          try {
-            sendGroupInfoRequest(groupInfo.getGroupId(), source);
-          } catch (IOException e) {
-            logger.catching(e);
+          if (groupInfo.getName().isPresent()) {
+            group.name = groupInfo.getName().get();
           }
-        }
-        break;
-      case QUIT:
-        if (group == null) {
-          try {
-            sendGroupInfoRequest(groupInfo.getGroupId(), source);
-          } catch (IOException e) {
-            logger.catching(e);
+
+          if (groupInfo.getMembers().isPresent()) {
+            AddressResolver resolver = accountData.getResolver();
+            Set<SignalServiceAddress> members = groupInfo.getMembers().get().stream().map(resolver::resolve).collect(Collectors.toSet());
+            group.addMembers(members);
           }
-        } else {
-          group.removeMember(source);
+
           accountData.groupStore.updateGroup(group);
-        }
-        break;
-      case REQUEST_INFO:
-        if (group != null) {
-          try {
-            sendUpdateGroupMessage(groupInfo.getGroupId(), source);
-          } catch (IOException e) {
-            logger.catching(e);
-          } catch (NotAGroupMemberException e) {
-            // We have left this group, so don't send a group update message
+          break;
+        case DELIVER:
+          if (group == null) {
+            try {
+              sendGroupInfoRequest(groupInfo.getGroupId(), source);
+            } catch (IOException e) {
+              logger.catching(e);
+            }
           }
+          break;
+        case QUIT:
+          if (group == null) {
+            try {
+              sendGroupInfoRequest(groupInfo.getGroupId(), source);
+            } catch (IOException e) {
+              logger.catching(e);
+            }
+          } else {
+            group.removeMember(source);
+            accountData.groupStore.updateGroup(group);
+          }
+          break;
+        case REQUEST_INFO:
+          if (group != null) {
+            try {
+              sendUpdateGroupMessage(groupInfo.getGroupId(), source);
+            } catch (IOException e) {
+              logger.catching(e);
+            } catch (NotAGroupMemberException e) {
+              // We have left this group, so don't send a group update message
+            }
+          }
+          break;
         }
-        break;
       }
     } else {
       ContactStore.ContactInfo c = accountData.contactStore.getContact(isSync ? destination : source);
@@ -973,19 +1016,15 @@ class Manager {
 
     if (message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
       if (source.equals(accountData.address.getSignalServiceAddress())) {
-        if (message.getProfileKey().isPresent()) {
-          accountData.setProfileKey(message.getProfileKey().get());
-        }
-        accountData.save();
-      } else {
-        ContactStore.ContactInfo contact = accountData.contactStore.getContact(source);
-        if (contact == null) {
-          contact = new ContactStore.ContactInfo();
-          contact.address = new JsonAddress(source);
-        }
-        contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
-        updateContact(contact);
+        accountData.setProfileKey(message.getProfileKey().get());
       }
+      ContactStore.ContactInfo contact = accountData.contactStore.getContact(source);
+      if (contact == null) {
+        contact = new ContactStore.ContactInfo();
+        contact.address = new JsonAddress(source);
+      }
+      contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
+      updateContact(contact);
     }
   }
 
@@ -1025,7 +1064,8 @@ class Manager {
           if (exception == null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
-            } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
+            } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException | InvalidGroupStateException |
+                     VerificationFailedException e) {
               logger.catching(e);
             }
           }
@@ -1050,7 +1090,7 @@ class Manager {
   }
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
-      throws IOException, MissingConfigurationException {
+      throws IOException, MissingConfigurationException, InvalidGroupStateException, VerificationFailedException {
     try {
       retryFailedReceivedMessages(handler, ignoreAttachments);
     } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
@@ -1130,7 +1170,8 @@ class Manager {
   }
 
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
-      throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
+      throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException,
+             InvalidGroupStateException, VerificationFailedException {
     if (content != null) {
       SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
       AddressResolver resolver = accountData.getResolver();
@@ -1585,22 +1626,46 @@ class Manager {
   }
 
   public SignalServiceProfile getProfile(SignalServiceAddress address, byte[] profileKeyBytes)
-      throws IOException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
+      throws InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-    ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, Optional.of(new ProfileKey(profileKeyBytes)), Optional.absent(), null);
-    return profile.get(10, TimeUnit.SECONDS).getProfile();
+    address = getResolver().resolve(address);
+    Optional<ProfileKey> profileKey = Optional.of(new ProfileKey(profileKeyBytes));
+    ListenableFuture<ProfileAndCredential> profileAndCredential =
+        messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
+    return profileAndCredential.get(10, TimeUnit.SECONDS).getProfile();
   }
 
   private SignalServiceMessageSender getMessageSender() {
     return new SignalServiceMessageSender(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
                                           accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false, Optional.fromNullable(messagePipe),
-                                          Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null, null);
+                                          Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), getClientZkOperations().getProfileOperations(), null);
   }
 
   private SignalServiceMessageReceiver getMessageReceiver() {
     return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
-                                            accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
+                                            accountData.signalingKey, USER_AGENT, null, sleepTimer, getClientZkOperations().getProfileOperations());
   }
 
+  private ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
+
   public AddressResolver getResolver() { return accountData.getResolver(); }
+
+  public void refreshAccount() throws IOException {
+    accountManager.setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true, SERVICE_CAPABILITIES, true);
+    setGroupsV2Supported();
+  }
+
+  public GroupsV2Manager getGroupsV2() { return groupsV2Manager; }
+
+  public void setGroupsV2Supported() throws NonSuccessfulResponseCodeException, PushNetworkException {
+    DynamicCredentialsProvider credentialsProvider =
+        new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, accountData.signalingKey, accountData.deviceId);
+    GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
+    ExpandedPushServiceSocket es = new ExpandedPushServiceSocket(serviceConfiguration, credentialsProvider, BuildConfig.SIGNAL_AGENT,
+                                                                 groupsV2Operations == null ? null : groupsV2Operations.getProfileOperations());
+
+    Map<String, Boolean> capabilities = new HashMap<>();
+    capabilities.put("gv2-3", true);
+    es.setCapabilities(capabilities);
+  }
 }

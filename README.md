@@ -360,6 +360,15 @@ React to a message. For details see the [`JsonReaction`](https://gitlab.com/thef
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `reaction` | [`JsonReaction`](https://gitlab.com/thefinn93/signald/-/wikis/Protocol/v1/JsonReaction) | yes | the reaction message to send |
 
+### `group_link_info`
+
+Get information about a v2 group from a signal.group link
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `username` | `string` | yes      | The account to use. |
+| `uri`      | `string` | yes      | The signal.group link |
+
 ## Transition An Account From signal-cli
 
 signald's on-disk data structures are generally the same as or very similar to signal-cli's. Until recently, signald used the same

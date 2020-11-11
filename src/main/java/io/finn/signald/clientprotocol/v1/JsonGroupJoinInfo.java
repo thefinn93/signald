@@ -15,25 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.storage.GroupInfo;
+import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 
-import java.util.ArrayList;
-import java.util.List;
+public class JsonGroupJoinInfo {
+  String title;
+  int memberCount;
+  int addFromInviteLink;
+  int revision;
+  boolean pendingAdminApproval;
 
-class JsonGroupList {
-  List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
-  List<JsonGroupV2Info> groupsv2 = new ArrayList<>();
-
-  JsonGroupList(Manager m) {
-    for (GroupInfo group : m.getGroups()) {
-      if (group != null) {
-        this.groups.add(new JsonGroupInfo(group, m));
-      }
-    }
-
-    groupsv2 = m.getGroupsV2Info();
+  public JsonGroupJoinInfo(DecryptedGroupJoinInfo i) {
+    title = i.getTitle();
+    memberCount = i.getMemberCount();
+    addFromInviteLink = i.getAddFromInviteLinkValue();
+    revision = i.getRevision();
+    pendingAdminApproval = i.getPendingAdminApproval();
   }
 }

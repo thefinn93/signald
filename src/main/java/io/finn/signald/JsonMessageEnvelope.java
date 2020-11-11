@@ -30,34 +30,25 @@ import java.util.TimeZone;
 
 class JsonMessageEnvelope {
   String username;
-
   String uuid;
-
   JsonAddress source;
   int sourceDevice;
-
   String type;
   String relay;
-
   long timestamp;
   String timestampISO;
-
   long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
   long serverDeliveredTimestamp;
   boolean hasLegacyMessage;
-
   boolean hasContent;
   boolean isUnidentifiedSender;
   JsonDataMessage dataMessage;
-
   JsonSyncMessage syncMessage;
   JsonCallMessage callMessage;
-
   JsonReceiptMessage receipt;
   JsonTypingMessage typing;
 
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
-
     this.username = username;
 
     if (envelope.hasUuid()) {
@@ -65,7 +56,6 @@ class JsonMessageEnvelope {
     }
 
     Manager m = Manager.get(username);
-
     if (envelope.hasSource()) {
       source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
     } else if (c != null) {

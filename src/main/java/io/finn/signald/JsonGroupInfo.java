@@ -17,10 +17,9 @@
 
 package io.finn.signald;
 
-import io.finn.signald.storage.GroupInfo;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.storage.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
@@ -35,8 +34,7 @@ class JsonGroupInfo {
   String type;
   Long avatarId;
 
-  JsonGroupInfo(SignalServiceGroupContext groupContext, String username) throws IOException, NoSuchAccountException {
-    SignalServiceGroup groupInfo = groupContext.getGroupV1().get();
+  JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccountException {
     Manager manager = Manager.get(username);
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
