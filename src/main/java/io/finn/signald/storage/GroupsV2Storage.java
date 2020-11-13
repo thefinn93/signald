@@ -17,18 +17,77 @@
 
 package io.finn.signald.storage;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
+import org.whispersystems.util.Base64;
 
+import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class GroupsV2Storage {
     private final static Logger logger = LogManager.getLogger();
-    public Map<Integer, AuthCredentialResponse> credentials;
+
+    public Map<Integer, JsonAuthCredential> credentials;
 
     public GroupsV2Storage() {
         credentials = new HashMap<>();
+    }
+
+    public void RefreshIfNeeded(GroupsV2Api groupsV2Api) throws IOException {
+        int today = (int) TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+        if(!credentials.containsKey(today)) {
+            credentials = groupsV2Api.getCredentials(today).entrySet().stream()
+                    .map(e -> JsonAuthCredential.fromMap(e))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+    }
+
+    @JsonSerialize(using=JsonAuthCredential.JsonAuthCredentialSerializer.class)
+    @JsonDeserialize(using=JsonAuthCredential.JsonAuthCredentialDeserializer.class)
+    static class JsonAuthCredential {
+        AuthCredentialResponse credential;
+        JsonAuthCredential(AuthCredentialResponse c) {
+            credential = c;
+        }
+
+        public static Map.Entry<Integer, JsonAuthCredential> fromMap(Map.Entry<Integer, AuthCredentialResponse> e) {
+            return new AbstractMap.SimpleEntry<>(e.getKey(), new JsonAuthCredential(e.getValue()));
+        }
+
+        public static class JsonAuthCredentialSerializer extends JsonSerializer<JsonAuthCredential> {
+            @Override
+            public void serialize(final JsonAuthCredential value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
+                jgen.writeString(Base64.encodeBytes(value.credential.serialize()));
+            }
+        }
+
+        public static class JsonAuthCredentialDeserializer extends JsonDeserializer<JsonAuthCredential> {
+            @Override
+            public JsonAuthCredential deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+                AuthCredentialResponse c = null;
+                try {
+                    c = new AuthCredentialResponse(Base64.decode(jsonParser.readValueAs(String.class)));
+                } catch (InvalidInputException e) {
+                    e.printStackTrace();
+                    throw new IOException("failed to deserialize group auth credentials");
+                }
+                return new JsonAuthCredential(c);
+            }
+        }
     }
 }

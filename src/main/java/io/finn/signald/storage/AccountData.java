@@ -113,6 +113,9 @@ public class AccountData {
         if(address == null) {
             address = new JsonAddress(username);
         }
+        if(groupsV2 == null) {
+            groupsV2 = new GroupsV2Storage();
+        }
     }
 
     public void save() throws IOException {

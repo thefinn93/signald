@@ -20,6 +20,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
+import io.finn.signald.util.ExpandedPushServiceSocket;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
@@ -33,7 +34,6 @@ import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
-import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -50,6 +50,8 @@ import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
@@ -65,6 +67,7 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
+import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
@@ -290,11 +293,11 @@ class Manager {
 
     public void init() throws IOException {
         accountData = AccountData.load(new File(getFileName()));
-        accountManager = getAccountManager();
         if(accountData.address.uuid == null) {
             accountData.address.uuid = accountManager.getOwnUuid().toString();
             accountData.save();
         }
+        accountManager = getAccountManager();
         try {
             if(accountData.registered && accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
                 refreshPreKeys();
@@ -335,8 +338,8 @@ class Manager {
     }
 
     private SignalServiceAccountManager getAccountManager() {
-        DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, null, accountData.deviceId);
-        return new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
+        DynamicCredentialsProvider dynamicCredentialsProvider = new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, accountData.signalingKey, accountData.deviceId);
+        return new SignalServiceAccountManager(serviceConfiguration, dynamicCredentialsProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
     }
 
     public static Map<String, String> getQueryMap(String query) {
@@ -1647,23 +1650,28 @@ class Manager {
 
     public SignalServiceProfile getProfile(SignalServiceAddress address, byte[] profileKeyBytes) throws InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
         final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-        ProfileAndCredential profileAndCredential = messageReceiver.retrieveProfile(address, Optional.of(new ProfileKey(profileKeyBytes)), Optional.absent(), null).get(10, TimeUnit.SECONDS);
-        Optional<ProfileKeyCredential> credential = profileAndCredential.getProfileKeyCredential();
-        if(credential.isPresent()) {
-            ProfileKeyCredential c = credential.get();
-
-        }
-        return profileAndCredential.getProfile();
+        address = getResolver().resolve(address);
+        Optional<ProfileKey> profileKey = Optional.of(new ProfileKey(profileKeyBytes));
+        ListenableFuture<ProfileAndCredential> profileAndCredential = messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
+        return profileAndCredential.get(10, TimeUnit.SECONDS).getProfile();
     }
 
     private SignalServiceMessageSender getMessageSender() {
         return new SignalServiceMessageSender(serviceConfiguration,
                 accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
-                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), null, null);
+                accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false,
+                Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
+                getClientZkOperations().getProfileOperations(), null);
     }
 
     private SignalServiceMessageReceiver getMessageReceiver() {
-        return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null, sleepTimer, null);
+        return new SignalServiceMessageReceiver(serviceConfiguration,
+                accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
+                accountData.signalingKey, USER_AGENT, null, sleepTimer, getClientZkOperations().getProfileOperations());
+    }
+
+    private ClientZkOperations getClientZkOperations() {
+        return ClientZkOperations.create(generateSignalServiceConfiguration());
     }
 
     public AddressResolver getResolver() {
@@ -1677,5 +1685,13 @@ class Manager {
                 true, null, null,
                 null, true,
                 SERVICE_CAPABILITIES, true);
+
+        DynamicCredentialsProvider credentialsProvider = new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, accountData.signalingKey, accountData.deviceId);
+        GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
+        ExpandedPushServiceSocket es = new ExpandedPushServiceSocket(serviceConfiguration, credentialsProvider, BuildConfig.SIGNAL_AGENT, groupsV2Operations == null ? null : groupsV2Operations.getProfileOperations());
+
+        Map<String, Boolean> capabilities = new HashMap<>();
+        capabilities.put("gv2-3", true);
+        es.setCapabilities(capabilities);
     }
 }

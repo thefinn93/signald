@@ -18,12 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.storage.GroupsV2Storage;
-import org.signal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
 
 public class GroupsV2Manager {
     private final GroupsV2Api groupsV2Api;
@@ -32,10 +27,5 @@ public class GroupsV2Manager {
     public GroupsV2Manager(GroupsV2Api groupsV2Api, GroupsV2Storage cache) {
         this.groupsV2Api = groupsV2Api;
         this.cache = cache;
-    }
-
-    public void RefreshGroupCredentials() throws IOException {
-        int today = (int) TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
-        HashMap<Integer, AuthCredentialResponse> response = groupsV2Api.getCredentials(today);
     }
 }
