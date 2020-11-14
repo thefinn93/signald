@@ -116,6 +116,9 @@ public class AccountData {
         if(groupsV2 == null) {
             groupsV2 = new GroupsV2Storage();
         }
+        if(contactStore == null) {
+            contactStore = new ContactStore();
+        }
     }
 
     public void save() throws IOException {

@@ -19,6 +19,9 @@ package io.finn.signald.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.zkgroup.groups.GroupIdentifier;
+import org.signal.zkgroup.groups.GroupMasterKey;
+import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -35,5 +38,9 @@ public class GroupsUtil {
             logger.warn("Unable to load groups v2 library. likely due to being non-linux or non-x86. See https://gitlab.com/thefinn93/signald/-/issues/34");
         }
         return groupsV2Operations;
+    }
+
+    public static GroupIdentifier GetIdentifierFromMasterKey(GroupMasterKey masterKey) {
+        return GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier();
     }
 }

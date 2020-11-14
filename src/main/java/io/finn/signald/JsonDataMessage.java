@@ -17,9 +17,11 @@
 
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.clientprotocol.v1.JsonReaction;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.messages.shared.SharedContact;
 
 import java.io.IOException;
@@ -31,6 +33,7 @@ class JsonDataMessage {
     List<JsonAttachment> attachments;
     String body;
     JsonGroupInfo group;
+    JsonGroupV2Info groupV2;
     boolean endSession;
     int expiresInSeconds;
     boolean profileKeyUpdate;
@@ -58,7 +61,13 @@ class JsonDataMessage {
         }
 
         if(dataMessage.getGroupContext().isPresent()) {
-            group = new JsonGroupInfo(dataMessage.getGroupContext().get(), username);
+            SignalServiceGroupContext groupContext = dataMessage.getGroupContext().get();
+            if(groupContext.getGroupV1().isPresent()) {
+                group = new JsonGroupInfo(groupContext.getGroupV1().get(), username);
+            }
+            if(groupContext.getGroupV2().isPresent()) {
+                groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get());
+            }
         }
 
         endSession = dataMessage.isEndSession();
