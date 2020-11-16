@@ -16,12 +16,30 @@ signald is a daemon that facilitates communication over Signal.
 
 ## Quick Start for developers
 
+### Launch signald
 1. Startup signald depending on your installation method
 1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock` (Debian users will need to have `netcat-openbsd` installed)
-1. Register a new number on signal by sending something like this : `{"type": "register", "username": "+12024561414"}` (see [link](#link) to add signald as another device on your existing signal account)
-1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
-1. Incoming messages will be sent to the socket and shown on your screen. To send a message, use something like this:
+1. Responses from signald, including incoming Signal messages, will be sent to the socket and shown on your screen
 
+### Connect an account to Signal
+Either register a new number on Signal or add signald as a linked device on your existing Signal account.
+
+#### To register a new number:
+1. Send something like: `{"type": "register", "username": "+12024561414"}`
+1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
+
+#### To link an account:
+1. Send `{"type": "link", "deviceName": "your-device-name"}`
+1. You'll receive a `uri`, create a QR code from that URI
+1. Open the Signal app, go to Settings -> Linked Devices, tap the + button in the bottom right and scan the QR code.
+
+### Interact with Signal
+- To subscribe to messages being sent to you, use (where username is *your* number):
+```json
+{"type": "subscribe", "username": "+12024561414"}
+```
+
+- To send a message, use something like this:
 ```json
 {"type": "send", "username": "+12024561414", "recipientAddress": {"number": "+14235290302"}, "messageBody": "Hello, Dave"}
 ```
@@ -355,4 +373,4 @@ If you have installed the `.deb` and are using the system-wide signald service, 
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli)
 
 ## Contributing
-Contributions are welcome and appreciated. for larger changes, consider reaching out first (via the issue tracker, IRC or email).  
+Contributions are welcome and appreciated. for larger changes, consider reaching out first (via the issue tracker, IRC or email).
