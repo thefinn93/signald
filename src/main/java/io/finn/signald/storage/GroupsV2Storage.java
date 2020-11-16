@@ -25,35 +25,56 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.util.GroupsUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class GroupsV2Storage {
     private final static Logger logger = LogManager.getLogger();
 
     public Map<Integer, JsonAuthCredential> credentials;
+    public List<JsonGroupV2Info> groups;
 
     public GroupsV2Storage() {
         credentials = new HashMap<>();
+        groups = new ArrayList<>();
     }
 
-    public void RefreshIfNeeded(GroupsV2Api groupsV2Api) throws IOException {
-        int today = (int) TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+    public AuthCredentialResponse getAuthCredential(GroupsV2Api groupsV2Api, int today) throws IOException {
         if(!credentials.containsKey(today)) {
             credentials = groupsV2Api.getCredentials(today).entrySet().stream()
                     .map(e -> JsonAuthCredential.fromMap(e))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+        return credentials.get(today).credential;
+    }
+
+    public JsonGroupV2Info get(SignalServiceGroupV2 group) {
+        String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
+        for(JsonGroupV2Info g : groups) {
+            if(g.id.equals(id)) {
+                return g;
+            }
+        }
+        return null;
+    }
+
+    public void update(JsonGroupV2Info group) {
+        for(JsonGroupV2Info g : groups) {
+            if(!g.id.equals(group.id)) {
+                continue;
+            }
+
         }
     }
 

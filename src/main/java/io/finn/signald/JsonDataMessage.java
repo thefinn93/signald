@@ -66,7 +66,10 @@ class JsonDataMessage {
                 group = new JsonGroupInfo(groupContext.getGroupV1().get(), username);
             }
             if(groupContext.getGroupV2().isPresent()) {
-                groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get());
+                Manager m = Manager.get(username);
+                groupV2 = m.getGroupsV2().getGroup(groupContext.getGroupV2().get());
+                groupV2.resolveMembers(m.getResolver());
+                groupV2.masterKey = null; // no need to send this to the client
             }
         }
 

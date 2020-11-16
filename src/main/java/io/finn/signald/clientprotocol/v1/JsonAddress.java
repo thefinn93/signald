@@ -163,7 +163,8 @@ public class JsonAddress {
         }
     }
 
-    public void resolve(AddressResolver resolver) {
+    public JsonAddress resolve(AddressResolver resolver) {
         update(resolver.resolve(getSignalServiceAddress()));
+        return this;
     }
 }
