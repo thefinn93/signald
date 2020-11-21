@@ -6,14 +6,11 @@ Pull the image from Docker Hub
 
 # Running the image
 
-The container will create a socket: `/var/run/signald/signald.sock`. To access the socket from outside the container, mount a directory to `/var/run/signald`. You will be sending messages to the process in the container.
+The container will create a socket: `/signald/signald.sock`. To access the socket from outside the container, mount a directory to `/signald`. You will be sending messages to the process in the container.
 
 ```bash
-# Ensure you create the directory before mounting it
-mkdir run
-
 docker run \
-    -v "$PWD/run":/var/run/signald \
+    -v "$PWD/run":/signald \
     finn/signald
 ```
 
