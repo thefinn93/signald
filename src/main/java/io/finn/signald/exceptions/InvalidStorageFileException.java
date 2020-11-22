@@ -20,7 +20,5 @@ package io.finn.signald.exceptions;
 import java.io.IOException;
 
 public class InvalidStorageFileException extends IOException {
-    public InvalidStorageFileException(String message) {
-        super("Failed to load account data: " + message);
-    }
+  public InvalidStorageFileException(String message) { super("Failed to load account data: " + message); }
 }

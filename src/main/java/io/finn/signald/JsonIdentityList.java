@@ -27,20 +27,20 @@ class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<>();
 
   JsonIdentityList(List<IdentityKeyStore.Identity> identities, Manager m) {
-    for(IdentityKeyStore.Identity identity : identities) {
+    for (IdentityKeyStore.Identity identity : identities) {
       this.identities.add(new JsonIdentity(identity, m));
     }
   }
 
   JsonIdentityList(SignalServiceAddress address, Manager m) {
-    if(address == null) {
+    if (address == null) {
       for (IdentityKeyStore.Identity identity : m.getIdentities()) {
-          this.identities.add(new JsonIdentity(identity, m));
+        this.identities.add(new JsonIdentity(identity, m));
       }
     } else {
       List<IdentityKeyStore.Identity> identities = m.getIdentities(address);
-      if(identities != null) {
-        for(IdentityKeyStore.Identity identity : m.getIdentities(address)) {
+      if (identities != null) {
+        for (IdentityKeyStore.Identity identity : m.getIdentities(address)) {
           this.identities.add(new JsonIdentity(identity, m, address));
         }
       }

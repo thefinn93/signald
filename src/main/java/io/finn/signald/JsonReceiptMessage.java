@@ -23,13 +23,13 @@ import java.util.List;
 
 class JsonReceiptMessage {
 
-    String type;
-    List<Long> timestamps;
-    long when;
+  String type;
+  List<Long> timestamps;
+  long when;
 
-    JsonReceiptMessage(SignalServiceReceiptMessage receiptMessage) {
-        type = receiptMessage.getType().name();
-        timestamps = receiptMessage.getTimestamps();
-        when = receiptMessage.getWhen();
-    }
+  JsonReceiptMessage(SignalServiceReceiptMessage receiptMessage) {
+    type = receiptMessage.getType().name();
+    timestamps = receiptMessage.getTimestamps();
+    when = receiptMessage.getWhen();
+  }
 }

@@ -26,15 +26,15 @@ class JsonStickerPackOperationMessage {
   String type;
 
   JsonStickerPackOperationMessage(StickerPackOperationMessage message) {
-    if(message.getPackId().isPresent()) {
-      packID = Hex.toStringCondensed(message.getPackId().get()); 
+    if (message.getPackId().isPresent()) {
+      packID = Hex.toStringCondensed(message.getPackId().get());
     }
 
-    if(message.getPackKey().isPresent()) {
+    if (message.getPackKey().isPresent()) {
       packKey = Hex.toStringCondensed(message.getPackKey().get());
     }
 
-    if(message.getType().isPresent()) {
+    if (message.getType().isPresent()) {
       type = message.getType().get().toString();
     }
   }

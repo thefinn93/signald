@@ -32,62 +32,62 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-@JsonSerialize(using=RecipientStore.RecipientStoreSerializer.class)
-@JsonDeserialize(using=RecipientStore.RecipientStoreDeserializer.class)
+@JsonSerialize(using = RecipientStore.RecipientStoreSerializer.class)
+@JsonDeserialize(using = RecipientStore.RecipientStoreDeserializer.class)
 public class RecipientStore {
-    private static final Logger logger = LogManager.getLogger();
-    private static final ObjectMapper mapper = JSONUtil.GetMapper();
-    private List<JsonAddress> addresses = new ArrayList<>();
+  private static final Logger logger = LogManager.getLogger();
+  private static final ObjectMapper mapper = JSONUtil.GetMapper();
+  private List<JsonAddress> addresses = new ArrayList<>();
 
-    public RecipientStore() {}
+  public RecipientStore() {}
 
-    private void add(SignalServiceAddress a) {
-        if(a.getNumber().isPresent() && a.getUuid().isPresent()) {
-            JsonAddress jsonAddress = new JsonAddress(a);
-            logger.debug("creating new recipientStore entry: " + jsonAddress.toRedactedString());
-            addresses.add(jsonAddress);
-        } else {
-            logger.debug("not storing unresolved, partial address: " + new JsonAddress(a).toRedactedString());
-        }
+  private void add(SignalServiceAddress a) {
+    if (a.getNumber().isPresent() && a.getUuid().isPresent()) {
+      JsonAddress jsonAddress = new JsonAddress(a);
+      logger.debug("creating new recipientStore entry: " + jsonAddress.toRedactedString());
+      addresses.add(jsonAddress);
+    } else {
+      logger.debug("not storing unresolved, partial address: " + new JsonAddress(a).toRedactedString());
+    }
+  }
+
+  public SignalServiceAddress resolve(SignalServiceAddress partial) {
+    for (JsonAddress i : addresses) {
+      if (i.getSignalServiceAddress().matches(partial)) {
+        i.update(partial);
+        return i.getSignalServiceAddress();
+      }
     }
 
-    public SignalServiceAddress resolve(SignalServiceAddress partial) {
-        for(JsonAddress i : addresses) {
-            if(i.getSignalServiceAddress().matches(partial)) {
-                i.update(partial);
-                return i.getSignalServiceAddress();
-            }
+    add(partial);
+    return partial;
+  }
+
+  public static class RecipientStoreDeserializer extends JsonDeserializer<RecipientStore> {
+
+    @Override
+    public RecipientStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+      JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+      RecipientStore store = new RecipientStore();
+      if (node.isArray()) {
+        for (JsonNode recipient : node) {
+          JsonAddress jsonAddress = mapper.treeToValue(recipient, JsonAddress.class);
+          store.addresses.add(jsonAddress);
         }
-
-        add(partial);
-        return partial;
+      }
+      return store;
     }
+  }
 
-    public static class RecipientStoreDeserializer extends JsonDeserializer<RecipientStore> {
+  public static class RecipientStoreSerializer extends JsonSerializer<RecipientStore> {
 
-        @Override
-        public RecipientStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-            RecipientStore store = new RecipientStore();
-            if(node.isArray()) {
-                for(JsonNode recipient : node) {
-                    JsonAddress jsonAddress = mapper.treeToValue(recipient, JsonAddress.class);
-                    store.addresses.add(jsonAddress);
-                }
-            }
-            return store;
-        }
+    @Override
+    public void serialize(RecipientStore store, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
+      json.writeStartArray();
+      for (JsonAddress address : store.addresses) {
+        json.writeObject(address);
+      }
+      json.writeEndArray();
     }
-
-    public static class RecipientStoreSerializer extends JsonSerializer<RecipientStore> {
-
-        @Override
-        public void serialize(RecipientStore store, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
-            json.writeStartArray();
-            for(JsonAddress address : store.addresses) {
-                json.writeObject(address);
-            }
-            json.writeEndArray();
-        }
-    }
+  }
 }

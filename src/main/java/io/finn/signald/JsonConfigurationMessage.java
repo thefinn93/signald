@@ -21,26 +21,26 @@ import org.whispersystems.signalservice.api.messages.multidevice.ConfigurationMe
 
 class JsonConfigurationMessage {
 
-    boolean readReceipts;
-    boolean unidentifiedDeliveryIndicators;
-    boolean typingIndicators;
-    boolean linkPreviews;
+  boolean readReceipts;
+  boolean unidentifiedDeliveryIndicators;
+  boolean typingIndicators;
+  boolean linkPreviews;
 
-    JsonConfigurationMessage(ConfigurationMessage verifiedMessage) {
-      if(verifiedMessage.getReadReceipts().isPresent()) {
-        readReceipts = verifiedMessage.getReadReceipts().get();
-      }
-
-      if(verifiedMessage.getUnidentifiedDeliveryIndicators().isPresent()) {
-        unidentifiedDeliveryIndicators = verifiedMessage.getUnidentifiedDeliveryIndicators().get();
-      }
-
-      if(verifiedMessage.getTypingIndicators().isPresent()) {
-        typingIndicators = verifiedMessage.getTypingIndicators().get();
-      }
-
-      if(verifiedMessage.getLinkPreviews().isPresent()) {
-        linkPreviews = verifiedMessage.getLinkPreviews().get();
-      }
+  JsonConfigurationMessage(ConfigurationMessage verifiedMessage) {
+    if (verifiedMessage.getReadReceipts().isPresent()) {
+      readReceipts = verifiedMessage.getReadReceipts().get();
     }
+
+    if (verifiedMessage.getUnidentifiedDeliveryIndicators().isPresent()) {
+      unidentifiedDeliveryIndicators = verifiedMessage.getUnidentifiedDeliveryIndicators().get();
+    }
+
+    if (verifiedMessage.getTypingIndicators().isPresent()) {
+      typingIndicators = verifiedMessage.getTypingIndicators().get();
+    }
+
+    if (verifiedMessage.getLinkPreviews().isPresent()) {
+      linkPreviews = verifiedMessage.getLinkPreviews().get();
+    }
+  }
 }

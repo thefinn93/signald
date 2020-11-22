@@ -24,7 +24,6 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import java.util.ArrayList;
 import java.util.List;
 
-
 class JsonQuote {
   public long id;
   public JsonAddress author;
@@ -38,9 +37,9 @@ class JsonQuote {
     id = quote.getId();
     author = new JsonAddress(quote.getAuthor());
     text = quote.getText();
-    if(quote.getAttachments() != null && !quote.getAttachments().isEmpty()) {
+    if (quote.getAttachments() != null && !quote.getAttachments().isEmpty()) {
       attachments = new ArrayList<>();
-      for(SignalServiceDataMessage.Quote.QuotedAttachment a : quote.getAttachments()) {
+      for (SignalServiceDataMessage.Quote.QuotedAttachment a : quote.getAttachments()) {
         attachments.add(new JsonQuotedAttachment(a));
       }
     }
@@ -50,7 +49,7 @@ class JsonQuote {
   public SignalServiceDataMessage.Quote getQuote() {
     ArrayList<SignalServiceDataMessage.Quote.QuotedAttachment> quotedAttachments = new ArrayList<>();
 
-    if(attachments != null) {
+    if (attachments != null) {
       for (JsonQuotedAttachment attachment : this.attachments) {
         quotedAttachments.add(attachment.getAttachment());
       }

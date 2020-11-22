@@ -32,59 +32,51 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@JsonSerialize(using=GroupStore.GroupStoreSerializer.class)
-@JsonDeserialize(using=GroupStore.GroupStoreDeserializer.class)
+@JsonSerialize(using = GroupStore.GroupStoreSerializer.class)
+@JsonDeserialize(using = GroupStore.GroupStoreDeserializer.class)
 public class GroupStore {
-    static final Logger logger = LogManager.getLogger();
+  static final Logger logger = LogManager.getLogger();
 
-    private static final ObjectMapper jsonProcessor = new ObjectMapper();
+  private static final ObjectMapper jsonProcessor = new ObjectMapper();
 
-    private Map<String, GroupInfo> groups = new HashMap<>();
-    public static List<GroupInfo> groupsWithLegacyAvatarId = new ArrayList<>();
+  private Map<String, GroupInfo> groups = new HashMap<>();
+  public static List<GroupInfo> groupsWithLegacyAvatarId = new ArrayList<>();
 
-    public void updateGroup(GroupInfo group) {
-        groups.put(Base64.encodeBytes(group.groupId), group);
+  public void updateGroup(GroupInfo group) { groups.put(Base64.encodeBytes(group.groupId), group); }
+
+  public GroupInfo getGroup(String groupId) { return groups.get(groupId); }
+
+  public GroupInfo getGroup(byte[] groupId) { return getGroup(Base64.encodeBytes(groupId)); }
+
+  public List<GroupInfo> getGroups() { return new ArrayList<>(groups.values()); }
+
+  public static class GroupStoreSerializer extends JsonSerializer<GroupStore> {
+    @Override
+    public void serialize(final GroupStore value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
+      jgen.writeStartObject();
+      jgen.writeObjectField("groups", new ArrayList<>(value.groups.values()));
+      jgen.writeEndObject();
     }
+  }
 
-    public GroupInfo getGroup(String groupId) {
-        return groups.get(groupId);
-    }
-
-    public GroupInfo getGroup(byte[] groupId) {
-        return getGroup(Base64.encodeBytes(groupId));
-    }
-
-    public List<GroupInfo> getGroups() {
-        return new ArrayList<>(groups.values());
-    }
-
-    public static class GroupStoreSerializer extends JsonSerializer<GroupStore> {
-        @Override
-        public void serialize(final GroupStore value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {
-            jgen.writeStartObject();
-            jgen.writeObjectField("groups", new ArrayList<>(value.groups.values()));
-            jgen.writeEndObject();
+  public static class GroupStoreDeserializer extends JsonDeserializer<GroupStore> {
+    @Override
+    public GroupStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+      GroupStore store = new GroupStore();
+      JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+      if (!node.has("groups")) {
+        return store;
+      }
+      for (JsonNode n : node.get("groups")) {
+        GroupInfo g = jsonProcessor.treeToValue(n, GroupInfo.class);
+        // Check if a legacy avatarId exists
+        if (g.getAvatarId() != 0) {
+          groupsWithLegacyAvatarId.add(g);
         }
-    }
+        store.groups.put(Base64.encodeBytes(g.groupId), g);
+      }
 
-    public static class GroupStoreDeserializer extends JsonDeserializer<GroupStore> {
-        @Override
-        public GroupStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-            GroupStore store = new GroupStore();
-            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-            if(!node.has("groups")) {
-                return store;
-            }
-            for (JsonNode n : node.get("groups")) {
-                GroupInfo g = jsonProcessor.treeToValue(n, GroupInfo.class);
-                // Check if a legacy avatarId exists
-                if (g.getAvatarId() != 0) {
-                    groupsWithLegacyAvatarId.add(g);
-                }
-                store.groups.put(Base64.encodeBytes(g.groupId), g);
-            }
-
-            return store;
-        }
+      return store;
     }
+  }
 }

@@ -12,16 +12,15 @@ import io.finn.signald.BuildConfig;
 
 public class MiscHelpers {
 
-    public static String getVerificationCode(String username) throws IOException {
-        OkHttpClient client = new OkHttpClient();
+  public static String getVerificationCode(String username) throws IOException {
+    OkHttpClient client = new OkHttpClient();
 
-        RequestBody body = new MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("number", username).build();
+    RequestBody body = new MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("number", username).build();
 
-        Request request = new Request.Builder().url(BuildConfig.SIGNAL_URL + "/helper/verification-code").post(body).build();
+    Request request = new Request.Builder().url(BuildConfig.SIGNAL_URL + "/helper/verification-code").post(body).build();
 
-        Response response = client.newCall(request).execute();
+    Response response = client.newCall(request).execute();
 
-        return response.body().string().trim();
-    }
-
+    return response.body().string().trim();
+  }
 }

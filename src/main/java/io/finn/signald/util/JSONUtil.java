@@ -23,13 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
 public class JSONUtil {
-    public static ObjectMapper GetMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT); // does this do anything?
-        return mapper;
-    }
+  public static ObjectMapper GetMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT); // does this do anything?
+    return mapper;
+  }
 
-    public static ObjectWriter GetWriter() {
-        return GetMapper().writer(new DefaultPrettyPrinter());
-    }
+  public static ObjectWriter GetWriter() { return GetMapper().writer(new DefaultPrettyPrinter()); }
 }

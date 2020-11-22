@@ -23,33 +23,32 @@ import io.finn.signald.storage.ContactStore;
 
 import java.util.List;
 
-
 public class JsonRequest {
-    public String type;
-    public String id;
-    public String username;
-    public String messageBody;
-    public String recipientGroupId;
-    public JsonAddress recipientAddress;
-    public Boolean voice;
-    public String code;
-    public String deviceName;
-    public List<JsonAttachment> attachments;
-    public String uri;
-    public String groupName;
-    public List<String> members;
-    public String avatar;
-    public JsonQuote quote;
-    public int expiresInSeconds;
-    public String fingerprint;
-    public String trustLevel;
-    public ContactStore.ContactInfo contact;
-    public String captcha;
-    public String name;
-    public List<Long> timestamps;
-    public long when;
-    public JsonReaction reaction;
-    public Long timestamp;
+  public String type;
+  public String id;
+  public String username;
+  public String messageBody;
+  public String recipientGroupId;
+  public JsonAddress recipientAddress;
+  public Boolean voice;
+  public String code;
+  public String deviceName;
+  public List<JsonAttachment> attachments;
+  public String uri;
+  public String groupName;
+  public List<String> members;
+  public String avatar;
+  public JsonQuote quote;
+  public int expiresInSeconds;
+  public String fingerprint;
+  public String trustLevel;
+  public ContactStore.ContactInfo contact;
+  public String captcha;
+  public String name;
+  public List<Long> timestamps;
+  public long when;
+  public JsonReaction reaction;
+  public Long timestamp;
 
-    JsonRequest() {}
+  JsonRequest() {}
 }

@@ -25,22 +25,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JsonBlockedListMessage {
-    List<JsonAddress> addresses;
-    List<String> groupIds;
-    public JsonBlockedListMessage(BlockedListMessage blocklist) {
-        if(!blocklist.getAddresses().isEmpty()) {
-            addresses = new ArrayList();
-            for(SignalServiceAddress a : blocklist.getAddresses()) {
-                addresses.add(new JsonAddress(a));
-            }
-        }
-
-        if(!blocklist.getGroupIds().isEmpty()) {
-            groupIds = new ArrayList<>();
-            for(byte[] groupId : blocklist.getGroupIds()) {
-                groupIds.add(Base64.encodeBytes(groupId));
-            }
-        }
-
+  List<JsonAddress> addresses;
+  List<String> groupIds;
+  public JsonBlockedListMessage(BlockedListMessage blocklist) {
+    if (!blocklist.getAddresses().isEmpty()) {
+      addresses = new ArrayList();
+      for (SignalServiceAddress a : blocklist.getAddresses()) {
+        addresses.add(new JsonAddress(a));
+      }
     }
+
+    if (!blocklist.getGroupIds().isEmpty()) {
+      groupIds = new ArrayList<>();
+      for (byte[] groupId : blocklist.getGroupIds()) {
+        groupIds.add(Base64.encodeBytes(groupId));
+      }
+    }
+  }
 }

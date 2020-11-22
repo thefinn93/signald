@@ -21,11 +21,11 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.whispersystems.signalservice.api.messages.multidevice.ViewOnceOpenMessage;
 
 class JsonViewOnceOpenMessage {
-    JsonAddress sender;
-    long timestamp;
+  JsonAddress sender;
+  long timestamp;
 
-    JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
-        sender = new JsonAddress(message.getSender());
-        timestamp = message.getTimestamp();
-    }
+  JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
+    sender = new JsonAddress(message.getSender());
+    timestamp = message.getTimestamp();
+  }
 }

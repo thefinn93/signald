@@ -18,12 +18,8 @@
 package io.finn.signald;
 import org.whispersystems.signalservice.api.push.exceptions.NetworkFailureException;
 
-
 class JsonNetworkFailureException {
   public String number;
 
-  JsonNetworkFailureException(NetworkFailureException e) {
-    this.number = e.getE164number();
-  }
-
+  JsonNetworkFailureException(NetworkFailureException e) { this.number = e.getE164number(); }
 }

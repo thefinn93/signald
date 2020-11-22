@@ -22,7 +22,5 @@ import java.net.URI;
 class JsonLinkingURI {
   public URI uri;
 
-  JsonLinkingURI(URI uri) {
-    this.uri = uri;
-  }
+  JsonLinkingURI(URI uri) { this.uri = uri; }
 }

@@ -26,28 +26,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 class JsonSentTranscriptMessage {
-    JsonAddress destination;
-    long timestamp;
-    long expirationStartTimestamp;
-    JsonDataMessage message;
-    Map<String, Boolean> unidentifiedStatus = new HashMap<>();
-    boolean isRecipientUpdate;
+  JsonAddress destination;
+  long timestamp;
+  long expirationStartTimestamp;
+  JsonDataMessage message;
+  Map<String, Boolean> unidentifiedStatus = new HashMap<>();
+  boolean isRecipientUpdate;
 
-    JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException {
-        if(s.getDestination().isPresent()) {
-            destination = new JsonAddress(s.getDestination().get());
-        }
-        timestamp = s.getTimestamp();
-        expirationStartTimestamp = s.getExpirationStartTimestamp();
-        message = new JsonDataMessage(s.getMessage(), username);
-        for(SignalServiceAddress r : s.getRecipients()) {
-            if(r.getNumber().isPresent()) {
-                unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
-            }
-            if(r.getUuid().isPresent()) {
-                unidentifiedStatus.put(r.getUuid().get().toString(), s.isUnidentified(r.getUuid().get()));
-            }
-        }
-        isRecipientUpdate = s.isRecipientUpdate(); 
+  JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException {
+    if (s.getDestination().isPresent()) {
+      destination = new JsonAddress(s.getDestination().get());
     }
+    timestamp = s.getTimestamp();
+    expirationStartTimestamp = s.getExpirationStartTimestamp();
+    message = new JsonDataMessage(s.getMessage(), username);
+    for (SignalServiceAddress r : s.getRecipients()) {
+      if (r.getNumber().isPresent()) {
+        unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
+      }
+      if (r.getUuid().isPresent()) {
+        unidentifiedStatus.put(r.getUuid().get().toString(), s.isUnidentified(r.getUuid().get()));
+      }
+    }
+    isRecipientUpdate = s.isRecipientUpdate();
+  }
 }

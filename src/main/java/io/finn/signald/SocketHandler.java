@@ -59,13 +59,13 @@ import java.util.concurrent.TimeoutException;
 public class SocketHandler implements Runnable {
   private BufferedReader reader;
   private PrintWriter writer;
-  private ConcurrentHashMap<String,MessageReceiver> receivers;
+  private ConcurrentHashMap<String, MessageReceiver> receivers;
   private ObjectMapper mpr = new ObjectMapper();
   private static final Logger logger = LogManager.getLogger();
   private Socket socket;
   private ArrayList<String> subscribedAccounts = new ArrayList<>();
 
-  public SocketHandler(Socket socket, ConcurrentHashMap<String,MessageReceiver> receivers) throws IOException {
+  public SocketHandler(Socket socket, ConcurrentHashMap<String, MessageReceiver> receivers) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     this.writer = new PrintWriter(socket.getOutputStream(), true);
     this.socket = socket;
@@ -104,14 +104,14 @@ public class SocketHandler implements Runnable {
         try {
           request = mpr.readValue(line, JsonRequest.class);
           handleRequest(request);
-        } catch(JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
           handleError(e, null);
         } catch (Throwable e) {
           handleError(e, request);
         }
       }
 
-    } catch(IOException e) {
+    } catch (IOException e) {
       handleError(e, null);
     } finally {
 
@@ -122,8 +122,8 @@ public class SocketHandler implements Runnable {
         logger.catching(e);
       }
 
-      for(Map.Entry<String, MessageReceiver> entry : receivers.entrySet()) {
-        if(entry.getValue().unsubscribe(socket)) {
+      for (Map.Entry<String, MessageReceiver> entry : receivers.entrySet()) {
+        if (entry.getValue().unsubscribe(socket)) {
           logger.info("Unsubscribed from " + entry.getKey());
           receivers.remove(entry.getKey());
         }
@@ -132,108 +132,109 @@ public class SocketHandler implements Runnable {
   }
 
   private void handleRequest(JsonRequest request) throws Throwable {
-    switch(request.type) {
-      case "send":
-        send(request);
-        break;
-      case "typing_started":
-        typing(request, SignalServiceTypingMessage.Action.STARTED);
-        break;
-      case "typing_stopped":
-        typing(request, SignalServiceTypingMessage.Action.STOPPED);
-        break;
-      case "mark_delivered":
-        markDelivered(request);
-        break;
-      case "mark_read":
-        markRead(request);
-        break;
-      case "subscribe":
-        subscribe(request);
-        break;
-      case "unsubscribe":
-        unsubscribe(request);
-        break;
-      case "list_accounts":
-        listAccounts(request);
-        break;
-      case "register":
-        register(request);
-        break;
-      case "verify":
-        verify(request);
-        break;
-      case "link":
-        link(request);
-        break;
-      case "add_device":
-        addDevice(request);
-        break;
-      case "update_group":
-        updateGroup(request);
-        break;
-      case "set_expiration":
-        setExpiration(request);
-        break;
-      case "list_groups":
-        listGroups(request);
-        break;
-      case "leave_group":
-       leaveGroup(request);
-       break;
-      case "get_user":
-        getUser(request);
-        break;
-      case "get_identities":
-        getIdentities(request);
-        break;
-      case "trust":
-        trust(request);
-        break;
-      case "sync_contacts":
-        syncContacts(request);
-        break;
-      case "sync_groups":
-        syncGroups(request);
-        break;
-      case "sync_configuration":
-        syncConfiguration(request);
-        break;
-      case "list_contacts":
-        listContacts(request);
-        break;
-      case "update_contact":
-        updateContact(request);
-        break;
-      case "version":
-        version();
-        break;
-      case "get_profile":
-        getProfile(request);
-        break;
-      case "set_profile":
-        setProfile(request);
-        break;
-      case "react":
-        react(request);
-        break;
-      default:
-        logger.warn("Unknown command type " + request.type);
-        this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
-        break;
+    switch (request.type) {
+    case "send":
+      send(request);
+      break;
+    case "typing_started":
+      typing(request, SignalServiceTypingMessage.Action.STARTED);
+      break;
+    case "typing_stopped":
+      typing(request, SignalServiceTypingMessage.Action.STOPPED);
+      break;
+    case "mark_delivered":
+      markDelivered(request);
+      break;
+    case "mark_read":
+      markRead(request);
+      break;
+    case "subscribe":
+      subscribe(request);
+      break;
+    case "unsubscribe":
+      unsubscribe(request);
+      break;
+    case "list_accounts":
+      listAccounts(request);
+      break;
+    case "register":
+      register(request);
+      break;
+    case "verify":
+      verify(request);
+      break;
+    case "link":
+      link(request);
+      break;
+    case "add_device":
+      addDevice(request);
+      break;
+    case "update_group":
+      updateGroup(request);
+      break;
+    case "set_expiration":
+      setExpiration(request);
+      break;
+    case "list_groups":
+      listGroups(request);
+      break;
+    case "leave_group":
+      leaveGroup(request);
+      break;
+    case "get_user":
+      getUser(request);
+      break;
+    case "get_identities":
+      getIdentities(request);
+      break;
+    case "trust":
+      trust(request);
+      break;
+    case "sync_contacts":
+      syncContacts(request);
+      break;
+    case "sync_groups":
+      syncGroups(request);
+      break;
+    case "sync_configuration":
+      syncConfiguration(request);
+      break;
+    case "list_contacts":
+      listContacts(request);
+      break;
+    case "update_contact":
+      updateContact(request);
+      break;
+    case "version":
+      version();
+      break;
+    case "get_profile":
+      getProfile(request);
+      break;
+    case "set_profile":
+      setProfile(request);
+      break;
+    case "react":
+      react(request);
+      break;
+    default:
+      logger.warn("Unknown command type " + request.type);
+      this.reply("unknown_command", new JsonStatusMessage(5, "Unknown command type " + request.type, request), request.id);
+      break;
     }
   }
 
-  private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException, InvalidRecipientException {
+  private void send(JsonRequest request)
+      throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException, InvalidRecipientException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
 
-    if(request.messageBody != null) {
+    if (request.messageBody != null) {
       messageBuilder = messageBuilder.withBody(request.messageBody);
     }
 
-    if(request.attachments != null) {
+    if (request.attachments != null) {
       List<SignalServiceAttachment> attachments = new ArrayList<>(request.attachments.size());
       for (JsonAttachment attachment : request.attachments) {
         try {
@@ -250,7 +251,9 @@ public class SocketHandler implements Runnable {
           if (attachment.customFilename != null) {
             customFilename = attachment.customFilename;
           }
-          attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+          attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false,
+                                                            attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(),
+                                                            Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
         } catch (IOException e) {
           throw new AttachmentInvalidException(attachment.filename, e);
         }
@@ -258,11 +261,11 @@ public class SocketHandler implements Runnable {
       messageBuilder.withAttachments(attachments);
     }
 
-    if(request.quote != null) {
+    if (request.quote != null) {
       messageBuilder.withQuote(request.quote.getQuote());
     }
 
-    if(request.reaction != null) {
+    if (request.reaction != null) {
       messageBuilder.withReaction(request.reaction.getReaction());
     }
 
@@ -278,26 +281,23 @@ public class SocketHandler implements Runnable {
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
-    if(request.recipientGroupId != null) {
+    if (request.recipientGroupId != null) {
       groupId = Base64.decode(request.recipientGroupId);
     }
     if (groupId == null) {
-        groupId = new byte[0];
+      groupId = new byte[0];
     }
 
-    if(request.when == 0) {
+    if (request.when == 0) {
       request.when = System.currentTimeMillis();
     }
 
-    SignalServiceTypingMessage message = new SignalServiceTypingMessage(
-        action,
-        request.when,
-        Optional.fromNullable(groupId));
+    SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, request.when, Optional.fromNullable(groupId));
 
     SendMessageResult result = m.sendTypingMessage(message, request.recipientAddress.getSignalServiceAddress());
-    if(result != null) {
+    if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
-      if(identityFailure != null) {
+      if (identityFailure != null) {
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
       }
     }
@@ -307,19 +307,16 @@ public class SocketHandler implements Runnable {
     logger.info("Mark as Delivered");
     Manager m = Manager.get(request.username);
 
-    if(request.when == 0) {
+    if (request.when == 0) {
       request.when = System.currentTimeMillis();
     }
 
-    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(
-        SignalServiceReceiptMessage.Type.DELIVERY,
-        request.timestamps,
-        request.when);
+    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, request.timestamps, request.when);
 
     SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
-    if(result != null) {
+    if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
-      if(identityFailure != null) {
+      if (identityFailure != null) {
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
       }
     }
@@ -329,19 +326,16 @@ public class SocketHandler implements Runnable {
     logger.info("Mark as Read");
     Manager m = Manager.get(request.username);
 
-    if(request.when == 0) {
+    if (request.when == 0) {
       request.when = System.currentTimeMillis();
     }
 
-    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(
-        SignalServiceReceiptMessage.Type.READ,
-        request.timestamps,
-        request.when);
+    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, request.timestamps, request.when);
 
     SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
-    if(result != null) {
+    if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
-      if(identityFailure != null) {
+      if (identityFailure != null) {
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
       }
     }
@@ -356,11 +350,11 @@ public class SocketHandler implements Runnable {
     logger.info("Register request: " + request);
     Manager m = Manager.get(request.username, true);
     boolean voice = false;
-    if(request.voice != null) {
+    if (request.voice != null) {
       voice = request.voice;
     }
 
-    if(!m.userHasKeys()) {
+    if (!m.userHasKeys()) {
       logger.info("User has no keys, making some");
       m.createNewIdentity();
     }
@@ -371,16 +365,16 @@ public class SocketHandler implements Runnable {
 
   private void verify(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
     Manager m = Manager.get(request.username);
-    if(!m.userHasKeys()) {
+    if (!m.userHasKeys()) {
       logger.warn("User has no keys, first call register.");
-    } else if(m.isRegistered()) {
+    } else if (m.isRegistered()) {
       logger.warn("User is already verified");
     } else {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
         m.verifyAccount(request.code);
         this.reply("verification_succeeded", new JsonAccount(m), request.id);
-      } catch(LockedException e) {
+      } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/thefinn93/signald/-/issues/47");
         this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/thefinn93/signald/-/issues/47", request.id);
       }
@@ -393,45 +387,46 @@ public class SocketHandler implements Runnable {
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
-  private void updateGroup(JsonRequest request) throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
+  private void updateGroup(JsonRequest request)
+      throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
-    if(request.recipientGroupId != null) {
+    if (request.recipientGroupId != null) {
       groupId = Base64.decode(request.recipientGroupId);
     }
     if (groupId == null) {
-        groupId = new byte[0];
+      groupId = new byte[0];
     }
 
     String groupName = request.groupName;
-    if(groupName == null) {
-        groupName = "";
+    if (groupName == null) {
+      groupName = "";
     }
 
     List<String> groupMembers = request.members;
     if (groupMembers == null) {
-        groupMembers = new ArrayList<>();
+      groupMembers = new ArrayList<>();
     }
 
     String groupAvatar = request.avatar;
     if (groupAvatar == null) {
-        groupAvatar = "";
+      groupAvatar = "";
     }
 
     byte[] newGroupId = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
 
     if (groupId.length != newGroupId.length) {
-        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + "."), request.id);
+      this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + "."), request.id);
     } else {
-        this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
+      this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
     }
   }
 
   private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     List<SendMessageResult> results;
-    if(request.recipientGroupId != null) {
+    if (request.recipientGroupId != null) {
       byte[] groupId = Base64.decode(request.recipientGroupId);
       results = m.setExpiration(groupId, request.expiresInSeconds);
     } else {
@@ -461,11 +456,10 @@ public class SocketHandler implements Runnable {
     out.println(jsonmessage);
   }
 
-
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, URISyntaxException, NoSuchAccountException, InvalidInputException {
     ProvisioningManager pm = new ProvisioningManager();
     String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify
-    if(request.deviceName != null) {
+    if (request.deviceName != null) {
       deviceName = request.deviceName;
     }
     try {
@@ -475,17 +469,18 @@ public class SocketHandler implements Runnable {
       String username = pm.finishDeviceLink(deviceName);
       Manager m = Manager.get(username);
       this.reply("linking_successful", new JsonAccount(m), request.id);
-    } catch(TimeoutException e) {
+    } catch (TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
-    } catch(UserAlreadyExists e) {
-      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", request), request.id);
+    } catch (UserAlreadyExists e) {
+      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", request),
+                 request.id);
     }
   }
 
   private void getUser(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     Optional<ContactTokenDetails> contact = m.getUser(request.recipientAddress.number);
-    if(contact.isPresent()) {
+    if (contact.isPresent()) {
       this.reply("user", new JsonContactTokenDetails(contact.get()), request.id);
     } else {
       this.reply("user_not_registered", null, request.id);
@@ -500,14 +495,14 @@ public class SocketHandler implements Runnable {
   private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     TrustLevel trustLevel = TrustLevel.TRUSTED_VERIFIED;
-    if(request.fingerprint == null) {
+    if (request.fingerprint == null) {
       this.reply("input_error", new JsonStatusMessage(0, "Fingerprint must be a string!", request), request.id);
       return;
     }
-    if(request.trustLevel != null) {
+    if (request.trustLevel != null) {
       try {
         trustLevel = TrustLevel.valueOf(request.trustLevel.toUpperCase());
-      } catch(IllegalArgumentException e) {
+      } catch (IllegalArgumentException e) {
         this.reply("input_error", new JsonStatusMessage(0, "Invalid TrustLevel", request), request.id);
         return;
       }
@@ -518,14 +513,18 @@ public class SocketHandler implements Runnable {
       fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
       boolean res = m.trustIdentity(request.recipientAddress.getSignalServiceAddress(), fingerprintBytes, trustLevel);
       if (!res) {
-        this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request), request.id);
+        this.reply("trust_failed",
+                   new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request),
+                   request.id);
       } else {
         this.reply("trusted_fingerprint", new JsonStatusMessage(0, "Successfully trusted fingerprint", request), request.id);
       }
     } else if (fingerprint.length() == 60) {
       boolean res = m.trustIdentitySafetyNumber(request.recipientAddress.getSignalServiceAddress(), fingerprint, trustLevel);
       if (!res) {
-        this.reply("trust_failed", new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request), request.id);
+        this.reply("trust_failed",
+                   new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request),
+                   request.id);
       } else {
         this.reply("trusted_safety_number", new JsonStatusMessage(0, "Successfully trusted safety number", request), request.id);
       }
@@ -560,12 +559,12 @@ public class SocketHandler implements Runnable {
 
   public void updateContact(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    if(request.contact == null) {
+    if (request.contact == null) {
       this.reply("update_contact_error", new JsonStatusMessage(0, "No contact specificed!", request), request.id);
       return;
     }
 
-    if(request.contact.address == null) {
+    if (request.contact.address == null) {
       this.reply("update_contact_error", new JsonStatusMessage(0, "No address specified! Contact must have an address", request), request.id);
       return;
     }
@@ -576,7 +575,7 @@ public class SocketHandler implements Runnable {
 
   private void subscribe(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager.get(request.username); // throws an exception if the user doesn't exist
-    if(!this.receivers.containsKey(request.username)) {
+    if (!this.receivers.containsKey(request.username)) {
       MessageReceiver receiver = new MessageReceiver(request.username);
       this.receivers.put(request.username, receiver);
       Thread messageReceiverThread = new Thread(receiver);
@@ -586,41 +585,40 @@ public class SocketHandler implements Runnable {
     }
     this.receivers.get(request.username).subscribe(this.socket);
     this.subscribedAccounts.add(request.username);
-    this.reply("subscribed", null, request.id);  // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
+    this.reply("subscribed", null, request.id); // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
   }
 
   private void unsubscribe(JsonRequest request) throws IOException {
     this.receivers.get(request.username).unsubscribe(this.socket);
     this.receivers.remove(request.username);
     this.subscribedAccounts.remove(request.username);
-    this.reply("unsubscribed", null, request.id);  // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
+    this.reply("unsubscribed", null, request.id); // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
 
-  private void version() throws IOException {
-      this.reply("version", new JsonVersionMessage(), null);
-  }
+  private void version() throws IOException { this.reply("version", new JsonVersionMessage(), null); }
 
-  private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException, VerificationFailedException {
-      Manager m = Manager.get(request.username);
-      ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
-      if(contact == null || contact.profileKey == null) {
-          this.reply("profile_not_available", null, request.id);
-          return;
-      }
-      byte[] profileKeyBytes = Base64.decode(contact.profileKey);
-      this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress(), profileKeyBytes), profileKeyBytes), request.id);
+  private void getProfile(JsonRequest request)
+      throws IOException, NoSuchAccountException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException, VerificationFailedException {
+    Manager m = Manager.get(request.username);
+    ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
+    if (contact == null || contact.profileKey == null) {
+      this.reply("profile_not_available", null, request.id);
+      return;
+    }
+    byte[] profileKeyBytes = Base64.decode(contact.profileKey);
+    this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress(), profileKeyBytes), profileKeyBytes), request.id);
   }
 
   private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
-      Manager m = Manager.get(request.username);
-      m.setProfile(request.name, null);
-      this.reply("profile_set", null, request.id);
+    Manager m = Manager.get(request.username);
+    m.setProfile(request.name, null);
+    this.reply("profile_set", null, request.id);
   }
 
   private void react(JsonRequest request) throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException {
     Manager manager = Manager.get(request.username);
 
-    if(request.recipientAddress != null) {
+    if (request.recipientAddress != null) {
       request.recipientAddress.resolve(manager.getResolver());
     }
     request.reaction.resolve(manager.getResolver());
@@ -632,28 +630,28 @@ public class SocketHandler implements Runnable {
 
   private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {
     List<JsonSendMessageResult> results = new ArrayList<>();
-    for(SendMessageResult r: sendMessageResults) {
+    for (SendMessageResult r : sendMessageResults) {
       results.add(new JsonSendMessageResult(r));
     }
     this.reply("send_results", results, request.id);
   }
 
   private void handleError(Throwable error, JsonRequest request) {
-    if(error instanceof NoSuchAccountException) {
+    if (error instanceof NoSuchAccountException) {
       logger.warn("unable to process request for non-existent account");
-    } else if(error instanceof UnregisteredUserException) {
+    } else if (error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
     } else {
       logger.catching(error);
     }
     String requestid = "";
-    if(request != null) {
-        requestid = request.id;
+    if (request != null) {
+      requestid = request.id;
     }
     try {
-        this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
-    } catch(JsonProcessingException e) {
-        logger.catching(e);
+      this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
+    } catch (JsonProcessingException e) {
+      logger.catching(e);
     }
   }
 }

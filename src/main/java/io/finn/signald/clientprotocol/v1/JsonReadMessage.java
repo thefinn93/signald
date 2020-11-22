@@ -20,11 +20,11 @@ package io.finn.signald.clientprotocol.v1;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 
 public class JsonReadMessage {
-    JsonAddress sender;
-    long timestamp;
+  JsonAddress sender;
+  long timestamp;
 
-    public JsonReadMessage(ReadMessage r) {
-        sender = new JsonAddress(r.getSender());
-        timestamp = r.getTimestamp();
-    }
+  public JsonReadMessage(ReadMessage r) {
+    sender = new JsonAddress(r.getSender());
+    timestamp = r.getTimestamp();
+  }
 }

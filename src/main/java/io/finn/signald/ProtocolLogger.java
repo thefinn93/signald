@@ -25,7 +25,5 @@ import org.whispersystems.libsignal.logging.SignalProtocolLogger;
 class ProtocolLogger implements SignalProtocolLogger {
   private static final Logger logger = LogManager.getLogger();
 
-  public void log(int priority, String tag, String message) {
-    logger.debug("[" + tag + "] " + message);
-  }
+  public void log(int priority, String tag, String message) { logger.debug("[" + tag + "] " + message); }
 }

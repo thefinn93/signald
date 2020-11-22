@@ -29,87 +29,95 @@ import java.util.Date;
 import java.util.TimeZone;
 
 class JsonMessageEnvelope {
-    String username;
-    String uuid;
-    JsonAddress source;
-    int sourceDevice;
-    String type;
-    String relay;
-    long timestamp;
-    String timestampISO;
-    long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
-    long serverDeliveredTimestamp;
-    boolean hasLegacyMessage;
-    boolean hasContent;
-    boolean isUnidentifiedSender;
-    JsonDataMessage dataMessage;
-    JsonSyncMessage syncMessage;
-    JsonCallMessage callMessage;
-    JsonReceiptMessage receipt;
-    JsonTypingMessage typing;
+  String username;
 
+  String uuid;
 
-    public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
-        this.username = username;
+  JsonAddress source;
+  int sourceDevice;
 
-        if (envelope.hasUuid()) {
-            uuid = envelope.getUuid();
-        }
+  String type;
+  String relay;
 
-        Manager m = Manager.get(username);
-        if(envelope.hasSource()) {
-            source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
-        } else if(c != null) {
-            source = new JsonAddress(m.getResolver().resolve(c.getSender()));
-        }
+  long timestamp;
+  String timestampISO;
 
-        if (envelope.hasSourceDevice()) {
-            sourceDevice = envelope.getSourceDevice();
-        }
+  long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
+  long serverDeliveredTimestamp;
+  boolean hasLegacyMessage;
 
-        if(source != null) {
-            if (source.getSignalServiceAddress().getRelay().isPresent()) {
-                relay = source.getSignalServiceAddress().getRelay().get();
-            }
-        }
+  boolean hasContent;
+  boolean isUnidentifiedSender;
+  JsonDataMessage dataMessage;
 
-        type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
-        timestamp = envelope.getTimestamp();
-        timestampISO = formatTimestampISO(envelope.getTimestamp());
-        serverTimestamp = envelope.getServerReceivedTimestamp();
-        serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
-        hasLegacyMessage = envelope.hasLegacyMessage();
-        hasContent = envelope.hasContent();
+  JsonSyncMessage syncMessage;
+  JsonCallMessage callMessage;
 
-        if (c != null) {
-            if (c.getDataMessage().isPresent()) {
-                this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), username);
-            }
+  JsonReceiptMessage receipt;
+  JsonTypingMessage typing;
 
-            if (c.getSyncMessage().isPresent()) {
-                this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), username);
-            }
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException {
 
-            if (c.getCallMessage().isPresent()) {
-                this.callMessage = new JsonCallMessage(c.getCallMessage().get());
-            }
+    this.username = username;
 
-            if (c.getReceiptMessage().isPresent()) {
-                this.receipt = new JsonReceiptMessage(c.getReceiptMessage().get());
-            }
-
-            if (c.getTypingMessage().isPresent()) {
-                this.typing = new JsonTypingMessage(c.getTypingMessage().get());
-            }
-        }
-        isUnidentifiedSender = envelope.isUnidentifiedSender();
+    if (envelope.hasUuid()) {
+      uuid = envelope.getUuid();
     }
 
-    private static String formatTimestampISO(long timestamp) {
-        Date date = new Date(timestamp);
-        final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
-        df.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return df.format(date);
+    Manager m = Manager.get(username);
+
+    if (envelope.hasSource()) {
+      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+    } else if (c != null) {
+      source = new JsonAddress(m.getResolver().resolve(c.getSender()));
     }
 
+    if (envelope.hasSourceDevice()) {
+      sourceDevice = envelope.getSourceDevice();
+    }
+
+    if (source != null) {
+      if (source.getSignalServiceAddress().getRelay().isPresent()) {
+        relay = source.getSignalServiceAddress().getRelay().get();
+      }
+    }
+
+    type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
+    timestamp = envelope.getTimestamp();
+    timestampISO = formatTimestampISO(envelope.getTimestamp());
+    serverTimestamp = envelope.getServerReceivedTimestamp();
+    serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
+    hasLegacyMessage = envelope.hasLegacyMessage();
+    hasContent = envelope.hasContent();
+
+    if (c != null) {
+      if (c.getDataMessage().isPresent()) {
+        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), username);
+      }
+
+      if (c.getSyncMessage().isPresent()) {
+        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), username);
+      }
+
+      if (c.getCallMessage().isPresent()) {
+        this.callMessage = new JsonCallMessage(c.getCallMessage().get());
+      }
+
+      if (c.getReceiptMessage().isPresent()) {
+        this.receipt = new JsonReceiptMessage(c.getReceiptMessage().get());
+      }
+
+      if (c.getTypingMessage().isPresent()) {
+        this.typing = new JsonTypingMessage(c.getTypingMessage().get());
+      }
+    }
+    isUnidentifiedSender = envelope.isUnidentifiedSender();
+  }
+
+  private static String formatTimestampISO(long timestamp) {
+    Date date = new Date(timestamp);
+    final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // Quoted "Z" to indicate UTC, no timezone offset
+    df.setTimeZone(TimeZone.getTimeZone("UTC"));
+    return df.format(date);
+  }
 }

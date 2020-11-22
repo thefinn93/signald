@@ -25,7 +25,6 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
 
-
 class JsonUntrustedIdentityException {
   public JsonAddress local_address;
   public JsonAddress remote_address;
@@ -48,7 +47,8 @@ class JsonUntrustedIdentityException {
     try {
       Manager m = Manager.get(username);
       this.local_address = new JsonAddress(m.getOwnAddress());
-      this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
+      this.safety_number =
+          SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
     } catch (IOException | NoSuchAccountException e) {
       e.printStackTrace();
     }

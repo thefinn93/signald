@@ -24,25 +24,25 @@ import java.util.Collection;
 // Based on signal-cli's SignalServiceAddressResolver
 public interface AddressResolver {
 
-    /**
-     * Get a SignalServiceAddress with number and/or uuid from an identifier name.
-     *
-     * @param identifier can be either a serialized uuid or a e164 phone number
-     * @return the full address
-     */
-    SignalServiceAddress resolve(String identifier);
+  /**
+   * Get a SignalServiceAddress with number and/or uuid from an identifier name.
+   *
+   * @param identifier can be either a serialized uuid or a e164 phone number
+   * @return the full address
+   */
+  SignalServiceAddress resolve(String identifier);
 
-    /**
-     * Attempt to create a full SignalServiceAddress with number and uuid from an address that may only have one of them
-     * @param partial the partial address. If the partial has a full set of identifiers it will be returned unmodified
-     * @return the full address
-     */
-    SignalServiceAddress resolve(SignalServiceAddress partial);
+  /**
+   * Attempt to create a full SignalServiceAddress with number and uuid from an address that may only have one of them
+   * @param partial the partial address. If the partial has a full set of identifiers it will be returned unmodified
+   * @return the full address
+   */
+  SignalServiceAddress resolve(SignalServiceAddress partial);
 
-    /**
-     * Attempt to resolve a collection of addresses
-     * @param partials a list of addresses to resolve
-     * @return a list of resolved addresses
-     */
-    Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials);
+  /**
+   * Attempt to resolve a collection of addresses
+   * @param partials a list of addresses to resolve
+   * @return a list of resolved addresses
+   */
+  Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials);
 }

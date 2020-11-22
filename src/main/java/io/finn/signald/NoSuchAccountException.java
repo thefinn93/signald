@@ -18,7 +18,5 @@
 package io.finn.signald;
 
 public class NoSuchAccountException extends Exception {
-    public NoSuchAccountException(String username) {
-        super("Attempted to connect to a non-existant user " + username);
-    }
+  public NoSuchAccountException(String username) { super("Attempted to connect to a non-existant user " + username); }
 }

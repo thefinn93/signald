@@ -31,87 +31,84 @@ import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
 class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
-    final String username;
-    private SocketManager sockets;
-    private static final Logger logger = LogManager.getLogger();
+  final String username;
+  private SocketManager sockets;
+  private static final Logger logger = LogManager.getLogger();
 
-    public MessageReceiver(String username) {
-      this.username = username;
-      this.sockets = new SocketManager();
-    }
+  public MessageReceiver(String username) {
+    this.username = username;
+    this.sockets = new SocketManager();
+  }
 
-    public void subscribe(Socket s) {
-      this.sockets.add(s);
-    }
+  public void subscribe(Socket s) { this.sockets.add(s); }
 
-    public boolean unsubscribe(Socket s) {
-      boolean removed = sockets.remove(s);
-      if(removed && sockets.size() == 0) {
-          logger.info("Last client for " + this.username + " unsubscribed, shutting down message pipe!");
-          try {
-              Manager.get(username).shutdownMessagePipe();
-          } catch(IOException | NoSuchAccountException e) {
-              logger.catching(e);
-          }
-      }
-      return removed;
-    }
-
-
-    public void run() {
+  public boolean unsubscribe(Socket s) {
+    boolean removed = sockets.remove(s);
+    if (removed && sockets.size() == 0) {
+      logger.info("Last client for " + this.username + " unsubscribed, shutting down message pipe!");
       try {
-        Thread.currentThread().setName(Util.redact(username) + "-receiver");
-        Manager manager = Manager.get(username);
-        while(sockets.size() > 0) {
-          double timeout = 3600;
-          boolean returnOnTimeout = true;
-          boolean ignoreAttachments = false;
-          try {
-            manager.receiveMessages((long) (timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
-          } catch (IOException e) {
-              if(sockets.size() > 0) {
-                  throw e;
-              }
-          } catch (AssertionError e) {
-              logger.catching(e);
-          }
-        }
-      } catch(Exception e) {
+        Manager.get(username).shutdownMessagePipe();
+      } catch (IOException | NoSuchAccountException e) {
         logger.catching(e);
       }
     }
+    return removed;
+  }
 
-    @Override
-    public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
-      String type = "message";
-      if(exception != null) {
-          if(exception instanceof SelfSendException) {
-              logger.debug("ignoring SelfSendException (see https://gitlab.com/thefinn93/signald/-/issues/24)");
-          } else if(exception instanceof DuplicateMessageException || exception.getCause() instanceof DuplicateMessageException) {
-              logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/thefinn93/signald/-/issues/50): " + exception.toString());
-          } else if(exception instanceof UntrustedIdentityException) {
-              logger.debug("UntrustedIdentityException", exception.toString());
-          } else if(exception instanceof InvalidMetadataMessageException) {
-              logger.warn("Received invalid metadata in incoming message: " + exception.toString());
-          } else {
-              logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
+  public void run() {
+    try {
+      Thread.currentThread().setName(Util.redact(username) + "-receiver");
+      Manager manager = Manager.get(username);
+      while (sockets.size() > 0) {
+        double timeout = 3600;
+        boolean returnOnTimeout = true;
+        boolean ignoreAttachments = false;
+        try {
+          manager.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
+        } catch (IOException e) {
+          if (sockets.size() > 0) {
+            throw e;
           }
-          type = "unreadable_message";
-      }
-
-      try {
-          if(exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-              JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException) exception, username);
-              this.sockets.broadcast(new JsonMessageWrapper("inbound_identity_failure", message, (Throwable)null));
-          }
-          if(envelope != null) {
-              JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
-              this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
-          } else {
-              this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
-          }
-      } catch (IOException | NoSuchAccountException e) {
+        } catch (AssertionError e) {
           logger.catching(e);
+        }
       }
+    } catch (Exception e) {
+      logger.catching(e);
     }
+  }
+
+  @Override
+  public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
+    String type = "message";
+    if (exception != null) {
+      if (exception instanceof SelfSendException) {
+        logger.debug("ignoring SelfSendException (see https://gitlab.com/thefinn93/signald/-/issues/24)");
+      } else if (exception instanceof DuplicateMessageException || exception.getCause() instanceof DuplicateMessageException) {
+        logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/thefinn93/signald/-/issues/50): " + exception.toString());
+      } else if (exception instanceof UntrustedIdentityException) {
+        logger.debug("UntrustedIdentityException", exception.toString());
+      } else if (exception instanceof InvalidMetadataMessageException) {
+        logger.warn("Received invalid metadata in incoming message: " + exception.toString());
+      } else {
+        logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
+      }
+      type = "unreadable_message";
+    }
+
+    try {
+      if (exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, username);
+        this.sockets.broadcast(new JsonMessageWrapper("inbound_identity_failure", message, (Throwable)null));
+      }
+      if (envelope != null) {
+        JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
+        this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
+      } else {
+        this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
+      }
+    } catch (IOException | NoSuchAccountException e) {
+      logger.catching(e);
+    }
+  }
 }

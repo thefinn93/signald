@@ -21,19 +21,19 @@ import org.whispersystems.signalservice.api.messages.multidevice.MessageRequestR
 import org.whispersystems.util.Base64;
 
 public class JsonMessageRequestResponseMessage {
-    JsonAddress person;
-    String groupId;
-    String type;
+  JsonAddress person;
+  String groupId;
+  String type;
 
-    public JsonMessageRequestResponseMessage(MessageRequestResponseMessage m) {
-        if(m.getPerson().isPresent()) {
-            person = new JsonAddress(m.getPerson().get());
-        }
-
-        if(m.getGroupId().isPresent()) {
-            groupId = Base64.encodeBytes(m.getGroupId().get());
-        }
-
-        type = m.getType().toString();
+  public JsonMessageRequestResponseMessage(MessageRequestResponseMessage m) {
+    if (m.getPerson().isPresent()) {
+      person = new JsonAddress(m.getPerson().get());
     }
+
+    if (m.getGroupId().isPresent()) {
+      groupId = Base64.encodeBytes(m.getGroupId().get());
+    }
+
+    type = m.getType().toString();
+  }
 }

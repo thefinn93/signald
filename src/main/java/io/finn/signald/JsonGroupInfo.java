@@ -29,41 +29,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 class JsonGroupInfo {
-    String groupId;
-    List<JsonAddress> members;
-    String name;
-    String type;
-    Long avatarId;
+  String groupId;
+  List<JsonAddress> members;
+  String name;
+  String type;
+  Long avatarId;
 
-    JsonGroupInfo(SignalServiceGroupContext groupContext, String username) throws IOException, NoSuchAccountException {
-        SignalServiceGroup groupInfo = groupContext.getGroupV1().get();
-        Manager manager = Manager.get(username);
-        this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
-        if (groupInfo.getMembers().isPresent()) {
-            this.members = new ArrayList<>();
-            for(SignalServiceAddress member : groupInfo.getMembers().get()) {
-                this.members.add(new JsonAddress(member));
-            }
-        }
-        if (groupInfo.getName().isPresent()) {
-            this.name = groupInfo.getName().get();
-        } else {
-            GroupInfo group = manager.getGroup(groupInfo.getGroupId());
-            if(group != null) {
-                this.name = group.name;
-            }
-        }
-
-        this.type = groupInfo.getType().toString();
+  JsonGroupInfo(SignalServiceGroupContext groupContext, String username) throws IOException, NoSuchAccountException {
+    SignalServiceGroup groupInfo = groupContext.getGroupV1().get();
+    Manager manager = Manager.get(username);
+    this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
+    if (groupInfo.getMembers().isPresent()) {
+      this.members = new ArrayList<>();
+      for (SignalServiceAddress member : groupInfo.getMembers().get()) {
+        this.members.add(new JsonAddress(member));
+      }
+    }
+    if (groupInfo.getName().isPresent()) {
+      this.name = groupInfo.getName().get();
+    } else {
+      GroupInfo group = manager.getGroup(groupInfo.getGroupId());
+      if (group != null) {
+        this.name = group.name;
+      }
     }
 
-    JsonGroupInfo(GroupInfo groupInfo, Manager m) {
-        this.groupId = Base64.encodeBytes(groupInfo.groupId);
-        this.name = groupInfo.name;
-        this.members = new ArrayList();
-        for(SignalServiceAddress member : groupInfo.getMembers()) {
-            this.members.add(new JsonAddress(member));
-        }
-        this.avatarId = groupInfo.getAvatarId();
+    this.type = groupInfo.getType().toString();
+  }
+
+  JsonGroupInfo(GroupInfo groupInfo, Manager m) {
+    this.groupId = Base64.encodeBytes(groupInfo.groupId);
+    this.name = groupInfo.name;
+    this.members = new ArrayList();
+    for (SignalServiceAddress member : groupInfo.getMembers()) {
+      this.members.add(new JsonAddress(member));
     }
+    this.avatarId = groupInfo.getAvatarId();
+  }
 }

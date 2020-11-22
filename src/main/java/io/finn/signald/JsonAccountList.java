@@ -21,14 +21,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 class JsonAccountList {
-    public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
+  public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
-    JsonAccountList(ArrayList<String> subscribedAccounts) {
-        for (Manager m : Manager.getAll()) {
-            if (m != null) {
-                accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getUsername())));
-            }
-
-        }
+  JsonAccountList(ArrayList<String> subscribedAccounts) {
+    for (Manager m : Manager.getAll()) {
+      if (m != null) {
+        accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getUsername())));
+      }
     }
+  }
 }

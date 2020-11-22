@@ -38,7 +38,7 @@ class JsonIdentity {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
-    if(identity.getAddress() != null) {
+    if (identity.getAddress() != null) {
       this.address = identity.getAddress();
       generateSafetyNumber(identity, m);
     }
@@ -51,7 +51,7 @@ class JsonIdentity {
   }
 
   private void generateSafetyNumber(IdentityKeyStore.Identity identity, Manager m) {
-    if(address != null) {
+    if (address != null) {
       Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnAddress(), m.getIdentity(), address.getSignalServiceAddress(), identity.getKey());
       if (fingerprint == null) {
         safety_number = "INVALID ID";
@@ -64,7 +64,7 @@ class JsonIdentity {
 
   @JsonProperty
   public void setNumber(String number) {
-    if(this.address == null) {
+    if (this.address == null) {
       this.address = new JsonAddress(number);
     } else {
       this.address.number = number;

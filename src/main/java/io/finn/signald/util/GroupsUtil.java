@@ -22,13 +22,13 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 
 public class GroupsUtil {
-    public static GroupsV2Operations GetGroupsV2Operations(SignalServiceConfiguration serviceConfiguration) {
-        GroupsV2Operations groupsV2Operations;
-        try {
-            groupsV2Operations = new GroupsV2Operations(ClientZkOperations.create(serviceConfiguration));
-        } catch (Throwable ignored) {
-            groupsV2Operations = null;
-        }
-        return groupsV2Operations;
+  public static GroupsV2Operations GetGroupsV2Operations(SignalServiceConfiguration serviceConfiguration) {
+    GroupsV2Operations groupsV2Operations;
+    try {
+      groupsV2Operations = new GroupsV2Operations(ClientZkOperations.create(serviceConfiguration));
+    } catch (Throwable ignored) {
+      groupsV2Operations = null;
     }
+    return groupsV2Operations;
+  }
 }

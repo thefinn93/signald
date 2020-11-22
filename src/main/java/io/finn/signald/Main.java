@@ -38,27 +38,21 @@ import java.nio.file.Files;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
 
-
-@Command(name=BuildConfig.NAME, mixinStandardHelpOptions=true, version=BuildConfig.NAME + " " + BuildConfig.VERSION)
+@Command(name = BuildConfig.NAME, mixinStandardHelpOptions = true, version = BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {
 
-  public static void main(String[] args) {
-    CommandLine.run(new Main(), System.err, args);
-  }
+  public static void main(String[] args) { CommandLine.run(new Main(), System.err, args); }
 
-  @Option(names={"-v", "--verbose"}, description="Verbose mode. Helpful for troubleshooting.")
-  private boolean verbose = false;
+  @Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting.") private boolean verbose = false;
 
-  @Option(names={"-s", "--socket"}, description="The path to the socket file")
-  private String socket_path = "/var/run/signald/signald.sock";
+  @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = "/var/run/signald/signald.sock";
 
-  @Option(names={"-d", "--data"}, description="Data storage location")
-  private String data_path = System.getProperty("user.home") + "/.config/signald";
+  @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
 
   private static final Logger logger = LogManager.getLogger();
 
   public void run() {
-    if(verbose) {
+    if (verbose) {
       Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
     }
 
@@ -70,11 +64,11 @@ public class Main implements Runnable {
       Security.addProvider(new BouncyCastleProvider());
 
       SocketManager socketmanager = new SocketManager();
-      ConcurrentHashMap<String,MessageReceiver> receivers = new ConcurrentHashMap<String,MessageReceiver>();
+      ConcurrentHashMap<String, MessageReceiver> receivers = new ConcurrentHashMap<String, MessageReceiver>();
 
       // Spins up one thread per inbound connection to the control socket
       File socketFile = new File(socket_path);
-      if(socketFile.exists()) {
+      if (socketFile.exists()) {
         logger.debug("Deleting existing socket file");
         Files.delete(socketFile.toPath());
       }
@@ -90,8 +84,8 @@ public class Main implements Runnable {
       // Spins up one thread per registered signal number, listens for incoming messages
       File[] users = new File(data_path + "/data").listFiles();
 
-      if(users == null) {
-         logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
+      if (users == null) {
+        logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
       }
 
       SignalProtocolLoggerProvider.setProvider(new ProtocolLogger());
@@ -107,11 +101,11 @@ public class Main implements Runnable {
           Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers), "socketlistener");
           socketHandlerThread.start();
 
-        } catch(IOException e) {
+        } catch (IOException e) {
           logger.catching(e);
         }
       }
-    } catch(Exception e) {
+    } catch (Exception e) {
       logger.catching(e);
       System.exit(1);
     }

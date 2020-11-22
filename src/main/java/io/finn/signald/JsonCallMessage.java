@@ -22,39 +22,39 @@ import org.whispersystems.signalservice.api.messages.calls.*;
 import java.util.List;
 
 class JsonCallMessage {
-    OfferMessage offerMessage;
-    AnswerMessage answerMessage;
-    BusyMessage busyMessage;
-    HangupMessage hangupMessage;
-    List<IceUpdateMessage> iceUpdateMessages;
-    Integer destinationDeviceId;
-    boolean isMultiRing;
+  OfferMessage offerMessage;
+  AnswerMessage answerMessage;
+  BusyMessage busyMessage;
+  HangupMessage hangupMessage;
+  List<IceUpdateMessage> iceUpdateMessages;
+  Integer destinationDeviceId;
+  boolean isMultiRing;
 
-    JsonCallMessage(SignalServiceCallMessage callMessage) {
-        if(callMessage.getOfferMessage().isPresent()) {
-            offerMessage = callMessage.getOfferMessage().get();
-        }
-
-        if(callMessage.getAnswerMessage().isPresent()) {
-            answerMessage = callMessage.getAnswerMessage().get();
-        }
-
-        if(callMessage.getBusyMessage().isPresent()) {
-            busyMessage = callMessage.getBusyMessage().get();
-        }
-
-        if(callMessage.getHangupMessage().isPresent()) {
-            hangupMessage = callMessage.getHangupMessage().get();
-        }
-
-        if(callMessage.getIceUpdateMessages().isPresent()) {
-            iceUpdateMessages = callMessage.getIceUpdateMessages().get();
-        }
-
-        if(callMessage.getDestinationDeviceId().isPresent()) {
-            destinationDeviceId = callMessage.getDestinationDeviceId().get();
-        }
-
-        isMultiRing = callMessage.isMultiRing();
+  JsonCallMessage(SignalServiceCallMessage callMessage) {
+    if (callMessage.getOfferMessage().isPresent()) {
+      offerMessage = callMessage.getOfferMessage().get();
     }
+
+    if (callMessage.getAnswerMessage().isPresent()) {
+      answerMessage = callMessage.getAnswerMessage().get();
+    }
+
+    if (callMessage.getBusyMessage().isPresent()) {
+      busyMessage = callMessage.getBusyMessage().get();
+    }
+
+    if (callMessage.getHangupMessage().isPresent()) {
+      hangupMessage = callMessage.getHangupMessage().get();
+    }
+
+    if (callMessage.getIceUpdateMessages().isPresent()) {
+      iceUpdateMessages = callMessage.getIceUpdateMessages().get();
+    }
+
+    if (callMessage.getDestinationDeviceId().isPresent()) {
+      destinationDeviceId = callMessage.getDestinationDeviceId().get();
+    }
+
+    isMultiRing = callMessage.isMultiRing();
+  }
 }

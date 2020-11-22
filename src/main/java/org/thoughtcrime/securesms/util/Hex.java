@@ -24,17 +24,13 @@ import java.io.IOException;
 public class Hex {
 
   private final static int HEX_DIGITS_START = 10;
-  private final static int ASCII_TEXT_START = HEX_DIGITS_START + (16*2 + (16/2));
+  private final static int ASCII_TEXT_START = HEX_DIGITS_START + (16 * 2 + (16 / 2));
 
   final static String EOL = System.getProperty("line.separator");
 
-  private final static char[] HEX_DIGITS = {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-  };
+  private final static char[] HEX_DIGITS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
-  public static String toString(byte[] bytes) {
-    return toString(bytes, 0, bytes.length);
-  }
+  public static String toString(byte[] bytes) { return toString(bytes, 0, bytes.length); }
 
   public static String toString(byte[] bytes, int offset, int length) {
     StringBuffer buf = new StringBuffer();
@@ -47,7 +43,7 @@ public class Hex {
 
   public static String toStringCondensed(byte[] bytes) {
     StringBuffer buf = new StringBuffer();
-    for (int i=0;i<bytes.length;i++) {
+    for (int i = 0; i < bytes.length; i++) {
       appendHexChar(buf, bytes[i]);
     }
     return buf.toString();
@@ -55,7 +51,7 @@ public class Hex {
 
   public static byte[] fromStringCondensed(String encoded) throws IOException {
     final char[] data = encoded.toCharArray();
-    final int    len  = data.length;
+    final int len = data.length;
 
     if ((len & 0x01) != 0) {
       throw new IOException("Odd number of characters.");
@@ -69,15 +65,13 @@ public class Hex {
       j++;
       f = f | Character.digit(data[j], 16);
       j++;
-      out[i] = (byte) (f & 0xFF);
+      out[i] = (byte)(f & 0xFF);
     }
 
     return out;
   }
 
-  public static String dump(byte[] bytes) {
-    return dump(bytes, 0, bytes.length);
-  }
+  public static String dump(byte[] bytes) { return dump(bytes, 0, bytes.length); }
 
   public static String dump(byte[] bytes, int offset, int length) {
     StringBuffer buf = new StringBuffer();
@@ -101,9 +95,9 @@ public class Hex {
     buf.append(HEX_DIGITS[(line >> 20) & 0xf]);
     buf.append(HEX_DIGITS[(line >> 16) & 0xf]);
     buf.append(HEX_DIGITS[(line >> 12) & 0xf]);
-    buf.append(HEX_DIGITS[(line >>  8) & 0xf]);
-    buf.append(HEX_DIGITS[(line >>  4) & 0xf]);
-    buf.append(HEX_DIGITS[(line      ) & 0xf]);
+    buf.append(HEX_DIGITS[(line >> 8) & 0xf]);
+    buf.append(HEX_DIGITS[(line >> 4) & 0xf]);
+    buf.append(HEX_DIGITS[(line)&0xf]);
     buf.append(": ");
 
     for (int i = 0; i < 16; i++) {
@@ -134,5 +128,4 @@ public class Hex {
     buf.append(HEX_DIGITS[(b >> 4) & 0xf]);
     buf.append(HEX_DIGITS[b & 0xf]);
   }
-
 }

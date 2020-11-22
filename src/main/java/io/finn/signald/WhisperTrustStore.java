@@ -23,13 +23,13 @@ import java.io.InputStream;
 
 class WhisperTrustStore implements TrustStore {
 
-    @Override
-    public InputStream getKeyStoreInputStream() {
-        return WhisperTrustStore.class.getResourceAsStream("whisper.store");
-    }
+  @Override
+  public InputStream getKeyStoreInputStream() {
+    return WhisperTrustStore.class.getResourceAsStream("whisper.store");
+  }
 
-    @Override
-    public String getKeyStorePassword() {
-        return "whisper";
-    }
+  @Override
+  public String getKeyStorePassword() {
+    return "whisper";
+  }
 }

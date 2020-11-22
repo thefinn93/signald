@@ -28,142 +28,135 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 import java.util.UUID;
 
 public class JsonAddress {
-    private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LogManager.getLogger();
 
-    public String number;
+  public String number;
 
-    public String uuid;
+  public String uuid;
 
-    public String relay;
+  public String relay;
 
-    public JsonAddress() {};
+  public JsonAddress(){};
 
-    public JsonAddress(String n, UUID uuid) {
-        if(!n.startsWith("+") && UuidUtil.isUuid(n)) {
-            logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
-            uuid = UUID.fromString(n);
-        } else {
-            number = n;
-        }
-        if(uuid != null) {
-            this.uuid = uuid.toString();
-        }
+  public JsonAddress(String n, UUID uuid) {
+    if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
+      logger.warn(
+          "Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
+      uuid = UUID.fromString(n);
+    } else {
+      number = n;
+    }
+    if (uuid != null) {
+      this.uuid = uuid.toString();
+    }
+  }
+
+  @JsonIgnore
+  public SignalServiceAddress getSignalServiceAddress() {
+    return new SignalServiceAddress(getUUID(), number);
+  }
+
+  public UUID getUUID() {
+    if (uuid == null) {
+      return null;
+    }
+    return UUID.fromString(uuid);
+  }
+
+  public JsonAddress(SignalServiceAddress address) {
+    if (address.getNumber().isPresent()) {
+      String n = address.getNumber().get();
+      if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
+        logger.warn(
+            "Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
+        uuid = n;
+      } else {
+        number = n;
+      }
     }
 
-    @JsonIgnore
-    public SignalServiceAddress getSignalServiceAddress() {
-        return new SignalServiceAddress(getUUID(), number);
+    if (address.getUuid().isPresent()) {
+      uuid = address.getUuid().get().toString();
     }
 
-    public UUID getUUID() {
-        if(uuid == null) {
-            return null;
-        }
-        return UUID.fromString(uuid);
+    if (address.getRelay().isPresent()) {
+      relay = address.getRelay().get();
+    }
+  }
+
+  public JsonAddress(String number) { this.number = number; }
+
+  JsonAddress(UUID uuid) { this.uuid = uuid.toString(); }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null || !(other instanceof JsonAddress))
+      return false;
+
+    JsonAddress that = (JsonAddress)other;
+    return getSignalServiceAddress().equals(that.getSignalServiceAddress());
+  }
+
+  public String toString() {
+    String out = "";
+    if (number == null) {
+      out += "null";
+    } else {
+      out += number;
     }
 
-    public JsonAddress(SignalServiceAddress address) {
-        if(address.getNumber().isPresent()) {
-            String n = address.getNumber().get();
-            if(!n.startsWith("+") && UuidUtil.isUuid(n)) {
-                logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
-                uuid = n;
-            } else {
-                number = n;
-            }
-        }
+    out += "/";
 
-        if(address.getUuid().isPresent()) {
-            uuid = address.getUuid().get().toString();
-        }
+    if (uuid == null) {
+      out += "null";
+    } else {
+      out += uuid;
+    }
+    if (relay != null) {
+      out += " (relay " + relay + ")";
+    }
+    return out;
+  }
 
-        if(address.getRelay().isPresent()) {
-            relay = address.getRelay().get();
-        }
+  public String toRedactedString() {
+    String out = "";
+    if (number == null) {
+      out += "null";
+    } else {
+      out += Util.redact(number);
     }
 
-    public JsonAddress(String number) {
-        this.number = number;
+    out += "/";
+
+    if (uuid == null) {
+      out += "null";
+    } else {
+      out += Util.redact(uuid);
+    }
+    if (relay != null) {
+      out += " (relay " + relay + ")";
+    }
+    return out;
+  }
+
+  @Override
+  public int hashCode() {
+    return getSignalServiceAddress().hashCode();
+  }
+
+  public boolean matches(JsonAddress other) { return matches(other.getSignalServiceAddress()); }
+
+  public boolean matches(SignalServiceAddress other) { return getSignalServiceAddress().matches(other); }
+
+  public void update(SignalServiceAddress a) {
+    if (uuid == null && a.getUuid().isPresent()) {
+      uuid = a.getUuid().get().toString();
     }
 
-    JsonAddress(UUID uuid) {
-        this.uuid = uuid.toString();
+    if (number == null && a.getNumber().isPresent()) {
+      number = a.getNumber().get();
     }
+  }
 
-    @Override
-    public boolean equals(Object other) {
-        if (other == null || !(other instanceof JsonAddress)) return false;
-
-        JsonAddress that = (JsonAddress)other;
-        return getSignalServiceAddress().equals(that.getSignalServiceAddress());
-    }
-
-    public String toString() {
-        String out = "";
-        if(number == null) {
-            out += "null";
-        } else {
-            out += number;
-        }
-
-        out += "/";
-
-        if(uuid == null) {
-            out += "null";
-        } else {
-            out += uuid;
-        }
-        if(relay != null) {
-            out += " (relay " + relay + ")";
-        }
-        return out;
-    }
-
-    public String toRedactedString() {
-        String out = "";
-        if(number == null) {
-            out += "null";
-        } else {
-            out += Util.redact(number);
-        }
-
-        out += "/";
-
-        if(uuid == null) {
-            out += "null";
-        } else {
-            out += Util.redact(uuid);
-        }
-        if(relay != null) {
-            out += " (relay " + relay + ")";
-        }
-        return out;
-    }
-
-    @Override
-    public int hashCode() {
-        return getSignalServiceAddress().hashCode();
-    }
-
-    public boolean matches(JsonAddress other) {
-        return matches(other.getSignalServiceAddress());
-    }
-
-    public boolean matches(SignalServiceAddress other) {
-        return getSignalServiceAddress().matches(other);
-    }
-
-    public void update(SignalServiceAddress a) {
-        if(uuid == null && a.getUuid().isPresent()) {
-            uuid = a.getUuid().get().toString();
-        }
-
-        if(number == null && a.getNumber().isPresent()) {
-            number = a.getNumber().get();
-        }
-    }
-
-    public void resolve(AddressResolver resolver) {
-        update(resolver.resolve(getSignalServiceAddress()));
-    }
+  public void resolve(AddressResolver resolver) { update(resolver.resolve(getSignalServiceAddress())); }
 }

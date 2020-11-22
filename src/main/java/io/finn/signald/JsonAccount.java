@@ -41,5 +41,4 @@ class JsonAccount {
     this(m);
     this.subscribed = subscribed;
   }
-
 }

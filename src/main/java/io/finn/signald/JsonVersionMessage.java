@@ -30,5 +30,4 @@ class JsonVersionMessage {
     this.branch = BuildConfig.BRANCH;
     this.commit = BuildConfig.COMMIT;
   }
-
 }

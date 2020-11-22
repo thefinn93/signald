@@ -23,13 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 class JsonGroupList {
-    List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
+  List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
 
-    JsonGroupList(Manager m) {
-        for(GroupInfo group : m.getGroups()) {
-            if(group != null) {
-                this.groups.add(new JsonGroupInfo(group, m));
-            }
-        }
+  JsonGroupList(Manager m) {
+    for (GroupInfo group : m.getGroups()) {
+      if (group != null) {
+        this.groups.add(new JsonGroupInfo(group, m));
+      }
     }
+  }
 }

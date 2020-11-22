@@ -20,9 +20,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class LegacyThreadInfo {
-    @JsonProperty
-    public String id;
+  @JsonProperty public String id;
 
-    @JsonProperty
-    public int messageExpirationTime;
+  @JsonProperty public int messageExpirationTime;
 }

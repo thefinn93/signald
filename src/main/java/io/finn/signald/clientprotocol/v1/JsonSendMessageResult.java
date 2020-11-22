@@ -21,19 +21,19 @@ import org.asamk.signal.util.Hex;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 
 public class JsonSendMessageResult {
-    JsonAddress address;
-    SendMessageResult.Success success;
-    boolean networkFailure;
-    boolean unregisteredFailure;
-    String identityFailure;
+  JsonAddress address;
+  SendMessageResult.Success success;
+  boolean networkFailure;
+  boolean unregisteredFailure;
+  String identityFailure;
 
-    public JsonSendMessageResult(SendMessageResult result) {
-        address = new JsonAddress(result.getAddress());
-        success = result.getSuccess();
-        networkFailure = result.isNetworkFailure();
-        unregisteredFailure = result.isUnregisteredFailure();
-        if(result.getIdentityFailure() != null) {
-            identityFailure = Hex.toStringCondensed(result.getIdentityFailure().getIdentityKey().serialize()).trim();
-        }
+  public JsonSendMessageResult(SendMessageResult result) {
+    address = new JsonAddress(result.getAddress());
+    success = result.getSuccess();
+    networkFailure = result.isNetworkFailure();
+    unregisteredFailure = result.isUnregisteredFailure();
+    if (result.getIdentityFailure() != null) {
+      identityFailure = Hex.toStringCondensed(result.getIdentityFailure().getIdentityKey().serialize()).trim();
     }
+  }
 }

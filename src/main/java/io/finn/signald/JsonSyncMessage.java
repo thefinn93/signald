@@ -27,75 +27,75 @@ import java.util.ArrayList;
 import java.util.List;
 
 class JsonSyncMessage {
-    JsonSentTranscriptMessage sent;
-    JsonAttachment contacts;
-    boolean contactsComplete;
-    JsonAttachment groups;
-    JsonBlockedListMessage blockedList;
-    String request;
-    List<JsonReadMessage> readMessages;
-    JsonViewOnceOpenMessage viewOnceOpen;
-    JsonVerifiedMessage verified;
-    ConfigurationMessage configuration;
-    List<JsonStickerPackOperationMessage> stickerPackOperations;
-    String fetchType;
-    JsonMessageRequestResponseMessage messageRequestResponse;
+  JsonSentTranscriptMessage sent;
+  JsonAttachment contacts;
+  boolean contactsComplete;
+  JsonAttachment groups;
+  JsonBlockedListMessage blockedList;
+  String request;
+  List<JsonReadMessage> readMessages;
+  JsonViewOnceOpenMessage viewOnceOpen;
+  JsonVerifiedMessage verified;
+  ConfigurationMessage configuration;
+  List<JsonStickerPackOperationMessage> stickerPackOperations;
+  String fetchType;
+  JsonMessageRequestResponseMessage messageRequestResponse;
 
-    JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
-        if(syncMessage.getSent().isPresent()) {
-            this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
-        }
-
-        if(syncMessage.getContacts().isPresent()) {
-          ContactsMessage c = syncMessage.getContacts().get();
-          contacts = new JsonAttachment(c.getContactsStream(), username);
-          contactsComplete = c.isComplete();
-        }
-
-        if(syncMessage.getGroups().isPresent()) {
-          groups = new JsonAttachment(syncMessage.getGroups().get(), username);
-        }
-
-        if(syncMessage.getBlockedList().isPresent()) {
-            blockedList = new JsonBlockedListMessage(syncMessage.getBlockedList().get());
-        }
-
-        if(syncMessage.getRequest().isPresent()) {
-            request = syncMessage.getRequest().get().getRequest().getType().name();
-        }
-
-        if(syncMessage.getRead().isPresent()) {
-            readMessages = new ArrayList<>();
-            for(ReadMessage r : syncMessage.getRead().get()) {
-             readMessages.add(new JsonReadMessage(r));
-            }
-        }
-
-        if(syncMessage.getViewOnceOpen().isPresent()) {
-            viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
-        }
-
-        if(syncMessage.getVerified().isPresent()) {
-           verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
-        }
-
-        if(syncMessage.getConfiguration().isPresent()) {
-            configuration = syncMessage.getConfiguration().get();
-        }
-
-        if(syncMessage.getStickerPackOperations().isPresent()) {
-            stickerPackOperations = new ArrayList<>();
-          for(StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
-            stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
-          }
-        }
-
-        if(syncMessage.getFetchType().isPresent()) {
-            fetchType = syncMessage.getFetchType().get().name();
-        }
-
-        if(syncMessage.getMessageRequestResponse().isPresent()) {
-            messageRequestResponse = new JsonMessageRequestResponseMessage(syncMessage.getMessageRequestResponse().get());
-        }
+  JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
+    if (syncMessage.getSent().isPresent()) {
+      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
     }
+
+    if (syncMessage.getContacts().isPresent()) {
+      ContactsMessage c = syncMessage.getContacts().get();
+      contacts = new JsonAttachment(c.getContactsStream(), username);
+      contactsComplete = c.isComplete();
+    }
+
+    if (syncMessage.getGroups().isPresent()) {
+      groups = new JsonAttachment(syncMessage.getGroups().get(), username);
+    }
+
+    if (syncMessage.getBlockedList().isPresent()) {
+      blockedList = new JsonBlockedListMessage(syncMessage.getBlockedList().get());
+    }
+
+    if (syncMessage.getRequest().isPresent()) {
+      request = syncMessage.getRequest().get().getRequest().getType().name();
+    }
+
+    if (syncMessage.getRead().isPresent()) {
+      readMessages = new ArrayList<>();
+      for (ReadMessage r : syncMessage.getRead().get()) {
+        readMessages.add(new JsonReadMessage(r));
+      }
+    }
+
+    if (syncMessage.getViewOnceOpen().isPresent()) {
+      viewOnceOpen = new JsonViewOnceOpenMessage(syncMessage.getViewOnceOpen().get());
+    }
+
+    if (syncMessage.getVerified().isPresent()) {
+      verified = new JsonVerifiedMessage(syncMessage.getVerified().get());
+    }
+
+    if (syncMessage.getConfiguration().isPresent()) {
+      configuration = syncMessage.getConfiguration().get();
+    }
+
+    if (syncMessage.getStickerPackOperations().isPresent()) {
+      stickerPackOperations = new ArrayList<>();
+      for (StickerPackOperationMessage message : syncMessage.getStickerPackOperations().get()) {
+        stickerPackOperations.add(new JsonStickerPackOperationMessage(message));
+      }
+    }
+
+    if (syncMessage.getFetchType().isPresent()) {
+      fetchType = syncMessage.getFetchType().get().name();
+    }
+
+    if (syncMessage.getMessageRequestResponse().isPresent()) {
+      messageRequestResponse = new JsonMessageRequestResponseMessage(syncMessage.getMessageRequestResponse().get());
+    }
+  }
 }

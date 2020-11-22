@@ -27,75 +27,74 @@ import java.util.ArrayList;
 import java.util.List;
 
 class JsonDataMessage {
-    long timestamp;
-    List<JsonAttachment> attachments;
-    String body;
-    JsonGroupInfo group;
-    boolean endSession;
-    int expiresInSeconds;
-    boolean profileKeyUpdate;
-    JsonQuote quote;
-    List<SharedContact> contacts;
-    List<JsonPreview> previews;
-    JsonSticker sticker;
-    boolean viewOnce;
-    JsonReaction reaction;
-    SignalServiceDataMessage.RemoteDelete remoteDelete;
+  long timestamp;
+  List<JsonAttachment> attachments;
+  String body;
+  JsonGroupInfo group;
+  boolean endSession;
+  int expiresInSeconds;
+  boolean profileKeyUpdate;
+  JsonQuote quote;
+  List<SharedContact> contacts;
+  List<JsonPreview> previews;
+  JsonSticker sticker;
+  boolean viewOnce;
+  JsonReaction reaction;
+  SignalServiceDataMessage.RemoteDelete remoteDelete;
 
+  JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
+    timestamp = dataMessage.getTimestamp();
 
-    JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
-        timestamp = dataMessage.getTimestamp();
-
-        if (dataMessage.getAttachments().isPresent()) {
-            attachments = new ArrayList<>(dataMessage.getAttachments().get().size());
-            for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
-                attachments.add(new JsonAttachment(attachment, username));
-            }
-        }
-
-        if(dataMessage.getBody().isPresent()) {
-            body = dataMessage.getBody().get();
-        }
-
-        if(dataMessage.getGroupContext().isPresent()) {
-            group = new JsonGroupInfo(dataMessage.getGroupContext().get(), username);
-        }
-
-        endSession = dataMessage.isEndSession();
-
-        if(dataMessage.isExpirationUpdate()) {
-            expiresInSeconds = dataMessage.getExpiresInSeconds();
-        }
-
-        profileKeyUpdate = dataMessage.isProfileKeyUpdate();
-
-        if(dataMessage.getQuote().isPresent()) {
-          quote = new JsonQuote(dataMessage.getQuote().get());
-        }
-
-        if(dataMessage.getSharedContacts().isPresent()) {
-            contacts = dataMessage.getSharedContacts().get();
-        }
-
-        if(dataMessage.getPreviews().isPresent()) {
-          previews = new ArrayList();
-          for(SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
-            previews.add(new JsonPreview(p, username));
-          }
-        }
-
-        if(dataMessage.getSticker().isPresent()) {
-          sticker = new JsonSticker(dataMessage.getSticker().get(), username);
-        }
-
-        viewOnce = dataMessage.isViewOnce();
-
-        if(dataMessage.getReaction().isPresent()) {
-            reaction = new JsonReaction(dataMessage.getReaction().get());
-        }
-
-        if(dataMessage.getRemoteDelete().isPresent()) {
-            remoteDelete = dataMessage.getRemoteDelete().get();
-        }
+    if (dataMessage.getAttachments().isPresent()) {
+      attachments = new ArrayList<>(dataMessage.getAttachments().get().size());
+      for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
+        attachments.add(new JsonAttachment(attachment, username));
+      }
     }
+
+    if (dataMessage.getBody().isPresent()) {
+      body = dataMessage.getBody().get();
+    }
+
+    if (dataMessage.getGroupContext().isPresent()) {
+      group = new JsonGroupInfo(dataMessage.getGroupContext().get(), username);
+    }
+
+    endSession = dataMessage.isEndSession();
+
+    if (dataMessage.isExpirationUpdate()) {
+      expiresInSeconds = dataMessage.getExpiresInSeconds();
+    }
+
+    profileKeyUpdate = dataMessage.isProfileKeyUpdate();
+
+    if (dataMessage.getQuote().isPresent()) {
+      quote = new JsonQuote(dataMessage.getQuote().get());
+    }
+
+    if (dataMessage.getSharedContacts().isPresent()) {
+      contacts = dataMessage.getSharedContacts().get();
+    }
+
+    if (dataMessage.getPreviews().isPresent()) {
+      previews = new ArrayList();
+      for (SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
+        previews.add(new JsonPreview(p, username));
+      }
+    }
+
+    if (dataMessage.getSticker().isPresent()) {
+      sticker = new JsonSticker(dataMessage.getSticker().get(), username);
+    }
+
+    viewOnce = dataMessage.isViewOnce();
+
+    if (dataMessage.getReaction().isPresent()) {
+      reaction = new JsonReaction(dataMessage.getReaction().get());
+    }
+
+    if (dataMessage.getRemoteDelete().isPresent()) {
+      remoteDelete = dataMessage.getRemoteDelete().get();
+    }
+  }
 }

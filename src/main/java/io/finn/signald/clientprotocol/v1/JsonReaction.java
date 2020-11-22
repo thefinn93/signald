@@ -22,26 +22,24 @@ import io.finn.signald.storage.AddressResolver;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 public class JsonReaction {
-    String emoji;
-    boolean remove;
-    JsonAddress targetAuthor;
-    long targetSentTimestamp;
+  String emoji;
+  boolean remove;
+  JsonAddress targetAuthor;
+  long targetSentTimestamp;
 
-    public JsonReaction() {}
+  public JsonReaction() {}
 
-    public JsonReaction(SignalServiceDataMessage.Reaction r) {
-        emoji = r.getEmoji();
-        remove = r.isRemove();
-        targetAuthor = new JsonAddress(r.getTargetAuthor());
-        targetSentTimestamp = r.getTargetSentTimestamp();
-    }
+  public JsonReaction(SignalServiceDataMessage.Reaction r) {
+    emoji = r.getEmoji();
+    remove = r.isRemove();
+    targetAuthor = new JsonAddress(r.getTargetAuthor());
+    targetSentTimestamp = r.getTargetSentTimestamp();
+  }
 
-    @JsonIgnore
-    public SignalServiceDataMessage.Reaction getReaction() {
-        return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
-    }
+  @JsonIgnore
+  public SignalServiceDataMessage.Reaction getReaction() {
+    return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
+  }
 
-    public void resolve(AddressResolver resolver) {
-        targetAuthor.resolve(resolver);
-    }
+  public void resolve(AddressResolver resolver) { targetAuthor.resolve(resolver); }
 }

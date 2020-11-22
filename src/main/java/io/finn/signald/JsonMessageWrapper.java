@@ -36,7 +36,7 @@ class JsonMessageWrapper {
   public JsonMessageWrapper(String type, Object data, Throwable e) {
     this.type = type;
     this.data = data;
-    if(e != null) {
+    if (e != null) {
       this.exception = e.toString();
     }
   }

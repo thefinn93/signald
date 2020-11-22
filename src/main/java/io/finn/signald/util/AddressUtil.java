@@ -26,43 +26,42 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class AddressUtil implements AddressResolver {
-    public static SignalServiceAddress fromIdentifier(String identifier) {
-        if(UuidUtil.isUuid(identifier)) {
-            return new SignalServiceAddress(UuidUtil.parseOrNull(identifier), null);
-        } else {
-            return new SignalServiceAddress(null, identifier);
-        }
+  public static SignalServiceAddress fromIdentifier(String identifier) {
+    if (UuidUtil.isUuid(identifier)) {
+      return new SignalServiceAddress(UuidUtil.parseOrNull(identifier), null);
+    } else {
+      return new SignalServiceAddress(null, identifier);
     }
+  }
 
-    public static JsonAddress update(JsonAddress old, JsonAddress update) {
-        assert old.matches(update);
-        JsonAddress result = new JsonAddress(old.getSignalServiceAddress());
-        if(update.number != null) {
-            result.number = update.number;
-        }
-        if(update.uuid != null) {
-            result.uuid = update.uuid;
-        }
-        return old;
+  public static JsonAddress update(JsonAddress old, JsonAddress update) {
+    assert old.matches(update);
+    JsonAddress result = new JsonAddress(old.getSignalServiceAddress());
+    if (update.number != null) {
+      result.number = update.number;
     }
-
-
-    @Override
-    public SignalServiceAddress resolve(String identifier) {
-        return fromIdentifier(identifier);
+    if (update.uuid != null) {
+      result.uuid = update.uuid;
     }
+    return old;
+  }
 
-    @Override
-    public SignalServiceAddress resolve(SignalServiceAddress partial) {
-        return partial;
-    }
+  @Override
+  public SignalServiceAddress resolve(String identifier) {
+    return fromIdentifier(identifier);
+  }
 
-    @Override
-    public Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials) {
-        Collection <SignalServiceAddress> full = new ArrayList<>();
-        for(SignalServiceAddress p : partials) {
-            full.add(resolve(p));
-        }
-        return full;
+  @Override
+  public SignalServiceAddress resolve(SignalServiceAddress partial) {
+    return partial;
+  }
+
+  @Override
+  public Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials) {
+    Collection<SignalServiceAddress> full = new ArrayList<>();
+    for (SignalServiceAddress p : partials) {
+      full.add(resolve(p));
     }
+    return full;
+  }
 }

@@ -1,4 +1,4 @@
-.PHONY: all deb installDist distTar clean
+.PHONY: all deb installDist distTar clean format
 
 export VERSION ?= $(shell ./version.sh)
 export CI_PROJECT_NAME ?= signald
@@ -18,6 +18,9 @@ installDist distTar:
 integrationTest:
 	export SIGNAL_URL=https://signal-server.signald.org
 	$(GRADLE) integrationTest --info
+
+format:
+	find src/ -name '*.java' -exec clang-format -i {} \;
 
 setup:
 	sudo mkdir -p /var/run/signald

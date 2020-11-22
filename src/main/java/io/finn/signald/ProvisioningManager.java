@@ -39,48 +39,48 @@ import java.net.URLEncoder;
 import java.util.concurrent.TimeoutException;
 
 class ProvisioningManager {
-    private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
+  private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
 
-    private final SignalServiceAccountManager accountManager;
-    private final IdentityKeyPair identityKey;
-    private final int registrationId;
-    private final String password;
+  private final SignalServiceAccountManager accountManager;
+  private final IdentityKeyPair identityKey;
+  private final int registrationId;
+  private final String password;
 
+  public ProvisioningManager() {
+    identityKey = KeyHelper.generateIdentityKeyPair();
+    registrationId = KeyHelper.generateRegistrationId(false);
+    password = Util.getSecret(18);
+    final SleepTimer timer = new UptimeSleepTimer();
+    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, null, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    accountManager =
+        new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), timer);
+  }
 
-    public ProvisioningManager() {
-        identityKey = KeyHelper.generateIdentityKeyPair();
-        registrationId = KeyHelper.generateRegistrationId(false);
-        password = Util.getSecret(18);
-        final SleepTimer timer = new UptimeSleepTimer();
-        DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, null, SignalServiceAddress.DEFAULT_DEVICE_ID);
-        accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), timer);
+  public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
+    String deviceUuid = accountManager.getNewDeviceUuid();
+    String deviceKey = Base64.encodeBytesWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
+    return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
+  }
+
+  public String finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException, NoSuchAccountException {
+    String signalingKey = Util.getSecret(52);
+
+    SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, signalingKey, false, true, registrationId, deviceName);
+    String username = ret.getNumber();
+
+    if (Manager.userExists(username)) {
+      throw new UserAlreadyExists(username, Manager.getFileName(username));
     }
 
-    public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
-        String deviceUuid = accountManager.getNewDeviceUuid();
-        String deviceKey = Base64.encodeBytesWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
-        return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
-    }
+    AccountData.createLinkedAccount(ret, password, registrationId, signalingKey);
+    Manager m = Manager.get(username);
+    m.refreshPreKeys();
 
-    public String finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException, NoSuchAccountException {
-        String signalingKey = Util.getSecret(52);
+    m.requestSyncGroups();
+    m.requestSyncContacts();
+    // m.requestSyncBlocked(); // TODO: implement support for blocking
+    m.requestSyncConfiguration();
 
-        SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, signalingKey, false, true, registrationId, deviceName);
-        String username = ret.getNumber();
-
-        if (Manager.userExists(username)) {
-            throw new UserAlreadyExists(username, Manager.getFileName(username));
-        }
-
-        AccountData.createLinkedAccount(ret, password, registrationId, signalingKey);
-        Manager m = Manager.get(username);
-        m.refreshPreKeys();
-
-        m.requestSyncGroups();
-        m.requestSyncContacts();
-        // m.requestSyncBlocked(); // TODO: implement support for blocking
-        m.requestSyncConfiguration();
-
-        return username;
-    }
+    return username;
+  }
 }

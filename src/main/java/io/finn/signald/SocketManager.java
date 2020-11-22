@@ -33,7 +33,6 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.core.JsonGenerator;
 
-
 class SocketManager {
   private List<Socket> sockets = Collections.synchronizedList(new ArrayList<Socket>());
   private ObjectMapper mpr = new ObjectMapper();
@@ -45,24 +44,18 @@ class SocketManager {
     this.mpr.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
   }
 
-  public void add(Socket s) {
-    this.sockets.add(s);
-  }
+  public void add(Socket s) { this.sockets.add(s); }
 
-  public boolean remove(Socket s) {
-    return this.sockets.remove(s);
-  }
+  public boolean remove(Socket s) { return this.sockets.remove(s); }
 
-  public int size() {
-    return this.sockets.size();
-  }
+  public int size() { return this.sockets.size(); }
 
   public void broadcast(JsonMessageWrapper message) throws JsonProcessingException, IOException {
-    synchronized(this.sockets) {
+    synchronized (this.sockets) {
       Iterator i = this.sockets.iterator();
-      while(i.hasNext()) {
+      while (i.hasNext()) {
         Socket s = (Socket)i.next();
-        if(s.isClosed()) {
+        if (s.isClosed()) {
           this.remove(s);
         } else {
           send(message, s);

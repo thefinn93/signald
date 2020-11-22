@@ -18,12 +18,8 @@
 package io.finn.signald;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
-
 class JsonUnregisteredUserException {
   public String number;
 
-  JsonUnregisteredUserException(UnregisteredUserException e) {
-    this.number = e.getE164Number();
-  }
-
+  JsonUnregisteredUserException(UnregisteredUserException e) { this.number = e.getE164Number(); }
 }

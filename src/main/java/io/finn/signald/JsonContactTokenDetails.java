@@ -33,5 +33,4 @@ class JsonContactTokenDetails {
     this.voice = contact.isVoice();
     this.video = contact.isVideo();
   }
-
 }
