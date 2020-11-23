@@ -29,7 +29,7 @@ public class JsonBlockedListMessage {
   List<String> groupIds;
   public JsonBlockedListMessage(BlockedListMessage blocklist) {
     if (!blocklist.getAddresses().isEmpty()) {
-      addresses = new ArrayList();
+      addresses = new ArrayList<>();
       for (SignalServiceAddress a : blocklist.getAddresses()) {
         addresses.add(new JsonAddress(a));
       }

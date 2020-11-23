@@ -86,7 +86,7 @@ class JsonDataMessage {
     }
 
     if (dataMessage.getPreviews().isPresent()) {
-      previews = new ArrayList();
+      previews = new ArrayList<>();
       for (SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
         previews.add(new JsonPreview(p, username));
       }

@@ -58,7 +58,7 @@ class JsonGroupInfo {
   JsonGroupInfo(GroupInfo groupInfo, Manager m) {
     this.groupId = Base64.encodeBytes(groupInfo.groupId);
     this.name = groupInfo.name;
-    this.members = new ArrayList();
+    this.members = new ArrayList<>();
     for (SignalServiceAddress member : groupInfo.getMembers()) {
       this.members.add(new JsonAddress(member));
     }
