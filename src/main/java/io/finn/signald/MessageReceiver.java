@@ -45,7 +45,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   public boolean unsubscribe(Socket s) {
     boolean removed = sockets.remove(s);
     if (removed && sockets.size() == 0) {
-      logger.info("Last client for " + this.username + " unsubscribed, shutting down message pipe!");
+      logger.info("Last client for " + Util.redact(this.username) + " unsubscribed, shutting down message pipe!");
       try {
         Manager.get(username).shutdownMessagePipe();
       } catch (IOException | NoSuchAccountException e) {
