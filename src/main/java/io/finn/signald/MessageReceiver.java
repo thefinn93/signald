@@ -64,9 +64,9 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
         try {
-          this.sockets.broadcast(new JsonMessageWrapper("listen_started", username, (String) null));
+          this.sockets.broadcast(new JsonMessageWrapper("listen_started", username, (String)null));
           manager.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
-          this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String) null));
+          this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String)null));
         } catch (IOException e) {
           this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, e));
           if (sockets.size() > 0) {
