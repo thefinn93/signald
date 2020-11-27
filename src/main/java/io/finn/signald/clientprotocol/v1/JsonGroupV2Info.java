@@ -42,7 +42,7 @@ public class JsonGroupV2Info {
 
   // Fields from DecryptedGroup
   public String title;
-  public Integer timer;
+  public int timer;
 
   @JsonProperty public List<JsonAddress> members;
   public List<JsonAddress> pendingMembers;
