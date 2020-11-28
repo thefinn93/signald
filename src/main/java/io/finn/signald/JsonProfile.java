@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
@@ -50,14 +51,15 @@ class JsonProfile {
   }
 
   public class JsonCapabilities {
-    public boolean uuid;
     public boolean gv2;
     public boolean storage;
+    @JsonProperty("gv1-migration")
+    public boolean gv1Migration;
 
     public JsonCapabilities(SignalServiceProfile.Capabilities c) {
-      uuid = c.isUuid();
       gv2 = c.isGv2();
       storage = c.isStorage();
+      gv1Migration = c.isGv1Migration();
     }
   }
 }

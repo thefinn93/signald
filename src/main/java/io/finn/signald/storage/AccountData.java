@@ -35,6 +35,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
+import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.util.Base64;
 
 import java.io.File;
@@ -227,6 +228,12 @@ public class AccountData {
       return null;
     }
     return address.getUUID();
+  }
+
+  @JsonIgnore
+  public DynamicCredentialsProvider getCredentialsProvider() {
+    return new DynamicCredentialsProvider(getUUID(), username, password, signalingKey, deviceId);
+
   }
 
   // Jackson getters and setters

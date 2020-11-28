@@ -49,6 +49,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.account.AccountAttributes;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
@@ -71,7 +72,6 @@ import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
-import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
@@ -99,7 +99,7 @@ class Manager {
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
   private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final SignalServiceProfile.Capabilities SERVICE_CAPABILITIES = new SignalServiceProfile.Capabilities(true, true, false);
+  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(true, true, false, false);
 
   private final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
@@ -321,9 +321,7 @@ class Manager {
   }
 
   private SignalServiceAccountManager getAccountManager() {
-    DynamicCredentialsProvider dynamicCredentialsProvider =
-        new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, accountData.signalingKey, accountData.deviceId);
-    return new SignalServiceAccountManager(serviceConfiguration, dynamicCredentialsProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
+    return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
                                            sleepTimer);
   }
 
@@ -830,8 +828,9 @@ class Manager {
               SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient), message.getTimestamp(), message, message.getExpiresInSeconds(),
                                                                            Collections.singletonMap(recipient, unidentifiedAccess.isPresent()), false);
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
+              long start = System.currentTimeMillis();
               messageSender.sendMessage(syncMessage, unidentifiedAccess);
-              results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false));
+              results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false, System.currentTimeMillis() - start));
             } else {
               results.add(messageSender.sendMessage(address, getAccessFor(address), message));
             }
@@ -1636,9 +1635,9 @@ class Manager {
   }
 
   private SignalServiceMessageSender getMessageSender() {
-    return new SignalServiceMessageSender(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
-                                          accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true, false, Optional.fromNullable(messagePipe),
-                                          Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), getClientZkOperations().getProfileOperations(), null);
+    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true,
+            Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), getClientZkOperations().getProfileOperations(),
+            null, 0);
   }
 
   private SignalServiceMessageReceiver getMessageReceiver() {
@@ -1658,10 +1657,8 @@ class Manager {
   public GroupsV2Manager getGroupsV2() { return groupsV2Manager; }
 
   public void setGroupsV2Supported() throws NonSuccessfulResponseCodeException, PushNetworkException {
-    DynamicCredentialsProvider credentialsProvider =
-        new DynamicCredentialsProvider(accountData.getUUID(), accountData.username, accountData.password, accountData.signalingKey, accountData.deviceId);
     GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
-    ExpandedPushServiceSocket es = new ExpandedPushServiceSocket(serviceConfiguration, credentialsProvider, BuildConfig.SIGNAL_AGENT,
+    ExpandedPushServiceSocket es = new ExpandedPushServiceSocket(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
                                                                  groupsV2Operations == null ? null : groupsV2Operations.getProfileOperations());
 
     Map<String, Boolean> capabilities = new HashMap<>();
