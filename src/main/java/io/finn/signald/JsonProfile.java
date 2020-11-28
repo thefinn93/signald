@@ -53,8 +53,7 @@ class JsonProfile {
   public class JsonCapabilities {
     public boolean gv2;
     public boolean storage;
-    @JsonProperty("gv1-migration")
-    public boolean gv1Migration;
+    @JsonProperty("gv1-migration") public boolean gv1Migration;
 
     public JsonCapabilities(SignalServiceProfile.Capabilities c) {
       gv2 = c.isGv2();

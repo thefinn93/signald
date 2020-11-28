@@ -233,7 +233,6 @@ public class AccountData {
   @JsonIgnore
   public DynamicCredentialsProvider getCredentialsProvider() {
     return new DynamicCredentialsProvider(getUUID(), username, password, signalingKey, deviceId);
-
   }
 
   // Jackson getters and setters

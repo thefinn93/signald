@@ -321,8 +321,8 @@ class Manager {
   }
 
   private SignalServiceAccountManager getAccountManager() {
-    return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
-                                           sleepTimer);
+    return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
+                                           GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
   }
 
   public static Map<String, String> getQueryMap(String query) {
@@ -1636,8 +1636,8 @@ class Manager {
 
   private SignalServiceMessageSender getMessageSender() {
     return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true,
-            Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(), getClientZkOperations().getProfileOperations(),
-            null, 0);
+                                          Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
+                                          getClientZkOperations().getProfileOperations(), null, 0);
   }
 
   private SignalServiceMessageReceiver getMessageReceiver() {
