@@ -14,7 +14,7 @@ clang-format:
     - ci/format.sh
   needs: []
 
-build-java-8:
+build java8 x86:
   image: openjdk:8-jdk
   stage: build
   needs: []
@@ -28,7 +28,7 @@ build-java-8:
     paths:
       - build/
 
-build-java-11:
+build java11 x86:
   image: openjdk:11-jdk
   stage: build
   needs: []
@@ -42,7 +42,20 @@ build-java-11:
     paths:
       - build/
 
-deb:build:
+build java11 aarch64:
+  image: debian
+  stage: build
+  tags: [arm-builder]
+  needs: []
+  before_script:
+    - apt update && apt install -y make openjdk-11-jdk-headless git
+  script:
+    - make installDist
+  artifacts:
+    paths:
+      - build/
+
+build deb x86:
   image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   stage: build
   needs: []
@@ -62,7 +75,28 @@ deb:build:
     paths:
       - "signald_*"
 
-test:integration:
+build deb aarch64:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-arm:d6b7bebf
+  stage: build
+  needs: []
+  tags: [arm-builder]
+  before_script:
+    - export VERSION=$(./version.sh)
+    - echo "Building signald version $VERSION"
+  script:
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
+    - cat debian/changelog
+    - dpkg-buildpackage -b
+    - cp -rv ../signald_${VERSION}* .
+  except:
+    - schedules
+  cache:
+    key: deb-builder
+  artifacts:
+    paths:
+      - "signald_*"
+
+integration tests x86:
   image: openjdk:11-jdk
   stage: test
   needs: []
@@ -76,6 +110,20 @@ test:integration:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
 
+integration tests aarch64:
+  image: debian
+  stage: test
+  tags: [arm-builder]
+  needs: ["build java11 aarch64"]
+  before_script:
+    - apt update && apt install -y make openjdk-11-jdk-headless
+  script:
+    - ./gradlew integrationTest --info
+  variables:
+    SIGNAL_URL: https://signal-server.signald.org
+  artifacts:
+    reports:
+      junit: build/test-results/integrationTest/TEST-*.xml
 documentation:
   image: openjdk:11-jdk
   stage: docs
