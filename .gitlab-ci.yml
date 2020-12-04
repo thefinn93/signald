@@ -1,9 +1,13 @@
 stages:
   - lint
+  - zkgroup
   - build
   - test
   - docs
   - downstreams
+
+variables:
+  zkgroup_ver: "0.7.0"
 
 clang-format:
   image: debian:latest
@@ -13,6 +17,37 @@ clang-format:
   script:
     - ci/format.sh
   needs: []
+
+zkgroup aarch64-glibc aarch64:
+  # zkgroup specifies it's own toolchain version
+  # so image doesn't really matter here as long as it has rust
+  image: rust:slim
+  stage: zkgroup
+  tags: [arm-builder]
+  needs: []
+  before_script:
+    - apt update && apt install --no-install-recommends -y git make
+  script:
+    - git clone https://github.com/signalapp/zkgroup
+    - cd zkgroup && git checkout "v$zkgroup_ver"
+    - make libzkgroup
+  artifacts:
+    paths: ['zkgroup/target/release/libzkgroup.so']
+
+zkgroup aarch64-musl aarch64:
+  # zkgroup specifies it's own toolchain version
+  # so image doesn't really matter here as long as it has rust
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-alpine-arm:0081ee04
+  stage: zkgroup
+  tags: [arm-builder]
+  needs: []
+  when: manual
+  script:
+    - git clone https://github.com/signalapp/zkgroup
+    - cd zkgroup && git checkout "v$zkgroup_ver"
+    - make libzkgroup
+  artifacts:
+    paths: ['zkgroup/target/release/libzkgroup.so']
 
 build java8 x86:
   image: openjdk:8-jdk
@@ -46,11 +81,12 @@ build java11 aarch64:
   image: debian
   stage: build
   tags: [arm-builder]
-  needs: []
+  needs: ["zkgroup aarch64-glibc aarch64"]
   before_script:
     - apt update && apt install -y make openjdk-11-jdk-headless git
   script:
     - make installDist
+    - tools/repackage-zkgroup.sh zkgroup/target/release/libzkgroup.so $zkgroup_ver
   artifacts:
     paths:
       - build/
@@ -78,7 +114,7 @@ build deb x86:
 build deb aarch64:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-arm:d6b7bebf
   stage: build
-  needs: []
+  needs: ["zkgroup aarch64-glibc aarch64"]
   tags: [arm-builder]
   before_script:
     - export VERSION=$(./version.sh)
@@ -124,6 +160,7 @@ integration tests aarch64:
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
+
 documentation:
   image: openjdk:11-jdk
   stage: docs
@@ -140,3 +177,4 @@ docs.signald.org:
   trigger: signald/docs.signald.org
   only:
     - master
+
