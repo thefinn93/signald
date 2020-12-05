@@ -99,7 +99,7 @@ class Manager {
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
   private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(true, true, false, false);
+  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, false);
 
   private final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
