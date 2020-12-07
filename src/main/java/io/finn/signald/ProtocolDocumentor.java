@@ -43,10 +43,7 @@ public class ProtocolDocumentor {
 
   // the version of the protocol documentation format
   public static final String docVersion = "v1alpha1";
-  public static final String info = "This document describes objects that may be used when communicating with signald. If this document lacks "
-                                    + "something you need to generate a client, please open an issue (" + BuildConfig.ERROR_REPORTING_URL +
-                                    "). This is an initial proposal for the format, and I expect to change it before finalizing it. If it works"
-                                    + "well, I hope to slowly move things out of the legacy request types.";
+  public static final String info = "This document describes objects that may be used when communicating with signald.";
 
   public static JsonNode GetProtocolDocumentation() throws JsonMappingException {
     ObjectNode actions = JsonNodeFactory.instance.objectNode();
