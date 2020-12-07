@@ -6,13 +6,11 @@ After=network.target
 [Service]
 Type=simple
 PermissionsStartOnly=true
-ExecStartPre=-/bin/rm /var/run/signald/signald.sock
-ExecStartPre=/bin/mkdir -p /var/run/signald
-ExecStartPre=/bin/chown signald:signald /var/run/signald
+RuntimeDirectory=signald
 User=signald
 Group=signald
 ExecStart=/usr/bin/signald -d /var/lib/signald
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
