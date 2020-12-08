@@ -1630,7 +1630,7 @@ public class Manager {
     address = getResolver().resolve(address);
     Optional<ProfileKey> profileKey = Optional.of(new ProfileKey(profileKeyBytes));
     ListenableFuture<ProfileAndCredential> profileAndCredential =
-        messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
+        messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL);
     return profileAndCredential.get(10, TimeUnit.SECONDS).getProfile();
   }
 

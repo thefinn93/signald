@@ -18,6 +18,8 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
@@ -34,8 +36,11 @@ class JsonProfile {
   public String unidentified_access;
   public boolean unrestricted_unidentified_access;
   public JsonCapabilities capabilities;
+  public String uuid;
 
-  JsonProfile(SignalServiceProfile p, byte[] profileKey) throws IOException, InvalidInputException {
+  @Doc("the address that signald used to look up this profile") public JsonAddress address;
+
+  JsonProfile(SignalServiceProfile p, byte[] profileKey, JsonAddress a) throws IOException, InvalidInputException {
     ProfileCipher profileCipher = new ProfileCipher(new ProfileKey(profileKey));
     try {
       name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
@@ -48,6 +53,10 @@ class JsonProfile {
       unrestricted_unidentified_access = true;
     }
     capabilities = new JsonCapabilities(p.getCapabilities());
+    if (p.getUuid() != null) {
+      uuid = p.getUuid().toString();
+    }
+    address = a;
   }
 
   public class JsonCapabilities {
