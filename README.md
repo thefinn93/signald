@@ -14,6 +14,12 @@ signald is a daemon that facilitates communication over Signal.
 * [libpurple](https://github.com/hoehermann/libpurple-signald)
 * [matrix](https://github.com/tulir/mautrix-signal)
 
+## other things that use signald
+note that this list does not include libraries, which are listed under [lower down](#use-a-library).
+
+* [Adhesive](https://github.com/signalstickers/Adhesive) - A chatbot serving as your glue between Telegram and Signal sticker packs
+* [alertmanager-webhook-signald](https://github.com/dgl/alertmanager-webhook-signald) -  Alertmanager webhook server for Signald 
+
 ## Quick Start for developers
 
 ### Launch signald
@@ -47,7 +53,6 @@ Either register a new number on Signal or add signald as a linked device on your
 ## Contributing/Feedback/Bugs
 [Issues and MRs are accepted via GitLab.com](https://gitlab.com/thefinn93/signald). There is an IRC channel, `#signald` on Freenode,
 for those that go for that sort of thing. MRs gladly accepted.
-
 
 ## Stability
 This is currently beta software. The public API may have backwards-incompatible, breaking changes before it stabilizes, although we will make an
