@@ -270,7 +270,7 @@ public class Manager {
 
   public void init() throws IOException {
     accountData = AccountData.load(new File(getFileName()));
-    if (accountData.address.uuid == null) {
+    if (accountData.address.uuid == null && accountManager.getOwnUuid() != null) {
       accountData.address.uuid = accountManager.getOwnUuid().toString();
       accountData.save();
     }
