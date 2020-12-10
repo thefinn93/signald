@@ -270,11 +270,11 @@ public class Manager {
 
   public void init() throws IOException {
     accountData = AccountData.load(new File(getFileName()));
+    accountManager = getAccountManager();
     if (accountData.address.uuid == null && accountManager.getOwnUuid() != null) {
       accountData.address.uuid = accountManager.getOwnUuid().toString();
       accountData.save();
     }
-    accountManager = getAccountManager();
     groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.getUUID());
     try {
       if (accountData.registered) {
