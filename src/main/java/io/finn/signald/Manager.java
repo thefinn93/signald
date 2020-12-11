@@ -1024,8 +1024,7 @@ public class Manager {
     }
   }
 
-  public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments)
-      throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException {
+  public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws IOException, MissingConfigurationException {
     final File cachePath = new File(getMessageCachePath());
     if (!cachePath.exists()) {
       return;
@@ -1046,6 +1045,7 @@ public class Manager {
             continue;
           }
         } catch (IOException e) {
+          Files.delete(fileEntry.toPath());
           logger.catching(e);
           continue;
         }
