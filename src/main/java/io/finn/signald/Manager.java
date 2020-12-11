@@ -1087,11 +1087,7 @@ public class Manager {
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
       throws IOException, MissingConfigurationException, InvalidGroupStateException, VerificationFailedException {
-    try {
-      retryFailedReceivedMessages(handler, ignoreAttachments);
-    } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
-      logger.catching(e);
-    }
+    retryFailedReceivedMessages(handler, ignoreAttachments);
 
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
 
