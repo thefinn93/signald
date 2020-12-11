@@ -774,7 +774,9 @@ public class Manager {
 
     recipients = accountData.getResolver().resolve(recipients);
 
-    messageBuilder.withProfileKey(accountData.getProfileKeyBytes());
+    if (accountData.profileKey != null) {
+      messageBuilder.withProfileKey(accountData.getProfileKeyBytes());
+    }
 
     SignalServiceDataMessage message = null;
     try {
