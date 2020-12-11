@@ -42,9 +42,11 @@ class JsonProfile {
 
   JsonProfile(SignalServiceProfile p, byte[] profileKey, JsonAddress a) throws IOException, InvalidInputException {
     ProfileCipher profileCipher = new ProfileCipher(new ProfileKey(profileKey));
-    try {
-      name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
-    } catch (InvalidCiphertextException e) {
+    if (p.getName() != null) {
+      try {
+        name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
+      } catch (InvalidCiphertextException e) {
+      }
     }
     identity_key = p.getIdentityKey();
     avatar = p.getAvatar();

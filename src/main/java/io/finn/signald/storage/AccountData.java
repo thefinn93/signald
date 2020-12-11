@@ -20,6 +20,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -64,7 +65,7 @@ public class AccountData {
   public ContactStore contactStore;
   public RecipientStore recipientStore = new RecipientStore();
 
-  public boolean groupsV2Supported;
+  public int lastAccountRefresh;
 
   private static String dataPath;
   private static final Logger logger = LogManager.getLogger();
@@ -178,6 +179,11 @@ public class AccountData {
       RandomUtils.getSecureRandom().nextBytes(key);
       setProfileKey(key);
     }
+  }
+
+  @JsonSetter("groupsV2Supported")
+  public void migrateGroupsV2SupportedFlag(boolean flag) {
+    // no op
   }
 
   @JsonIgnore

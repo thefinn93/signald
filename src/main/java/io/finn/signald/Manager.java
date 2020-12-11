@@ -100,6 +100,7 @@ public class Manager {
   private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
   private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, false);
+  private final static int ACCOUNT_REFRESH_VERSION = 1;
 
   private final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
@@ -282,11 +283,7 @@ public class Manager {
           refreshPreKeys();
           accountData.save();
         }
-        if (!accountData.groupsV2Supported) {
-          setGroupsV2Supported();
-          accountData.groupsV2Supported = true;
-          accountData.save();
-        }
+        refreshAccountIfNeeded();
       }
     } catch (AuthorizationFailedException e) {
       logger.warn("Authorization failed, was the number registered elsewhere?");
@@ -1651,10 +1648,20 @@ public class Manager {
 
   public void refreshAccount() throws IOException {
     accountManager.setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true, SERVICE_CAPABILITIES, true);
-    setGroupsV2Supported();
+    if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
+      accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
+      accountData.save();
+    }
+    //    setGroupsV2Supported();
   }
 
   public GroupsV2Manager getGroupsV2() { return groupsV2Manager; }
+
+  private void refreshAccountIfNeeded() throws IOException {
+    if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
+      refreshAccount();
+    }
+  }
 
   public void setGroupsV2Supported() throws NonSuccessfulResponseCodeException, PushNetworkException {
     GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
