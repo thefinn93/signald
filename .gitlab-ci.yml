@@ -127,7 +127,7 @@ build deb aarch64:
   except:
     - schedules
   cache:
-    key: deb-builder
+    key: deb-arm-builder
   artifacts:
     paths:
       - "signald_*"
@@ -166,7 +166,7 @@ documentation:
   stage: docs
   script:
     - build/install/signald/bin/signald --dump-protocol > protocol.json
-  needs: [build-java-11]
+  needs: ["build java11 x86"]
   artifacts:
     paths:
       - protocol.json
