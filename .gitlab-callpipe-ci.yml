@@ -8,6 +8,7 @@ stages:
 variables:
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Xmx512m"
+  zkgroup_ver: "0.7.0"
 
 cache:
   paths:
