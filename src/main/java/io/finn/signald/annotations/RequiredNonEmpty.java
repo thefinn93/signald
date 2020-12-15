@@ -15,26 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.annotations;
 
-import io.finn.signald.clientprotocol.v1.JsonGroupInfo;
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.storage.GroupInfo;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-import java.util.ArrayList;
-import java.util.List;
-
-class JsonGroupList {
-  List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
-  List<JsonGroupV2Info> groupsv2;
-
-  JsonGroupList(Manager m) {
-    for (GroupInfo group : m.getGroups()) {
-      if (group != null) {
-        this.groups.add(new JsonGroupInfo(group, m));
-      }
-    }
-
-    groupsv2 = m.getGroupsV2Info();
-  }
-}
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RequiredNonEmpty {}

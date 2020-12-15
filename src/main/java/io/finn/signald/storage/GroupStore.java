@@ -50,6 +50,8 @@ public class GroupStore {
 
   public List<GroupInfo> getGroups() { return new ArrayList<>(groups.values()); }
 
+  public boolean deleteGroup(String groupId) { return groups.remove(groupId) == null; }
+
   public static class GroupStoreSerializer extends JsonSerializer<GroupStore> {
     @Override
     public void serialize(final GroupStore value, final JsonGenerator jgen, final SerializerProvider provider) throws IOException {

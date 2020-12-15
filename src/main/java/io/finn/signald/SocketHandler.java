@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
@@ -656,8 +657,8 @@ public class SocketHandler implements Runnable {
 
   private void groupLinkInfo(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, VerificationFailedException, GroupLinkNotActiveException {
     Manager m = Manager.get(request.username);
-    GroupsV2Manager groupsv2Manager = m.getGroupsV2();
-    this.reply("group_join_ino", groupsv2Manager.getGroupJoinInfo(request.uri), request.id);
+    GroupsV2Manager groupsv2Manager = m.getGroupsV2Manager();
+    this.reply("group_join_ino", new JsonGroupJoinInfo(groupsv2Manager.getGroupJoinInfo(request.uri)), request.id);
   }
 
   private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {

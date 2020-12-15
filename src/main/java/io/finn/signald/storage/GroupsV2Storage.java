@@ -27,8 +27,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.util.GroupsUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
@@ -40,8 +38,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class GroupsV2Storage {
-  private final static Logger logger = LogManager.getLogger();
-
   public Map<Integer, JsonAuthCredential> credentials;
   public List<JsonGroupV2Info> groups;
 
@@ -52,7 +48,7 @@ public class GroupsV2Storage {
 
   public AuthCredentialResponse getAuthCredential(GroupsV2Api groupsV2Api, int today) throws IOException {
     if (!credentials.containsKey(today)) {
-      credentials = groupsV2Api.getCredentials(today).entrySet().stream().map(e -> JsonAuthCredential.fromMap(e)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+      credentials = groupsV2Api.getCredentials(today).entrySet().stream().map(JsonAuthCredential::fromMap).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
     return credentials.get(today).credential;
   }
@@ -109,7 +105,7 @@ public class GroupsV2Storage {
     public static class JsonAuthCredentialDeserializer extends JsonDeserializer<JsonAuthCredential> {
       @Override
       public JsonAuthCredential deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
-        AuthCredentialResponse c = null;
+        AuthCredentialResponse c;
         try {
           c = new AuthCredentialResponse(Base64.decode(jsonParser.readValueAs(String.class)));
         } catch (InvalidInputException e) {

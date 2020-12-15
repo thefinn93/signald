@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.JsonMessageWrapper;
 import io.finn.signald.annotations.OneOfRequired;
 import io.finn.signald.annotations.Required;
+import io.finn.signald.annotations.RequiredNonEmpty;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.VersionRequest;
@@ -147,7 +148,7 @@ public class Request {
     for (Field f : requestType.getClass().getFields()) {
       // Field exists in request
       if (!request.has(f.getName())) {
-        if (f.getAnnotation(Required.class) != null) {
+        if (f.getAnnotation(Required.class) != null || f.getAnnotation(RequiredNonEmpty.class) != null) {
           errors.add("missing required argument: " + f.getName());
         }
 
@@ -157,6 +158,15 @@ public class Request {
             if (!request.has(option)) {
               errors.add("missing required argument: " + f.getName() + " or " + String.join(" or ", requirement.value()));
               break;
+            }
+          }
+        }
+      } else {
+        if (f.getAnnotation(RequiredNonEmpty.class) != null) {
+          JsonNode field = request.get(f.getName());
+          if (field.isArray()) {
+            if (field.size() == 0) {
+              errors.add(f.getName() + " must have at least 1 entry");
             }
           }
         }

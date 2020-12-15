@@ -97,10 +97,10 @@ import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 public class Manager {
   private final Logger logger;
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
-  private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
+  public final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, false);
-  private final static int ACCOUNT_REFRESH_VERSION = 1;
+  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true);
+  private final static int ACCOUNT_REFRESH_VERSION = 2;
 
   private final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
@@ -122,7 +122,7 @@ public class Manager {
 
   private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
-  static SignalServiceConfiguration generateSignalServiceConfiguration() {
+  public static SignalServiceConfiguration generateSignalServiceConfiguration() {
     final Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", USER_AGENT).build());
 
     Map<Integer, SignalCdnUrl[]> signalCdnUrlMap = new HashMap<>();
@@ -277,17 +277,17 @@ public class Manager {
       accountData.save();
     }
     groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.getUUID());
-    try {
-      if (accountData.registered) {
+    if (accountData.registered) {
+      try {
         if (accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
           refreshPreKeys();
           accountData.save();
         }
-        refreshAccountIfNeeded();
+      } catch (AuthorizationFailedException e) {
+        logger.warn("Authorization failed, was the number registered elsewhere?");
+        accountData.registered = false;
       }
-    } catch (AuthorizationFailedException e) {
-      logger.warn("Authorization failed, was the number registered elsewhere?");
-      accountData.registered = false;
+      refreshAccountIfNeeded();
     }
   }
 
@@ -317,7 +317,7 @@ public class Manager {
     accountData.save();
   }
 
-  private SignalServiceAccountManager getAccountManager() {
+  public SignalServiceAccountManager getAccountManager() {
     return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
                                            GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
   }
@@ -881,6 +881,9 @@ public class Manager {
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId)
       throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException, InvalidInputException {
     if (recipientGroupId != null && recipientAddress == null) {
+      if (recipientGroupId.length() == 24) {
+        recipientGroupId = accountData.getMigratedGroupId(recipientGroupId);
+      }
       if (recipientGroupId.length() == 44) {
         JsonGroupV2Info group = accountData.groupsV2.get(recipientGroupId);
         if (group == null) {
@@ -1625,7 +1628,7 @@ public class Manager {
     address = getResolver().resolve(address);
     Optional<ProfileKey> profileKey = Optional.of(new ProfileKey(profileKeyBytes));
     ListenableFuture<ProfileAndCredential> profileAndCredential =
-        messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL);
+        messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
     return profileAndCredential.get(10, TimeUnit.SECONDS).getProfile();
   }
 
@@ -1635,12 +1638,12 @@ public class Manager {
                                           getClientZkOperations().getProfileOperations(), null, 0);
   }
 
-  private SignalServiceMessageReceiver getMessageReceiver() {
+  public SignalServiceMessageReceiver getMessageReceiver() {
     return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
                                             accountData.signalingKey, USER_AGENT, null, sleepTimer, getClientZkOperations().getProfileOperations());
   }
 
-  private ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
+  public static ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
 
   public AddressResolver getResolver() { return accountData.getResolver(); }
 
@@ -1653,7 +1656,7 @@ public class Manager {
     //    setGroupsV2Supported();
   }
 
-  public GroupsV2Manager getGroupsV2() { return groupsV2Manager; }
+  public GroupsV2Manager getGroupsV2Manager() { return groupsV2Manager; }
 
   private void refreshAccountIfNeeded() throws IOException {
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
@@ -1670,4 +1673,6 @@ public class Manager {
     capabilities.put("gv2-3", true);
     es.setCapabilities(capabilities);
   }
+
+  public AccountData getAccountData() { return accountData; }
 }

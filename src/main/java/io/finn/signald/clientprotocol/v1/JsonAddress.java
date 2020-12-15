@@ -93,7 +93,7 @@ public class JsonAddress {
 
   public JsonAddress(String number) { this.number = number; }
 
-  JsonAddress(UUID uuid) { this.uuid = uuid.toString(); }
+  public JsonAddress(UUID uuid) { this.uuid = uuid.toString(); }
 
   @Override
   public boolean equals(Object other) {

@@ -19,9 +19,9 @@ package io.finn.signald.util;
 
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.ReactRequest;
+import io.finn.signald.clientprotocol.v1.SendRequest;
 import io.finn.signald.clientprotocol.v1.VersionRequest;
 import io.finn.signald.clientprotocol.v1alpha1.ProtocolRequest;
-import io.finn.signald.clientprotocol.v1.SendRequest;
 
 import java.util.Arrays;
 import java.util.List;

@@ -85,7 +85,7 @@ public class JsonDataMessage {
         group = new JsonGroupInfo(groupContext.getGroupV1().get(), username);
       }
       if (groupContext.getGroupV2().isPresent()) {
-        groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanatized();
+        groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanitized();
       }
     }
 

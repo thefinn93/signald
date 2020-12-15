@@ -24,8 +24,10 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.AddressUtil;
+import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -43,7 +45,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class AccountData {
@@ -64,6 +68,7 @@ public class AccountData {
   public GroupsV2Storage groupsV2;
   public ContactStore contactStore;
   public RecipientStore recipientStore = new RecipientStore();
+  public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
 
   public int lastAccountRefresh;
 
@@ -122,6 +127,10 @@ public class AccountData {
     }
     if (contactStore == null) {
       contactStore = new ContactStore();
+    }
+
+    for (GroupInfo g : groupStore.getGroups()) {
+      getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
     }
   }
 
@@ -241,6 +250,15 @@ public class AccountData {
     return new DynamicCredentialsProvider(getUUID(), username, password, signalingKey, deviceId);
   }
 
+  public String getMigratedGroupId(String groupV1Id) throws IOException {
+    String groupV2Id = Base64.encodeBytes(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
+    List<JsonGroupV2Info> v2Groups = groupsV2.groups.stream().filter(g -> g.id.equals(groupV2Id)).collect(Collectors.toList());
+    if (v2Groups.size() > 0) {
+      groupStore.deleteGroup(groupV1Id);
+      return v2Groups.get(0).id;
+    }
+    return null;
+  }
   // Jackson getters and setters
 
   // migrate old threadStore which tracked expiration timers, now moved to groups and contacts

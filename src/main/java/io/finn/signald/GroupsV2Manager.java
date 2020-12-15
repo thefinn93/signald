@@ -17,10 +17,11 @@
 
 package io.finn.signald;
 
-import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.storage.GroupsV2Storage;
+import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
+import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
@@ -34,7 +35,8 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2AuthorizationString
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
+import org.whispersystems.signalservice.api.push.exceptions.ConflictException;
+import org.whispersystems.util.Base64;
 import org.whispersystems.util.Base64UrlSafe;
 
 import java.io.IOException;
@@ -46,12 +48,12 @@ import java.util.concurrent.TimeUnit;
 public class GroupsV2Manager {
   private final GroupsV2Api groupsV2Api;
   private final GroupsV2Storage storage;
-  private final UUID uuid;
+  private final UUID self;
 
-  public GroupsV2Manager(GroupsV2Api groupsV2Api, GroupsV2Storage storage, UUID uuid) {
+  public GroupsV2Manager(GroupsV2Api groupsV2Api, GroupsV2Storage storage, UUID self) {
     this.groupsV2Api = groupsV2Api;
     this.storage = storage;
-    this.uuid = uuid;
+    this.self = self;
   }
 
   public boolean handleIncomingDataMessage(SignalServiceDataMessage message) throws IOException, VerificationFailedException, InvalidGroupStateException {
@@ -64,24 +66,12 @@ public class GroupsV2Manager {
       return false;
     }
 
-    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    AuthCredentialResponse authCredential = storage.getAuthCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(uuid, today, groupSecretParams, authCredential);
-    try {
-      JsonGroupV2Info newState = new JsonGroupV2Info(group, groupsV2Api.getGroup(groupSecretParams, authorization));
-      if (localState == null) {
-        storage.groups.add(newState);
-      } else {
-        localState.update(newState);
-      }
-    } catch (NotInGroupException e) {
-      storage.remove(group);
-    }
+    getGroup(groupSecretParams, group.getRevision());
     return true;
   }
 
-  public JsonGroupJoinInfo getGroupJoinInfo(String urlString) throws IOException, InvalidInputException, VerificationFailedException, GroupLinkNotActiveException {
+  public DecryptedGroupJoinInfo getGroupJoinInfo(String urlString) throws IOException, InvalidInputException, VerificationFailedException, GroupLinkNotActiveException {
     URI uri;
     try {
       uri = new URI(urlString);
@@ -97,14 +87,55 @@ public class GroupsV2Manager {
     GroupInviteLink.GroupInviteLinkContentsV1 groupInviteLinkContentsV1 = groupInviteLink.getV1Contents();
     GroupMasterKey groupMasterKey = new GroupMasterKey(groupInviteLinkContentsV1.getGroupMasterKey().toByteArray());
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupMasterKey);
+    return getGroupJoinInfo(groupSecretParams, groupInviteLinkContentsV1.getInviteLinkPassword().toByteArray());
+  }
 
-    byte[] password = groupInviteLinkContentsV1.getInviteLinkPassword().toByteArray();
+  public DecryptedGroupJoinInfo getGroupJoinInfo(GroupSecretParams groupSecretParams, byte[] password)
+      throws IOException, VerificationFailedException, GroupLinkNotActiveException {
+    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+    AuthCredentialResponse authCredential = storage.getAuthCredential(groupsV2Api, today);
+    GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredential);
+
+    return groupsV2Api.getGroupJoinInfo(groupSecretParams, Optional.of(password), authorization);
+  }
+
+  public GroupChange commitJoinChangeWithConflictResolution(int currentRevision, GroupChange.Actions.Builder change, GroupSecretParams groupSecretParams, byte[] password)
+      throws IOException, GroupLinkNotActiveException, VerificationFailedException {
+    for (int attempt = 0; attempt < 5; attempt++) {
+      try {
+        GroupChange.Actions changeActions = change.setRevision(currentRevision + 1).build();
+        GroupChange signedGroupChange = commitJoinToServer(changeActions, groupSecretParams, password);
+
+        return signedGroupChange;
+      } catch (ConflictException e) {
+        currentRevision = getGroupJoinInfo(groupSecretParams, password).getRevision();
+      }
+    }
+    return null;
+  }
+
+  public GroupChange commitJoinToServer(GroupChange.Actions change, GroupSecretParams groupSecretParams, byte[] password) throws IOException, VerificationFailedException {
+    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+    AuthCredentialResponse authCredentialResponse = storage.getAuthCredential(groupsV2Api, today);
+    GroupsV2AuthorizationString authorizationString = groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredentialResponse);
+    return groupsV2Api.patchGroup(change, authorizationString, Optional.fromNullable(password));
+  }
+
+  public JsonGroupV2Info getGroup(GroupSecretParams groupSecretParams, int revision) throws InvalidGroupStateException, VerificationFailedException, IOException {
+    String groupID = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
+    JsonGroupV2Info group = storage.get(groupID);
+    if (group != null && group.revision == revision) {
+      return group;
+    }
 
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = storage.getAuthCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(uuid, today, groupSecretParams, authCredential);
+    GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredential);
 
-    DecryptedGroupJoinInfo joinInfo = groupsV2Api.getGroupJoinInfo(groupSecretParams, Optional.of(password), authorization);
-    return new JsonGroupJoinInfo(joinInfo);
+    SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(groupSecretParams.getMasterKey()).withRevision(revision).build();
+    DecryptedGroup decryptedGroup = groupsV2Api.getGroup(groupSecretParams, authorization);
+    group = new JsonGroupV2Info(signalServiceGroupV2, decryptedGroup);
+    storage.update(group);
+    return group;
   }
 }

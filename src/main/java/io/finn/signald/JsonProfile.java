@@ -28,8 +28,9 @@ import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
+import java.util.UUID;
 
-class JsonProfile {
+public class JsonProfile {
   public String name;
   public String avatar;
   public String identity_key;
@@ -40,7 +41,10 @@ class JsonProfile {
 
   @Doc("the address that signald used to look up this profile") public JsonAddress address;
 
-  JsonProfile(SignalServiceProfile p, byte[] profileKey, JsonAddress a) throws IOException, InvalidInputException {
+  public JsonProfile(SignalServiceProfile p, ProfileKey profileKey, UUID address) throws IOException, InvalidInputException {
+    this(p, profileKey.serialize(), new JsonAddress(address));
+  }
+  public JsonProfile(SignalServiceProfile p, byte[] profileKey, JsonAddress a) throws IOException, InvalidInputException {
     ProfileCipher profileCipher = new ProfileCipher(new ProfileKey(profileKey));
     if (p.getName() != null) {
       try {

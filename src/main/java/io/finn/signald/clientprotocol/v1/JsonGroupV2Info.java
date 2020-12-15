@@ -123,7 +123,7 @@ public class JsonGroupV2Info {
     }
   }
 
-  public JsonGroupV2Info sanatized() {
+  public JsonGroupV2Info sanitized() {
     JsonGroupV2Info output = new JsonGroupV2Info(this);
     output.masterKey = null;
     return output;
