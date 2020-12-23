@@ -17,7 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1alpha1;
 
-import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
@@ -26,10 +25,12 @@ import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.messages.multidevice.DeviceInfo;
 
 import java.io.IOException;
+import java.util.List;
 
-@SignaldClientRequest(type = "get_linked_devices", ResponseClass = Empty.class)
+@SignaldClientRequest(type = "get_linked_devices", ResponseClass = GetLinkedDevicesRequest.LinkedDevices.class)
 @Doc("list all linked devices on a Signal account")
 public class GetLinkedDevicesRequest implements RequestType {
   @Doc("The account to interact with") @Required public String account;
@@ -37,6 +38,11 @@ public class GetLinkedDevicesRequest implements RequestType {
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException {
     SignalServiceAccountManager accountManager = Manager.get(account).getAccountManager();
-    request.reply(accountManager.getDevices());
+    request.reply(new LinkedDevices(accountManager.getDevices()));
+  }
+
+  public static class LinkedDevices {
+    List<DeviceInfo> devices;
+    LinkedDevices(List<DeviceInfo> devices) { this.devices = devices; }
   }
 }
