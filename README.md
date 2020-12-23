@@ -375,6 +375,23 @@ Get information about a v2 group from a signal.group link
 | `uri`      | `string` | yes      | The signal.group link |
 
 
+### `get_linked_devices`
+
+list all linked devices on a Signal account
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `account`  | `string` | yes      | The account to use. |
+
+### `remove_linked_device`
+
+Remove a linked device from the Signal account. Unavailable on non-primary devices (device ID != 1)
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `account`  | `string` | yes      | The account to use. |
+| `deviceId` | `long`   | yes      | the ID of the device to unlink |
+
 ### `protocol`
 
 returns a JSON document that describes the next generation of the signald protocol. For more information, see [docs.signald.org](https://docs.signald.org)

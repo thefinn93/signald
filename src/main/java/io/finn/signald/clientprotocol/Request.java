@@ -32,7 +32,9 @@ import io.finn.signald.annotations.RequiredNonEmpty;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.VersionRequest;
+import io.finn.signald.clientprotocol.v1alpha1.GetLinkedDevicesRequest;
 import io.finn.signald.clientprotocol.v1alpha1.ProtocolRequest;
+import io.finn.signald.clientprotocol.v1alpha1.RemoveLinkedDeviceRequest;
 import io.finn.signald.clientprotocol.v1alpha1.RequestProcessingError;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
@@ -82,6 +84,8 @@ public class Request {
     Map<String, String> v = new HashMap<>();
     v.put(VersionRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(ProtocolRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(GetLinkedDevicesRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(RemoveLinkedDeviceRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
     return v;
   }
 
