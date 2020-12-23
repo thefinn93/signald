@@ -42,7 +42,7 @@ public class GetLinkedDevicesRequest implements RequestType {
   }
 
   public static class LinkedDevices {
-    List<DeviceInfo> devices;
+    public List<DeviceInfo> devices;
     LinkedDevices(List<DeviceInfo> devices) { this.devices = devices; }
   }
 }
