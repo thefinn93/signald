@@ -36,6 +36,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.exceptions.ConflictException;
+import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
 import org.whispersystems.util.Base64;
 import org.whispersystems.util.Base64UrlSafe;
 
@@ -56,7 +57,7 @@ public class GroupsV2Manager {
     this.self = self;
   }
 
-  public boolean handleIncomingDataMessage(SignalServiceDataMessage message) throws IOException, VerificationFailedException, InvalidGroupStateException {
+  public boolean handleIncomingDataMessage(SignalServiceDataMessage message) throws IOException, VerificationFailedException {
     assert message.getGroupContext().isPresent();
     assert message.getGroupContext().get().getGroupV2().isPresent();
     SignalServiceGroupV2 group = message.getGroupContext().get().getGroupV2().get();
@@ -67,7 +68,12 @@ public class GroupsV2Manager {
     }
 
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    getGroup(groupSecretParams, group.getRevision());
+    try {
+      getGroup(groupSecretParams, group.getRevision());
+    } catch (NotInGroupException | InvalidGroupStateException e) {
+      // do nothing for now
+      e.printStackTrace();
+    }
     return true;
   }
 
