@@ -851,7 +851,7 @@ public class Manager {
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId)
       throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException, InvalidInputException {
     if (recipientGroupId != null && recipientAddress == null) {
-      if (recipientGroupId.length() == 24) {
+      if (recipientGroupId.length() == 24) { // redirect to new group if it exists
         recipientGroupId = accountData.getMigratedGroupId(recipientGroupId);
       }
       if (recipientGroupId.length() == 44) {

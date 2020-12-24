@@ -257,7 +257,7 @@ public class AccountData {
       groupStore.deleteGroup(groupV1Id);
       return v2Groups.get(0).id;
     }
-    return null;
+    return groupV1Id;
   }
   // Jackson getters and setters
 
