@@ -21,7 +21,6 @@ import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
-import io.finn.signald.util.ExpandedPushServiceSocket;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
@@ -54,7 +53,6 @@ import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
-import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
@@ -64,8 +62,6 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
-import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
-import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 import org.whispersystems.signalservice.api.util.*;
 import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -77,6 +73,7 @@ import org.whispersystems.util.Base64;
 import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -105,7 +102,7 @@ public class Manager {
   private final static int PREKEY_BATCH_SIZE = 100;
   private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
 
-  private static ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
 
   private static String settingsPath;
   private static String dataPath;
@@ -117,9 +114,9 @@ public class Manager {
   private GroupsV2Manager groupsV2Manager;
   private SignalServiceAccountManager accountManager;
   private SignalServiceMessagePipe messagePipe = null;
-  private SignalServiceMessagePipe unidentifiedMessagePipe = null;
+  private final SignalServiceMessagePipe unidentifiedMessagePipe = null;
 
-  private UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
+  private final UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
   public static SignalServiceConfiguration generateSignalServiceConfiguration() {
     final Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", USER_AGENT).build());
@@ -319,17 +316,9 @@ public class Manager {
     Map<String, String> map = new HashMap<>();
     for (String param : params) {
       String name = null;
-      try {
-        name = URLDecoder.decode(param.split("=")[0], "utf-8");
-      } catch (UnsupportedEncodingException e) {
-        // Impossible
-      }
+      name = URLDecoder.decode(param.split("=")[0], StandardCharsets.UTF_8);
       String value = null;
-      try {
-        value = URLDecoder.decode(param.split("=")[1], "utf-8");
-      } catch (UnsupportedEncodingException e) {
-        // Impossible
-      }
+      value = URLDecoder.decode(param.split("=")[1], StandardCharsets.UTF_8);
       map.put(name, value);
     }
     return map;
@@ -505,18 +494,6 @@ public class Manager {
     accountData.groupStore.updateGroup(g);
 
     return sendMessage(messageBuilder, g.getMembers());
-  }
-
-  private static String join(CharSequence separator, Iterable<? extends CharSequence> list) {
-    StringBuilder buf = new StringBuilder();
-    for (CharSequence str : list) {
-      if (buf.length() > 0) {
-        buf.append(separator);
-      }
-      buf.append(str);
-    }
-
-    return buf.toString();
   }
 
   public byte[] sendUpdateGroupMessage(byte[] groupId, String name, Collection<String> members, String avatarFile)
@@ -1057,8 +1034,7 @@ public class Manager {
           if (exception == null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
-            } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException | InvalidGroupStateException |
-                     VerificationFailedException e) {
+            } catch (GroupNotFoundException | AttachmentInvalidException | InvalidInputException | InvalidGroupStateException | VerificationFailedException e) {
               logger.catching(e);
             }
           }
@@ -1132,7 +1108,7 @@ public class Manager {
           if (exception == null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
-            } catch (GroupNotFoundException | AttachmentInvalidException | UntrustedIdentityException | InvalidInputException e) {
+            } catch (GroupNotFoundException | AttachmentInvalidException | InvalidInputException e) {
               logger.catching(e);
             }
           }
@@ -1159,8 +1135,8 @@ public class Manager {
   }
 
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
-      throws GroupNotFoundException, AttachmentInvalidException, UntrustedIdentityException, IOException, MissingConfigurationException, InvalidInputException,
-             InvalidGroupStateException, VerificationFailedException {
+      throws GroupNotFoundException, AttachmentInvalidException, IOException, MissingConfigurationException, InvalidInputException, InvalidGroupStateException,
+             VerificationFailedException {
     if (content != null) {
       SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
       AddressResolver resolver = accountData.getResolver();
@@ -1645,7 +1621,6 @@ public class Manager {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
       accountData.save();
     }
-    //    setGroupsV2Supported();
   }
 
   public GroupsV2Manager getGroupsV2Manager() { return groupsV2Manager; }
@@ -1654,16 +1629,6 @@ public class Manager {
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       refreshAccount();
     }
-  }
-
-  public void setGroupsV2Supported() throws NonSuccessfulResponseCodeException, PushNetworkException {
-    GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
-    ExpandedPushServiceSocket es = new ExpandedPushServiceSocket(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
-                                                                 groupsV2Operations == null ? null : groupsV2Operations.getProfileOperations());
-
-    Map<String, Boolean> capabilities = new HashMap<>();
-    capabilities.put("gv2-3", true);
-    es.setCapabilities(capabilities);
   }
 
   public AccountData getAccountData() { return accountData; }
