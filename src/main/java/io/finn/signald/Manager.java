@@ -63,7 +63,6 @@ import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
-import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
@@ -277,18 +276,11 @@ public class Manager {
       accountData.save();
     }
     groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.getUUID());
-    if (accountData.registered) {
-      try {
-        if (accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
-          refreshPreKeys();
-          accountData.save();
-        }
-      } catch (AuthorizationFailedException e) {
-        logger.warn("Authorization failed, was the number registered elsewhere?");
-        accountData.registered = false;
-      }
-      refreshAccountIfNeeded();
+    if (accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
+      refreshPreKeys();
+      accountData.save();
     }
+    refreshAccountIfNeeded();
   }
 
   public void createNewIdentity() {
