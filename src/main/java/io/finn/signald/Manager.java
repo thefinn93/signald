@@ -73,7 +73,6 @@ import org.whispersystems.util.Base64;
 import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -315,11 +314,13 @@ public class Manager {
     String[] params = query.split("&");
     Map<String, String> map = new HashMap<>();
     for (String param : params) {
-      String name = null;
-      name = URLDecoder.decode(param.split("=")[0], StandardCharsets.UTF_8);
-      String value = null;
-      value = URLDecoder.decode(param.split("=")[1], StandardCharsets.UTF_8);
-      map.put(name, value);
+      try {
+        String name = URLDecoder.decode(param.split("=")[0], "UTF-8");
+        String value = URLDecoder.decode(param.split("=")[1], "UTF-8");
+        map.put(name, value);
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace(); // impossible
+      }
     }
     return map;
   }
