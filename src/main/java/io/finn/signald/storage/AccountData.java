@@ -88,7 +88,7 @@ public class AccountData {
     return a;
   }
 
-  public static void createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey)
+  public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey)
       throws InvalidInputException, IOException {
     logger.debug("Creating new local account by linking");
     AccountData a = new AccountData();
@@ -98,6 +98,8 @@ public class AccountData {
     // if the profileKey returned is null, a new one will be generated when we call a.init()
     if (registration.getProfileKey() != null) {
       a.setProfileKey(registration.getProfileKey());
+    } else {
+      a.generateProfileKey();
     }
 
     a.deviceId = registration.getDeviceId();
@@ -106,6 +108,7 @@ public class AccountData {
     a.registered = true;
     a.init();
     a.save();
+    return a;
   }
 
   @JsonIgnore

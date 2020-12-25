@@ -375,17 +375,15 @@ public class SocketHandler implements Runnable {
       voice = request.voice;
     }
 
-    if (!m.userHasKeys()) {
-      logger.info("User has no keys, making some");
-      m.createNewIdentity();
-    }
+    m.createNewIdentity();
+
     logger.info("Registering (voice: " + voice + ")");
     m.register(voice, Optional.fromNullable(request.captcha));
     this.reply("verification_required", new JsonAccount(m), request.id);
   }
 
   private void verify(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
-    Manager m = Manager.get(request.username);
+    Manager m = Manager.get(request.username, true);
     if (!m.userHasKeys()) {
       logger.warn("User has no keys, first call register.");
     } else if (m.isRegistered()) {

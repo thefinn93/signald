@@ -164,6 +164,16 @@ public class Manager {
     return m;
   }
 
+  public static Manager fromAccountData(AccountData a) {
+    Logger logger = LogManager.getLogger("manager");
+    Manager m = new Manager(a.username);
+    managers.put(a.username, m);
+    m.accountData = a;
+    m.accountManager = m.getAccountManager();
+    logger.info("Created a manager for " + Util.redact(a.username));
+    return m;
+  }
+
   public static List<Manager> getAll() {
     Logger logger = LogManager.getLogger("manager");
     // We have to create a manager for each account that we're listing, which is all of them :/

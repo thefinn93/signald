@@ -72,8 +72,7 @@ class ProvisioningManager {
       throw new UserAlreadyExists(username, Manager.getFileName(username));
     }
 
-    AccountData.createLinkedAccount(ret, password, registrationId, signalingKey);
-    Manager m = Manager.get(username);
+    Manager m = Manager.fromAccountData(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey));
     m.refreshPreKeys();
 
     m.requestSyncGroups();
