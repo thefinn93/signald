@@ -19,8 +19,10 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.util.GroupsUtil;
+import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
@@ -47,7 +49,7 @@ public class JsonGroupV2Info {
   @JsonProperty public List<JsonAddress> members;
   public List<JsonAddress> pendingMembers;
   public List<JsonAddress> requestingMembers;
-  public String inviteLinkPassword;
+  public String inviteLink;
 
   public JsonGroupV2Info() {}
 
@@ -58,11 +60,9 @@ public class JsonGroupV2Info {
   }
 
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
-    if (signalServiceGroupV2 != null) {
-      masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());
-      id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
-      revision = signalServiceGroupV2.getRevision();
-    }
+    masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());
+    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
+    revision = signalServiceGroupV2.getRevision();
 
     if (decryptedGroup != null) {
       title = decryptedGroup.getTitle();
@@ -70,8 +70,11 @@ public class JsonGroupV2Info {
       members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
       pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
       requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
-      //            inviteLinkPassword =
-      //            decryptedGroup.getInviteLinkPassword().toString();
+
+      AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
+      if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
+        inviteLink = GroupInviteLinkUrl.forGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup).getUrl();
+      }
     }
   }
 
@@ -81,7 +84,7 @@ public class JsonGroupV2Info {
     revision = other.revision;
     title = other.title;
     timer = other.timer;
-    inviteLinkPassword = other.inviteLinkPassword;
+    inviteLink = other.inviteLink;
 
     if (other.members != null) {
       members = new ArrayList<>();
@@ -145,5 +148,10 @@ public class JsonGroupV2Info {
   public SignalServiceGroupV2 getSignalServiceGroupV2() throws IOException, InvalidInputException {
     GroupMasterKey groupMasterKey = new GroupMasterKey(Base64.decode(masterKey));
     return SignalServiceGroupV2.newBuilder(groupMasterKey).withRevision(revision).build();
+  }
+
+  @JsonIgnore
+  public GroupMasterKey getMasterKey() throws IOException, InvalidInputException {
+    return new GroupMasterKey(Base64.decode(masterKey));
   }
 }

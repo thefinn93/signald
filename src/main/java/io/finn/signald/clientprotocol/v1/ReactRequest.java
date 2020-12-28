@@ -34,7 +34,6 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @SignaldClientRequest(type = "react", ResponseClass = SendResponse.class)
 @Doc("react to a previous message")
@@ -57,7 +56,6 @@ public class ReactRequest implements RequestType {
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
     List<SendMessageResult> results = manager.send(messageBuilder, recipientAddress, recipientGroupId);
-    List<JsonSendMessageResult> jsonResults = results.stream().map(JsonSendMessageResult::new).collect(Collectors.toList());
-    request.reply(new SendResponse(jsonResults, timestamp));
+    request.reply(new SendResponse(results, timestamp));
   }
 }

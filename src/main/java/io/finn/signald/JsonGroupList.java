@@ -29,7 +29,7 @@ class JsonGroupList {
   List<JsonGroupV2Info> groupsv2;
 
   JsonGroupList(Manager m) {
-    for (GroupInfo group : m.getGroups()) {
+    for (GroupInfo group : m.getV1Groups()) {
       if (group != null) {
         this.groups.add(new JsonGroupInfo(group, m));
       }

@@ -17,81 +17,73 @@
 
 package io.finn.signald.storage;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.signal.zkgroup.InvalidInputException;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
-import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
-import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.util.Base64;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-@JsonDeserialize(using = ProfileCredentialStore.ProfileCredentialStoreDeserializer.class)
-@JsonSerialize(using = ProfileCredentialStore.ProfileCredentialStoreSerializer.class)
 public class ProfileCredentialStore {
-  Map<UUID, ProfileKeyCredential> credential = new HashMap<>();
-  Map<UUID, SignalServiceProfile> profiles;
+  private static boolean unsaved = false;
+  public List<ProfileAndCredentialEntry> profiles = new ArrayList<>();
 
-  public ProfileKeyCredential getCredential(UUID address, ProfileKey profileKey, SignalServiceMessageReceiver messageReceiver)
-      throws InterruptedException, ExecutionException, TimeoutException {
-    if (!credential.containsKey(address)) {
-      Optional<ProfileKey> profileKeyOptional = Optional.of(profileKey);
-      SignalServiceAddress signalServiceAddress = new SignalServiceAddress(Optional.of(address), Optional.absent());
-      SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
-      ProfileAndCredential profileAndCredential =
-          messageReceiver.retrieveProfile(signalServiceAddress, profileKeyOptional, Optional.absent(), requestType).get(10, TimeUnit.SECONDS);
-      profiles.put(address, profileAndCredential.getProfile());
-      if (profileAndCredential.getProfileKeyCredential().isPresent()) {
-        credential.put(address, profileAndCredential.getProfileKeyCredential().get());
-      }
+  @JsonIgnore
+  public ProfileKeyCredential getProfileKeyCredential(UUID uuid) {
+    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(Optional.of(uuid), Optional.absent()));
+    if (entry != null) {
+      return entry.getProfileKeyCredential();
     }
-    return credential.get(address);
+    return null;
   }
 
-  public static class ProfileCredentialStoreDeserializer extends JsonDeserializer<ProfileCredentialStore> {
-    @Override
-    public ProfileCredentialStore deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
-      JsonNode node = p.getCodec().readTree(p);
-      ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
-      for (Iterator<Map.Entry<String, JsonNode>> it = node.fields(); it.hasNext();) {
-        Map.Entry<String, JsonNode> profileNode = it.next();
-        UUID uuid = UUID.fromString(profileNode.getKey());
-        try {
-          ProfileKeyCredential profileKeyCredential = new ProfileKeyCredential(Base64.decode(profileNode.getValue().textValue()));
-          profileCredentialStore.credential.put(uuid, profileKeyCredential);
-        } catch (InvalidInputException e) {
-          e.printStackTrace();
+  @JsonIgnore
+  public ProfileAndCredentialEntry get(SignalServiceAddress address) {
+    for (ProfileAndCredentialEntry entry : profiles) {
+      if (entry.getServiceAddress().matches(address)) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  @JsonIgnore
+  public boolean isUnsaved() {
+    return unsaved;
+  }
+
+  public void markSaved() { unsaved = false; }
+
+  public void storeProfileKey(SignalServiceAddress address, ProfileKey profileKey) {
+    ProfileAndCredentialEntry newEntry = new ProfileAndCredentialEntry(address, profileKey, 0, null, null);
+    for (int i = 0; i < profiles.size(); i++) {
+      if (profiles.get(i).getServiceAddress().matches(address)) {
+        if (!profiles.get(i).getProfileKey().equals(profileKey)) {
+          profiles.set(i, newEntry);
+          unsaved = true;
         }
+        return;
       }
-      return profileCredentialStore;
     }
+    profiles.add(newEntry);
+    unsaved = true;
   }
 
-  public static class ProfileCredentialStoreSerializer extends JsonSerializer<ProfileCredentialStore> {
-    @Override
-    public void serialize(ProfileCredentialStore value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-      ObjectNode objectNode = JsonNodeFactory.instance.objectNode();
-      for (Map.Entry<UUID, ProfileKeyCredential> entry : value.credential.entrySet()) {
-        objectNode.put(entry.getKey().toString(), Base64.encodeBytes(entry.getValue().serialize()));
+  public void update(SignalServiceAddress address, ProfileKey profileKey, long now, SignalProfile profile, ProfileKeyCredential profileKeyCredential) {
+    ProfileAndCredentialEntry entry = new ProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential);
+    for (int i = 0; i < profiles.size(); i++) {
+      if (profiles.get(i).getServiceAddress().matches(address)) {
+        if (!profiles.get(i).getProfileKey().equals(profileKey)) {
+          profiles.set(i, entry);
+          unsaved = true;
+        }
+        return;
       }
-      gen.writeObject(objectNode);
     }
+    profiles.add(entry);
+    unsaved = true;
   }
 }

@@ -32,10 +32,7 @@ import io.finn.signald.annotations.RequiredNonEmpty;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.VersionRequest;
-import io.finn.signald.clientprotocol.v1alpha1.GetLinkedDevicesRequest;
-import io.finn.signald.clientprotocol.v1alpha1.ProtocolRequest;
-import io.finn.signald.clientprotocol.v1alpha1.RemoveLinkedDeviceRequest;
-import io.finn.signald.clientprotocol.v1alpha1.RequestProcessingError;
+import io.finn.signald.clientprotocol.v1alpha1.*;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import org.apache.logging.log4j.LogManager;
@@ -63,7 +60,7 @@ public class Request {
   private PrintWriter writer;
   private Logger logger;
 
-  private ObjectMapper mapper = JSONUtil.GetMapper();
+  private final ObjectMapper mapper = JSONUtil.GetMapper();
 
   public static Map<String, Map<String, Class<? extends RequestType>>> getRequests() {
     Map<String, Map<String, Class<? extends RequestType>>> requests = new HashMap<>();
@@ -86,6 +83,10 @@ public class Request {
     v.put(ProtocolRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
     v.put(GetLinkedDevicesRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
     v.put(RemoveLinkedDeviceRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(AcceptInvitationRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(ApproveMembershipRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(GetGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(JoinGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
     return v;
   }
 
@@ -150,7 +151,7 @@ public class Request {
     List<String> errors = new ArrayList<>();
 
     for (Field f : requestType.getClass().getFields()) {
-      // Field exists in request
+      // Field does not exist in request
       if (!request.has(f.getName())) {
         if (f.getAnnotation(Required.class) != null || f.getAnnotation(RequiredNonEmpty.class) != null) {
           errors.add("missing required argument: " + f.getName());
@@ -158,14 +159,17 @@ public class Request {
 
         if (f.getAnnotation(OneOfRequired.class) != null) {
           OneOfRequired requirement = f.getAnnotation(OneOfRequired.class);
+          int found = 0;
           for (String option : requirement.value()) {
-            if (!request.has(option)) {
-              errors.add("missing required argument: " + f.getName() + " or " + String.join(" or ", requirement.value()));
-              break;
+            if (request.has(option)) {
+              found++;
             }
           }
+          if (found != 1) {
+            errors.add("exactly one required of: " + f.getName() + " or " + String.join(" or ", requirement.value()));
+          }
         }
-      } else {
+      } else { // argument is present
         if (f.getAnnotation(RequiredNonEmpty.class) != null) {
           JsonNode field = request.get(f.getName());
           if (field.isArray()) {
@@ -205,24 +209,5 @@ public class Request {
     mapper.setSerializationInclusion(Include.NON_NULL);
     mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
     mapper.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-  }
-
-  static class CommandListBuilder {
-    Map<String, Map<String, Class<? extends RequestType>>> requests;
-
-    public CommandListBuilder() { requests = new HashMap<>(); }
-
-    public CommandListBuilder withRequest(String type, String version, Class<? extends RequestType> request) {
-      if (!requests.containsKey(type)) {
-        requests.put(type, new HashMap<>());
-      }
-      Map<String, Class<? extends RequestType>> versions = requests.get(type);
-      versions.put(version, request);
-      requests.put(type, versions);
-      requests.get(type).put(version, request);
-      return this;
-    }
-
-    public Map<String, Map<String, Class<? extends RequestType>>> getRequests() { return requests; }
   }
 }

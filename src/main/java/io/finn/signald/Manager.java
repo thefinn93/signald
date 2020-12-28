@@ -35,6 +35,7 @@ import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -49,9 +50,10 @@ import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
+import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
+import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
@@ -170,6 +172,7 @@ public class Manager {
     managers.put(a.username, m);
     m.accountData = a;
     m.accountManager = m.getAccountManager();
+    m.groupsV2Manager = new GroupsV2Manager(m.accountManager.getGroupsV2Api(), m.accountData.groupsV2, m.accountData.profileCredentialStore, m.accountData.getUUID());
     logger.info("Created a manager for " + Util.redact(a.username));
     return m;
   }
@@ -281,7 +284,7 @@ public class Manager {
       accountData.address.uuid = accountManager.getOwnUuid().toString();
       accountData.save();
     }
-    groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.getUUID());
+    groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID());
     if (accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
       refreshPreKeys();
       accountData.save();
@@ -353,14 +356,9 @@ public class Manager {
     IdentityKeyPair identityKeyPair = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
 
-    Optional<byte[]> profileKeyOptional = Optional.absent();
-    try {
-      ProfileKey profileKey = accountData.getProfileKey();
-      profileKeyOptional = Optional.of(profileKey.serialize());
-    } catch (InvalidInputException e) {
-      e.printStackTrace();
-    }
-
+    Optional<byte[]> profileKeyOptional;
+    ProfileKey profileKey = accountData.getProfileKey();
+    profileKeyOptional = Optional.of(profileKey.serialize());
     accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, profileKeyOptional, verificationCode);
   }
 
@@ -464,22 +462,31 @@ public class Manager {
     return g;
   }
 
-  public List<GroupInfo> getGroups() { return accountData.groupStore.getGroups(); }
+  public List<GroupInfo> getV1Groups() { return accountData.groupStore.getGroups(); }
 
-  public List<JsonGroupV2Info> getGroupsV2Info() { return accountData.groupsV2.groups; }
+  public List<JsonGroupV2Info> getGroupsV2Info() { return accountData.groupsV2.groups.stream().map(Group::getJsonGroupV2Info).collect(Collectors.toList()); }
 
   public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException {
-    message.asGroupMessage(group);
-
-    JsonGroupV2Info g = accountData.groupsV2.get(group);
-    if (g.timer != 0) {
-      message.withExpiration(g.timer);
+    Group g = accountData.groupsV2.get(group);
+    if (g.group.getDisappearingMessagesTimer().getDuration() != 0) {
+      message.withExpiration(g.group.getDisappearingMessagesTimer().getDuration());
     }
 
-    g.resolveMembers(getResolver());
-    final List<SignalServiceAddress> membersSend = g.getMembers();
-    // don't send to self
-    membersSend.remove(accountData.address.getSignalServiceAddress());
+    return sendGroupV2Message(message, group, g.getMembers());
+  }
+
+  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group, List<SignalServiceAddress> recipients)
+      throws IOException {
+    message.asGroupMessage(group);
+
+    SignalServiceAddress self = accountData.address.getSignalServiceAddress();
+    final List<SignalServiceAddress> membersSend = new ArrayList<>();
+    for (SignalServiceAddress member : recipients) {
+      if (!member.matches(self)) {
+        membersSend.add(member);
+      }
+    }
+
     return sendMessage(message, membersSend);
   }
 
@@ -670,7 +677,7 @@ public class Manager {
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     try {
       sendSyncMessage(message);
-    } catch (UntrustedIdentityException e) {
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       logger.catching(e);
     }
   }
@@ -680,7 +687,7 @@ public class Manager {
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     try {
       sendSyncMessage(message);
-    } catch (UntrustedIdentityException e) {
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       logger.catching(e);
     }
   }
@@ -690,16 +697,16 @@ public class Manager {
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     try {
       sendSyncMessage(message);
-    } catch (UntrustedIdentityException e) {
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       logger.catching(e);
     }
   }
 
-  private void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, UntrustedIdentityException {
+  private void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     SignalServiceMessageSender messageSender = getMessageSender();
     try {
       messageSender.sendMessage(message, Optional.absent());
-    } catch (UntrustedIdentityException e) {
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       throw e;
     }
@@ -720,7 +727,7 @@ public class Manager {
         // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
         messageSender.sendTyping(address, getAccessFor(address), message);
         return null;
-      } catch (UntrustedIdentityException e) {
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
         return SendMessageResult.identityFailure(address, e.getIdentityKey());
       }
@@ -744,7 +751,7 @@ public class Manager {
         // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
         messageSender.sendReceipt(address, getAccessFor(address), message);
         return null;
-      } catch (UntrustedIdentityException e) {
+      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
         return SendMessageResult.identityFailure(address, e.getIdentityKey());
       }
@@ -753,7 +760,7 @@ public class Manager {
     }
   }
 
-  List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<SignalServiceAddress> recipients) throws IOException {
+  public List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<SignalServiceAddress> recipients) throws IOException {
     if (recipients == null) {
       accountData.save();
       return Collections.emptyList();
@@ -761,8 +768,8 @@ public class Manager {
 
     recipients = accountData.getResolver().resolve(recipients);
 
-    if (accountData.profileKey != null) {
-      messageBuilder.withProfileKey(accountData.getProfileKeyBytes());
+    if (accountData.profileCredentialStore.get(getOwnAddress()).getProfile() != null) {
+      messageBuilder.withProfileKey(accountData.getProfileKey().serialize());
     }
 
     SignalServiceDataMessage message = null;
@@ -780,7 +787,7 @@ public class Manager {
             }
           }
           return result;
-        } catch (UntrustedIdentityException e) {
+        } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           return Collections.emptyList();
         }
@@ -794,7 +801,7 @@ public class Manager {
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
         try {
           messageSender.sendMessage(syncMessage, unidentifiedAccess);
-        } catch (UntrustedIdentityException e) {
+        } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
         }
@@ -820,7 +827,7 @@ public class Manager {
             } else {
               results.add(messageSender.sendMessage(address, getAccessFor(address), message));
             }
-          } catch (UntrustedIdentityException e) {
+          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
             results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
           }
@@ -872,7 +879,7 @@ public class Manager {
         recipientGroupId = accountData.getMigratedGroupId(recipientGroupId);
       }
       if (recipientGroupId.length() == 44) {
-        JsonGroupV2Info group = accountData.groupsV2.get(recipientGroupId);
+        Group group = accountData.groupsV2.get(recipientGroupId);
         if (group == null) {
           throw new GroupNotFoundException("Unknown group requsted");
         }
@@ -893,8 +900,8 @@ public class Manager {
   public interface ReceiveMessageHandler { void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e); }
 
   private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
-                                              boolean ignoreAttachments) throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException,
-                                                                                InvalidInputException, IOException, InvalidGroupStateException, VerificationFailedException {
+                                              boolean ignoreAttachments)
+      throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException, IOException, VerificationFailedException {
     if (message.getGroupContext().isPresent()) {
       SignalServiceGroup groupInfo;
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
@@ -1003,16 +1010,13 @@ public class Manager {
     }
 
     if (message.getProfileKey().isPresent() && message.getProfileKey().get().length == 32) {
-      if (source.equals(accountData.address.getSignalServiceAddress())) {
-        accountData.setProfileKey(message.getProfileKey().get());
+      final ProfileKey profileKey;
+      try {
+        profileKey = new ProfileKey(message.getProfileKey().get());
+      } catch (InvalidInputException e) {
+        throw new AssertionError(e);
       }
-      ContactStore.ContactInfo contact = accountData.contactStore.getContact(source);
-      if (contact == null) {
-        contact = new ContactStore.ContactInfo();
-        contact.address = new JsonAddress(source);
-      }
-      contact.profileKey = Base64.encodeBytes(message.getProfileKey().get());
-      updateContact(contact);
+      accountData.profileCredentialStore.storeProfileKey(source, profileKey);
     }
   }
 
@@ -1079,6 +1083,7 @@ public class Manager {
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
       throws IOException, MissingConfigurationException, InvalidGroupStateException, VerificationFailedException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
+    accountData.saveIfNeeded();
 
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
 
@@ -1155,110 +1160,112 @@ public class Manager {
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
       throws GroupNotFoundException, AttachmentInvalidException, IOException, MissingConfigurationException, InvalidInputException, InvalidGroupStateException,
              VerificationFailedException {
-    if (content != null) {
-      SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
-      AddressResolver resolver = accountData.getResolver();
-      resolver.resolve(source);
-      if (content.getDataMessage().isPresent()) {
-        SignalServiceDataMessage message = content.getDataMessage().get();
-        handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments);
-      }
-      if (content.getSyncMessage().isPresent()) {
-        SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
-        if (syncMessage.getSent().isPresent()) {
-          SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
-          handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments);
-        }
-        if (syncMessage.getRequest().isPresent()) {
-          RequestMessage rm = syncMessage.getRequest().get();
-          if (rm.isContactsRequest()) {
-            try {
-              sendContacts();
-            } catch (UntrustedIdentityException | IOException e) {
-              logger.catching(e);
-            }
-          }
-          if (rm.isGroupsRequest()) {
-            try {
-              sendGroups();
-            } catch (UntrustedIdentityException | IOException e) {
-              logger.catching(e);
-            }
-          }
-        }
+    if (content == null) {
+      return;
+    }
+    SignalServiceAddress source = envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
+    AddressResolver resolver = accountData.getResolver();
+    resolver.resolve(source);
+    if (content.getDataMessage().isPresent()) {
+      SignalServiceDataMessage message = content.getDataMessage().get();
+      handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments);
+    }
 
-        if (syncMessage.getGroups().isPresent()) {
-          File tmpFile = null;
+    if (content.getSyncMessage().isPresent()) {
+      SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
+      if (syncMessage.getSent().isPresent()) {
+        SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
+        handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments);
+      }
+      if (syncMessage.getRequest().isPresent()) {
+        RequestMessage rm = syncMessage.getRequest().get();
+        if (rm.isContactsRequest()) {
           try {
-            tmpFile = Util.createTempFile();
-            try (InputStream attachmentAsStream = retrieveAttachmentAsStream(syncMessage.getGroups().get().asPointer(), tmpFile)) {
-              DeviceGroupsInputStream s = new DeviceGroupsInputStream(attachmentAsStream);
-              DeviceGroup g;
-              logger.debug("Sync message included new groups!");
-              while ((g = s.read()) != null) {
-                accountData.groupStore.updateGroup(new GroupInfo(g));
-                if (g.getAvatar().isPresent()) {
-                  retrieveGroupAvatarAttachment(g.getAvatar().get(), g.getId());
-                }
-                g.getMembers().stream().map(resolver::resolve);
-              }
-            }
-          } catch (Exception e) {
+            sendContacts();
+          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException | IOException e) {
             logger.catching(e);
-          } finally {
-            if (tmpFile != null) {
-              try {
-                Files.delete(tmpFile.toPath());
-              } catch (IOException e) {
-                logger.warn("Failed to delete received groups temp file “" + tmpFile + "”: " + e.getMessage());
-              }
-            }
-          }
-          if (syncMessage.getBlockedList().isPresent()) {
-            // TODO store list of blocked numbers
           }
         }
-        if (syncMessage.getContacts().isPresent()) {
-          File tmpFile = null;
+        if (rm.isGroupsRequest()) {
           try {
-            tmpFile = Util.createTempFile();
-            final ContactsMessage contactsMessage = syncMessage.getContacts().get();
-            try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
-              DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
-              if (contactsMessage.isComplete()) {
-                accountData.contactStore.clear();
-              }
-              DeviceContact c;
-              while ((c = s.read()) != null) {
-                if (accountData.address.matches(c.getAddress()) && c.getProfileKey().isPresent()) {
-                  accountData.setProfileKey(c.getProfileKey().get());
-                }
-                ContactStore.ContactInfo contact = accountData.contactStore.getContact(resolver.resolve(c.getAddress()));
-                contact.update(c);
-                updateContact(contact);
-                if (c.getAvatar().isPresent()) {
-                  retrieveContactAvatarAttachment(c.getAvatar().get(), contact.address.getSignalServiceAddress());
-                }
-              }
-            }
-          } catch (Exception e) {
+            sendGroups();
+          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException | IOException e) {
             logger.catching(e);
-          } finally {
-            if (tmpFile != null) {
-              try {
-                Files.delete(tmpFile.toPath());
-              } catch (IOException e) {
-                logger.warn("Failed to delete received contacts temp file “" + tmpFile + "”: " + e.getMessage());
+          }
+        }
+      }
+
+      if (syncMessage.getGroups().isPresent()) {
+        File tmpFile = null;
+        try {
+          tmpFile = Util.createTempFile();
+          try (InputStream attachmentAsStream = retrieveAttachmentAsStream(syncMessage.getGroups().get().asPointer(), tmpFile)) {
+            DeviceGroupsInputStream s = new DeviceGroupsInputStream(attachmentAsStream);
+            DeviceGroup g;
+            logger.debug("Sync message included new groups!");
+            while ((g = s.read()) != null) {
+              accountData.groupStore.updateGroup(new GroupInfo(g));
+              if (g.getAvatar().isPresent()) {
+                retrieveGroupAvatarAttachment(g.getAvatar().get(), g.getId());
               }
+              g.getMembers().stream().map(resolver::resolve);
+            }
+          }
+        } catch (Exception e) {
+          logger.catching(e);
+        } finally {
+          if (tmpFile != null) {
+            try {
+              Files.delete(tmpFile.toPath());
+            } catch (IOException e) {
+              logger.warn("Failed to delete received groups temp file “" + tmpFile + "”: " + e.getMessage());
             }
           }
         }
-        if (syncMessage.getVerified().isPresent()) {
-          final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
-          SignalServiceAddress destination = resolver.resolve(verifiedMessage.getDestination());
-          TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
-          accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
+        if (syncMessage.getBlockedList().isPresent()) {
+          // TODO store list of blocked numbers
         }
+      }
+      if (syncMessage.getContacts().isPresent()) {
+        File tmpFile = null;
+        try {
+          tmpFile = Util.createTempFile();
+          final ContactsMessage contactsMessage = syncMessage.getContacts().get();
+          try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
+            DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
+            if (contactsMessage.isComplete()) {
+              accountData.contactStore.clear();
+            }
+            DeviceContact c;
+            while ((c = s.read()) != null) {
+              ContactStore.ContactInfo contact = accountData.contactStore.getContact(resolver.resolve(c.getAddress()));
+              contact.update(c);
+              updateContact(contact);
+              if (c.getAvatar().isPresent()) {
+                retrieveContactAvatarAttachment(c.getAvatar().get(), contact.address.getSignalServiceAddress());
+              }
+              if (c.getProfileKey().isPresent()) {
+                accountData.profileCredentialStore.storeProfileKey(c.getAddress(), c.getProfileKey().get());
+              }
+            }
+          }
+        } catch (Exception e) {
+          logger.catching(e);
+        } finally {
+          if (tmpFile != null) {
+            try {
+              Files.delete(tmpFile.toPath());
+            } catch (IOException e) {
+              logger.warn("Failed to delete received contacts temp file “" + tmpFile + "”: " + e.getMessage());
+            }
+          }
+        }
+      }
+      if (syncMessage.getVerified().isPresent()) {
+        final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
+        SignalServiceAddress destination = resolver.resolve(verifiedMessage.getDestination());
+        TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
+        accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
   }
@@ -1442,7 +1449,7 @@ public class Manager {
     return PhoneNumberFormatter.formatNumber(number, localNumber);
   }
 
-  private void sendGroups() throws IOException, UntrustedIdentityException {
+  private void sendGroups() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     File groupsFile = Util.createTempFile();
 
     try {
@@ -1473,7 +1480,7 @@ public class Manager {
     }
   }
 
-  private void sendContacts() throws IOException, UntrustedIdentityException {
+  private void sendContacts() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     File contactsFile = Util.createTempFile();
 
     try {
@@ -1497,12 +1504,13 @@ public class Manager {
                                                   currentIdentity.getDateAdded().getTime());
           }
 
-          // TODO include profile key
           // TODO: Don't hard code `false` value for blocked argument
           Optional<Integer> expirationTimer = Optional.absent();
+          ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.address.getSignalServiceAddress());
+          ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
           out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
                                       createContactAvatarAttachment(record.address.getSignalServiceAddress()), Optional.fromNullable(record.color),
-                                      Optional.fromNullable(verifiedMessage), Optional.absent(), false, expirationTimer, Optional.absent(), false));
+                                      Optional.fromNullable(verifiedMessage), Optional.of(profileKey), false, expirationTimer, Optional.absent(), false));
         }
       }
 
@@ -1523,7 +1531,8 @@ public class Manager {
     }
   }
 
-  private void sendVerifiedMessage(SignalServiceAddress destination, IdentityKey identityKey, TrustLevel trustLevel) throws IOException, UntrustedIdentityException {
+  private void sendVerifiedMessage(SignalServiceAddress destination, IdentityKey identityKey, TrustLevel trustLevel)
+      throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     VerifiedMessage verifiedMessage = new VerifiedMessage(destination, identityKey, trustLevel.toVerifiedState(), System.currentTimeMillis());
     sendSyncMessage(SignalServiceSyncMessage.forVerified(verifiedMessage));
   }
@@ -1556,7 +1565,7 @@ public class Manager {
       accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (IOException | UntrustedIdentityException e) {
+      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         logger.catching(e);
       }
       accountData.save();
@@ -1578,7 +1587,7 @@ public class Manager {
       accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
-      } catch (IOException | UntrustedIdentityException e) {
+      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         logger.catching(e);
       }
       accountData.save();
@@ -1602,7 +1611,7 @@ public class Manager {
     return Optional.absent();
   }
 
-  public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
+  public void setProfile(String name, File avatar) throws IOException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
       accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, streamDetails);
     }
@@ -1650,4 +1659,58 @@ public class Manager {
   }
 
   public AccountData getAccountData() { return accountData; }
+
+  public ProfileKeyCredential getRecipientProfileKeyCredential(SignalServiceAddress address) throws InterruptedException, ExecutionException, TimeoutException {
+    ProfileAndCredentialEntry profileEntry = accountData.profileCredentialStore.get(address);
+    if (profileEntry == null) {
+      return null;
+    }
+
+    if (profileEntry.getProfileKeyCredential() == null) {
+      ProfileAndCredential profileAndCredential;
+      SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
+      Optional<ProfileKey> profileKeyOptional = Optional.fromNullable(profileEntry.getProfileKey());
+      profileAndCredential = getMessageReceiver().retrieveProfile(address, profileKeyOptional, Optional.absent(), requestType).get(10, TimeUnit.SECONDS);
+
+      long now = new Date().getTime();
+      final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
+      final SignalProfile profile = decryptProfile(profileEntry.getProfileKey(), profileAndCredential.getProfile());
+      accountData.profileCredentialStore.update(address, profileEntry.getProfileKey(), now, profile, profileKeyCredential);
+      return profileKeyCredential;
+    }
+    return profileEntry.getProfileKeyCredential();
+  }
+
+  private SignalProfile decryptProfile(final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {
+    File avatarFile = null;
+    // TODO: implement avatar support
+    // try {
+    //   avatarFile = encryptedProfile.getAvatar() == null ? null : retrieveProfileAvatar(address, encryptedProfile.getAvatar(), profileKey);
+    // } catch (Throwable e) {
+    //   System.err.println("Failed to retrieve profile avatar, ignoring: " + e.getMessage());
+    // }
+
+    ProfileCipher profileCipher = new ProfileCipher(profileKey);
+    try {
+      String name;
+      try {
+        name = encryptedProfile.getName() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getName())));
+      } catch (IOException e) {
+        name = null;
+      }
+      String unidentifiedAccess;
+      try {
+        unidentifiedAccess = encryptedProfile.getUnidentifiedAccess() == null || !profileCipher.verifyUnidentifiedAccess(Base64.decode(encryptedProfile.getUnidentifiedAccess()))
+                                 ? null
+                                 : encryptedProfile.getUnidentifiedAccess();
+      } catch (IOException e) {
+        unidentifiedAccess = null;
+      }
+      return new SignalProfile(encryptedProfile.getIdentityKey(), name, avatarFile, unidentifiedAccess, encryptedProfile.isUnrestrictedUnidentifiedAccess(),
+                               encryptedProfile.getCapabilities());
+    } catch (InvalidCiphertextException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
 }

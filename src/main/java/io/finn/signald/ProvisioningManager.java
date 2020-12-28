@@ -62,9 +62,8 @@ class ProvisioningManager {
     return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public String finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException, NoSuchAccountException {
+  public String finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException {
     String signalingKey = Util.getSecret(52);
-
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, signalingKey, false, true, registrationId, deviceName);
     String username = ret.getNumber();
 

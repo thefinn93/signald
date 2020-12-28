@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 
 public class GroupsV2Storage {
   public Map<Integer, JsonAuthCredential> credentials;
-  public List<JsonGroupV2Info> groups;
+  public List<Group> groups;
 
   public GroupsV2Storage() {
     credentials = new HashMap<>();
@@ -53,32 +53,41 @@ public class GroupsV2Storage {
     return credentials.get(today).credential;
   }
 
-  public JsonGroupV2Info get(SignalServiceGroupV2 group) {
+  public Group get(Group group) {
     String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
     return get(id);
   }
 
-  public JsonGroupV2Info get(String id) {
-    for (JsonGroupV2Info g : groups) {
-      if (g.id.equals(id)) {
+  public Group get(SignalServiceGroupV2 group) {
+    String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
+    return get(id);
+  }
+
+  public Group get(String id) {
+    for (Group g : groups) {
+      if (g.getID().equals(id)) {
         return g;
       }
     }
     return null;
   }
 
-  public void update(JsonGroupV2Info group) {
-    for (JsonGroupV2Info g : groups) {
-      if (!g.id.equals(group.id)) {
+  public void update(JsonGroupV2Info groupInfo) {}
+
+  public void update(Group group) {
+    String id = group.getID();
+    for (Group g : groups) {
+      if (!g.getID().equals(id)) {
         continue;
       }
       g.update(group);
       return;
     }
+    groups.add(group);
   }
 
-  public void remove(SignalServiceGroupV2 group) {
-    JsonGroupV2Info g = get(group);
+  public void remove(Group group) {
+    Group g = get(group);
     if (g == null) {
       return;
     }

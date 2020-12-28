@@ -25,9 +25,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
-import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.storage.ContactStore;
@@ -604,7 +603,7 @@ public class SocketHandler implements Runnable {
     }
     this.receivers.get(request.username).subscribe(this.socket);
     this.subscribedAccounts.add(request.username);
-    this.reply("subscribed", null, request.id); // TODO: Indicate if we actually subscribed or were already subscribed, also which username it was for
+    this.reply("subscribed", null, request.id);
   }
 
   private void unsubscribe(JsonRequest request) throws IOException {
@@ -656,7 +655,7 @@ public class SocketHandler implements Runnable {
   private void groupLinkInfo(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, VerificationFailedException, GroupLinkNotActiveException {
     Manager m = Manager.get(request.username);
     GroupsV2Manager groupsv2Manager = m.getGroupsV2Manager();
-    this.reply("group_join_ino", new JsonGroupJoinInfo(groupsv2Manager.getGroupJoinInfo(request.uri)), request.id);
+    this.reply("group_join_info", groupsv2Manager.getGroupJoinInfo(request.uri), request.id);
   }
 
   private void handleSendMessage(List<SendMessageResult> sendMessageResults, JsonRequest request) throws JsonProcessingException {

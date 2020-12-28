@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.GroupsUtil;
@@ -71,6 +70,9 @@ public class AccountData {
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
 
   public int lastAccountRefresh;
+  public int version;
+
+  static final int VERSION_IMPORT_CONTACT_PROFILES = 1;
 
   private static String dataPath;
   private static final Logger logger = LogManager.getLogger();
@@ -95,9 +97,8 @@ public class AccountData {
     a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
     a.password = password;
 
-    // if the profileKey returned is null, a new one will be generated when we call a.init()
     if (registration.getProfileKey() != null) {
-      a.setProfileKey(registration.getProfileKey());
+      a.profileCredentialStore.storeProfileKey(a.address.getSignalServiceAddress(), new ProfileKey(registration.getProfileKey()));
     } else {
       a.generateProfileKey();
     }
@@ -135,6 +136,39 @@ public class AccountData {
     for (GroupInfo g : groupStore.getGroups()) {
       getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
     }
+
+    if (version < VERSION_IMPORT_CONTACT_PROFILES) {
+      // migrate profile keys from contacts to profileCredentialStore
+      for (ContactStore.ContactInfo c : contactStore.getContacts()) {
+        if (c.profileKey == null) {
+          continue;
+        }
+        try {
+          ProfileKey p = new ProfileKey(Base64.decode(c.profileKey));
+          profileCredentialStore.storeProfileKey(c.address.getSignalServiceAddress(), p);
+        } catch (InvalidInputException e) {
+          logger.warn("Invalid profile key while migrating profile keys from contacts", e);
+        }
+      }
+
+      if (profileKey != null) {
+        try {
+          ProfileKey p = new ProfileKey(Base64.decode(profileKey));
+          profileCredentialStore.storeProfileKey(address.getSignalServiceAddress(), p);
+        } catch (InvalidInputException e) {
+          logger.warn("Invalid profile key while migrating own profile key", e);
+        }
+      }
+
+      version = VERSION_IMPORT_CONTACT_PROFILES;
+      save();
+    }
+  }
+
+  public void saveIfNeeded() throws IOException {
+    if (profileCredentialStore.isUnsaved()) {
+      save();
+    }
   }
 
   public void save() throws IOException {
@@ -149,6 +183,7 @@ public class AccountData {
     File destination = new File(dataPath + "/.tmp-" + username);
     logger.debug("Saving account to disk");
     writer.writeValue(destination, this);
+    profileCredentialStore.markSaved();
     destination.renameTo(new File(dataPath + "/" + username));
   }
 
@@ -179,17 +214,17 @@ public class AccountData {
       contactStore = new ContactStore();
     }
 
-    if (profileKey == null) {
+    if (profileCredentialStore.get(address.getSignalServiceAddress()) == null) {
       generateProfileKey();
     }
   }
 
   // Generates a profile key if one does not exist
   public void generateProfileKey() throws InvalidInputException {
-    if (profileKey == null) {
+    if (profileCredentialStore.get(address.getSignalServiceAddress()) == null) {
       byte[] key = new byte[32];
       RandomUtils.getSecureRandom().nextBytes(key);
-      setProfileKey(key);
+      profileCredentialStore.storeProfileKey(address.getSignalServiceAddress(), new ProfileKey(key));
     }
   }
 
@@ -204,40 +239,8 @@ public class AccountData {
   }
 
   @JsonIgnore
-  public byte[] getProfileKeyBytes() {
-    try {
-      return Base64.decode(profileKey);
-    } catch (IOException e) {
-      return null;
-    }
-  }
-
-  @JsonIgnore
-  public ProfileKey getProfileKey() throws IOException, InvalidInputException {
-    if (profileKey == null || profileKey.equals("")) {
-      return null;
-    }
-    return new ProfileKey(Base64.decode(profileKey));
-  }
-
-  @JsonIgnore
-  public void setProfileKey(ProfileKey key) {
-    if (key == null) {
-      profileKey = "";
-      return;
-    }
-    profileKey = Base64.encodeBytes(key.serialize());
-  }
-
-  // sets the profile key by bytes, checking for validity first
-  @JsonIgnore
-  public void setProfileKey(byte[] bytes) throws InvalidInputException {
-    setProfileKey(new ProfileKey(bytes));
-  }
-
-  @JsonIgnore
-  public byte[] getSelfUnidentifiedAccessKey() throws IOException, InvalidInputException {
-    return UnidentifiedAccess.deriveAccessKeyFrom(getProfileKey());
+  public byte[] getSelfUnidentifiedAccessKey() {
+    return UnidentifiedAccess.deriveAccessKeyFrom(profileCredentialStore.get(address.getSignalServiceAddress()).getProfileKey());
   }
 
   @JsonIgnore
@@ -255,12 +258,21 @@ public class AccountData {
 
   public String getMigratedGroupId(String groupV1Id) throws IOException {
     String groupV2Id = Base64.encodeBytes(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
-    List<JsonGroupV2Info> v2Groups = groupsV2.groups.stream().filter(g -> g.id.equals(groupV2Id)).collect(Collectors.toList());
+    List<Group> v2Groups = groupsV2.groups.stream().filter(g -> g.getID().equals(groupV2Id)).collect(Collectors.toList());
     if (v2Groups.size() > 0) {
       groupStore.deleteGroup(groupV1Id);
-      return v2Groups.get(0).id;
+      return v2Groups.get(0).getID();
     }
     return groupV1Id;
+  }
+
+  @JsonIgnore
+  public ProfileKey getProfileKey() {
+    ProfileAndCredentialEntry entry = profileCredentialStore.get(address.getSignalServiceAddress());
+    if (entry == null) {
+      return null;
+    }
+    return entry.getProfileKey();
   }
   // Jackson getters and setters
 

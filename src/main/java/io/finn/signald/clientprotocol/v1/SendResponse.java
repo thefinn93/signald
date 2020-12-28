@@ -17,14 +17,17 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import org.whispersystems.signalservice.api.messages.SendMessageResult;
+
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SendResponse {
   public List<JsonSendMessageResult> results;
   public long timestamp;
 
-  public SendResponse(List<JsonSendMessageResult> r, long t) {
-    results = r;
+  public SendResponse(List<SendMessageResult> r, long t) {
+    results = r.stream().map(JsonSendMessageResult::new).collect(Collectors.toList());
     timestamp = t;
   }
 }

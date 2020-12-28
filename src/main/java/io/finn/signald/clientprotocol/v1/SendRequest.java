@@ -108,7 +108,6 @@ public class SendRequest implements RequestType {
     }
 
     List<SendMessageResult> results = manager.send(messageBuilder, recipientAddress, recipientGroupId);
-    List<JsonSendMessageResult> jsonResults = results.stream().map(JsonSendMessageResult::new).collect(Collectors.toList());
-    request.reply(new SendResponse(jsonResults, timestamp));
+    request.reply(new SendResponse(results, timestamp));
   }
 }
