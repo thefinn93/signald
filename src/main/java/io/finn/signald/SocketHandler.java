@@ -619,7 +619,7 @@ public class SocketHandler implements Runnable {
     Manager m = Manager.get(request.username);
     ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
     if (contact == null || contact.profileKey == null) {
-      this.reply("profile_not_available", null, request.id);
+      this.reply("profile_not_available", request.recipientAddress, request.id);
       return;
     }
     byte[] profileKeyBytes = Base64.decode(contact.profileKey);
