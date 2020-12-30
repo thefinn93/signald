@@ -27,11 +27,11 @@ import java.util.List;
 
 @Doc("A quote is a reply to a previous message. ID is the sent time of the message being replied to")
 public class JsonQuote {
-  public long id;
-  public JsonAddress author;
-  public String text;
-  public List<JsonQuotedAttachment> attachments;
-  public List<SignalServiceDataMessage.Mention> mentions = new ArrayList<>();
+  @Doc("the client timestamp of the message being quoted") public long id;
+  @Doc("the author of the message being quoted") public JsonAddress author;
+  @Doc("the body of the message being quoted") public String text;
+  @Doc("list of files attached to the quoted message") public List<JsonQuotedAttachment> attachments;
+  @Doc("list of mentions in the quoted message") public List<JsonMention> mentions = new ArrayList<>();
 
   public JsonQuote() {}
 
@@ -45,6 +45,10 @@ public class JsonQuote {
         attachments.add(new JsonQuotedAttachment(a));
       }
     }
+
+    for (SignalServiceDataMessage.Mention mention : quote.getMentions()) {
+      mentions.add(new JsonMention(mention));
+    }
   }
 
   @JsonIgnore
@@ -56,6 +60,11 @@ public class JsonQuote {
         quotedAttachments.add(attachment.getAttachment());
       }
     }
-    return new SignalServiceDataMessage.Quote(this.id, this.author.getSignalServiceAddress(), this.text, quotedAttachments, mentions);
+
+    List<SignalServiceDataMessage.Mention> signalMentions = new ArrayList<>();
+    for (JsonMention mention : mentions) {
+      signalMentions.add(mention.asMention());
+    }
+    return new SignalServiceDataMessage.Quote(this.id, this.author.getSignalServiceAddress(), this.text, quotedAttachments, signalMentions);
   }
 }

@@ -17,14 +17,17 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.annotations.Doc;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.util.UUID;
 
 public class JsonMention {
-  public String uuid;
+  @Doc("The UUID of the account being mentioned") public String uuid;
+  @Doc(
+      "The position in the message that the mention is, by character count. Note that due to a quirk of how signald encodes JSON, if this value is 0 (for example if the first character in the message is the mention) the field won't show up.")
   public int start;
-  public int length;
+  @Doc("The length of the mention represented in the message. Seems to always be 1 but included here in case that changes. Please open an issu") public int length;
 
   public JsonMention() {}
 
