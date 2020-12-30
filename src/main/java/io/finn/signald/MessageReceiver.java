@@ -24,8 +24,7 @@ import org.signal.libsignal.metadata.InvalidMetadataMessageException;
 import org.signal.libsignal.metadata.SelfSendException;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.messages.*;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -108,12 +107,30 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       }
       if (envelope != null) {
         JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
-        this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
+        if (shouldBroadcast(content)) {
+          this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
+        }
       } else {
         this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
       }
     } catch (IOException | NoSuchAccountException e) {
       logger.catching(e);
     }
+  }
+
+  private boolean shouldBroadcast(SignalServiceContent content) {
+    if (content == null) {
+      return true;
+    }
+    if (content.getDataMessage().isPresent()) {
+      SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+      if (dataMessage.getGroupContext().isPresent()) {
+        SignalServiceGroupContext group = dataMessage.getGroupContext().get();
+        if (group.getGroupV1Type() == SignalServiceGroup.Type.REQUEST_INFO) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }
