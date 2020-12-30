@@ -65,6 +65,8 @@ public class JsonDataMessage {
 
   @Doc("if the inbound message is deleting a previously sent message, indicates which message should be deleted") public SignalServiceDataMessage.RemoteDelete remoteDelete;
 
+  @Doc("list of mentions in the message") public List<JsonMention> mentions;
+
   public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
     timestamp = dataMessage.getTimestamp();
 
@@ -124,6 +126,13 @@ public class JsonDataMessage {
 
     if (dataMessage.getRemoteDelete().isPresent()) {
       remoteDelete = dataMessage.getRemoteDelete().get();
+    }
+
+    if (dataMessage.getMentions().isPresent()) {
+      mentions = new ArrayList<>();
+      for (SignalServiceDataMessage.Mention mention : dataMessage.getMentions().get()) {
+        mentions.add(new JsonMention(mention));
+      }
     }
   }
 }

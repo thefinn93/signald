@@ -26,5 +26,13 @@ public class JsonMention {
   public int start;
   public int length;
 
+  public JsonMention() {}
+
+  public JsonMention(SignalServiceDataMessage.Mention m) {
+    uuid = m.getUuid().toString();
+    start = m.getStart();
+    length = m.getLength();
+  }
+
   public SignalServiceDataMessage.Mention asMention() { return new SignalServiceDataMessage.Mention(UUID.fromString(uuid), start, length); }
 }
