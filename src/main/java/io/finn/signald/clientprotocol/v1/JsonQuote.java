@@ -46,8 +46,10 @@ public class JsonQuote {
       }
     }
 
-    for (SignalServiceDataMessage.Mention mention : quote.getMentions()) {
-      mentions.add(new JsonMention(mention));
+    if (quote.getMentions() != null) {
+      for (SignalServiceDataMessage.Mention mention : quote.getMentions()) {
+        mentions.add(new JsonMention(mention));
+      }
     }
   }
 
