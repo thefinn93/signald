@@ -353,8 +353,15 @@ public class Manager {
     IdentityKeyPair identityKeyPair = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
 
-    // TODO send profile key
-    accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, Optional.absent(), verificationCode);
+    Optional<byte[]> profileKeyOptional = Optional.absent();
+    try {
+      ProfileKey profileKey = accountData.getProfileKey();
+      profileKeyOptional = Optional.of(profileKey.serialize());
+    } catch (InvalidInputException e) {
+      e.printStackTrace();
+    }
+
+    accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, profileKeyOptional, verificationCode);
   }
 
   private List<PreKeyRecord> generatePreKeys() throws IOException {
