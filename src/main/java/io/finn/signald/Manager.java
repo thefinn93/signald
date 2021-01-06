@@ -468,7 +468,7 @@ public class Manager {
 
   public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException {
     Group g = accountData.groupsV2.get(group);
-    if (g.group.getDisappearingMessagesTimer().getDuration() != 0) {
+    if (g.group.getDisappearingMessagesTimer() != null && g.group.getDisappearingMessagesTimer().getDuration() != 0) {
       message.withExpiration(g.group.getDisappearingMessagesTimer().getDuration());
     }
 
@@ -521,7 +521,7 @@ public class Manager {
     return sendMessage(messageBuilder, g.getMembers());
   }
 
-  public byte[] sendUpdateGroupMessage(byte[] groupId, String name, Collection<String> members, String avatarFile)
+  public GroupInfo sendUpdateGroupMessage(byte[] groupId, String name, Collection<SignalServiceAddress> members, String avatarFile)
       throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
     GroupInfo g;
     if (groupId == null) {
@@ -537,26 +537,13 @@ public class Manager {
     }
 
     if (members != null) {
-      Set<String> newMembers = new HashSet<>();
-      for (String member : members) {
-        try {
-          member = canonicalizeNumber(member);
-        } catch (InvalidNumberException e) {
-          logger.warn("Failed to add member \"" + Util.redact(member) + "\" to group: " + e.getMessage());
+      for (SignalServiceAddress member : members) {
+        for (JsonAddress m : g.members) {
+          if (m.matches(member)) {
+            continue;
+          }
         }
-        if (g.members.contains(new JsonAddress(member))) {
-          continue;
-        }
-        newMembers.add(member);
         g.addMember(new JsonAddress(member));
-      }
-      final List<ContactTokenDetails> contacts = accountManager.getContacts(newMembers);
-      if (contacts.size() != newMembers.size()) {
-        // Some of the new members are not registered on Signal
-        for (ContactTokenDetails contact : contacts) {
-          newMembers.remove(contact.getNumber());
-        }
-        //                logger.warn("Failed to add members " + join(", ", newMembers) + " to group: Not registered on Signal");
       }
     }
 
@@ -574,7 +561,7 @@ public class Manager {
     final List<SignalServiceAddress> membersSend = g.getMembers();
     membersSend.remove(accountData.address.getSignalServiceAddress());
     sendMessage(messageBuilder, membersSend);
-    return g.groupId;
+    return g;
   }
 
   private List<SendMessageResult> sendUpdateGroupMessage(byte[] groupId, SignalServiceAddress recipient)
@@ -655,7 +642,7 @@ public class Manager {
     accountData.save();
   }
 
-  public byte[] updateGroup(byte[] groupId, String name, List<String> members, String avatar)
+  public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar)
       throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
     if (groupId.length == 0) {
       groupId = null;
@@ -663,12 +650,10 @@ public class Manager {
     if (name.isEmpty()) {
       name = null;
     }
-    if (members.size() == 0) {
-      members = null;
-    }
     if (avatar.isEmpty()) {
       avatar = null;
     }
+    List<SignalServiceAddress> members = stringMembers.stream().map(x -> new SignalServiceAddress(null, x)).collect(Collectors.toList());
     return sendUpdateGroupMessage(groupId, name, members, avatar);
   }
 

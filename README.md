@@ -177,7 +177,7 @@ Returns a list of all groups the specified user is in.
 
 ### `update_group`
 
-Creates or modifies a group. Only specify fields that should be updated.
+Creates or modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example) 
 
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|

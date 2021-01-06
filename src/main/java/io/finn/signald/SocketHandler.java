@@ -29,7 +29,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.storage.ContactStore;
+import io.finn.signald.storage.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
@@ -37,13 +37,15 @@ import org.asamk.signal.util.Hex;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
-import org.whispersystems.signalservice.api.push.exceptions.EncapsulatedExceptions;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
 
@@ -59,6 +61,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class SocketHandler implements Runnable {
   private BufferedReader reader;
@@ -405,14 +408,15 @@ public class SocketHandler implements Runnable {
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
-  private void updateGroup(JsonRequest request)
-      throws IOException, EncapsulatedExceptions, UntrustedIdentityException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException {
+  private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException,
+                                                       VerificationFailedException, InvalidGroupStateException {
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
     if (request.recipientGroupId != null) {
       groupId = Base64.decode(request.recipientGroupId);
     }
+
     if (groupId == null) {
       groupId = new byte[0];
     }
@@ -432,12 +436,43 @@ public class SocketHandler implements Runnable {
       groupAvatar = "";
     }
 
-    byte[] newGroupId = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
+    if (request.recipientGroupId.length() == 44) { // v2 group
+      GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
+      Group group = groupsV2Manager.getGroup(request.recipientGroupId);
+      List<SignalServiceAddress> recipients =
+          group.group.getMembersList().stream().map(x -> new SignalServiceAddress(UuidUtil.fromByteString(x.getUuid()), null)).collect(Collectors.toList());
+      Pair<SignalServiceDataMessage.Builder, Group> output;
+      if (request.groupName != null) {
+        output = groupsV2Manager.updateTitle(request.recipientGroupId, request.groupName);
+      } else if (request.members != null) {
+        List<ProfileAndCredentialEntry> members = new ArrayList<>();
+        for (String member : request.members) {
+          SignalServiceAddress signalServiceAddress = m.getAccountData().recipientStore.resolve(new SignalServiceAddress(null, member));
+          ProfileAndCredentialEntry profileAndCredentialEntry = m.getAccountData().profileCredentialStore.get(signalServiceAddress);
+          members.add(profileAndCredentialEntry);
+          recipients.add(profileAndCredentialEntry.getServiceAddress());
+        }
+        output = groupsV2Manager.addMembers(request.recipientGroupId, members);
+      } else if (request.avatar != null) {
+        output = groupsV2Manager.updateAvatar(request.recipientGroupId, request.avatar);
+      } else {
+        this.reply("group_update_error", "unknown action for v2 group. only name changes and membership adds are supported in this version of the update_group request.",
+                   request.id);
+        return;
+      }
+      m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
 
-    if (groupId.length != newGroupId.length) {
-      this.reply("group_created", new JsonStatusMessage(5, "Created new group " + groupName + "."), request.id);
+      AccountData accountData = m.getAccountData();
+      accountData.groupsV2.update(output.second());
+      accountData.save();
+
     } else {
-      this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
+      GroupInfo group = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
+      if (groupId.length != group.groupId.length) {
+        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + group.name + "."), request.id);
+      } else {
+        this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
+      }
     }
   }
 
