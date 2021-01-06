@@ -504,8 +504,14 @@ public class Manager {
     }
 
     // Don't send group message to ourself
-    final List<SignalServiceAddress> membersSend = g.getMembers();
-    membersSend.remove(accountData.address.getSignalServiceAddress());
+    SignalServiceAddress self = accountData.address.getSignalServiceAddress();
+    final List<SignalServiceAddress> membersSend = new ArrayList<>();
+    for (JsonAddress member : g.members) {
+      if (!member.matches(self)) {
+        membersSend.add(member.getSignalServiceAddress());
+      }
+    }
+
     return sendMessage(message, membersSend);
   }
 
@@ -571,7 +577,14 @@ public class Manager {
     }
     GroupInfo g = getGroupForSending(groupId);
 
-    if (!g.members.contains(new JsonAddress(recipient))) {
+    boolean isMember = false;
+    for (JsonAddress m : g.members) {
+      if (m.matches(recipient)) {
+        isMember = true;
+      }
+    }
+
+    if (!isMember) {
       return null;
     }
 
