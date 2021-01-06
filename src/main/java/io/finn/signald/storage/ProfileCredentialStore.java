@@ -72,7 +72,7 @@ public class ProfileCredentialStore {
     unsaved = true;
   }
 
-  public void update(SignalServiceAddress address, ProfileKey profileKey, long now, SignalProfile profile, ProfileKeyCredential profileKeyCredential) {
+  public ProfileAndCredentialEntry update(SignalServiceAddress address, ProfileKey profileKey, long now, SignalProfile profile, ProfileKeyCredential profileKeyCredential) {
     ProfileAndCredentialEntry entry = new ProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential);
     for (int i = 0; i < profiles.size(); i++) {
       if (profiles.get(i).getServiceAddress().matches(address)) {
@@ -80,10 +80,11 @@ public class ProfileCredentialStore {
           profiles.set(i, entry);
           unsaved = true;
         }
-        return;
+        return entry;
       }
     }
     profiles.add(entry);
     unsaved = true;
+    return entry;
   }
 }

@@ -44,6 +44,8 @@ import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @SignaldClientRequest(type = "update_group", ResponseClass = GroupInfo.class)
@@ -64,8 +66,8 @@ public class UpdateGroupRequest implements RequestType {
   @OneOfRequired({"title", "avatar", "addMembers"}) public List<JsonAddress> removeMembers;
 
   @Override
-  public void run(Request request)
-      throws IOException, NoSuchAccountException, VerificationFailedException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException {
+  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, GroupNotFoundException, NotAGroupMemberException,
+                                          AttachmentInvalidException, InterruptedException, ExecutionException, TimeoutException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
 
@@ -93,7 +95,11 @@ public class UpdateGroupRequest implements RequestType {
         List<ProfileAndCredentialEntry> members = new ArrayList<>();
         for (JsonAddress member : addMembers) {
           SignalServiceAddress signalServiceAddress = m.getAccountData().recipientStore.resolve(member.getSignalServiceAddress());
-          ProfileAndCredentialEntry profileAndCredentialEntry = m.getAccountData().profileCredentialStore.get(signalServiceAddress);
+          ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(signalServiceAddress);
+          if (profileAndCredentialEntry == null) {
+            logger.warn("Unable to add group member with no profile");
+            continue;
+          }
           members.add(profileAndCredentialEntry);
           recipients.add(profileAndCredentialEntry.getServiceAddress());
         }

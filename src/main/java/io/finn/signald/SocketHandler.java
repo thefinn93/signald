@@ -409,7 +409,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException,
-                                                       VerificationFailedException, InvalidGroupStateException {
+                                                       VerificationFailedException, InvalidGroupStateException, InterruptedException, ExecutionException, TimeoutException {
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
@@ -448,7 +448,7 @@ public class SocketHandler implements Runnable {
         List<ProfileAndCredentialEntry> members = new ArrayList<>();
         for (String member : request.members) {
           SignalServiceAddress signalServiceAddress = m.getAccountData().recipientStore.resolve(new SignalServiceAddress(null, member));
-          ProfileAndCredentialEntry profileAndCredentialEntry = m.getAccountData().profileCredentialStore.get(signalServiceAddress);
+          ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(signalServiceAddress);
           members.add(profileAndCredentialEntry);
           recipients.add(profileAndCredentialEntry.getServiceAddress());
         }

@@ -1645,7 +1645,7 @@ public class Manager {
 
   public AccountData getAccountData() { return accountData; }
 
-  public ProfileKeyCredential getRecipientProfileKeyCredential(SignalServiceAddress address) throws InterruptedException, ExecutionException, TimeoutException {
+  public ProfileAndCredentialEntry getRecipientProfileKeyCredential(SignalServiceAddress address) throws InterruptedException, ExecutionException, TimeoutException {
     ProfileAndCredentialEntry profileEntry = accountData.profileCredentialStore.get(address);
     if (profileEntry == null) {
       return null;
@@ -1660,10 +1660,9 @@ public class Manager {
       long now = new Date().getTime();
       final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
       final SignalProfile profile = decryptProfile(profileEntry.getProfileKey(), profileAndCredential.getProfile());
-      accountData.profileCredentialStore.update(address, profileEntry.getProfileKey(), now, profile, profileKeyCredential);
-      return profileKeyCredential;
+      return accountData.profileCredentialStore.update(address, profileEntry.getProfileKey(), now, profile, profileKeyCredential);
     }
-    return profileEntry.getProfileKeyCredential();
+    return profileEntry;
   }
 
   private SignalProfile decryptProfile(final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {

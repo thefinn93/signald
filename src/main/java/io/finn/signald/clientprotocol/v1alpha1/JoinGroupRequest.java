@@ -63,7 +63,7 @@ public class JoinGroupRequest implements RequestType {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupInviteLinkUrl.getGroupMasterKey());
 
     Manager m = Manager.get(account);
-    ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress());
+    ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
 
     if (profileKeyCredential == null) {
       request.error("cannot get own profileKeyCredential");
