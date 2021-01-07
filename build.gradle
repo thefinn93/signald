@@ -128,7 +128,7 @@ task integrationTest(type: Test) {
 
 task moveBranch {
     doLast {
-        throw new Exception('\n\n\n\nsignald has a new default branch! Please run: git checkout main\n\n\n');
+        throw new Exception('\n\n\n\nsignald has a new default branch! Please run: git checkout main\n\nwe also recently moved to a new git URL, please ensure your remote is set to https://gitlab.com/signald/signald.git\n\n\n');
     }
 }
 
