@@ -10,7 +10,6 @@ mainClassName = 'io.finn.signald.Main'
 
 compileJava.options.encoding = 'UTF-8'
 
-
 repositories {
     maven {url "https://raw.github.com/AsamK/maven/master/releases/"}
     maven {url "https://plugins.gradle.org/m2/"}
@@ -124,4 +123,15 @@ task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     outputs.upToDateWhen { false }
+}
+
+
+task moveBranch {
+    doLast {
+        throw new Exception('\n\n\n\nsignald has a new default branch! Please run:\n                    git checkout main\n\n\n');
+    }
+}
+
+tasks.matching { it.name != 'moveBranch' }.all { Task task ->
+    task.dependsOn moveBranch
 }
