@@ -12,6 +12,12 @@ And trust the signing key:
 curl https://updates.signald.org/apt-signing-key.asc | sudo apt-key add -
 ```
 
+Update the package list:
+
+```
+sudo apt update
+```
+
 Now you can install signald:
 
 ```
