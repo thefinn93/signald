@@ -154,7 +154,7 @@ Mark a received message as "read" by sending a receipt message.
 
 ### `add_device`
 
-Adds another device to a signal account that signald controls the master device on. Possible values are:
+Adds another device to a signal account that signald controls the primary device on. Possible values are:
 
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|

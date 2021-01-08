@@ -152,5 +152,5 @@ docs.signald.org:
   needs: [documentation]
   trigger: signald/docs.signald.org
   only:
-    - master
+    - main
 

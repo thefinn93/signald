@@ -62,12 +62,12 @@ build-docker:
   script:
     - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} .
     - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
-    - if [[ "${CI_COMMIT_REF_SLUG}" == "master" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${CI_REGISTRY_IMAGE}:latest; fi;
-    - if [[ "${CI_COMMIT_REF_SLUG}" == "master" ]]; then docker push ${CI_REGISTRY_IMAGE}:latest; fi;
+    - if [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${CI_REGISTRY_IMAGE}:latest; fi;
+    - if [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${CI_REGISTRY_IMAGE}:latest; fi;
     - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_SLUG}; fi
     - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_SLUG}; fi
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "master" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:latest; fi
-    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "master" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:latest; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:latest; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:latest; fi
 
 
 deb:publish:
@@ -128,7 +128,7 @@ checkupdates:gradle:
   only:
     - schedules
     - feature/autoupdates
-    - master
+    - main
   before_script:
     - apt-get update && apt-get install -y jq
     - git config --global user.email "upgrade-robot@signald.org"
