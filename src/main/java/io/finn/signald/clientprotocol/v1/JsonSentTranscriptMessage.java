@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -27,7 +28,7 @@ import java.util.Map;
 
 public class JsonSentTranscriptMessage {
   public JsonAddress destination;
-  public long timestamp;
+  @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   public long expirationStartTimestamp;
   public JsonDataMessage message;
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();

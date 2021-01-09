@@ -22,6 +22,7 @@ import io.finn.signald.JsonPreview;
 import io.finn.signald.JsonSticker;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
@@ -32,12 +33,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JsonDataMessage {
-  @Doc("the (unix) timestamp that the message was sent at, according to the sender's device. This is used to uniquely identify this message for things like reactions and quotes.")
+  @Doc("the timestamp that the message was sent at, according to the sender's device. This is used to uniquely identify this message for things like reactions and quotes.")
+  @ExampleValue(ExampleValue.MESSAGE_ID)
   public long timestamp;
 
   @Doc("files attached to the incoming message") public List<JsonAttachment> attachments;
 
-  @Doc("the text body of the incoming message.") public String body;
+  @ExampleValue(ExampleValue.MESSAGE_BODY) @Doc("the text body of the incoming message.") public String body;
 
   @Doc("if the incoming message was sent to a v1 group, information about that group will be here") public JsonGroupInfo group;
 

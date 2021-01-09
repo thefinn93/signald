@@ -21,6 +21,7 @@ import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
@@ -31,11 +32,11 @@ import java.io.IOException;
 
 @SignaldClientRequest(type = "set_profile", ResponseClass = Empty.class)
 public class SetProfile implements RequestType {
-  @Doc("The phone number of the account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The phone number of the account to use") @Required public String account;
 
-  @Doc("New profile name. Set to empty string for no profile name") @Required public String name;
+  @ExampleValue("\"signald user\"") @Doc("New profile name. Set to empty string for no profile name") @Required public String name;
 
-  @Doc("Path to new profile avatar file, if the avatar should be updated") public String avatarFile;
+  @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @Doc("Path to new profile avatar file, if the avatar should be updated") public String avatarFile;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException {

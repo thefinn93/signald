@@ -19,18 +19,19 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.storage.AddressResolver;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 public class JsonReaction {
 
-  @Doc("the emoji to react with") public String emoji;
+  @ExampleValue("\"👍\"") @Doc("the emoji to react with") public String emoji;
 
   @Doc("set to true to remove the reaction. requires emoji be set to previously reacted emoji") public boolean remove;
 
   @Doc("the author of the message being reacted to") public JsonAddress targetAuthor;
 
-  @Doc("the client timestamp of the message being reacted to") public long targetSentTimestamp;
+  @ExampleValue(ExampleValue.MESSAGE_ID) @Doc("the client timestamp of the message being reacted to") public long targetSentTimestamp;
 
   public JsonReaction() {}
 

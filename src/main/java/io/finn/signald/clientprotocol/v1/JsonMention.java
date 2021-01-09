@@ -18,16 +18,20 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.util.UUID;
 
 public class JsonMention {
-  @Doc("The UUID of the account being mentioned") public String uuid;
+  @ExampleValue(ExampleValue.REMOTE_UUID) @Doc("The UUID of the account being mentioned") public String uuid;
+
   @Doc(
-      "The position in the message that the mention is, by character count. Note that due to a quirk of how signald encodes JSON, if this value is 0 (for example if the first character in the message is the mention) the field won't show up.")
+      "The number of characters in that the mention starts at. Note that due to a quirk of how signald encodes JSON, if this value is 0 (for example if the first character in the message is the mention) the field won't show up.")
+  @ExampleValue("4") // make sure this lines up with the mention in JsonQuote
   public int start;
-  @Doc("The length of the mention represented in the message. Seems to always be 1 but included here in case that changes. Please open an issu") public int length;
+
+  @ExampleValue("1") @Doc("The length of the mention represented in the message. Seems to always be 1 but included here in case that changes.") public int length;
 
   public JsonMention() {}
 

@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
@@ -32,9 +33,9 @@ import java.io.IOException;
     "Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience function for client authors, mostly because signald doesn't resolve all the partials it returns")
 @SignaldClientRequest(type = "resolve_address", ResponseClass = JsonAddress.class)
 public class ResolveAddressRequest implements RequestType {
-  @Doc("The signal account to use") @Required String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The signal account to use") @Required public String account;
 
-  @Doc("The partial address, missing fields") @Required JsonAddress partial;
+  @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException {

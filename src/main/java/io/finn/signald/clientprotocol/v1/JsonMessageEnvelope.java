@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.*;
+import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -29,16 +30,16 @@ import java.util.Date;
 import java.util.TimeZone;
 
 public class JsonMessageEnvelope {
-  public String username;
-  public String uuid;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String username;
+  @ExampleValue(ExampleValue.LOCAL_UUID) public String uuid;
   public JsonAddress source;
   public int sourceDevice;
   public String type;
   public String relay;
-  public long timestamp;
+  @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   public String timestampISO;
   public long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
-  public long serverDeliveredTimestamp;
+  @ExampleValue(ExampleValue.MESSAGE_ID + 80) public long serverDeliveredTimestamp;
   public boolean hasLegacyMessage;
   public boolean hasContent;
   public boolean isUnidentifiedSender;

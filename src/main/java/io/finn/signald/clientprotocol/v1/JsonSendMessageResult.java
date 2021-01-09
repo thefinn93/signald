@@ -17,14 +17,15 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.annotations.ExampleValue;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 
 public class JsonSendMessageResult {
   public JsonAddress address;
   public SendMessageResult.Success success;
-  public boolean networkFailure;
-  public boolean unregisteredFailure;
+  @ExampleValue("false") public boolean networkFailure;
+  @ExampleValue("false") public boolean unregisteredFailure;
   public String identityFailure;
 
   public JsonSendMessageResult(SendMessageResult result) {

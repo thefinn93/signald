@@ -19,10 +19,7 @@ package io.finn.signald.clientprotocol.v1alpha1;
 
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.OneOfRequired;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -57,11 +54,11 @@ import java.util.stream.Collectors;
 @SignaldClientRequest(type = "update_group", ResponseClass = JsonGroupV2Info.class)
 @Doc("modify a group. only v2 groups for now")
 public class UpdateGroupRequest implements RequestType {
-  @Doc("The account to interact with") @Required public String account;
+  @Doc("The account to interact with") @Required @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String account;
 
-  @Required public String groupID;
+  @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
-  @OneOfRequired({"addMembers", "removeMembers"}) public String title;
+  @ExampleValue(ExampleValue.GROUP_TITLE) @OneOfRequired({"addMembers", "removeMembers"}) public String title;
 
   @OneOfRequired({"title", "removeMembers"}) public List<JsonAddress> addMembers;
 

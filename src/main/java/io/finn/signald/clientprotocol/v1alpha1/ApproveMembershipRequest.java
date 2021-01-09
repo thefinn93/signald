@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1alpha1;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
@@ -50,9 +51,9 @@ import java.util.stream.Collectors;
 @SignaldClientRequest(type = "approve_membership", ResponseClass = JsonGroupV2Info.class)
 @Doc("approve a request to join a group")
 public class ApproveMembershipRequest implements RequestType {
-  @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
-  @Required public String groupID;
+  @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 

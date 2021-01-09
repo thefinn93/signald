@@ -19,10 +19,7 @@ package io.finn.signald.clientprotocol.v1alpha2;
 
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.OneOfRequired;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -53,13 +50,13 @@ import java.util.stream.Collectors;
 public class UpdateGroupRequest implements RequestType {
   private static final Logger logger = LogManager.getLogger();
 
-  @Doc("The identifier of the account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The identifier of the account to interact with") @Required public String account;
 
-  @Required public String groupID;
+  @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
-  @OneOfRequired({"avatar", "addMembers", "removeMembers"}) public String title;
+  @ExampleValue(ExampleValue.GROUP_TITLE) @OneOfRequired({"avatar", "addMembers", "removeMembers"}) public String title;
 
-  @OneOfRequired({"title", "addMembers", "removeMembers"}) public String avatar;
+  @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @OneOfRequired({"title", "addMembers", "removeMembers"}) public String avatar;
 
   @OneOfRequired({"title", "avatar", "removeMembers"}) public List<JsonAddress> addMembers;
 

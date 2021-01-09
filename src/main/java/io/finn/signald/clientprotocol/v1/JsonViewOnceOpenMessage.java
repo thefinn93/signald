@@ -17,11 +17,12 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.multidevice.ViewOnceOpenMessage;
 
 public class JsonViewOnceOpenMessage {
   public JsonAddress sender;
-  public long timestamp;
+  @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
 
   public JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
     sender = new JsonAddress(message.getSender());

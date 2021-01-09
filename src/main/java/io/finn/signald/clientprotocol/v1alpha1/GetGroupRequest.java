@@ -21,6 +21,7 @@ import io.finn.signald.GroupsV2Manager;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
@@ -35,9 +36,9 @@ import java.io.IOException;
 @SignaldClientRequest(type = "get_group", ResponseClass = JsonGroupV2Info.class)
 @Doc("Query the server for the latest state of a known group")
 public class GetGroupRequest implements RequestType {
-  @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
-  @Required public String groupID;
+  @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 

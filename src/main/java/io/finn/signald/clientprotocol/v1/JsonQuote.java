@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.JsonQuotedAttachment;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.util.ArrayList;
@@ -27,9 +28,9 @@ import java.util.List;
 
 @Doc("A quote is a reply to a previous message. ID is the sent time of the message being replied to")
 public class JsonQuote {
-  @Doc("the client timestamp of the message being quoted") public long id;
+  @ExampleValue(ExampleValue.MESSAGE_ID) @Doc("the client timestamp of the message being quoted") public long id;
   @Doc("the author of the message being quoted") public JsonAddress author;
-  @Doc("the body of the message being quoted") public String text;
+  @ExampleValue(ExampleValue.QUOTED_MESSAGE_BODY) @Doc("the body of the message being quoted") public String text;
   @Doc("list of files attached to the quoted message") public List<JsonQuotedAttachment> attachments;
   @Doc("list of mentions in the quoted message") public List<JsonMention> mentions = new ArrayList<>();
 

@@ -18,12 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.BuildConfig;
+import io.finn.signald.annotations.ExampleValue;
 
 public class JsonVersionMessage {
-  public String name;
-  public String version;
-  public String branch;
-  public String commit;
+  @ExampleValue("\"" + BuildConfig.NAME + "\"") public String name;
+  @ExampleValue("\"" + BuildConfig.VERSION + "\"") public String version;
+  @ExampleValue("\"" + BuildConfig.BRANCH + "\"") public String branch;
+  @ExampleValue("\"" + BuildConfig.COMMIT + "\"") public String commit;
 
   public JsonVersionMessage() {
     this.name = BuildConfig.NAME;

@@ -19,10 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.OneOfRequired;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidRecipientException;
@@ -39,9 +36,9 @@ import java.util.List;
 @Doc("react to a previous message")
 public class ReactRequest implements RequestType {
 
-  @Required public String username;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
   @OneOfRequired({"recipientGroupId"}) public JsonAddress recipientAddress;
-  @OneOfRequired({"recipientAddress"}) public String recipientGroupId;
+  @ExampleValue(ExampleValue.GROUP_ID) @OneOfRequired({"recipientAddress"}) public String recipientGroupId;
   @Required public JsonReaction reaction;
   public long timestamp;
 

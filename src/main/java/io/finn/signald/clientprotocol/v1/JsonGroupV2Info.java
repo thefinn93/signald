@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.GroupInviteLinkUrl;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.util.GroupsUtil;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -38,13 +39,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class JsonGroupV2Info {
-  public String id;
+  @ExampleValue(ExampleValue.GROUP_ID) public String id;
   public String masterKey;
-  public int revision;
+  @ExampleValue("5") public int revision;
 
   // Fields from DecryptedGroup
-  public String title;
-  public int timer;
+  @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
+  @ExampleValue("604800") public int timer;
 
   @JsonProperty public List<JsonAddress> members;
   public List<JsonAddress> pendingMembers;

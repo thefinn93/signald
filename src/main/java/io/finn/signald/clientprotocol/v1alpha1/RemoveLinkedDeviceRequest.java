@@ -20,18 +20,19 @@ package io.finn.signald.clientprotocol.v1alpha1;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 
-@Doc("Remove a linked device from the Signal account. Unavailable on non-primary devices")
+@Doc("Remove a linked device from the Signal account. Only allowed when the local device id is 1")
 @SignaldClientRequest(type = "remove_linked_device", ResponseClass = Empty.class)
 public class RemoveLinkedDeviceRequest implements RequestType {
-  @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
-  @Doc("the ID of the device to unlink") @Required public long deviceId;
+  @ExampleValue("3") @Doc("the ID of the device to unlink") @Required public long deviceId;
 
   @Override
   public void run(Request request) throws Throwable {

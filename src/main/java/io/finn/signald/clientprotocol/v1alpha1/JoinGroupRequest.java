@@ -22,6 +22,7 @@ import io.finn.signald.GroupsV2Manager;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
@@ -51,9 +52,9 @@ import java.util.concurrent.TimeoutException;
 @SignaldClientRequest(type = "join_group", ResponseClass = JsonGroupJoinInfo.class)
 @Doc("Join a group using the a signal.group URL.")
 public class JoinGroupRequest implements RequestType {
-  @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
-  @Doc("The signal.group URL") @Required public String uri;
+  @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("The signal.group URL") @Required public String uri;
 
   @Override
   public void run(Request request)

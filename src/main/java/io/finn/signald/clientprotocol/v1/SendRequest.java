@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.JsonAttachment;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.OneOfRequired;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
@@ -47,10 +48,10 @@ import java.util.stream.Collectors;
 
 @SignaldClientRequest(type = "send", ResponseClass = SendResponse.class)
 public class SendRequest implements RequestType {
-  @Required public String username;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
   @OneOfRequired({"recipientGroupId"}) public JsonAddress recipientAddress;
-  @OneOfRequired({"recipientAddress"}) public String recipientGroupId;
-  @OneOfRequired({"attachments"}) public String messageBody;
+  @ExampleValue(ExampleValue.GROUP_ID) @OneOfRequired({"recipientAddress"}) public String recipientGroupId;
+  @ExampleValue(ExampleValue.MESSAGE_BODY) @OneOfRequired({"attachments"}) public String messageBody;
   @OneOfRequired({"messageBody"}) public List<JsonAttachment> attachments;
   public JsonQuote quote;
   public Long timestamp;

@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1alpha1;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
@@ -33,7 +34,7 @@ import java.util.List;
 @SignaldClientRequest(type = "get_linked_devices", ResponseClass = GetLinkedDevicesRequest.LinkedDevices.class)
 @Doc("list all linked devices on a Signal account")
 public class GetLinkedDevicesRequest implements RequestType {
-  @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException {

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.JsonMessageEnvelope;
@@ -120,7 +121,7 @@ public class ProtocolDocumentor {
 
     PropertyVisitorWrapper(List<Class> t) { types = t; }
 
-    public void addProperty(String key, JavaType t, Doc doc) {
+    public void addProperty(String key, JavaType t, Doc doc, ExampleValue exampleValue) {
       ObjectNode property = JsonNodeFactory.instance.objectNode();
 
       JavaType type = t;
@@ -143,6 +144,10 @@ public class ProtocolDocumentor {
       }
       if (doc != null) {
         property.put("doc", doc.value());
+      }
+
+      if (exampleValue != null) {
+        property.put("example", exampleValue.value());
       }
 
       addType(type.getRawClass());
@@ -184,7 +189,9 @@ public class ProtocolDocumentor {
 
     @Override
     public void optionalProperty(BeanProperty writer) {
-      wrapper.addProperty(writer.getName(), writer.getType(), writer.getAnnotation(Doc.class));
+      Doc doc = writer.getAnnotation(Doc.class);
+      ExampleValue example = writer.getAnnotation(ExampleValue.class);
+      wrapper.addProperty(writer.getName(), writer.getType(), doc, example);
     }
 
     @Override

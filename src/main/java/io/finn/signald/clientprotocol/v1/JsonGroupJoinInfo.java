@@ -17,17 +17,18 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.util.GroupsUtil;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.whispersystems.util.Base64;
 
 public class JsonGroupJoinInfo {
-  public String groupID;
-  public String title;
-  public int memberCount;
+  @ExampleValue(ExampleValue.GROUP_ID) public String groupID;
+  @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
+  @ExampleValue("3") public int memberCount;
   public int addFromInviteLink;
-  public int revision;
+  @ExampleValue("5") public int revision;
   public boolean pendingAdminApproval;
 
   public JsonGroupJoinInfo(DecryptedGroupJoinInfo i, GroupMasterKey masterKey) {
