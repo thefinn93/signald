@@ -39,7 +39,8 @@ public class SetProfile implements RequestType {
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException {
-    Manager.get(account).setProfile(name, new File(avatarFile));
+    File avatar = avatarFile == null ? null : new File(avatarFile);
+    Manager.get(account).setProfile(name, avatar);
     request.reply(new Empty());
   }
 }
