@@ -77,7 +77,7 @@ deb:publish:
     - package-signer
   before_script:
     - mc config host add minio "${S3_URL}" "${DO_ACCESS_KEY_ID}" "${DO_SECRET_ACCESS_KEY}"
-    - if [[ "${CI_COMMIT_REF_NAME}" == "${CI_DEFAULT_BRANCH}" ]; then export SUITE=master; else export SUITE=$(get-suite); fi
+    - if [[ "${CI_COMMIT_REF_NAME}" == "${CI_DEFAULT_BRANCH}" ]]; then export SUITE=master; else export SUITE=$(get-suite); fi
     - export VERSION=$(./version.sh)
     - mkdir -p public/dists/${SUITE}/
     - mc cp -r -q "minio/${S3_BUCKET}/dists/${SUITE}/" public/ || true
