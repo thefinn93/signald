@@ -20,7 +20,6 @@ package io.finn.signald;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.ProfileCipher;
@@ -28,7 +27,6 @@ import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
-import java.util.UUID;
 
 public class JsonProfile {
   public String name;
@@ -41,11 +39,8 @@ public class JsonProfile {
 
   @Doc("the address that signald used to look up this profile") public JsonAddress address;
 
-  public JsonProfile(SignalServiceProfile p, ProfileKey profileKey, UUID address) throws IOException, InvalidInputException {
-    this(p, profileKey.serialize(), new JsonAddress(address));
-  }
-  public JsonProfile(SignalServiceProfile p, byte[] profileKey, JsonAddress a) throws IOException, InvalidInputException {
-    ProfileCipher profileCipher = new ProfileCipher(new ProfileKey(profileKey));
+  public JsonProfile(SignalServiceProfile p, ProfileKey profileKey, JsonAddress a) throws IOException {
+    ProfileCipher profileCipher = new ProfileCipher(profileKey);
     if (p.getName() != null) {
       try {
         name = new String(profileCipher.decryptName(Base64.decode(p.getName())));

@@ -26,10 +26,14 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.storage.*;
+import io.finn.signald.storage.AccountData;
+import io.finn.signald.storage.Group;
+import io.finn.signald.storage.GroupInfo;
+import io.finn.signald.storage.ProfileAndCredentialEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
@@ -42,6 +46,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
@@ -648,17 +653,16 @@ public class SocketHandler implements Runnable {
     this.reply("unsubscribed", null, request.id); // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
 
-  private void getProfile(JsonRequest request)
-      throws IOException, NoSuchAccountException, InvalidInputException, InterruptedException, ExecutionException, TimeoutException, VerificationFailedException {
+  private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException {
     Manager m = Manager.get(request.username);
-    ContactStore.ContactInfo contact = m.getContact(request.recipientAddress.getSignalServiceAddress());
-    if (contact == null || contact.profileKey == null) {
-      this.reply("profile_not_available", request.recipientAddress, request.id);
+    SignalServiceAddress address = m.getResolver().resolve(request.recipientAddress.getSignalServiceAddress());
+    ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(address);
+    if (profileEntry == null) {
+      this.reply("profile_not_available", new JsonAddress(address), request.id);
       return;
     }
-    byte[] profileKeyBytes = Base64.decode(contact.profileKey);
-    this.reply("profile", new JsonProfile(m.getProfile(request.recipientAddress.getSignalServiceAddress(), profileKeyBytes), profileKeyBytes, request.recipientAddress),
-               request.id);
+    SignalServiceProfile profile = m.getProfile(address, profileEntry.getProfileKey());
+    this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
   }
 
   private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {

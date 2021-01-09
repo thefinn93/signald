@@ -1615,14 +1615,10 @@ public class Manager {
     }
   }
 
-  public SignalServiceProfile getProfile(SignalServiceAddress address, byte[] profileKeyBytes)
-      throws InterruptedException, ExecutionException, TimeoutException, InvalidInputException {
+  public SignalServiceProfile getProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-    address = getResolver().resolve(address);
-    Optional<ProfileKey> profileKey = Optional.of(new ProfileKey(profileKeyBytes));
-    ListenableFuture<ProfileAndCredential> profileAndCredential =
-        messageReceiver.retrieveProfile(getResolver().resolve(address), profileKey, Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
-    return profileAndCredential.get(10, TimeUnit.SECONDS).getProfile();
+    ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, Optional.of(profileKey), Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
+    return profile.get(10, TimeUnit.SECONDS).getProfile();
   }
 
   private SignalServiceMessageSender getMessageSender() {
