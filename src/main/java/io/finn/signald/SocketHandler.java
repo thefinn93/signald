@@ -665,7 +665,7 @@ public class SocketHandler implements Runnable {
     this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
   }
 
-  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
+  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
     m.setProfile(request.name, null);
     this.reply("profile_set", null, request.id);

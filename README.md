@@ -1,7 +1,7 @@
 # signald - An (unofficial) Signal Daemon
 
 
-signald is a daemon that facilitates communication over Signal.
+signald is a daemon that facilitates communication over Signal.  Unofficial, unapproved, and [not nearly as secure as the real Signal clients](https://gitlab.com/signald/signald/-/issues/101).
 
 
 ## Installation
