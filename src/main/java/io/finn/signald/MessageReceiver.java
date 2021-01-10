@@ -87,9 +87,9 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     String type = "message";
     if (exception != null) {
       if (exception instanceof SelfSendException) {
-        logger.debug("ignoring SelfSendException (see https://gitlab.com/thefinn93/signald/-/issues/24)");
+        logger.debug("ignoring SelfSendException (see https://gitlab.com/signald/signald/-/issues/24)");
       } else if (exception instanceof DuplicateMessageException || exception.getCause() instanceof DuplicateMessageException) {
-        logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/thefinn93/signald/-/issues/50): " + exception.toString());
+        logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/signald/signald/-/issues/50): " + exception.toString());
       } else if (exception instanceof UntrustedIdentityException) {
         logger.debug("UntrustedIdentityException", exception.toString());
       } else if (exception instanceof InvalidMetadataMessageException) {

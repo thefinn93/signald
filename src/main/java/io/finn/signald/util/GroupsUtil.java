@@ -37,7 +37,7 @@ public class GroupsUtil {
       groupsV2Operations = new GroupsV2Operations(ClientZkOperations.create(serviceConfiguration));
     } catch (Throwable ignored) {
       groupsV2Operations = null;
-      logger.warn("Unable to load groups v2 library. likely due to being non-linux or non-x86. See https://gitlab.com/thefinn93/signald/-/issues/85");
+      logger.warn("Unable to load groups v2 library. likely due to being non-linux or non-x86. See https://gitlab.com/signald/signald/-/issues/85");
     }
     return groupsV2Operations;
   }

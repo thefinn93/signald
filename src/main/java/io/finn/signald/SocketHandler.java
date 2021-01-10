@@ -401,8 +401,8 @@ public class SocketHandler implements Runnable {
         m.verifyAccount(request.code);
         this.reply("verification_succeeded", new JsonAccount(m), request.id);
       } catch (LockedException e) {
-        logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/thefinn93/signald/-/issues/47");
-        this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/thefinn93/signald/-/issues/47", request.id);
+        logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
+        this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/signald/signald/-/issues/47", request.id);
       }
     }
   }

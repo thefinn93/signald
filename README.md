@@ -51,17 +51,12 @@ Either register a new number on Signal or add signald as a linked device on your
 ```
 
 ## Contributing/Feedback/Bugs
-[Issues and MRs are accepted via GitLab.com](https://gitlab.com/thefinn93/signald). There is an IRC channel, `#signald` on Freenode,
+[Issues and MRs are accepted via GitLab.com](https://gitlab.com/signald/signald). There is an IRC channel, `#signald` on Freenode,
 for those that go for that sort of thing. MRs gladly accepted.
 
 ## Stability
 This is currently beta software. The public API may have backwards-incompatible, breaking changes before it stabilizes, although we will make an
 effort to not do that. Further, there are no guarantees of safety or security with this software.
-
-Breaking changes that have been made:
-* As of [!86](https://git.callpipe.com/finn/signald/merge_requests/68), the data folder has moved from `~/.config/signal` to `~/.config/signald`.
-  You will need to migrate your data manually, unless you're using the debian package, which should handle this automatically.
-* As of [!66](https://git.callpipe.com/finn/signald/merge_requests/66), JSON keys that previously had values of `null` will simply not be sent.
 
 ## Interacting with signald
 
@@ -104,7 +99,7 @@ Begins the process of registering a new number on signal for use with signald. P
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The phone number to register |
-| `captcha` | string | no | The captcha value to use, if you get `CaptchaRequiredException` when trying to register. See the [Captchas](https://gitlab.com/thefinn93/signald/-/wikis/Captchas) wiki page for info. |
+| `captcha` | string | no | The captcha value to use, if you get `CaptchaRequiredException` when trying to register. See the [Captchas](https://gitlab.com/signald/signald/-/wikis/Captchas) wiki page for info. |
 | `voice` | boolean | no | Indicates if the verification code should be sent via a phone call. If `false` or not set the verification is done via SMS |
 
 
