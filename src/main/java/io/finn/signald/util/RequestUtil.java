@@ -18,10 +18,7 @@
 package io.finn.signald.util;
 
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.ReactRequest;
-import io.finn.signald.clientprotocol.v1.SendRequest;
-import io.finn.signald.clientprotocol.v1.SetProfile;
-import io.finn.signald.clientprotocol.v1.VersionRequest;
+import io.finn.signald.clientprotocol.v1.*;
 import io.finn.signald.clientprotocol.v1alpha1.*;
 
 import java.util.Arrays;
@@ -33,7 +30,7 @@ public class RequestUtil {
   public static final List<Class<? extends RequestType>> requestTypes =
       Arrays.asList(SendRequest.class, ReactRequest.class, VersionRequest.class, ProtocolRequest.class, GetLinkedDevicesRequest.class, RemoveLinkedDeviceRequest.class,
                     JoinGroupRequest.class, io.finn.signald.clientprotocol.v1alpha1.UpdateGroupRequest.class, AcceptInvitationRequest.class, ApproveMembershipRequest.class,
-                    GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, SetProfile.class);
+                    GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class);
 
   public static String getVersion(Class t) {
     if (t == null || t.isPrimitive() || t == UUID.class || t == Map.class) {

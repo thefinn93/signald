@@ -31,6 +31,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.RequiredNonEmpty;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
+import io.finn.signald.clientprotocol.v1.ResolveAddressRequest;
 import io.finn.signald.clientprotocol.v1.VersionRequest;
 import io.finn.signald.clientprotocol.v1alpha1.*;
 import io.finn.signald.util.JSONUtil;
@@ -87,6 +88,7 @@ public class Request {
     v.put(ApproveMembershipRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
     v.put(GetGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
     v.put(JoinGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(ResolveAddressRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     return v;
   }
 
