@@ -391,6 +391,15 @@ Remove a linked device from the Signal account. Unavailable on non-primary devic
 
 returns a JSON document that describes the next generation of the signald protocol. For more information, see [docs.signald.org](https://docs.signald.org)
 
+### `resolve_address`
+
+Takes a [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) with missing fields and populates any available fields.
+
+| Field      | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `account`  | `string` | yes      | The account to use. |
+| `partial` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes      | incomplete address to be populated |
+
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli).
 
