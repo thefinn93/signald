@@ -290,6 +290,10 @@ public class Manager {
       accountData.save();
     }
     refreshAccountIfNeeded();
+    try {
+      getRecipientProfileKeyCredential(getOwnAddress());
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+    }
   }
 
   public void createNewIdentity() {
