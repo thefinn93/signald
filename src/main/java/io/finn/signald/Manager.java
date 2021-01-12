@@ -766,8 +766,14 @@ public class Manager {
 
     recipients = accountData.getResolver().resolve(recipients);
 
-    if (accountData.profileCredentialStore.get(getOwnAddress()).getProfile() != null) {
-      messageBuilder.withProfileKey(accountData.getProfileKey().serialize());
+    try {
+      ProfileAndCredentialEntry profile = getRecipientProfileKeyCredential(getOwnAddress());
+      if (profile.getProfile() != null) {
+        messageBuilder.withProfileKey(profile.getProfileKey().serialize());
+      }
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+      logger.warn("Failed to get own profile key");
+      e.printStackTrace();
     }
 
     SignalServiceDataMessage message = null;
