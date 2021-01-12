@@ -656,7 +656,7 @@ public class SocketHandler implements Runnable {
   private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException {
     Manager m = Manager.get(request.username);
     SignalServiceAddress address = m.getResolver().resolve(request.recipientAddress.getSignalServiceAddress());
-    ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(address);
+    ProfileAndCredentialEntry profileEntry = m.getRecipientProfileKeyCredential(address);
     if (profileEntry == null) {
       this.reply("profile_not_available", new JsonAddress(address), request.id);
       return;
