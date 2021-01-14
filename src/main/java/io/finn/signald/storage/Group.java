@@ -137,7 +137,10 @@ public class Group {
       JsonNode node = p.getCodec().readTree(p);
       try {
         GroupMasterKey masterKey = new GroupMasterKey(Base64.decode(node.get("masterKey").textValue()));
-        int revision = node.get("revision").asInt();
+        int revision = 0;
+        if (node.has("revision")) {
+          revision = node.get("revision").asInt();
+        }
         DecryptedGroup group;
         if (node.has("group")) {
           group = DecryptedGroup.parseFrom(Base64.decode(node.get("group").textValue()));
