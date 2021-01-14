@@ -752,6 +752,11 @@ public class Manager {
       try {
         // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
         messageSender.sendReceipt(address, getAccessFor(address), message);
+        List<ReadMessage> readMessages = new LinkedList<>();
+        for (Long ts : message.getTimestamps()) {
+          readMessages.add(new ReadMessage(address, ts));
+        }
+        messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
         return null;
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
