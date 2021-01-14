@@ -46,7 +46,7 @@ public class MarkReadRequest implements RequestType {
 
   @Doc("The address that sent the message being marked as read") @Required public JsonAddress to;
 
-  @ExampleValue("[" + BuildConfig.BUILD_TIMESTAMP + "]") @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
+  @ExampleValue(BuildConfig.BUILD_TIMESTAMP) @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException {
