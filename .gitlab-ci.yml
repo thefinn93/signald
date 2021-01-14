@@ -7,6 +7,10 @@ stages:
 
 variables:
   zkgroup_ver: "0.7.0"
+  DOCKER_TLS_CERTDIR: "/certs"
+
+services:
+  - docker:20.10.0-dind
 
 clang-format:
   image: debian:latest
@@ -107,6 +111,27 @@ build deb aarch64:
   artifacts:
     paths:
       - "signald_*"
+
+build-docker:
+  image: docker:latest
+  stage: build
+  needs: []
+  only:
+    refs:
+      - tags
+      - main
+  before_script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}; fi
+  script:
+    - docker build --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} .
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+    - if [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${CI_REGISTRY_IMAGE}:latest; fi;
+    - if [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${CI_REGISTRY_IMAGE}:latest; fi;
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_SLUG}; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:${CI_COMMIT_REF_SLUG}; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG} ${DOCKER_HUB_USERNAME}/signald:latest; fi
+    - if [[ ! -z "${DOCKER_HUB_USERNAME}" ]] && [[ "${CI_COMMIT_REF_SLUG}" == "main" ]]; then docker push ${DOCKER_HUB_USERNAME}/signald:latest; fi
 
 integration tests x86:
   image: openjdk:11-jdk
