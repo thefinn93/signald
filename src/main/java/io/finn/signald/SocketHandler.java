@@ -361,7 +361,9 @@ public class SocketHandler implements Runnable {
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, request.timestamps, request.when);
 
     SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
-    if (result != null) {
+    if (result == null) {
+      this.reply("mark_read", null, request.id);
+    } else {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);

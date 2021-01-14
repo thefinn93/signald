@@ -30,7 +30,7 @@ public class RequestUtil {
   public static final List<Class<? extends RequestType>> requestTypes =
       Arrays.asList(SendRequest.class, ReactRequest.class, VersionRequest.class, ProtocolRequest.class, GetLinkedDevicesRequest.class, RemoveLinkedDeviceRequest.class,
                     JoinGroupRequest.class, io.finn.signald.clientprotocol.v1alpha1.UpdateGroupRequest.class, AcceptInvitationRequest.class, ApproveMembershipRequest.class,
-                    GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class);
+                    GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class, MarkReadRequest.class);
 
   public static String getVersion(Class t) {
     if (t == null || t.isPrimitive() || t == UUID.class || t == Map.class) {

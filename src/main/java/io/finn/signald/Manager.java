@@ -910,6 +910,7 @@ public class Manager {
   private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
                                               boolean ignoreAttachments)
       throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException, IOException, VerificationFailedException {
+
     if (message.getGroupContext().isPresent()) {
       SignalServiceGroup groupInfo;
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
@@ -1175,6 +1176,10 @@ public class Manager {
     AddressResolver resolver = accountData.getResolver();
     resolver.resolve(source);
     if (content.getDataMessage().isPresent()) {
+      if (content.isNeedsReceipt()) {
+        SignalServiceAddress sender = envelope.isUnidentifiedSender() && envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
+        markDelivered(content, sender);
+      }
       SignalServiceDataMessage message = content.getDataMessage().get();
       handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments);
     }
@@ -1275,6 +1280,17 @@ public class Manager {
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
         accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
+    }
+  }
+
+  private void markDelivered(SignalServiceContent content, SignalServiceAddress sender) {
+    List<Long> timestamps = new ArrayList<>();
+    timestamps.add(content.getTimestamp());
+    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, timestamps, System.currentTimeMillis());
+    try {
+      sendReceipt(message, sender);
+    } catch (IOException e) {
+      logger.warn("Failed to send delivery receipt:", e);
     }
   }
 
@@ -1631,7 +1647,7 @@ public class Manager {
     return profile.get(10, TimeUnit.SECONDS).getProfile();
   }
 
-  private SignalServiceMessageSender getMessageSender() {
+  public SignalServiceMessageSender getMessageSender() {
     return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true,
                                           Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
                                           getClientZkOperations().getProfileOperations(), null, 0);
