@@ -95,9 +95,7 @@ public class JsonDataMessage {
 
     endSession = dataMessage.isEndSession();
 
-    if (dataMessage.isExpirationUpdate()) {
-      expiresInSeconds = dataMessage.getExpiresInSeconds();
-    }
+    expiresInSeconds = dataMessage.getExpiresInSeconds();
 
     profileKeyUpdate = dataMessage.isProfileKeyUpdate();
 

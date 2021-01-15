@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 public class JSONUtil {
   public static ObjectMapper GetMapper() {
     ObjectMapper mapper = new ObjectMapper();
-    mapper.setSerializationInclusion(JsonInclude.Include.NON_DEFAULT); // does this do anything?
+    mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     return mapper;
   }
 
