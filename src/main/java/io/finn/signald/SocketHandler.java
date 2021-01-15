@@ -663,6 +663,7 @@ public class SocketHandler implements Runnable {
       this.reply("profile_not_available", new JsonAddress(address), request.id);
       return;
     }
+    m.getAccountData().saveIfNeeded();
     SignalServiceProfile profile = m.getProfile(address, profileEntry.getProfileKey());
     this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
   }

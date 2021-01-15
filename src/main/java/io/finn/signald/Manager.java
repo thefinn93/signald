@@ -102,6 +102,7 @@ public class Manager {
   private final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
   private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
+  private final static int PROFILE_REFRESH_TIME = 5 * 60 * 1000; // refresh profiles every 5 minutes
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
 
@@ -1693,7 +1694,7 @@ public class Manager {
       return null;
     }
 
-    if (profileEntry.getProfileKeyCredential() == null) {
+    if (profileEntry.getProfileKeyCredential() == null || System.currentTimeMillis() - profileEntry.getLastUpdateTimestamp() > PROFILE_REFRESH_TIME) {
       ProfileAndCredential profileAndCredential;
       SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
       Optional<ProfileKey> profileKeyOptional = Optional.fromNullable(profileEntry.getProfileKey());

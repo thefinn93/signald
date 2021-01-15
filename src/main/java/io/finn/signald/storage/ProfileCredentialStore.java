@@ -76,10 +76,9 @@ public class ProfileCredentialStore {
     ProfileAndCredentialEntry entry = new ProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential);
     for (int i = 0; i < profiles.size(); i++) {
       if (profiles.get(i).getServiceAddress().matches(address)) {
-        if (!profiles.get(i).getProfileKey().equals(profileKey)) {
-          profiles.set(i, entry);
-          unsaved = true;
-        }
+        ProfileAndCredentialEntry p = profiles.get(i);
+        profiles.set(i, entry);
+        unsaved = true;
         return entry;
       }
     }
