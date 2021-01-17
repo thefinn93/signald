@@ -19,7 +19,6 @@ package io.finn.signald.util;
 
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.*;
-import io.finn.signald.clientprotocol.v1alpha1.*;
 
 import java.util.Arrays;
 import java.util.List;
@@ -28,9 +27,13 @@ import java.util.UUID;
 
 public class RequestUtil {
   public static final List<Class<? extends RequestType>> requestTypes =
-      Arrays.asList(SendRequest.class, ReactRequest.class, VersionRequest.class, ProtocolRequest.class, GetLinkedDevicesRequest.class, RemoveLinkedDeviceRequest.class,
-                    JoinGroupRequest.class, io.finn.signald.clientprotocol.v1alpha1.UpdateGroupRequest.class, AcceptInvitationRequest.class, ApproveMembershipRequest.class,
-                    GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class, MarkReadRequest.class);
+      Arrays.asList(SendRequest.class, ReactRequest.class, VersionRequest.class, io.finn.signald.clientprotocol.v1alpha1.ProtocolRequest.class,
+                    io.finn.signald.clientprotocol.v1alpha1.GetLinkedDevicesRequest.class, io.finn.signald.clientprotocol.v1alpha1.RemoveLinkedDeviceRequest.class,
+                    io.finn.signald.clientprotocol.v1alpha1.JoinGroupRequest.class, io.finn.signald.clientprotocol.v1alpha1.UpdateGroupRequest.class,
+                    io.finn.signald.clientprotocol.v1alpha1.AcceptInvitationRequest.class, io.finn.signald.clientprotocol.v1alpha1.ApproveMembershipRequest.class,
+                    io.finn.signald.clientprotocol.v1alpha1.GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, AcceptInvitationRequest.class,
+                    ApproveMembershipRequest.class, GetGroupRequest.class, GetLinkedDevicesRequest.class, JoinGroupRequest.class, ProtocolRequest.class,
+                    RemoveLinkedDeviceRequest.class, UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class, MarkReadRequest.class);
 
   public static String getVersion(Class t) {
     if (t == null || t.isPrimitive() || t == UUID.class || t == Map.class) {

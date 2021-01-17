@@ -146,7 +146,6 @@ Mark a received message as "read" by sending a receipt message.
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
-
 ### `add_device`
 
 Adds another device to a signal account that signald controls the primary device on. Possible values are:
@@ -172,7 +171,9 @@ Returns a list of all groups the specified user is in.
 
 ### `update_group`
 
-Creates or modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example) 
+Creates or modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example)
+
+for v2 group features like removing members, see [`v1.update_group`](https://docs.signald.org/actions/v1/update_group.html).
 
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
@@ -342,6 +343,8 @@ Gets a user's profile. At this time only the name is available. Must have the us
 
 ### `set_profile`
 
+note: [`set_profile` v1](https://docs.signald.org/actions/v1/set_profile.html) supports setting avatar.
+
 Sets the user's profile. At this time only the name is available.
 
 | Field      | Type     | Required | Description |
@@ -372,6 +375,8 @@ Get information about a v2 group from a signal.group link
 
 ### `get_linked_devices`
 
+[see on docs.signald.org](https://docs.signald.org/actions/v1/get_linked_devices.html)
+
 list all linked devices on a Signal account
 
 | Field      | Type     | Required | Description |
@@ -379,6 +384,8 @@ list all linked devices on a Signal account
 | `account`  | `string` | yes      | The account to use. |
 
 ### `remove_linked_device`
+
+[see on docs.signald.org](https://docs.signald.org/actions/v1/remove_linked_device.html)
 
 Remove a linked device from the Signal account. Unavailable on non-primary devices (device ID != 1)
 
@@ -393,12 +400,25 @@ returns a JSON document that describes the next generation of the signald protoc
 
 ### `resolve_address`
 
+[see on docs.signald.org](https://docs.signald.org/actions/v1/resolve_address.html)
+
 Takes a [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) with missing fields and populates any available fields.
 
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `account`  | `string` | yes      | The account to use. |
 | `partial` | [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html) | yes      | incomplete address to be populated |
+
+### `accept_invitation`
+
+[see on docs.signald.org](https://docs.signald.org/actions/v1alpha1/accept_invitation.html)
+
+### `approve_membership`
+
+[see on docs.signald.org](https://docs.signald.org/actions/v1/approve_membership.html)
+
+
+
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli).

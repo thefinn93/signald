@@ -30,10 +30,7 @@ import io.finn.signald.annotations.OneOfRequired;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.RequiredNonEmpty;
 import io.finn.signald.annotations.SignaldClientRequest;
-import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
-import io.finn.signald.clientprotocol.v1.ResolveAddressRequest;
-import io.finn.signald.clientprotocol.v1.VersionRequest;
-import io.finn.signald.clientprotocol.v1alpha1.*;
+import io.finn.signald.clientprotocol.v1.*;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import org.apache.logging.log4j.LogManager;
@@ -81,13 +78,13 @@ public class Request {
   public static Map<String, String> getDefaultVersions() {
     Map<String, String> v = new HashMap<>();
     v.put(VersionRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(ProtocolRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
-    v.put(GetLinkedDevicesRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
-    v.put(RemoveLinkedDeviceRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
-    v.put(AcceptInvitationRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
-    v.put(ApproveMembershipRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
-    v.put(GetGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
-    v.put(JoinGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1alpha1");
+    v.put(ProtocolRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(GetLinkedDevicesRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(RemoveLinkedDeviceRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(AcceptInvitationRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(ApproveMembershipRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(GetGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(JoinGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(ResolveAddressRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     return v;
   }
