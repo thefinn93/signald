@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.finn.signald.clientprotocol.v1alpha1.ProtocolDocumentor;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.Level;

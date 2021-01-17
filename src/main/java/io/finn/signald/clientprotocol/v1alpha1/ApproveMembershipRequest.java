@@ -50,6 +50,7 @@ import java.util.stream.Collectors;
 
 @SignaldClientRequest(type = "approve_membership", ResponseClass = JsonGroupV2Info.class)
 @Doc("approve a request to join a group")
+@Deprecated
 public class ApproveMembershipRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 

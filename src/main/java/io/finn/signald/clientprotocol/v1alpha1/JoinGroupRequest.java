@@ -51,6 +51,7 @@ import java.util.concurrent.TimeoutException;
 
 @SignaldClientRequest(type = "join_group", ResponseClass = JsonGroupJoinInfo.class)
 @Doc("Join a group using the a signal.group URL. Note that you must have a profile name set to join groups.")
+@Deprecated
 public class JoinGroupRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 

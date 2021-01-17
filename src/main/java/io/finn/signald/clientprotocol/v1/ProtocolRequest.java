@@ -18,16 +18,207 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable;
+import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;
+import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.finn.signald.Empty;
-import io.finn.signald.ProtocolDocumentor;
+import io.finn.signald.JsonAccountList;
+import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.util.JSONUtil;
+import io.finn.signald.util.RequestUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @SignaldClientRequest(type = "protocol", ResponseClass = Empty.class)
 public class ProtocolRequest implements RequestType {
+  private static final ObjectMapper mapper = JSONUtil.GetMapper();
+  private static final Logger logger = LogManager.getLogger();
+
+  // the version of the protocol documentation format
+  public static final String docVersion = "v1";
+  public static final String info = "This document describes objects that may be used when communicating with signald.";
+
   @Override
   public void run(Request request) throws JsonProcessingException {
-    request.reply(ProtocolDocumentor.GetProtocolDocumentation());
+    ObjectNode actions = JsonNodeFactory.instance.objectNode();
+    List<Class> uncheckedTypes = new ArrayList<>();
+
+    // some classes not referenced by any currently documented request or reply
+    uncheckedTypes.add(JsonMessageEnvelope.class);
+    uncheckedTypes.add(JsonAccountList.class);
+
+    for (Class<? extends RequestType> r : RequestUtil.requestTypes) {
+      SignaldClientRequest annotation = r.getAnnotation(SignaldClientRequest.class);
+
+      ObjectNode action = JsonNodeFactory.instance.objectNode();
+      action.put("request", r.getSimpleName());
+      uncheckedTypes.add(r);
+
+      if (annotation.ResponseClass() != Empty.class) {
+        action.put("response", annotation.ResponseClass().getSimpleName());
+        uncheckedTypes.add(annotation.ResponseClass());
+      }
+
+      if (r.getAnnotation(Doc.class) != null) {
+        action.put("doc", r.getAnnotation(Doc.class).value());
+      }
+
+      if (r.getAnnotation(Deprecated.class) != null) {
+        action.put("deprecated", true);
+      }
+
+      String version = RequestUtil.getVersion(r);
+      ObjectNode versionedActions = actions.has(version) ? (ObjectNode)actions.get(version) : JsonNodeFactory.instance.objectNode();
+      versionedActions.set(annotation.type(), action);
+      if (!actions.has(version)) {
+        actions.set(version, versionedActions);
+      }
+    }
+    ObjectNode types = JsonNodeFactory.instance.objectNode();
+    while (uncheckedTypes.size() > 0) {
+      Class type = uncheckedTypes.remove(0);
+      if (type == null) {
+        continue;
+      }
+      String version = RequestUtil.getVersion(type);
+      if (version == null) {
+        continue;
+      }
+      ObjectNode versionedTypes = types.has(version) ? (ObjectNode)types.get(version) : JsonNodeFactory.instance.objectNode();
+      versionedTypes.set(type.getSimpleName(), scanObject(type, uncheckedTypes));
+      types.set(version, versionedTypes);
+    }
+
+    ObjectNode response = JsonNodeFactory.instance.objectNode();
+    response.put("doc_version", docVersion);
+    response.set("version", mapper.valueToTree(new JsonVersionMessage()));
+    response.put("info", info);
+    response.set("types", types);
+    response.set("actions", actions);
+    request.reply(response);
+  }
+
+  static JsonNode scanObject(Class<?> type, List<Class> types) throws JsonMappingException {
+    ObjectNode output = JsonNodeFactory.instance.objectNode();
+
+    PropertyVisitorWrapper v = new PropertyVisitorWrapper(types);
+    mapper.acceptJsonFormatVisitor(type, v);
+    output.set("fields", v.getResponse());
+
+    if (type.getAnnotation(Doc.class) != null) {
+      output.put("doc", type.getAnnotation(Doc.class).value());
+    }
+
+    if (type.getAnnotation(Deprecated.class) != null) {
+      output.put("deprecated", true);
+    }
+
+    return output;
+  }
+
+  public static class PropertyVisitorWrapper extends JsonFormatVisitorWrapper.Base {
+    ObjectNode response = JsonNodeFactory.instance.objectNode();
+    List<Class> types;
+
+    PropertyVisitorWrapper(List<Class> t) { types = t; }
+
+    public void addProperty(String key, JavaType t, Doc doc, ExampleValue exampleValue) {
+      ObjectNode property = JsonNodeFactory.instance.objectNode();
+
+      JavaType type = t;
+      if (type.isCollectionLikeType()) {
+        property.put("list", true);
+        type = t.getContentType();
+      }
+
+      String typeName = type.getRawClass().getSimpleName();
+      switch (type.getRawClass().getSimpleName()) {
+      case "byte[]":
+        property.put("type", "String");
+        break;
+      default:
+        property.put("type", typeName);
+        String version = RequestUtil.getVersion(type.getRawClass());
+        if (version != null) {
+          property.put("version", version);
+        }
+      }
+      if (doc != null) {
+        property.put("doc", doc.value());
+      }
+
+      if (exampleValue != null) {
+        property.put("example", exampleValue.value());
+      }
+
+      addType(type.getRawClass());
+      response.set(key, property);
+    }
+
+    private void addType(Class toAdd) {
+      if (toAdd == String.class || toAdd == long.class || toAdd == UUID.class || toAdd == Long.class || toAdd == int.class || toAdd == boolean.class || toAdd == byte[].class) {
+        return;
+      }
+      for (Class t : types) {
+        if (t == toAdd) {
+          return;
+        }
+      }
+      types.add(toAdd);
+    }
+
+    public ObjectNode getResponse() { return response; }
+
+    @Override
+    public JsonObjectFormatVisitor expectObjectFormat(JavaType type) {
+      return new ProtocolObjectFormatVisitor(this);
+    }
+
+    public List<Class> getTypes() { return types; }
+  }
+
+  public static class ProtocolObjectFormatVisitor extends JsonObjectFormatVisitor.Base {
+    private final PropertyVisitorWrapper wrapper;
+
+    public ProtocolObjectFormatVisitor(PropertyVisitorWrapper w) { wrapper = w; }
+
+    @Override
+    public void property(BeanProperty writer) {}
+
+    @Override
+    public void property(String name, JsonFormatVisitable handler, JavaType propertyTypeHint) {}
+
+    @Override
+    public void optionalProperty(BeanProperty writer) {
+      Doc doc = writer.getAnnotation(Doc.class);
+      ExampleValue example = writer.getAnnotation(ExampleValue.class);
+      wrapper.addProperty(writer.getName(), writer.getType(), doc, example);
+    }
+
+    @Override
+    public void optionalProperty(String name, JsonFormatVisitable handler, JavaType propertyTypeHint) {}
+  }
+
+  public static class DocumentedRequest {
+    String type;
+    Class<? extends RequestType> request;
+    Class response;
+
+    DocumentedRequest(String type, Class<? extends RequestType> request, Class response) {
+      this.type = type;
+      this.request = request;
+      this.response = response;
+    }
   }
 }

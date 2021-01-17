@@ -35,6 +35,7 @@ import java.io.IOException;
 
 @SignaldClientRequest(type = "get_group", ResponseClass = JsonGroupV2Info.class)
 @Doc("Query the server for the latest state of a known group")
+@Deprecated
 public class GetGroupRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 

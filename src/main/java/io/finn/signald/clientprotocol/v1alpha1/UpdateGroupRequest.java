@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
 
 @SignaldClientRequest(type = "update_group", ResponseClass = JsonGroupV2Info.class)
 @Doc("modify a group. only v2 groups for now")
+@Deprecated
 public class UpdateGroupRequest implements RequestType {
   @Doc("The account to interact with") @Required @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String account;
 

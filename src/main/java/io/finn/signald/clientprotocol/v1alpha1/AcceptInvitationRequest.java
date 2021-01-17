@@ -47,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 
 @SignaldClientRequest(type = "accept_invitation", ResponseClass = JsonGroupV2Info.class)
 @Doc("Accept a v2 group invitation. Note that you must have a profile name set to join groups.")
+@Deprecated
 public class AcceptInvitationRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 

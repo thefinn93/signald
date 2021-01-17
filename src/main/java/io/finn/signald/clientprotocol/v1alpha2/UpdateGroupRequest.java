@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 
 @SignaldClientRequest(type = "update_group", ResponseClass = GroupInfo.class)
 @Doc("modify a group")
+@Deprecated
 public class UpdateGroupRequest implements RequestType {
   private static final Logger logger = LogManager.getLogger();
 

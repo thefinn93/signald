@@ -20,7 +20,7 @@ package io.finn.signald;
 import java.util.ArrayList;
 import java.util.List;
 
-class JsonAccountList {
+public class JsonAccountList {
   public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
   JsonAccountList(ArrayList<String> subscribedAccounts) {

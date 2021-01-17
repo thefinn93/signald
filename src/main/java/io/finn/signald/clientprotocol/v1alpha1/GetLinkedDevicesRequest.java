@@ -33,6 +33,7 @@ import java.util.List;
 
 @SignaldClientRequest(type = "get_linked_devices", ResponseClass = GetLinkedDevicesRequest.LinkedDevices.class)
 @Doc("list all linked devices on a Signal account")
+@Deprecated
 public class GetLinkedDevicesRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
