@@ -18,7 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import io.finn.signald.clientprotocol.v1alpha1.ProtocolDocumentor;
+import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.Level;
@@ -65,7 +65,7 @@ public class Main implements Runnable {
 
     if (dumpProtocol) {
       try {
-        System.out.println(JSONUtil.GetMapper().writeValueAsString(ProtocolDocumentor.GetProtocolDocumentation()));
+        System.out.println(JSONUtil.GetMapper().writeValueAsString(ProtocolRequest.GetProtocolDocumentation()));
         System.exit(0);
       } catch (JsonProcessingException e) {
         logger.catching(e);

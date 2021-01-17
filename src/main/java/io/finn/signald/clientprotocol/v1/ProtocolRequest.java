@@ -51,6 +51,10 @@ public class ProtocolRequest implements RequestType {
 
   @Override
   public void run(Request request) throws JsonProcessingException {
+    request.reply(GetProtocolDocumentation());
+  }
+
+  public static JsonNode GetProtocolDocumentation() throws JsonMappingException {
     ObjectNode actions = JsonNodeFactory.instance.objectNode();
     List<Class> uncheckedTypes = new ArrayList<>();
 
@@ -106,7 +110,7 @@ public class ProtocolRequest implements RequestType {
     response.put("info", info);
     response.set("types", types);
     response.set("actions", actions);
-    request.reply(response);
+    return response;
   }
 
   static JsonNode scanObject(Class<?> type, List<Class> types) throws JsonMappingException {
