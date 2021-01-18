@@ -90,7 +90,7 @@ Sends a signal message to another user or a group. Possible values are:
 | `messageBody` | string | no | The text of the message. |
 | `attachments` | list of [`JsonAttachment`](https://docs.signald.org/structures/v0/JsonAttachment.html) | no | A list of attachments |
 | `quote` | [`JsonQuote`](https://docs.signald.org/structures/v1/JsonQuote.html) | no | The message to quote |
-| `timestamp` | int | The timestamp (in milliseconds) for the message, which also acts as the message identifier. Defaults to the current time. |
+| `timestamp` | int | no | The timestamp (in milliseconds) for the message, which also acts as the message identifier. Defaults to the current time. |
 
 ### `register`
 
@@ -190,7 +190,7 @@ Leaves a group
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | string | yes | The account to leave the group |
-| `recipientGroupId` string | yes | the base64 encoded group ID |
+| `recipientGroupId` | string | yes | the base64 encoded group ID |
 
 ### `link`
 
