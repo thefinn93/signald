@@ -411,7 +411,7 @@ Takes a [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html)
 
 ### `accept_invitation`
 
-[see on docs.signald.org](https://docs.signald.org/actions/v1alpha1/accept_invitation.html)
+[see on docs.signald.org](https://docs.signald.org/actions/v1/accept_invitation.html)
 
 ### `approve_membership`
 
