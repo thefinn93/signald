@@ -130,7 +130,13 @@ public class Request {
       return;
     }
 
-    requestType = mapper.convertValue(request, requests.get(type).get(version));
+    Class<? extends RequestType> requestClass = requests.get(type).get(version);
+
+    if (requestClass.getAnnotation(Deprecated.class) != null) {
+      logger.warn(type + " " + version + " is deprecated and will be removed in a future version of signald. please update your client");
+    }
+
+    requestType = mapper.convertValue(request, requestClass);
     List<String> validationFailures = validate(request);
     if (validationFailures.size() > 0) {
       logger.warn("invalid request");

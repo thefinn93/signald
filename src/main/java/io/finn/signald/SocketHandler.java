@@ -123,6 +123,11 @@ public class SocketHandler implements Runnable {
             version = Request.defaultVersions.get(type);
           }
 
+          if (!rawRequest.has("version")) {
+            logger.debug("consider adding \"version\": \"" + version + "\"  to your request to prevent future API breakage. "
+                         + "See https://gitlab.com/signald/signald/-/wikis/Protocol-Versioning");
+          }
+
           if (version.equals("v0")) {
             request = mpr.convertValue(rawRequest, JsonRequest.class);
             handleRequest(request);
