@@ -1,3 +1,11 @@
+.arm-build:
+  tags: [arm-builder]
+  rules:
+  - if: '$CI_PROJECT_NAMESPACE == "signald"'
+    when: on_success
+  - when: manual
+    allow_failure: true
+
 stages:
   - lint
   - build
@@ -50,9 +58,9 @@ build java11 x86:
       - build/
 
 build java11 aarch64 glibc:
+  extends: .arm-build
   image: debian
   stage: build
-  tags: [arm-builder]
   needs:
     - project: signald/zkgroup
       job: "zkgroup aarch64-glibc aarch64"
@@ -90,12 +98,12 @@ build deb x86:
 build deb aarch64:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-arm:d6b7bebf
   stage: build
+  extends: .arm-build
   needs:
     - project: signald/zkgroup
       job: "zkgroup aarch64-glibc aarch64"
       ref: main
       artifacts: true
-  tags: [arm-builder]
   before_script:
     - export VERSION=$(./version.sh)
     - echo "Building signald version $VERSION"
@@ -104,8 +112,6 @@ build deb aarch64:
     - cat debian/changelog
     - dpkg-buildpackage -b
     - cp -rv ../signald_${VERSION}* .
-  except:
-    - schedules
   cache:
     key: deb-arm-builder
   artifacts:
@@ -150,7 +156,7 @@ integration tests x86:
 integration tests aarch64:
   image: debian
   stage: test
-  tags: [arm-builder]
+  extends: .arm-build
   needs: ["build java11 aarch64 glibc"]
   before_script:
     - apt update && apt install -y make openjdk-11-jdk-headless
