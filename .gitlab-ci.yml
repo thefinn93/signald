@@ -1,11 +1,3 @@
-.arm-build:
-  tags: [arm-builder]
-  rules:
-  - if: '$CI_PROJECT_NAMESPACE == "signald"'
-    when: on_success
-  - when: manual
-    allow_failure: true
-
 stages:
   - lint
   - build
@@ -16,6 +8,22 @@ stages:
 variables:
   zkgroup_ver: "0.7.0"
   DOCKER_TLS_CERTDIR: "/certs"
+
+# from https://forum.gitlab.com/t/prevent-ci-cd-for-release-branches-for-forks/42207/2
+.arm-build:
+  tags: [arm-builder]
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+workflow:
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE != "signald"'
+      when: never
+    - when: always
+
 
 services:
   - docker:20.10.0-dind
