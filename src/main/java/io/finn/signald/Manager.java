@@ -16,6 +16,7 @@
  */
 package io.finn.signald;
 
+import io.finn.signald.actions.*;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidRecipientException;
@@ -26,7 +27,6 @@ import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
@@ -55,7 +55,6 @@ import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
-import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
@@ -64,7 +63,9 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
-import org.whispersystems.signalservice.api.util.*;
+import org.whispersystems.signalservice.api.util.StreamDetails;
+import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.configuration.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
@@ -99,7 +100,7 @@ public class Manager {
   private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true);
   private final static int ACCOUNT_REFRESH_VERSION = 2;
 
-  private final static int PREKEY_MINIMUM_COUNT = 20;
+  public final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
   private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
   private final static int PROFILE_REFRESH_TIME = 5 * 60 * 1000; // refresh profiles every 5 minutes
@@ -293,7 +294,7 @@ public class Manager {
     refreshAccountIfNeeded();
     try {
       getRecipientProfileKeyCredential(getOwnAddress());
-    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+    } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
     }
   }
 
@@ -415,10 +416,9 @@ public class Manager {
     accountData.save();
   }
 
-  void refreshPreKeys() throws IOException {
+  public void refreshPreKeys() throws IOException {
     List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
     SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(accountData.axolotlStore.getIdentityKeyPair());
-
     accountManager.setPreKeys(accountData.axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
 
@@ -436,7 +436,7 @@ public class Manager {
                                              System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
   }
 
-  private Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
+  public Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
     File file = getGroupAvatarFile(groupId);
     if (!file.exists()) {
       return Optional.absent();
@@ -445,7 +445,7 @@ public class Manager {
     return Optional.of(createAttachment(file));
   }
 
-  private Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(SignalServiceAddress address) throws IOException {
+  public Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(SignalServiceAddress address) throws IOException {
     File file = getContactAvatarFile(address);
     if (!file.exists()) {
       return Optional.absent();
@@ -533,7 +533,7 @@ public class Manager {
   }
 
   public GroupInfo sendUpdateGroupMessage(byte[] groupId, String name, Collection<SignalServiceAddress> members, String avatarFile)
-      throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+      throws IOException, GroupNotFoundException, NotAGroupMemberException {
     GroupInfo g;
     if (groupId == null) {
       // Create new group
@@ -553,8 +553,8 @@ public class Manager {
           if (m.matches(member)) {
             continue;
           }
+          g.addMember(new JsonAddress(member));
         }
-        g.addMember(new JsonAddress(member));
       }
     }
 
@@ -575,33 +575,7 @@ public class Manager {
     return g;
   }
 
-  private List<SendMessageResult> sendUpdateGroupMessage(byte[] groupId, SignalServiceAddress recipient)
-      throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException {
-    if (groupId == null) {
-      return null;
-    }
-    GroupInfo g = getGroupForSending(groupId);
-
-    boolean isMember = false;
-    for (JsonAddress m : g.members) {
-      if (m.matches(recipient)) {
-        isMember = true;
-      }
-    }
-
-    if (!isMember) {
-      return null;
-    }
-
-    SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
-
-    // Send group message only to the recipient who requested it
-    final List<SignalServiceAddress> membersSend = new ArrayList<>();
-    membersSend.add(recipient);
-    return sendMessage(messageBuilder, membersSend);
-  }
-
-  private SignalServiceDataMessage.Builder getGroupUpdateMessageBuilder(GroupInfo g) throws AttachmentInvalidException {
+  public SignalServiceDataMessage.Builder getGroupUpdateMessageBuilder(GroupInfo g) {
     SignalServiceGroup.Builder group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.UPDATE).withId(g.groupId).withName(g.name).withMembers(g.getMembers());
 
     File aFile = getGroupAvatarFile(g.groupId);
@@ -609,15 +583,14 @@ public class Manager {
       try {
         group.withAvatar(createAttachment(aFile));
       } catch (IOException e) {
-        throw new AttachmentInvalidException(aFile.toString(), e);
+        logger.warn("Unable to attach group avatar:" + aFile.toString(), e);
       }
     }
 
     return SignalServiceDataMessage.newBuilder().asGroupMessage(group.build());
   }
 
-  public List<SendMessageResult> setExpiration(byte[] groupId, int expiresInSeconds)
-      throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException {
+  public List<SendMessageResult> setExpiration(byte[] groupId, int expiresInSeconds) throws IOException, GroupNotFoundException, NotAGroupMemberException {
     if (groupId == null) {
       return null;
     }
@@ -660,8 +633,7 @@ public class Manager {
     accountData.save();
   }
 
-  public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar)
-      throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException {
+  public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar) throws IOException, GroupNotFoundException, NotAGroupMemberException {
     if (groupId.length == 0) {
       groupId = null;
     }
@@ -705,7 +677,7 @@ public class Manager {
     }
   }
 
-  private void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
+  public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     SignalServiceMessageSender messageSender = getMessageSender();
     try {
       messageSender.sendMessage(message, Optional.absent());
@@ -889,7 +861,7 @@ public class Manager {
   private void handleEndSession(SignalServiceAddress address) { accountData.axolotlStore.deleteAllSessions(address); }
 
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId)
-      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException, InvalidInputException {
+      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException {
     if (recipientGroupId != null && recipientAddress == null) {
       if (recipientGroupId.length() == 24) { // redirect to new group if it exists
         recipientGroupId = accountData.getMigratedGroupId(recipientGroupId);
@@ -915,10 +887,10 @@ public class Manager {
 
   public interface ReceiveMessageHandler { void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e); }
 
-  private void handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
-                                              boolean ignoreAttachments)
-      throws GroupNotFoundException, AttachmentInvalidException, MissingConfigurationException, IOException, VerificationFailedException {
+  private List<Action> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
+                                                      boolean ignoreAttachments) throws MissingConfigurationException, IOException, VerificationFailedException {
 
+    List<Action> actions = new ArrayList<>();
     if (message.getGroupContext().isPresent()) {
       SignalServiceGroup groupInfo;
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
@@ -993,13 +965,7 @@ public class Manager {
           break;
         case REQUEST_INFO:
           if (group != null) {
-            try {
-              sendUpdateGroupMessage(groupInfo.getGroupId(), source);
-            } catch (IOException e) {
-              logger.catching(e);
-            } catch (NotAGroupMemberException e) {
-              // We have left this group, so don't send a group update message
-            }
+            actions.add(new SendLegacyGroupUpdateAction(groupInfo.getGroupId(), source));
           }
           break;
         }
@@ -1035,6 +1001,7 @@ public class Manager {
       }
       accountData.profileCredentialStore.storeProfileKey(source, profileKey);
     }
+    return actions;
   }
 
   public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws IOException, MissingConfigurationException {
@@ -1073,7 +1040,7 @@ public class Manager {
           if (exception == null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
-            } catch (GroupNotFoundException | AttachmentInvalidException | InvalidInputException | InvalidGroupStateException | VerificationFailedException e) {
+            } catch (VerificationFailedException e) {
               logger.catching(e);
             }
           }
@@ -1098,7 +1065,7 @@ public class Manager {
   }
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
-      throws IOException, MissingConfigurationException, InvalidGroupStateException, VerificationFailedException {
+      throws IOException, MissingConfigurationException, VerificationFailedException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
     accountData.saveIfNeeded();
 
@@ -1146,11 +1113,7 @@ public class Manager {
             exception = e;
           }
           if (exception == null) {
-            try {
-              handleMessage(envelope, content, ignoreAttachments);
-            } catch (GroupNotFoundException | AttachmentInvalidException | InvalidInputException e) {
-              logger.catching(e);
-            }
+            handleMessage(envelope, content, ignoreAttachments);
           }
         }
         accountData.save();
@@ -1175,8 +1138,8 @@ public class Manager {
   }
 
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
-      throws GroupNotFoundException, AttachmentInvalidException, IOException, MissingConfigurationException, InvalidInputException, InvalidGroupStateException,
-             VerificationFailedException {
+      throws IOException, MissingConfigurationException, VerificationFailedException {
+    List<Action> actions = new ArrayList<>();
     if (content == null) {
       return;
     }
@@ -1186,33 +1149,25 @@ public class Manager {
     if (content.getDataMessage().isPresent()) {
       if (content.isNeedsReceipt()) {
         SignalServiceAddress sender = envelope.isUnidentifiedSender() && envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
-        markDelivered(content, sender);
+        actions.add(new SendDeliveryReceiptAction(sender, content.getTimestamp()));
       }
       SignalServiceDataMessage message = content.getDataMessage().get();
-      handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments);
+      actions.addAll(handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments));
     }
 
     if (content.getSyncMessage().isPresent()) {
       SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
       if (syncMessage.getSent().isPresent()) {
         SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
-        handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments);
+        actions.addAll(handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments));
       }
       if (syncMessage.getRequest().isPresent()) {
         RequestMessage rm = syncMessage.getRequest().get();
         if (rm.isContactsRequest()) {
-          try {
-            sendContacts();
-          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException | IOException e) {
-            logger.catching(e);
-          }
+          actions.add(new SendContactsSyncAction());
         }
         if (rm.isGroupsRequest()) {
-          try {
-            sendGroups();
-          } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException | IOException e) {
-            logger.catching(e);
-          }
+          actions.add(new SendGroupSyncAction());
         }
       }
 
@@ -1289,16 +1244,14 @@ public class Manager {
         accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
-  }
-
-  private void markDelivered(SignalServiceContent content, SignalServiceAddress sender) {
-    List<Long> timestamps = new ArrayList<>();
-    timestamps.add(content.getTimestamp());
-    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, timestamps, System.currentTimeMillis());
-    try {
-      sendReceipt(message, sender);
-    } catch (IOException e) {
-      logger.warn("Failed to send delivery receipt:", e);
+    for (Action action : actions) {
+      try {
+        logger.debug("running " + action.getName());
+        action.run(this);
+      } catch (Throwable t) {
+        logger.warn("Error running " + action.getName());
+        logger.catching(t);
+      }
     }
   }
 
@@ -1476,93 +1429,6 @@ public class Manager {
     return messageReceiver.retrieveAttachment(pointer, tmpFile, MAX_ATTACHMENT_SIZE);
   }
 
-  private String canonicalizeNumber(String number) throws InvalidNumberException {
-    String localNumber = accountData.username;
-    return PhoneNumberFormatter.formatNumber(number, localNumber);
-  }
-
-  private void sendGroups() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
-    File groupsFile = Util.createTempFile();
-
-    try {
-      try (OutputStream fos = new FileOutputStream(groupsFile)) {
-        DeviceGroupsOutputStream out = new DeviceGroupsOutputStream(fos);
-        for (GroupInfo record : accountData.groupStore.getGroups()) {
-          Optional<Integer> expirationTimer = Optional.absent();
-          Optional<String> color = Optional.absent();
-          out.write(new DeviceGroup(record.groupId, Optional.fromNullable(record.name), record.getMembers(), createGroupAvatarAttachment(record.groupId), record.active,
-                                    expirationTimer, color, false, Optional.absent(), false));
-        }
-      }
-
-      if (groupsFile.exists() && groupsFile.length() > 0) {
-        try (FileInputStream groupsFileStream = new FileInputStream(groupsFile)) {
-          SignalServiceAttachmentStream attachmentStream =
-              SignalServiceAttachment.newStreamBuilder().withStream(groupsFileStream).withContentType("application/octet-stream").withLength(groupsFile.length()).build();
-
-          sendSyncMessage(SignalServiceSyncMessage.forGroups(attachmentStream));
-        }
-      }
-    } finally {
-      try {
-        Files.delete(groupsFile.toPath());
-      } catch (IOException e) {
-        logger.warn("Failed to delete groups temp file " + groupsFile + ": " + e.getMessage());
-      }
-    }
-  }
-
-  private void sendContacts() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
-    File contactsFile = Util.createTempFile();
-
-    try {
-      try (OutputStream fos = new FileOutputStream(contactsFile)) {
-        DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
-        for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
-          VerifiedMessage verifiedMessage = null;
-          List<IdentityKeyStore.Identity> identities = accountData.axolotlStore.identityKeyStore.getIdentities(record.address.getSignalServiceAddress());
-          if (identities.size() == 0) {
-            continue;
-          }
-          IdentityKeyStore.Identity currentIdentity = null;
-          for (IdentityKeyStore.Identity id : identities) {
-            if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
-              currentIdentity = id;
-            }
-          }
-
-          if (currentIdentity != null) {
-            verifiedMessage = new VerifiedMessage(record.address.getSignalServiceAddress(), currentIdentity.getKey(), currentIdentity.getTrustLevel().toVerifiedState(),
-                                                  currentIdentity.getDateAdded().getTime());
-          }
-
-          // TODO: Don't hard code `false` value for blocked argument
-          Optional<Integer> expirationTimer = Optional.absent();
-          ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.address.getSignalServiceAddress());
-          ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
-          out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
-                                      createContactAvatarAttachment(record.address.getSignalServiceAddress()), Optional.fromNullable(record.color),
-                                      Optional.fromNullable(verifiedMessage), Optional.of(profileKey), false, expirationTimer, Optional.absent(), false));
-        }
-      }
-
-      if (contactsFile.exists() && contactsFile.length() > 0) {
-        try (FileInputStream contactsFileStream = new FileInputStream(contactsFile)) {
-          SignalServiceAttachmentStream attachmentStream =
-              SignalServiceAttachment.newStreamBuilder().withStream(contactsFileStream).withContentType("application/octet-stream").withLength(contactsFile.length()).build();
-
-          sendSyncMessage(SignalServiceSyncMessage.forContacts(new ContactsMessage(attachmentStream, true)));
-        }
-      }
-    } finally {
-      try {
-        Files.delete(contactsFile.toPath());
-      } catch (IOException e) {
-        logger.warn("Failed to delete contacts temp file " + contactsFile + ": " + e.getMessage());
-      }
-    }
-  }
-
   private void sendVerifiedMessage(SignalServiceAddress destination, IdentityKey identityKey, TrustLevel trustLevel)
       throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     VerifiedMessage verifiedMessage = new VerifiedMessage(destination, identityKey, trustLevel.toVerifiedState(), System.currentTimeMillis());
@@ -1575,8 +1441,6 @@ public class Manager {
     }
     return this.accountData.contactStore.getContacts();
   }
-
-  public ContactStore.ContactInfo getContact(SignalServiceAddress address) { return accountData.contactStore.getContact(address); }
 
   public GroupInfo getGroup(byte[] groupId) { return accountData.groupStore.getGroup(groupId); }
 
