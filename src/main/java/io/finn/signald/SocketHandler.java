@@ -30,6 +30,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.GroupInfo;
@@ -257,8 +258,8 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void send(JsonRequest request)
-      throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException, InvalidRecipientException, InvalidInputException {
+  private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException,
+                                                InvalidRecipientException, InvalidInputException, UnknownGroupException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -420,8 +421,8 @@ public class SocketHandler implements Runnable {
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
-  private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException,
-                                                       VerificationFailedException, InvalidGroupStateException, InterruptedException, ExecutionException, TimeoutException {
+  private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, VerificationFailedException,
+                                                       InvalidGroupStateException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException {
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
@@ -680,7 +681,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void react(JsonRequest request)
-      throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException {
+      throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, UnknownGroupException {
     Manager manager = Manager.get(request.username);
 
     if (request.recipientAddress != null) {

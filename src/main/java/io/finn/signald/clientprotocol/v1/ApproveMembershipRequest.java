@@ -25,6 +25,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
@@ -56,14 +57,10 @@ public class ApproveMembershipRequest implements RequestType {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException {
+  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);
-    if (group == null) {
-      request.error("group not found");
-      return;
-    }
 
     List<SignalServiceAddress> recipients = group.getMembers();
     recipients.addAll(members.stream().map(JsonAddress::getSignalServiceAddress).collect(Collectors.toSet()));

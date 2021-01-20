@@ -24,6 +24,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -66,7 +67,7 @@ public class UpdateGroupRequest implements RequestType {
   @OneOfRequired({"title", "addMembers"}) public List<JsonAddress> removeMembers;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException {
+  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);

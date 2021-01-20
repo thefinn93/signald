@@ -27,6 +27,7 @@ import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
@@ -58,8 +59,8 @@ public class SendRequest implements RequestType {
   public List<JsonMention> mentions;
 
   @Override
-  public void run(Request request)
-      throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException, InvalidInputException {
+  public void run(Request request) throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException,
+                                          NoSuchAccountException, InvalidInputException, UnknownGroupException {
     Manager manager = Manager.get(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

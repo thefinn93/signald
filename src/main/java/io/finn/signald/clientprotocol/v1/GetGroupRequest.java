@@ -26,6 +26,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
@@ -42,7 +43,7 @@ public class GetGroupRequest implements RequestType {
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, InvalidGroupStateException, VerificationFailedException {
+  public void run(Request request) throws IOException, NoSuchAccountException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException {
     GroupsV2Manager groupsV2Manager = Manager.get(account).getGroupsV2Manager();
     Group group = groupsV2Manager.getGroup(groupID, revision);
     request.reply(group.getJsonGroupV2Info());

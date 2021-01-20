@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.util.GroupsUtil;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
@@ -53,26 +53,24 @@ public class GroupsV2Storage {
     return credentials.get(today).credential;
   }
 
-  public Group get(Group group) {
+  public Group get(Group group) throws UnknownGroupException {
     String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
     return get(id);
   }
 
-  public Group get(SignalServiceGroupV2 group) {
+  public Group get(SignalServiceGroupV2 group) throws UnknownGroupException {
     String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
     return get(id);
   }
 
-  public Group get(String id) {
+  public Group get(String id) throws UnknownGroupException {
     for (Group g : groups) {
       if (g.getID().equals(id)) {
         return g;
       }
     }
-    return null;
+    throw new UnknownGroupException();
   }
-
-  public void update(JsonGroupV2Info groupInfo) {}
 
   public void update(Group group) {
     String id = group.getID();
@@ -87,8 +85,10 @@ public class GroupsV2Storage {
   }
 
   public void remove(Group group) {
-    Group g = get(group);
-    if (g == null) {
+    Group g;
+    try {
+      g = get(group);
+    } catch (UnknownGroupException e) {
       return;
     }
     groups.remove(g);

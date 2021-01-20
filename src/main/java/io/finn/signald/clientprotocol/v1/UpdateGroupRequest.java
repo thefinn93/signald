@@ -22,6 +22,7 @@ import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -63,7 +64,7 @@ public class UpdateGroupRequest implements RequestType {
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, GroupNotFoundException, NotAGroupMemberException,
-                                          AttachmentInvalidException, InterruptedException, ExecutionException, TimeoutException {
+                                          AttachmentInvalidException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
 

@@ -17,8 +17,8 @@
 
 package io.finn.signald;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.GroupsV2Storage;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -79,7 +79,11 @@ public class GroupsV2Manager {
     assert message.getGroupContext().isPresent();
     assert message.getGroupContext().get().getGroupV2().isPresent();
     SignalServiceGroupV2 group = message.getGroupContext().get().getGroupV2().get();
-    Group localState = storage.get(group);
+    Group localState = null;
+    try {
+      localState = storage.get(group);
+    } catch (UnknownGroupException ignored) {
+    }
 
     if (localState != null && localState.revision == group.getRevision()) {
       return false;
@@ -95,7 +99,7 @@ public class GroupsV2Manager {
     return true;
   }
 
-  public Pair<SignalServiceDataMessage.Builder, Group> updateTitle(String groupID, String title) throws IOException, VerificationFailedException {
+  public Pair<SignalServiceDataMessage.Builder, Group> updateTitle(String groupID, String title) throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
@@ -113,7 +117,7 @@ public class GroupsV2Manager {
     return new Pair<>(updateMessage, group);
   }
 
-  public Pair<SignalServiceDataMessage.Builder, Group> updateAvatar(String groupID, String avatar) throws IOException, VerificationFailedException {
+  public Pair<SignalServiceDataMessage.Builder, Group> updateAvatar(String groupID, String avatar) throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     final byte[] avatarBytes = readAvatarBytes(avatar);
@@ -146,7 +150,8 @@ public class GroupsV2Manager {
     return avatarBytes;
   }
 
-  public Pair<SignalServiceDataMessage.Builder, Group> addMembers(String groupID, List<ProfileAndCredentialEntry> members) throws IOException, VerificationFailedException {
+  public Pair<SignalServiceDataMessage.Builder, Group> addMembers(String groupID, List<ProfileAndCredentialEntry> members)
+      throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
@@ -157,7 +162,7 @@ public class GroupsV2Manager {
         profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
       }
       if (!profileAndCredentialEntry.getServiceAddress().getUuid().isPresent()) {
-        logger.warn("cannot add member to group because we do not know their UUID!", new JsonAddress(profileAndCredentialEntry.getServiceAddress()).toRedactedString());
+        logger.warn("cannot add member to group because we do not know their UUID!");
       }
       UUID uuid = profileAndCredentialEntry.getServiceAddress().getUuid().get();
       candidates.add(new GroupCandidate(uuid, profileKeyCredential));
@@ -177,7 +182,7 @@ public class GroupsV2Manager {
     return new Pair<>(updateMessage, group);
   }
 
-  public Pair<SignalServiceDataMessage.Builder, Group> removeMembers(String groupID, Set<UUID> members) throws IOException, VerificationFailedException {
+  public Pair<SignalServiceDataMessage.Builder, Group> removeMembers(String groupID, Set<UUID> members) throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
@@ -225,9 +230,7 @@ public class GroupsV2Manager {
     for (int attempt = 0; attempt < 5; attempt++) {
       try {
         GroupChange.Actions changeActions = change.setRevision(currentRevision + 1).build();
-        GroupChange signedGroupChange = commitJoinToServer(changeActions, groupSecretParams, password);
-
-        return signedGroupChange;
+        return commitJoinToServer(changeActions, groupSecretParams, password);
       } catch (ConflictException e) {
         currentRevision = getGroupJoinInfo(groupSecretParams, password).getRevision();
       }
@@ -241,8 +244,8 @@ public class GroupsV2Manager {
     GroupsV2AuthorizationString authorizationString = groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredentialResponse);
     return groupsV2Api.patchGroup(change, authorizationString, Optional.fromNullable(password));
   }
-  public Group getGroup(String groupID) throws VerificationFailedException, InvalidGroupStateException, IOException { return getGroup(groupID, -1); }
-  public Group getGroup(String groupID, int revision) throws VerificationFailedException, InvalidGroupStateException, IOException {
+  public Group getGroup(String groupID) throws VerificationFailedException, InvalidGroupStateException, IOException, UnknownGroupException { return getGroup(groupID, -1); }
+  public Group getGroup(String groupID, int revision) throws VerificationFailedException, InvalidGroupStateException, IOException, UnknownGroupException {
     Group g = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(g.masterKey);
     return getGroup(groupSecretParams, revision);
@@ -250,7 +253,11 @@ public class GroupsV2Manager {
 
   public Group getGroup(GroupSecretParams groupSecretParams, int revision) throws InvalidGroupStateException, VerificationFailedException, IOException {
     String groupID = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
-    Group group = storage.get(groupID);
+    Group group = null;
+    try {
+      group = storage.get(groupID);
+    } catch (UnknownGroupException ignored) {
+    }
     if (group == null || group.revision < revision || revision < 0) {
       int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
       AuthCredentialResponse authCredential = storage.getAuthCredential(groupsV2Api, today);

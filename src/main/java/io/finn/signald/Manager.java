@@ -20,6 +20,7 @@ import io.finn.signald.actions.*;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.GroupsUtil;
@@ -471,7 +472,7 @@ public class Manager {
 
   public List<JsonGroupV2Info> getGroupsV2Info() { return accountData.groupsV2.groups.stream().map(Group::getJsonGroupV2Info).collect(Collectors.toList()); }
 
-  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException {
+  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException, UnknownGroupException {
     Group g = accountData.groupsV2.get(group);
     if (g.group.getDisappearingMessagesTimer() != null && g.group.getDisappearingMessagesTimer().getDuration() != 0) {
       message.withExpiration(g.group.getDisappearingMessagesTimer().getDuration());
@@ -861,7 +862,7 @@ public class Manager {
   private void handleEndSession(SignalServiceAddress address) { accountData.axolotlStore.deleteAllSessions(address); }
 
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, JsonAddress recipientAddress, String recipientGroupId)
-      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException {
+      throws GroupNotFoundException, NotAGroupMemberException, IOException, InvalidRecipientException, UnknownGroupException {
     if (recipientGroupId != null && recipientAddress == null) {
       if (recipientGroupId.length() == 24) { // redirect to new group if it exists
         recipientGroupId = accountData.getMigratedGroupId(recipientGroupId);
