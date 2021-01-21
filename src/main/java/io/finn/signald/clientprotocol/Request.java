@@ -191,7 +191,10 @@ public class Request {
           value = exactlyOneOfRequired.get(key);
         }
 
-        value++;
+        if (request.has(f.getName())) {
+          value++;
+        }
+
         exactlyOneOfRequired.put(key, value);
       }
     }
@@ -205,7 +208,7 @@ public class Request {
             allOptions.add(f.getName());
           }
         }
-        errors.add("exactly one required of: " + String.join(", ", allOptions));
+        errors.add("exactly one required of: " + String.join(", ", allOptions) + " (" + String.valueOf(entry.getValue()) + " found)");
       }
     }
 
