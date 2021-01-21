@@ -21,6 +21,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface OneOfRequired {
-  String[] value();
+public @interface ExactlyOneOfRequired {
+
+  String value();
+
+  String RECIPIENT = "recipient";
+  String GROUP_MODIFICATION = "group-modification";
 }

@@ -26,10 +26,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.JsonMessageWrapper;
-import io.finn.signald.annotations.OneOfRequired;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.RequiredNonEmpty;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.v1.*;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
@@ -154,6 +151,7 @@ public class Request {
 
   private List<String> validate(JsonNode request) {
     List<String> errors = new ArrayList<>();
+    HashMap<String, Integer> exactlyOneOfRequired = new HashMap<>();
 
     for (Field f : requestType.getClass().getFields()) {
       // Field does not exist in request
@@ -161,17 +159,16 @@ public class Request {
         if (f.getAnnotation(Required.class) != null || f.getAnnotation(RequiredNonEmpty.class) != null) {
           errors.add("missing required argument: " + f.getName());
         }
-
-        if (f.getAnnotation(OneOfRequired.class) != null) {
-          OneOfRequired requirement = f.getAnnotation(OneOfRequired.class);
+        if (f.getAnnotation(AtLeastOneOfRequired.class) != null) {
+          AtLeastOneOfRequired requirement = f.getAnnotation(AtLeastOneOfRequired.class);
           int found = 0;
           for (String option : requirement.value()) {
             if (request.has(option)) {
               found++;
             }
           }
-          if (found != 1) {
-            errors.add("exactly one required of: " + f.getName() + " or " + String.join(" or ", requirement.value()));
+          if (found == 0) {
+            errors.add("at least one required of: " + f.getName() + " or " + String.join(" or ", requirement.value()));
           }
         }
       } else { // argument is present
@@ -183,6 +180,32 @@ public class Request {
             }
           }
         }
+      }
+
+      if (f.getAnnotation(ExactlyOneOfRequired.class) != null) {
+        ExactlyOneOfRequired requirement = f.getAnnotation(ExactlyOneOfRequired.class);
+        String key = requirement.value();
+
+        Integer value = 0;
+        if (exactlyOneOfRequired.containsKey(key)) {
+          value = exactlyOneOfRequired.get(key);
+        }
+
+        value++;
+        exactlyOneOfRequired.put(key, value);
+      }
+    }
+
+    for (Map.Entry<String, Integer> entry : exactlyOneOfRequired.entrySet()) {
+      if (entry.getValue() != 1) {
+        List<String> allOptions = new ArrayList<>();
+        for (Field f : requestType.getClass().getFields()) {
+          ExactlyOneOfRequired requirement = f.getAnnotation(ExactlyOneOfRequired.class);
+          if (requirement != null && requirement.value().equals(entry.getKey())) {
+            allOptions.add(f.getName());
+          }
+        }
+        errors.add("exactly one required of: " + String.join(", ", allOptions));
       }
     }
 

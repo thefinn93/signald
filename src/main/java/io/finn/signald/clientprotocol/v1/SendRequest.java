@@ -20,10 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.JsonAttachment;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
-import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.OneOfRequired;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidRecipientException;
@@ -47,13 +44,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
+
 @SignaldClientRequest(type = "send", ResponseClass = SendResponse.class)
 public class SendRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
-  @OneOfRequired({"recipientGroupId"}) public JsonAddress recipientAddress;
-  @ExampleValue(ExampleValue.GROUP_ID) @OneOfRequired({"recipientAddress"}) public String recipientGroupId;
-  @ExampleValue(ExampleValue.MESSAGE_BODY) @OneOfRequired({"attachments"}) public String messageBody;
-  @OneOfRequired({"messageBody"}) public List<JsonAttachment> attachments;
+  @ExactlyOneOfRequired(RECIPIENT) public JsonAddress recipientAddress;
+  @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
+  @ExampleValue(ExampleValue.MESSAGE_BODY) @AtLeastOneOfRequired({"attachments"}) public String messageBody;
+  @AtLeastOneOfRequired({"messageBody"}) public List<JsonAttachment> attachments;
   public JsonQuote quote;
   public Long timestamp;
   public List<JsonMention> mentions;

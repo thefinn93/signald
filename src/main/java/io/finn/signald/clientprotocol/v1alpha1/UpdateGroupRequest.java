@@ -52,6 +52,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
+
 @SignaldClientRequest(type = "update_group", ResponseClass = JsonGroupV2Info.class)
 @Doc("modify a group. only v2 groups for now")
 @Deprecated
@@ -60,11 +62,11 @@ public class UpdateGroupRequest implements RequestType {
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
-  @ExampleValue(ExampleValue.GROUP_TITLE) @OneOfRequired({"addMembers", "removeMembers"}) public String title;
+  @ExampleValue(ExampleValue.GROUP_TITLE) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String title;
 
-  @OneOfRequired({"title", "removeMembers"}) public List<JsonAddress> addMembers;
+  @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> addMembers;
 
-  @OneOfRequired({"title", "addMembers"}) public List<JsonAddress> removeMembers;
+  @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> removeMembers;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException {

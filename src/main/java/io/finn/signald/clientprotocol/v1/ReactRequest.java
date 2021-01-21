@@ -33,13 +33,14 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import java.io.IOException;
 import java.util.List;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
+
 @SignaldClientRequest(type = "react", ResponseClass = SendResponse.class)
 @Doc("react to a previous message")
 public class ReactRequest implements RequestType {
-
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
-  @OneOfRequired({"recipientGroupId"}) public JsonAddress recipientAddress;
-  @ExampleValue(ExampleValue.GROUP_ID) @OneOfRequired({"recipientAddress"}) public String recipientGroupId;
+  @ExactlyOneOfRequired(RECIPIENT) public JsonAddress recipientAddress;
+  @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
   @Required public JsonReaction reaction;
   public long timestamp;
 

@@ -46,6 +46,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
+
 @SignaldClientRequest(type = "update_group", ResponseClass = GroupInfo.class)
 @Doc("modify a group")
 @Deprecated
@@ -56,13 +58,13 @@ public class UpdateGroupRequest implements RequestType {
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
-  @ExampleValue(ExampleValue.GROUP_TITLE) @OneOfRequired({"avatar", "addMembers", "removeMembers"}) public String title;
+  @ExampleValue(ExampleValue.GROUP_TITLE) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String title;
 
-  @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @OneOfRequired({"title", "addMembers", "removeMembers"}) public String avatar;
+  @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String avatar;
 
-  @OneOfRequired({"title", "avatar", "removeMembers"}) public List<JsonAddress> addMembers;
+  @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> addMembers;
 
-  @OneOfRequired({"title", "avatar", "addMembers"}) public List<JsonAddress> removeMembers;
+  @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> removeMembers;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, GroupNotFoundException, NotAGroupMemberException,
