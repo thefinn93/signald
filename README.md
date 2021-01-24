@@ -417,8 +417,9 @@ Takes a [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html)
 
 [see on docs.signald.org](https://docs.signald.org/actions/v1/approve_membership.html)
 
+### `join_group`
 
-
+[see on docs.signald.org](https://docs.signald.org/actions/v1/join_group.html)
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli).
