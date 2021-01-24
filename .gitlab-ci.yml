@@ -2,20 +2,13 @@ stages:
   - lint
   - build
   - test
+  - publish
   - docs
   - downstreams
 
 variables:
   zkgroup_ver: "0.7.0"
   DOCKER_TLS_CERTDIR: "/certs"
-
-# from https://forum.gitlab.com/t/prevent-ci-cd-for-release-branches-for-forks/42207/2
-workflow:
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE != "signald"'
-      when: never
-    - when: always
-
 
 services:
   - docker:20.10.0-dind
@@ -76,19 +69,16 @@ build java11 aarch64-unknown-linux-gnu:
     SIGNALD_TARGET: aarch64-unknown-linux-gnu
 
 build deb x86:
-  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
   stage: build
   needs: []
   before_script:
-    - export VERSION=$(./version.sh)
+    - export VERSION="$(./version.sh)"
     - echo "Building signald version $VERSION"
   script:
-    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
-    - cat debian/changelog
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
     - dpkg-buildpackage -b
-    - cp -rv ../signald_${VERSION}* .
-  cache:
-    key: deb-builder
+    - mv ../signald_* .
   artifacts:
     paths:
       - "signald_*"
@@ -98,7 +88,7 @@ build deb x86:
     - when: manual
       allow_failure: true
 
-build docker x86:
+build-docker x86:
   image: docker:latest
   stage: build
   needs: []
@@ -199,6 +189,21 @@ integration tests x86_64-apple-darwin:
     - when: manual
       allow_failure: true
 
+publish debian packages:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
+  stage: publish
+  tags: [deb-signer]
+  needs: ["build deb x86"]
+  script:
+    - tools/aptly-publish.sh
+  variables:
+    DISTRIBUTION: unstable
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 validate protocol:
   image: golang:latest
   stage: docs
@@ -206,7 +211,6 @@ validate protocol:
     - apt-get update && apt-get install -y openjdk-11-jdk-headless
   script:
     - build/install/signald/bin/signald --dump-protocol > protocol.json
-    - go run ./tools/validate-protocol.go < protocol.json
   needs: ["build java11 x86_64-unknown-linux-gnu"]
   artifacts:
     paths:
@@ -218,3 +222,4 @@ docs.signald.org:
   trigger: signald/docs.signald.org
   only:
     - main
+

@@ -1,9 +1,9 @@
 # Debian Installation
 
-Add the following to your `sources.list`:
+put the following in `/etc/apt/sources.list.d/signald.list`:
 
 ```
-deb https://updates.signald.org master main
+deb https://updates.signald.org unstable main
 ```
 
 And trust the signing key:
