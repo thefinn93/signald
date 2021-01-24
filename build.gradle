@@ -1,3 +1,8 @@
+import org.gradle.nativeplatform.platform.internal.ArchitectureInternal
+import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+import org.xml.sax.SAXParseException
+
 plugins {
    id 'de.fuerstenau.buildconfig' version '1.1.8'
 }
@@ -10,9 +15,63 @@ mainClassName = 'io.finn.signald.Main'
 
 compileJava.options.encoding = 'UTF-8'
 
+// crappy rust target detection
+String getTarget() {
+    String target = System.getenv("SIGNALD_TARGET") // Allow overriding the architecture
+    if(target != null) {
+        System.out.println("skipping target detection, using " + target)
+        return target
+    }
+
+    String first = null;
+    String second = null
+    String third = null
+
+    ArchitectureInternal arch = DefaultNativePlatform.getCurrentArchitecture()
+    switch(arch.getName()) {
+        case ["x86_64", "x64", "x86-64"]:  // based on https://github.com/wasmerio/wasmer-java/blob/d1fc32347b206f28ddaf48896267a9740770323e/build.gradle#L79-L82
+            first = "x86_64"
+        break
+        case "aarch64":
+            first = "aarch64"
+        break
+        case "arm-v7":
+            first = "armv7"
+        break
+    }
+
+    OperatingSystemInternal os = DefaultNativePlatform.getCurrentOperatingSystem()
+    if(os.isLinux()) {
+        second = "unknown-linux"
+        if(arch.getName() == "arm-v7") {
+            third = "gnueabihf"
+        } else {
+            third = "gnu"
+        }
+    }
+
+    if(os.isMacOsX()) {
+        second = "apple"
+        third = "darwin"
+    }
+
+    if(first == null || second == null || third == null) {
+        throw new Exception("Unable to detect architecture." +
+                "\n * os: " + os.getName() +
+                "\n * arch: " + arch.getName() +
+                "\n * linux: " + os.isLinux() ? "yes" : "no" +
+                "\n * osx:" + os.isMacOsX() ? "yes": "no" +
+                "\n * windows: " + os.isWindows() ? "yes": "no" +
+                "\n\n Set environment variable SIGNALD_TARGET to force a target" +
+                "\n See https://gitlab.com/signald/signald/-/merge_requests/44")
+    }
+    target = first + "-" + second + "-" + third
+    System.out.println("detected build target: " + target + " (arch=" + arch.getName() + " os=" + os.getName() +")")
+    return target
+}
 
 repositories {
-    maven {url "https://raw.github.com/AsamK/maven/master/releases/"}
+    maven {url "https://gitlab.com/api/v4/groups/6853927/-/packages/maven"} // https://gitlab.com/groups/signald/-/packages
     maven {url "https://plugins.gradle.org/m2/"}
     mavenCentral()
 }
@@ -34,7 +93,7 @@ configurations {
 }
 
 dependencies {
-    implementation 'com.github.turasa:signal-service-java:2.15.3_unofficial_16'
+    implementation 'com.github.turasa:signal-service-java-' + getTarget() + ':2.15.3_unofficial_17'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.66'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.3.2'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.3.2'
@@ -54,7 +113,7 @@ buildConfig {
 
   buildConfigField 'String', 'BRANCH', { System.getenv("CI_BUILD_REF_NAME") ?: "" }
   buildConfigField 'String', 'COMMIT', { System.getenv("CI_COMMIT_SHA") ?: "" }
-  buildConfigField 'String', 'BUILD_TIMESTAMP', { String.valueOf(System.currentTimeMillis()); }
+  buildConfigField 'String', 'BUILD_TIMESTAMP', { String.valueOf(System.currentTimeMillis()) }
 
   buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://textsecure-service.whispersystems.org" }
   buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org" }
@@ -102,13 +161,13 @@ task checkLibVersions {
                             // versions.removeAll { it.toLowerCase().contains('beta') }
                             // versions.removeAll { it.toLowerCase().contains('rc') }
                             // def newest = versions.max()
-                            def newest = metadata.versioning.latest;
+                            def newest = metadata.versioning.latest
                             if ("$version" != "$newest") {
                                 println "UPGRADE {\"group\": \"$group\", \"name\": \"$name\", \"current\": \"$version\", \"latest\": \"$newest\"}"
                             }
                         } catch (FileNotFoundException e) {
                             logger.debug "Unable to download $url: $e.message"
-                        } catch (org.xml.sax.SAXParseException e) {
+                        } catch (SAXParseException e) {
                             logger.debug "Unable to parse $url: $e.message"
                         }
                         checked[dependency] = true

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class TestRequest {
   private Thread signaldMain;
-  private static final File SOCKET_FILE = new File(System.getProperty("java.io.tmpdir"), "signald.sock");
+  private static final File SOCKET_FILE = new File("signald.sock");
   private AFUNIXSocket socket;
   private PrintWriter writer;
   private BufferedReader reader;
@@ -30,6 +30,10 @@ class TestRequest {
 
   @BeforeAll
   public void startSignald() throws InterruptedException {
+    if (SOCKET_FILE.exists()) {
+      logger.info("Deleting socket file " + SOCKET_FILE.getAbsolutePath());
+      SOCKET_FILE.delete();
+    }
     signaldMain = new Thread(new RunnableMain(SOCKET_FILE.getAbsolutePath()), "main");
     signaldMain.start();
     while (!SOCKET_FILE.exists()) {
@@ -41,6 +45,10 @@ class TestRequest {
   @AfterAll
   public void stopSignald() {
     signaldMain.interrupt();
+    if (SOCKET_FILE.exists()) {
+      logger.info("Deleting socket file " + SOCKET_FILE.getAbsolutePath());
+      SOCKET_FILE.delete();
+    }
   }
 
   @BeforeEach
