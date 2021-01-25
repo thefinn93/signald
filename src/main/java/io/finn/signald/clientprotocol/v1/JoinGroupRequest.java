@@ -61,6 +61,10 @@ public class JoinGroupRequest implements RequestType {
       throws GroupInviteLinkUrl.InvalidGroupLinkException, GroupInviteLinkUrl.UnknownGroupLinkVersionException, IOException, NoSuchAccountException, InterruptedException,
              ExecutionException, TimeoutException, GroupLinkNotActiveException, VerificationFailedException, InvalidGroupStateException, UnknownGroupException {
     GroupInviteLinkUrl groupInviteLinkUrl = GroupInviteLinkUrl.fromUri(uri);
+    if (groupInviteLinkUrl == null) {
+      request.error("failed to parse invite URL");
+      return;
+    }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupInviteLinkUrl.getGroupMasterKey());
 
     Manager m = Manager.get(account);
@@ -86,15 +90,19 @@ public class JoinGroupRequest implements RequestType {
 
     Group group = groupsV2Manager.getGroup(groupSecretParams, decryptedChange.getRevision());
 
-    if (group != null) {
-      SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
-      SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build()).withExpiration(group.getTimer());
-      m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
-
-      AccountData accountData = m.getAccountData();
-      accountData.groupsV2.update(group);
-      accountData.save();
+    if (group == null) {
+      request.error("unknown error fetching group");
+      return;
     }
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build()).withExpiration(group.getTimer());
+    m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
+
+    AccountData accountData = m.getAccountData();
+    accountData.groupsV2.update(group);
+    accountData.save();
+
     request.reply(new JsonGroupJoinInfo(groupJoinInfo, groupInviteLinkUrl.getGroupMasterKey()));
   }
 }
