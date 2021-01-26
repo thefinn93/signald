@@ -176,11 +176,14 @@ integration tests aarch64:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
 
-documentation:
-  image: openjdk:11-jdk
+validate protocol:
+  image: golang:latest
   stage: docs
+  before_script:
+    - apt-get update && apt-get install -y openjdk-11-jdk-headless
   script:
     - build/install/signald/bin/signald --dump-protocol > protocol.json
+    - go run ./tools/validate-protocol.go < protocol.json
   needs: ["build java11 x86"]
   artifacts:
     paths:
@@ -188,7 +191,7 @@ documentation:
 
 docs.signald.org:
   stage: downstreams
-  needs: [documentation]
+  needs: ["validate protocol"]
   trigger: signald/docs.signald.org
   only:
     - main

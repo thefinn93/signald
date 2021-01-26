@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
-@SignaldClientRequest(type = "update_group", ResponseClass = io.finn.signald.clientprotocol.v1alpha2.GroupInfo.class)
+@SignaldClientRequest(type = "update_group", ResponseClass = GroupInfo.class)
 @Doc("modify a group")
 public class UpdateGroupRequest implements RequestType {
   private static final Logger logger = LogManager.getLogger();

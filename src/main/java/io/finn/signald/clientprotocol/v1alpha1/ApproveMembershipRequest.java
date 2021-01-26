@@ -26,7 +26,6 @@ import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
