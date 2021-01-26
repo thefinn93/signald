@@ -40,7 +40,7 @@ class JsonIdentityList {
     } else {
       List<IdentityKeyStore.Identity> identities = m.getIdentities(address);
       if (identities != null) {
-        for (IdentityKeyStore.Identity identity : m.getIdentities(address)) {
+        for (IdentityKeyStore.Identity identity : identities) {
           this.identities.add(new JsonIdentity(identity, m, address));
         }
       }

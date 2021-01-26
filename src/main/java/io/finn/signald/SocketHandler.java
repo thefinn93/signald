@@ -555,7 +555,11 @@ public class SocketHandler implements Runnable {
 
   private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException {
     Manager m = Manager.get(request.username);
-    this.reply("identities", new JsonIdentityList(request.recipientAddress == null ? null : request.recipientAddress.getSignalServiceAddress(), m), request.id);
+    SignalServiceAddress address = null;
+    if (request.recipientAddress != null) {
+      address = m.getResolver().resolve(request.recipientAddress.getSignalServiceAddress());
+    }
+    this.reply("identities", new JsonIdentityList(address, m), request.id);
   }
 
   private void trust(JsonRequest request) throws IOException, NoSuchAccountException {
