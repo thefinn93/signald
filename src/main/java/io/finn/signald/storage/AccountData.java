@@ -68,6 +68,7 @@ public class AccountData {
   public ContactStore contactStore;
   public RecipientStore recipientStore = new RecipientStore();
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
+  public BackgroundActionsLastRun backgroundActionsLastRun = new BackgroundActionsLastRun();
 
   public int lastAccountRefresh;
   public int version;

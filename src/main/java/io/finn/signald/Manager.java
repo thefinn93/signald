@@ -288,9 +288,8 @@ public class Manager {
       accountData.save();
     }
     groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID());
-    if (accountManager.getPreKeysCount() < PREKEY_MINIMUM_COUNT) {
-      refreshPreKeys();
-      accountData.save();
+    if (accountData.backgroundActionsLastRun.refreshPreKeysNeeded()) {
+      new RefreshPreKeysAction().run(this);
     }
     refreshAccountIfNeeded();
     try {
@@ -1154,6 +1153,10 @@ public class Manager {
       }
       SignalServiceDataMessage message = content.getDataMessage().get();
       actions.addAll(handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments));
+    }
+
+    if (envelope.isPreKeySignalMessage()) {
+      actions.add(new RefreshPreKeysAction());
     }
 
     if (content.getSyncMessage().isPresent()) {
