@@ -28,6 +28,7 @@ import io.finn.signald.Empty;
 import io.finn.signald.JsonAccountList;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
@@ -137,7 +138,7 @@ public class ProtocolRequest implements RequestType {
 
     PropertyVisitorWrapper(List<Class> t) { types = t; }
 
-    public void addProperty(String key, JavaType t, Doc doc, ExampleValue exampleValue) {
+    public void addProperty(String key, JavaType t, Doc doc, ExampleValue exampleValue, boolean required) {
       ObjectNode property = JsonNodeFactory.instance.objectNode();
 
       JavaType type = t;
@@ -164,6 +165,10 @@ public class ProtocolRequest implements RequestType {
 
       if (exampleValue != null) {
         property.put("example", exampleValue.value());
+      }
+
+      if (required) {
+        property.put("required", true);
       }
 
       addType(type.getRawClass());
@@ -207,7 +212,8 @@ public class ProtocolRequest implements RequestType {
     public void optionalProperty(BeanProperty writer) {
       Doc doc = writer.getAnnotation(Doc.class);
       ExampleValue example = writer.getAnnotation(ExampleValue.class);
-      wrapper.addProperty(writer.getName(), writer.getType(), doc, example);
+      boolean required = writer.getAnnotation(Required.class) != null;
+      wrapper.addProperty(writer.getName(), writer.getType(), doc, example, required);
     }
 
     @Override
