@@ -33,6 +33,7 @@ clang-format:
   artifacts:
     paths:
       - build/
+    expire_in: 30 days
 
 build java8 x86_64-unknown-linux-gnu:
   extends: .build
@@ -82,6 +83,7 @@ build deb x86:
   artifacts:
     paths:
       - "signald_*"
+    expire_in: 30 days
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -145,6 +147,7 @@ integration tests x86:
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
+    expire_in: 30 days
 
 integration tests aarch64-unknown-linux-gnu:
   image: debian
@@ -160,6 +163,7 @@ integration tests aarch64-unknown-linux-gnu:
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
+    expire_in: 30 days
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -183,6 +187,7 @@ integration tests x86_64-apple-darwin:
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
+    expire_in: 30 days
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -215,6 +220,7 @@ validate protocol:
   artifacts:
     paths:
       - protocol.json
+    expire_in: 1 year
 
 docs.signald.org:
   stage: downstreams
