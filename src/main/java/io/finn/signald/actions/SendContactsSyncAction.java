@@ -71,7 +71,7 @@ public class SendContactsSyncAction implements Action {
           ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
           out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
                                       m.createContactAvatarAttachment(record.address.getSignalServiceAddress()), Optional.fromNullable(record.color),
-                                      Optional.fromNullable(verifiedMessage), Optional.of(profileKey), false, expirationTimer, Optional.absent(), false));
+                                      Optional.fromNullable(verifiedMessage), Optional.fromNullable(profileKey), false, expirationTimer, Optional.absent(), false));
         }
       }
 
