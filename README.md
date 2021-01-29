@@ -67,7 +67,7 @@ signald's protocol can be somewhat annoying to interact with, and several librar
   * [pysignald](https://pypi.org/project/pysignald/) - general purpose signald library
   * [Semaphore](https://github.com/lwesterhof/semaphore) - a simple (rule-based) bot library for Signal Private Messenger in Python
 * Go:
-  * [signald-go](https://git.callpipe.com/finn/signald-go) - a signald library in go
+  * [signald-go](https://gitlab.com/signald/signald-go) - a signald library in go
 
 ### Write a library
 When started, signald will create a unix socket at `/var/run/signald/signald.sock` (can be overridden on the command line).

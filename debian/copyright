@@ -1,13 +1,13 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: signald
-Source: <https://git.callpipe.com/finn/signald>
+Source: <https://gitlab.com/signald/signald>
 
 Files: *
-Copyright: 2018 Finn Herzfeld <finn@janky.solutions>
+Copyright: 2021 Finn Herzfeld <finn@janky.solutions>
 License: GPL-3.0+
 
 Files: debian/*
-Copyright: 2018 Finn Herzfeld <signald@janky.solutions>
+Copyright: 2021 Finn Herzfeld <signald@janky.solutions>
 License: GPL-3.0+
 
 License: GPL-3.0+
