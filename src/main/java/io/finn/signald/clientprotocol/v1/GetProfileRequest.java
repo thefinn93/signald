@@ -42,7 +42,8 @@ public class GetProfileRequest implements RequestType {
 
   @Required @Doc("the address to look up") @JsonProperty("address") public JsonAddress requestedAddress;
 
-  @Doc("return results from local store immediately, refreshing from server if needed. If false (default), block until all pending profiles have been retrieved.") boolean async;
+  @Doc("return results from local store immediately, refreshing from server if needed. If false (default), block until all pending profiles have been retrieved.")
+  public boolean async;
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException {
