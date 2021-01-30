@@ -36,6 +36,7 @@ deb:build:
     - export VERSION=$(./version.sh)
     - echo "Building signald version $VERSION"
   script:
+    - sed -i '/^Recommends: signaldctl/d' debian/control
     - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="$VERSION"
     - cat debian/changelog
     - dpkg-buildpackage -b
