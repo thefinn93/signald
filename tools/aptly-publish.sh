@@ -21,6 +21,6 @@
 aptly repo create signald
 aptly mirror create -ignore-signatures backfill-mirror https://updates.signald.org "${DISTRIBUTION}" main
 aptly mirror update -ignore-signatures backfill-mirror
-aptly repo import backfill-mirror signald signald
+aptly repo import backfill-mirror signald signald signaldctl
 aptly repo add signald signald_*.deb
 aptly publish repo -config=.aptly.conf -batch -gpg-key="${SIGNING_KEY}" -distribution="${DISTRIBUTION}" "signald" "s3:updates.signald.org:"
