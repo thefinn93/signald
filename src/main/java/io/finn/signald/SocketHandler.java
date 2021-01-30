@@ -674,7 +674,7 @@ public class SocketHandler implements Runnable {
       return;
     }
     m.getAccountData().saveIfNeeded();
-    SignalServiceProfile profile = m.getProfile(address, profileEntry.getProfileKey());
+    SignalServiceProfile profile = m.getSignalServiceProfile(address, profileEntry.getProfileKey());
     this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
   }
 

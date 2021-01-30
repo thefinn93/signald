@@ -81,8 +81,35 @@ public class SignalProfile {
         ", unrestrictedUnidentifiedAccess=" + unrestrictedUnidentifiedAccess + ", capabilities=" + capabilities + '}';
   }
 
-  public static class Capabilities {
+  // Returns true if the name, avatar and capabilities are equal.
+  public boolean matches(SignalProfile other) {
+    if (!other.name.equals(name)) {
+      return false;
+    }
 
+    if (other.avatarFile != null) {
+      if (avatarFile == null) {
+        // other has an avatar, we do not
+        return false;
+      }
+      if (!other.avatarFile.getAbsolutePath().equals(avatarFile.getAbsolutePath())) {
+        return false;
+      }
+    } else {
+      if (avatarFile != null) {
+        // other has no avatar, we do
+        return false;
+      }
+    }
+
+    if (!other.capabilities.equals(capabilities)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  public static class Capabilities {
     @JsonIgnore public boolean uuid;
 
     @JsonProperty public boolean gv2;
@@ -90,5 +117,7 @@ public class SignalProfile {
     @JsonProperty public boolean storage;
 
     @JsonProperty public boolean gv1Migration;
+
+    public boolean equals(Capabilities other) { return other.uuid == uuid && other.gv2 == gv2 && other.storage == storage && other.gv1Migration == gv1Migration; }
   }
 }

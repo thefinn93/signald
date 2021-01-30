@@ -36,7 +36,6 @@ import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
-import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -104,7 +103,6 @@ public class Manager {
   public final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
   private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
-  private final static int PROFILE_REFRESH_TIME = 5 * 60 * 1000; // refresh profiles every 5 minutes
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
 
@@ -1517,7 +1515,7 @@ public class Manager {
     }
   }
 
-  public SignalServiceProfile getProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
+  public SignalServiceProfile getSignalServiceProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
     ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, Optional.of(profileKey), Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
     return profile.get(10, TimeUnit.SECONDS).getProfile();
@@ -1556,27 +1554,21 @@ public class Manager {
 
   public AccountData getAccountData() { return accountData; }
 
-  public ProfileAndCredentialEntry getRecipientProfileKeyCredential(SignalServiceAddress address) throws InterruptedException, ExecutionException, TimeoutException {
+  public ProfileAndCredentialEntry getRecipientProfileKeyCredential(SignalServiceAddress address) throws InterruptedException, ExecutionException, TimeoutException, IOException {
     ProfileAndCredentialEntry profileEntry = accountData.profileCredentialStore.get(address);
     if (profileEntry == null) {
       return null;
     }
-
-    if (profileEntry.getProfileKeyCredential() == null || System.currentTimeMillis() - profileEntry.getLastUpdateTimestamp() > PROFILE_REFRESH_TIME) {
-      ProfileAndCredential profileAndCredential;
-      SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
-      Optional<ProfileKey> profileKeyOptional = Optional.fromNullable(profileEntry.getProfileKey());
-      profileAndCredential = getMessageReceiver().retrieveProfile(address, profileKeyOptional, Optional.absent(), requestType).get(10, TimeUnit.SECONDS);
-
-      long now = new Date().getTime();
-      final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
-      final SignalProfile profile = decryptProfile(profileEntry.getProfileKey(), profileAndCredential.getProfile());
-      return accountData.profileCredentialStore.update(address, profileEntry.getProfileKey(), now, profile, profileKeyCredential);
+    RefreshProfileAction action = new RefreshProfileAction(profileEntry);
+    if (action.needsRefresh()) {
+      action.run(this);
+      return accountData.profileCredentialStore.get(address);
+    } else {
+      return profileEntry;
     }
-    return profileEntry;
   }
 
-  private SignalProfile decryptProfile(final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {
+  public SignalProfile decryptProfile(final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {
     File avatarFile = null;
     // TODO: implement avatar support
     // try {

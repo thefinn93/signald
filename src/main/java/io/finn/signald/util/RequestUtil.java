@@ -33,7 +33,7 @@ public class RequestUtil {
                     io.finn.signald.clientprotocol.v1alpha1.AcceptInvitationRequest.class, io.finn.signald.clientprotocol.v1alpha1.ApproveMembershipRequest.class,
                     io.finn.signald.clientprotocol.v1alpha1.GetGroupRequest.class, io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class, AcceptInvitationRequest.class,
                     ApproveMembershipRequest.class, GetGroupRequest.class, GetLinkedDevicesRequest.class, JoinGroupRequest.class, ProtocolRequest.class,
-                    RemoveLinkedDeviceRequest.class, UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class, MarkReadRequest.class);
+                    RemoveLinkedDeviceRequest.class, UpdateGroupRequest.class, SetProfile.class, ResolveAddressRequest.class, MarkReadRequest.class, GetProfileRequest.class);
 
   public static String getVersion(Class t) {
     if (t == null || t.isPrimitive() || t == UUID.class || t == Map.class) {

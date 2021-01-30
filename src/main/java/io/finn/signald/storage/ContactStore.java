@@ -114,6 +114,7 @@ public class ContactStore {
       if (c.getName().isPresent()) {
         name = c.getName().get();
       }
+
       if (c.getColor().isPresent()) {
         color = c.getColor().get();
       }

@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -154,10 +155,14 @@ public class Request {
     HashMap<String, Integer> exactlyOneOfRequired = new HashMap<>();
 
     for (Field f : requestType.getClass().getFields()) {
+      String name = f.getName();
+      if (f.getAnnotation(JsonProperty.class) != null && !f.getAnnotation(JsonProperty.class).value().equals("")) {
+        name = f.getAnnotation(JsonProperty.class).value();
+      }
       // Field does not exist in request
-      if (!request.has(f.getName())) {
+      if (!request.has(name)) {
         if (f.getAnnotation(Required.class) != null || f.getAnnotation(RequiredNonEmpty.class) != null) {
-          errors.add("missing required argument: " + f.getName());
+          errors.add("missing required argument: " + name);
         }
         if (f.getAnnotation(AtLeastOneOfRequired.class) != null) {
           AtLeastOneOfRequired requirement = f.getAnnotation(AtLeastOneOfRequired.class);
@@ -168,15 +173,15 @@ public class Request {
             }
           }
           if (found == 0) {
-            errors.add("at least one required of: " + f.getName() + " or " + String.join(" or ", requirement.value()));
+            errors.add("at least one required of: " + name + " or " + String.join(" or ", requirement.value()));
           }
         }
       } else { // argument is present
         if (f.getAnnotation(RequiredNonEmpty.class) != null) {
-          JsonNode field = request.get(f.getName());
+          JsonNode field = request.get(name);
           if (field.isArray()) {
             if (field.size() == 0) {
-              errors.add(f.getName() + " must have at least 1 entry");
+              errors.add(name + " must have at least 1 entry");
             }
           }
         }

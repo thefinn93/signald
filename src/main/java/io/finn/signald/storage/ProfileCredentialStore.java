@@ -77,6 +77,9 @@ public class ProfileCredentialStore {
     for (int i = 0; i < profiles.size(); i++) {
       if (profiles.get(i).getServiceAddress().matches(address)) {
         ProfileAndCredentialEntry p = profiles.get(i);
+        if (!p.getProfile().matches(entry.getProfile())) {
+          // TODO: announce profile change
+        }
         profiles.set(i, entry);
         unsaved = true;
         return entry;
