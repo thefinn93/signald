@@ -56,7 +56,7 @@ public class JsonGroupInfo {
     this.type = groupInfo.getType().toString();
   }
 
-  public JsonGroupInfo(GroupInfo groupInfo, Manager m) {
+  public JsonGroupInfo(GroupInfo groupInfo) {
     this.groupId = Base64.encodeBytes(groupInfo.groupId);
     this.name = groupInfo.name;
     this.members = new ArrayList<>();

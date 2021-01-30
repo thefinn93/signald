@@ -26,4 +26,6 @@ public class GroupInfo {
   public JsonGroupV2Info v2;
 
   public GroupInfo(Group group) { v2 = group.getJsonGroupV2Info(); }
+
+  public GroupInfo(io.finn.signald.storage.GroupInfo group) { v1 = new JsonGroupInfo(group); }
 }

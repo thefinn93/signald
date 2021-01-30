@@ -29,6 +29,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 
 @Doc("Remove a linked device from the Signal account. Only allowed when the local device id is 1")
 @SignaldClientRequest(type = "remove_linked_device", ResponseClass = Empty.class)
+@Deprecated
 public class RemoveLinkedDeviceRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 

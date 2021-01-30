@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
-
-import io.finn.signald.clientprotocol.v1.JsonGroupInfo;
-import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.storage.GroupInfo;
+package io.finn.signald.clientprotocol.v1;
 
 import java.util.ArrayList;
 import java.util.List;
 
-class JsonGroupList {
-  List<JsonGroupInfo> groups = new ArrayList<JsonGroupInfo>();
-  List<JsonGroupV2Info> groupsv2;
+public class GroupList {
+  public List<JsonGroupV2Info> groups;
+  public List<JsonGroupInfo> legacyGroups;
 
-  JsonGroupList(Manager m) {
-    for (GroupInfo group : m.getV1Groups()) {
-      if (group != null) {
-        this.groups.add(new JsonGroupInfo(group));
-      }
+  public GroupList() { groups = new ArrayList<>(); }
+
+  public void add(JsonGroupV2Info g) { groups.add(g); }
+
+  public void add(JsonGroupInfo g) {
+    if (legacyGroups == null) {
+      legacyGroups = new ArrayList<>();
     }
-
-    groupsv2 = m.getGroupsV2Info();
+    legacyGroups.add(g);
   }
 }
