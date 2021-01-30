@@ -9,6 +9,7 @@ Vcs-Git: https://gitlab.com/signald/signald.git
 Vcs-Browser: https://gitlab.com/signald/signald
 
 Package: signald
+Recommends: signaldctl (>= 0.1.0)
 Architecture: all
 Depends:default-jre, libunixsocket-java, ${misc:Depends}
 Description:  an unofficial daemon that facilitates communication with the Signal messaging app.
