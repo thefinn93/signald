@@ -47,15 +47,17 @@ public class ReactRequest implements RequestType {
   @Override
   public void run(Request request)
       throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException, InvalidInputException, UnknownGroupException {
-    Manager manager = Manager.get(username);
+    Manager m = Manager.get(username);
 
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();
     }
 
+    reaction.resolve(m.getResolver());
+
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
-    List<SendMessageResult> results = manager.send(messageBuilder, recipientAddress, recipientGroupId);
+    List<SendMessageResult> results = m.send(messageBuilder, recipientAddress, recipientGroupId);
     request.reply(new SendResponse(results, timestamp));
   }
 }
