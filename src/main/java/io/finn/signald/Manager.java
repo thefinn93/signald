@@ -867,7 +867,7 @@ public class Manager {
       if (recipientGroupId.length() == 44) {
         Group group = accountData.groupsV2.get(recipientGroupId);
         if (group == null) {
-          throw new GroupNotFoundException("Unknown group requsted");
+          throw new GroupNotFoundException("Unknown group requested");
         }
         return sendGroupV2Message(messageBuilder, group.getSignalServiceGroupV2());
       } else {
