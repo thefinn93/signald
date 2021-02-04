@@ -18,19 +18,22 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
+import java.io.File;
+
 @Doc("Information about a Signal user")
 public class Profile {
   @Doc("The user's name from local contact names if available, or if not in contact list their Signal profile name") public String name;
   @Doc("The user's Signal profile name") @JsonProperty("profile_name") public String profileName;
-  public String avatar;
+  @Doc("path to avatar on local disk") public String avatar;
   public JsonAddress address;
   public Capabilities capabilities;
-  public String color;
+  @Doc("color of the chat with this user") public String color;
   @JsonProperty("inbox_position") public Integer inboxPosition;
   @JsonProperty("expiration_time") public int expirationTime;
 
@@ -61,5 +64,13 @@ public class Profile {
     if (profileName != null && name == null) {
       name = profileName;
     }
+  }
+
+  public void populateAvatar(Manager m) {
+    File f = m.getProfileAvatarFile(address.getSignalServiceAddress());
+    if (f == null || !f.exists()) {
+      return;
+    }
+    avatar = f.getAbsolutePath();
   }
 }

@@ -103,6 +103,7 @@ public class Manager {
   public final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
   private final static int MAX_ATTACHMENT_SIZE = 150 * 1024 * 1024;
+  public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
 
@@ -1337,7 +1338,14 @@ public class Manager {
     }
   }
 
-  public File getContactAvatarFile(SignalServiceAddress address) { return new File(avatarsPath, "contact-" + address.getNumber()); }
+  public File getContactAvatarFile(SignalServiceAddress address) { return new File(avatarsPath, "contact-" + address.getNumber().get()); }
+
+  public File getProfileAvatarFile(SignalServiceAddress address) {
+    if (!address.getUuid().isPresent()) {
+      return null;
+    }
+    return new File(avatarsPath, address.getUuid().get().toString());
+  }
 
   private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, SignalServiceAddress address)
       throws IOException, InvalidMessageException, MissingConfigurationException {
@@ -1568,14 +1576,18 @@ public class Manager {
     }
   }
 
-  public SignalProfile decryptProfile(final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {
-    File avatarFile = null;
-    // TODO: implement avatar support
-    // try {
-    //   avatarFile = encryptedProfile.getAvatar() == null ? null : retrieveProfileAvatar(address, encryptedProfile.getAvatar(), profileKey);
-    // } catch (Throwable e) {
-    //   System.err.println("Failed to retrieve profile avatar, ignoring: " + e.getMessage());
-    // }
+  public SignalProfile decryptProfile(final SignalServiceAddress address, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {
+    File localAvatarPath = null;
+    if (address.getUuid().isPresent()) {
+      localAvatarPath = getProfileAvatarFile(address);
+      if (encryptedProfile.getAvatar() != null) {
+        try (OutputStream outputStream = new FileOutputStream(localAvatarPath)) {
+          retrieveProfileAvatar(encryptedProfile.getAvatar(), profileKey, outputStream);
+        } catch (IOException e) {
+          System.err.println("Failed to retrieve profile avatar, ignoring: " + e.getMessage());
+        }
+      }
+    }
 
     ProfileCipher profileCipher = new ProfileCipher(profileKey);
     try {
@@ -1593,11 +1605,24 @@ public class Manager {
       } catch (IOException e) {
         unidentifiedAccess = null;
       }
-      return new SignalProfile(encryptedProfile.getIdentityKey(), name, avatarFile, unidentifiedAccess, encryptedProfile.isUnrestrictedUnidentifiedAccess(),
+      return new SignalProfile(encryptedProfile.getIdentityKey(), name, localAvatarPath, unidentifiedAccess, encryptedProfile.isUnrestrictedUnidentifiedAccess(),
                                encryptedProfile.getCapabilities());
     } catch (InvalidCiphertextException e) {
       e.printStackTrace();
       return null;
+    }
+  }
+
+  private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {
+    File tmpFile = Util.createTempFile();
+    try (InputStream input = getMessageReceiver().retrieveProfileAvatar(avatarsPath, tmpFile, profileKey, AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+      Util.copyStream(input, outputStream, (int)AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE);
+    } finally {
+      try {
+        Files.delete(tmpFile.toPath());
+      } catch (IOException e) {
+        logger.warn("Failed to delete received profile avatar temp file “{}”, ignoring: {}", tmpFile, e.getMessage());
+      }
     }
   }
 }

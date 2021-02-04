@@ -21,6 +21,8 @@ import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
@@ -55,5 +57,14 @@ public class Util {
     }
     int unredactAfter = in.length() - 2;
     return new String(new char[unredactAfter]).replace("\0", "*") + in.substring(unredactAfter);
+  }
+
+  public static void copyStream(InputStream input, OutputStream output, int bufferSize) throws IOException {
+    byte[] buffer = new byte[bufferSize];
+    int read;
+
+    while ((read = input.read(buffer)) != -1) {
+      output.write(buffer, 0, read);
+    }
   }
 }

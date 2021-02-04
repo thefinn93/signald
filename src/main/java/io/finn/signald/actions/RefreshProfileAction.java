@@ -66,7 +66,7 @@ public class RefreshProfileAction implements Action {
 
     long now = System.currentTimeMillis();
     final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
-    final SignalProfile profile = m.decryptProfile(profileEntry.getProfileKey(), profileAndCredential.getProfile());
+    final SignalProfile profile = m.decryptProfile(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), profileAndCredential.getProfile());
     accountData.profileCredentialStore.update(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), now, profile, profileKeyCredential);
   }
 

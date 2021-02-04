@@ -69,6 +69,7 @@ public class ListContactsRequest implements RequestType {
       }
 
       Profile profile = new Profile(profileEntry.getProfile(), c.address.getSignalServiceAddress(), c);
+      profile.populateAvatar(m);
       list.profiles.add(profile);
     }
     request.reply(list);

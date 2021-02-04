@@ -55,7 +55,9 @@ public class GetProfileRequest implements RequestType {
       if (contact == null) {
         request.error("unavailable");
       } else {
-        request.reply(new Profile(contact));
+        Profile p = new Profile(contact);
+        p.populateAvatar(m);
+        request.reply(p);
       }
       return;
     }
@@ -66,6 +68,7 @@ public class GetProfileRequest implements RequestType {
     }
 
     Profile profile = new Profile(profileEntry.getProfile(), address, contact);
+    profile.populateAvatar(m);
     request.reply(profile);
 
     if (async) {
