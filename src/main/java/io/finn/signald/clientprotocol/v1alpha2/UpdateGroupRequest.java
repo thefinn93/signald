@@ -124,7 +124,7 @@ public class UpdateGroupRequest implements RequestType {
 
       accountData.groupsV2.update(output.second());
       accountData.save();
-      request.reply(new GroupInfo(group));
+      request.reply(new GroupInfo(group.getJsonGroupV2Info(m)));
     }
   }
 

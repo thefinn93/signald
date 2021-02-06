@@ -134,14 +134,13 @@ public class Group {
     } catch (IOException e) {
       logger.warn("Failed to fetch group avatar:", e.getMessage());
     }
-    JsonGroupV2Info jsonGroupV2Info = getJsonGroupV2Info();
+    JsonGroupV2Info jsonGroupV2Info = new JsonGroupV2Info(SignalServiceGroupV2.newBuilder(masterKey).withRevision(revision).build(), group);
     File avatarFile = m.getGroupAvatarFile(getGroupID());
     if (avatarFile.exists()) {
       jsonGroupV2Info.avatar = avatarFile.getAbsolutePath();
     }
     return jsonGroupV2Info;
   }
-  public JsonGroupV2Info getJsonGroupV2Info() { return new JsonGroupV2Info(SignalServiceGroupV2.newBuilder(masterKey).withRevision(revision).build(), group); }
 
   public String getID() { return Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize()); }
 

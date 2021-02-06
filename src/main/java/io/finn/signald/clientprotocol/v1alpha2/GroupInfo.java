@@ -20,12 +20,11 @@ package io.finn.signald.clientprotocol.v1alpha2;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonGroupInfo;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.storage.Group;
 
 @Doc("A generic type that is used when the group version is not known")
 public class GroupInfo {
   public JsonGroupInfo v1;
   public JsonGroupV2Info v2;
 
-  public GroupInfo(Group group) { v2 = group.getJsonGroupV2Info(); }
+  public GroupInfo(JsonGroupV2Info group) { v2 = group; }
 }
