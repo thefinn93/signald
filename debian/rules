@@ -8,7 +8,7 @@ export DH_VERBOSE=1
 
 override_dh_auto_build:
 	# dh_auto_build -- installDist
-	./gradlew installDist
+	GRADLE_USER_HOME=$(CURDIR)/debian/home ./gradlew installDist
 
 override_dh_install:
 	$(RM) build/install/signald/bin/signald.bat
