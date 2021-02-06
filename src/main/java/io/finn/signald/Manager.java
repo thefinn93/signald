@@ -468,7 +468,13 @@ public class Manager {
 
   public List<GroupInfo> getV1Groups() { return accountData.groupStore.getGroups(); }
 
-  public List<JsonGroupV2Info> getGroupsV2Info() { return accountData.groupsV2.groups.stream().map(Group::getJsonGroupV2Info).collect(Collectors.toList()); }
+  public List<JsonGroupV2Info> getGroupsV2Info() {
+    List<JsonGroupV2Info> groups = new ArrayList<>();
+    for (Group g : accountData.groupsV2.groups) {
+      groups.add(g.getJsonGroupV2Info(this));
+    }
+    return groups;
+  }
 
   public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException, UnknownGroupException {
     Group g = accountData.groupsV2.get(group);

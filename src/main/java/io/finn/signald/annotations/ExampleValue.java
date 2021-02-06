@@ -29,8 +29,6 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ExampleValue {
 
-  String GROUP_JOIN_URI = "\"https://signal.group/#CjQKINH_GZhXhfifTcnBkaKTNRxW-hHKnGSq-cJNyPVqHRp8EhDUB7zjKNEl0NaULhsqJCX3\"";
-
   String value();
 
   String LOCAL_PHONE_NUMBER = "\"+12024561414\"";
@@ -43,4 +41,6 @@ public @interface ExampleValue {
   String MESSAGE_BODY = "\"hello\"";
   String QUOTED_MESSAGE_BODY = "\"hey ￼ what's up?\"";
   String LOCAL_UUID = "\"0cc10e61-d64c-4dbc-b51c-334f7dd45a4a\"";
+  String LOCAL_GROUP_AVATAR_PATH = "\"/var/lib/signald/avatars/group-EdSqI90cS0UomDpgUXOlCoObWvQOXlH5G3Z2d3f4ayE=\"";
+  String GROUP_JOIN_URI = "\"https://signal.group/#CjQKINH_GZhXhfifTcnBkaKTNRxW-hHKnGSq-cJNyPVqHRp8EhDUB7zjKNEl0NaULhsqJCX3\"";
 }

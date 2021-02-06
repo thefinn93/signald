@@ -26,36 +26,50 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.protobuf.ByteString;
+import io.finn.signald.Manager;
+import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.util.GroupsUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.*;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
+import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
 
-import java.io.IOException;
-import java.util.*;
+import java.io.*;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @JsonSerialize(using = Group.GroupSerializer.class)
 @JsonDeserialize(using = Group.GroupDeserializer.class)
 public class Group {
+  private static final Logger logger = LogManager.getLogger();
+
   public GroupMasterKey masterKey;
   public int revision;
   public DecryptedGroup group;
+  private int lastAvatarFetch;
 
-  public Group(GroupMasterKey m, int r, DecryptedGroup d) {
+  public Group(GroupMasterKey m, int r, DecryptedGroup d, int l) {
     masterKey = m;
     revision = r;
     group = d;
+    lastAvatarFetch = l;
   }
 
   @JsonIgnore
@@ -114,6 +128,19 @@ public class Group {
     return group.getDisappearingMessagesTimer().getDuration();
   }
 
+  public JsonGroupV2Info getJsonGroupV2Info(Manager m) {
+    try {
+      fetchAvatar(m);
+    } catch (IOException e) {
+      logger.warn("Failed to fetch group avatar:", e.getMessage());
+    }
+    JsonGroupV2Info jsonGroupV2Info = getJsonGroupV2Info();
+    File avatarFile = m.getGroupAvatarFile(getGroupID());
+    if (avatarFile.exists()) {
+      jsonGroupV2Info.avatar = avatarFile.getAbsolutePath();
+    }
+    return jsonGroupV2Info;
+  }
   public JsonGroupV2Info getJsonGroupV2Info() { return new JsonGroupV2Info(SignalServiceGroupV2.newBuilder(masterKey).withRevision(revision).build(), group); }
 
   public String getID() { return Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize()); }
@@ -131,6 +158,36 @@ public class Group {
     }
   }
 
+  private void fetchAvatar(Manager m) throws IOException {
+    File avatarFile = m.getGroupAvatarFile(getGroupID());
+    if (avatarFile.exists() && lastAvatarFetch == revision) {
+      // group avatar has already been downloaded for this revision of the group
+      return;
+    }
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+
+    File tmpFile = Util.createTempFile();
+    try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, Manager.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
+      byte[] encryptedData = Util.readFully(input);
+      byte[] decryptedData = groupOperations.decryptAvatar(encryptedData);
+      OutputStream outputStream = new FileOutputStream(avatarFile);
+      outputStream.write(decryptedData);
+      lastAvatarFetch = revision;
+    } finally {
+      try {
+        Files.delete(tmpFile.toPath());
+      } catch (IOException e) {
+        logger.warn("Failed to delete received group avatar temp file “{}”, ignoring: {}", tmpFile, e.getMessage());
+      }
+    }
+  }
+
+  @JsonIgnore
+  public byte[] getGroupID() {
+    return GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize();
+  }
+
   public static class GroupDeserializer extends JsonDeserializer<Group> {
     @Override
     public Group deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
@@ -140,6 +197,10 @@ public class Group {
         int revision = 0;
         if (node.has("revision")) {
           revision = node.get("revision").asInt();
+        }
+        int lastAvatarFetch = 0;
+        if (node.has("lastAvatarFetch")) {
+          lastAvatarFetch = node.get("lastAvatarFetch").asInt();
         }
         DecryptedGroup group;
         if (node.has("group")) {
@@ -192,7 +253,7 @@ public class Group {
 
           group = builder.build();
         }
-        return new Group(masterKey, revision, group);
+        return new Group(masterKey, revision, group, lastAvatarFetch);
       } catch (InvalidInputException e) {
         e.printStackTrace();
         throw new IOException(e.getMessage());
@@ -209,6 +270,7 @@ public class Group {
       if (value.group != null) {
         node.put("group", Base64.encodeBytes(value.group.toByteArray()));
       }
+      node.put("lastAvatarFetch", value.lastAvatarFetch);
       gen.writeObject(node);
     }
   }

@@ -54,7 +54,7 @@ public class GroupsV2Storage {
   }
 
   public Group get(Group group) throws UnknownGroupException {
-    String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
+    String id = Base64.encodeBytes(group.getGroupID());
     return get(id);
   }
 

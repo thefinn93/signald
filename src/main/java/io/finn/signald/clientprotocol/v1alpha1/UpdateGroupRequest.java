@@ -136,7 +136,7 @@ public class UpdateGroupRequest implements RequestType {
 
     accountData.groupsV2.update(group);
     accountData.save();
-    request.reply(group.getJsonGroupV2Info());
+    request.reply(group.getJsonGroupV2Info(m));
   }
 
   private SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }

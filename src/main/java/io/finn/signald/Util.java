@@ -19,10 +19,7 @@ package io.finn.signald;
 
 import org.whispersystems.util.Base64;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
@@ -67,4 +64,12 @@ public class Util {
       output.write(buffer, 0, read);
     }
   }
+
+  public static byte[] readFully(InputStream in) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    Util.copyStream(in, baos);
+    return baos.toByteArray();
+  }
+
+  public static void copyStream(InputStream input, OutputStream output) throws IOException { copyStream(input, output, 4096); }
 }

@@ -36,10 +36,11 @@ public class ListGroupsRequest implements RequestType {
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException {
     GroupList groups = new GroupList();
-    AccountData accountData = Manager.get(account).getAccountData();
+    Manager m = Manager.get(account);
+    AccountData accountData = m.getAccountData();
 
     for (Group g : accountData.groupsV2.groups) {
-      groups.add(g.getJsonGroupV2Info());
+      groups.add(g.getJsonGroupV2Info(m));
     }
 
     for (io.finn.signald.storage.GroupInfo g : accountData.groupStore.getGroups()) {

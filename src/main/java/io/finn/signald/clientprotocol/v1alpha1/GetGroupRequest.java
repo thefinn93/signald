@@ -45,8 +45,9 @@ public class GetGroupRequest implements RequestType {
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException {
-    GroupsV2Manager groupsV2Manager = Manager.get(account).getGroupsV2Manager();
+    Manager m = Manager.get(account);
+    GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Group group = groupsV2Manager.getGroup(groupID, revision);
-    request.reply(group.getJsonGroupV2Info());
+    request.reply(group.getJsonGroupV2Info(m));
   }
 }

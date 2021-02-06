@@ -20,6 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.GroupInviteLinkUrl;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.util.GroupsUtil;
@@ -45,6 +46,7 @@ public class JsonGroupV2Info {
 
   // Fields from DecryptedGroup
   @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
+  @ExampleValue(ExampleValue.LOCAL_GROUP_AVATAR_PATH) @Doc("path to the group's avatar on local disk, if available") public String avatar;
   @ExampleValue("604800") public int timer;
 
   @JsonProperty public List<JsonAddress> members;

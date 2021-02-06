@@ -87,6 +87,6 @@ public class ApproveMembershipRequest implements RequestType {
 
     accountData.groupsV2.update(group);
     accountData.save();
-    request.reply(group.getJsonGroupV2Info());
+    request.reply(group.getJsonGroupV2Info(m));
   }
 }
