@@ -29,6 +29,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
+import io.finn.signald.clientprotocol.v1.UpdateGroupRequest;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
@@ -60,10 +61,7 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -508,10 +506,30 @@ public class SocketHandler implements Runnable {
     this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
-  private void leaveGroup(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException {
+  private void leaveGroup(JsonRequest request)
+      throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, UnknownGroupException, VerificationFailedException {
     Manager m = Manager.get(request.username);
-    byte[] groupId = Base64.decode(request.recipientGroupId);
-    m.sendQuitGroupMessage(groupId);
+    if (request.recipientGroupId.length() == 44) {
+      AccountData accountData = m.getAccountData();
+      Group group = accountData.groupsV2.get(request.recipientGroupId);
+      if (group == null) {
+        reply("leave_group_error", "group not found", request.id);
+        return;
+      }
+
+      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(UpdateGroupRequest::getMemberAddress).collect(Collectors.toList());
+
+      GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
+      Set me = new HashSet();
+      me.add(m.getUUID());
+      Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.removeMembers(request.recipientGroupId, me);
+      m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
+      accountData.groupsV2.update(output.second());
+      accountData.save();
+    } else {
+      byte[] groupId = Base64.decode(request.recipientGroupId);
+      m.sendQuitGroupMessage(groupId);
+    }
     this.reply("left_group", new JsonStatusMessage(7, "Successfully left group"), request.id);
   }
 

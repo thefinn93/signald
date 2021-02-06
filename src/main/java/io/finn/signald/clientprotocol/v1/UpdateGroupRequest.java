@@ -83,7 +83,7 @@ public class UpdateGroupRequest implements RequestType {
         return;
       }
 
-      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(this ::getMemberAddress).collect(Collectors.toList());
+      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(UpdateGroupRequest::getMemberAddress).collect(Collectors.toList());
       Pair<SignalServiceDataMessage.Builder, Group> output;
 
       if (title != null) {
@@ -130,5 +130,5 @@ public class UpdateGroupRequest implements RequestType {
     }
   }
 
-  private SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }
+  public static SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }
 }
