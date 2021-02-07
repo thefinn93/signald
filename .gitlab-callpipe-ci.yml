@@ -30,7 +30,7 @@ build-java-11:
 
 deb:build:
   stage: build
-  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  image: registry.git.callpipe.com/finn/debian-repo-builder/buster:latest
   retry: 2
   before_script:
     - export VERSION=$(./version.sh)
@@ -51,7 +51,7 @@ deb:build:
 
 deb:publish:
   stage: publish
-  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  image: registry.git.callpipe.com/finn/debian-repo-builder/buster:latest
   tags:
     - package-signer
   before_script:
@@ -91,7 +91,7 @@ test:integration:
 
 deb:cleanup:
   stage: cleanup
-  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
+  image: registry.git.callpipe.com/finn/debian-repo-builder/buster:latest
   only:
     - schedules
   before_script:
