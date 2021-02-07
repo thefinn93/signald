@@ -51,7 +51,7 @@ deb:build:
 
 deb:publish:
   stage: publish
-  image: registry.git.callpipe.com/finn/debian-repo-builder/buster:latest
+  image: registry.git.callpipe.com/finn/debian-repo-builder:latest
   tags:
     - package-signer
   before_script:
