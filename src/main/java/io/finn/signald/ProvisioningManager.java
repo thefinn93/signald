@@ -24,6 +24,7 @@ import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
+import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.SleepTimer;
@@ -36,15 +37,27 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
-class ProvisioningManager {
+public class ProvisioningManager {
+  private final static ConcurrentHashMap<String, ProvisioningManager> provisioningManagers = new ConcurrentHashMap<>();
   private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
 
   private final SignalServiceAccountManager accountManager;
   private final IdentityKeyPair identityKey;
   private final int registrationId;
   private final String password;
+
+  public static Pair<String, ProvisioningManager> create() {
+    UUID sessionID = UUID.randomUUID();
+    ProvisioningManager pm = new ProvisioningManager();
+    provisioningManagers.put(sessionID.toString(), pm);
+    return new Pair<>(sessionID.toString(), pm);
+  }
+
+  public static ProvisioningManager get(String sessionID) { return provisioningManagers.get(sessionID); }
 
   public ProvisioningManager() {
     identityKey = KeyHelper.generateIdentityKeyPair();
