@@ -52,8 +52,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @JsonSerialize(using = Group.GroupSerializer.class)
 @JsonDeserialize(using = Group.GroupDeserializer.class)
@@ -114,11 +112,6 @@ public class Group {
       }
     }
     return false;
-  }
-
-  public List<SignalServiceAddress> getMembersIncludingPendingWithout(UUID self) {
-    SignalServiceAddress address = new SignalServiceAddress(Optional.of(self), Optional.absent());
-    return Stream.concat(getMembers().stream(), getPendingMembers().stream()).filter(member -> !member.matches(address)).collect(Collectors.toList());
   }
 
   public int getTimer() {

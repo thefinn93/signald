@@ -35,11 +35,13 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
+import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
+import org.signal.zkgroup.groups.UuidCiphertext;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -53,7 +55,6 @@ import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupExcep
 import org.whispersystems.signalservice.internal.util.Util;
 import org.whispersystems.util.Base64;
 import org.whispersystems.util.Base64UrlSafe;
-
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -66,7 +67,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
 
 public class GroupsV2Manager {
@@ -459,5 +459,49 @@ public class GroupsV2Manager {
     }
     builder.setAccessControl(group.getAccessControl());
     return builder.build();
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> leaveGroup(String groupID) throws IOException, VerificationFailedException, UnknownGroupException {
+    Group group = storage.get(groupID);
+    List<DecryptedPendingMember> pendingMemberList = group.group.getPendingMembersList();
+    Optional<DecryptedPendingMember> selfPendingMember = DecryptedGroupUtil.findPendingByUuid(pendingMemberList, self);
+
+    Pair<DecryptedGroup, GroupChange> groupChangePair;
+    if (selfPendingMember.isPresent()) {
+      groupChangePair = revokeInvites(group, Set.of(selfPendingMember.get()));
+    } else {
+      groupChangePair = ejectMembers(group, Set.of(self));
+    }
+
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  private Pair<DecryptedGroup, GroupChange> revokeInvites(Group group, Set<DecryptedPendingMember> pendingMembers) throws IOException, VerificationFailedException {
+    final GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
+    final Set<UuidCiphertext> uuidCipherTexts = pendingMembers.stream()
+                                                    .map(member -> {
+                                                      try {
+                                                        return new UuidCiphertext(member.getUuidCipherText().toByteArray());
+                                                      } catch (InvalidInputException e) {
+                                                        throw new AssertionError(e);
+                                                      }
+                                                    })
+                                                    .collect(Collectors.toSet());
+    return commitChange(group, groupOperations.createRemoveInvitationChange(uuidCipherTexts));
+  }
+
+  public Pair<DecryptedGroup, GroupChange> ejectMembers(Group group, Set<UUID> uuids) throws IOException, VerificationFailedException {
+    final GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
+    return commitChange(group, groupOperations.createRemoveMembersChange(uuids));
   }
 }

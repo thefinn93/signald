@@ -53,7 +53,8 @@ public class RequestUtil {
                     GetProfileRequest.class,                                                 // v1        get_profile
                     ListGroupsRequest.class,                                                 // v1        list_groups
                     ListContactsRequest.class,                                               // v1        list_contacts
-                    CreateGroupRequest.class                                                 // v1        create_group
+                    CreateGroupRequest.class,                                                // v1        create_group
+                    LeaveGroupRequest.class                                                  // v1        leave_group
       );
 
   public static String getVersion(Class t) {
