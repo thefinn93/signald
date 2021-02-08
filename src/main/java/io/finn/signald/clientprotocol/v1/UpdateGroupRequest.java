@@ -18,55 +18,56 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.RequestValidationFailure;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
+import org.signal.storageservice.protos.groups.AccessControl;
+import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.local.DecryptedMember;
-import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
 @SignaldClientRequest(type = "update_group", ResponseClass = GroupInfo.class)
-@Doc("modify a group")
+@Doc("modify a group. Note that only one modification action may be preformed at once")
 public class UpdateGroupRequest implements RequestType {
   private static final Logger logger = LogManager.getLogger();
 
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The identifier of the account to interact with") @Required public String account;
 
-  @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
+  @ExampleValue(ExampleValue.GROUP_ID) @Doc("the ID of the group to update") @Required public String groupID;
 
   @ExampleValue(ExampleValue.GROUP_TITLE) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String title;
 
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String avatar;
 
+  @Doc("update the group timer.") @ExactlyOneOfRequired(GROUP_MODIFICATION) public int updateTimer = -1;
+
   @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> addMembers;
 
   @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> removeMembers;
 
+  @ExactlyOneOfRequired(GROUP_MODIFICATION) public GroupMember updateRole;
+
+  @Doc("note that only one of the access controls may be updated per request") @ExactlyOneOfRequired(GROUP_MODIFICATION) public GroupAccessControl updateAccessControl;
+
+  @Doc("regenerate the group link password, invalidating the old one") @ExactlyOneOfRequired(GROUP_MODIFICATION) public boolean resetLink;
+
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, GroupNotFoundException, NotAGroupMemberException,
-                                          AttachmentInvalidException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException {
+  public void run(Request request) throws Exception {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
 
@@ -111,15 +112,48 @@ public class UpdateGroupRequest implements RequestType {
             signalServiceAddress = m.getAccountData().recipientStore.resolve(member.getSignalServiceAddress());
           }
           if (!signalServiceAddress.getUuid().isPresent()) {
-            logger.warn("cannot remove member from group if we do not have their UUID! How did they get into the group if we don't know their UUID?",
-                        new JsonAddress(signalServiceAddress).toRedactedString());
+            logger.warn("cannot remove member " + new JsonAddress(signalServiceAddress).toRedactedString() +
+                        " from group if we do not have their UUID! How did they get into the group if we don't know their UUID?");
           }
           members.add(signalServiceAddress.getUuid().get());
         }
         output = m.getGroupsV2Manager().removeMembers(groupID, members);
+      } else if (updateRole != null) {
+        UUID uuid = UUID.fromString(updateRole.uuid);
+        Member.Role role;
+        switch (updateRole.role) {
+        case "ADMINISTRATOR":
+          role = Member.Role.ADMINISTRATOR;
+          break;
+        case "DEFAULT":
+          role = Member.Role.DEFAULT;
+          break;
+        default:
+          throw new RequestValidationFailure("unknown role requested");
+        }
+        output = m.getGroupsV2Manager().changeRole(groupID, uuid, role);
+      } else if (updateAccessControl != null) {
+        if (updateAccessControl.attributes != null) {
+          if (updateAccessControl.members != null || updateAccessControl.link != null) {
+            throw new RequestValidationFailure("only one access control may be updated at once");
+          }
+          output = m.getGroupsV2Manager().updateAccessControlAttributes(groupID, getAccessRequired(updateAccessControl.attributes));
+        } else if (updateAccessControl.members != null) {
+          if (updateAccessControl.link != null) {
+            throw new RequestValidationFailure("only one access control may be updated at once");
+          }
+          output = m.getGroupsV2Manager().updateAccessControlMembership(groupID, getAccessRequired(updateAccessControl.members));
+        } else if (updateAccessControl.link != null) {
+          output = m.getGroupsV2Manager().updateAccessControlJoinByLink(groupID, getAccessRequired(updateAccessControl.link));
+        } else {
+          throw new RequestValidationFailure("no known access control requested");
+        }
+      } else if (resetLink) {
+        output = m.getGroupsV2Manager().resetGroupLinkPassword(groupID);
+      } else if (updateTimer > -1) {
+        output = m.getGroupsV2Manager().updateGroupTimer(groupID, updateTimer);
       } else {
-        request.error("no change requested");
-        return;
+        throw new RequestValidationFailure("no change requested");
       }
 
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
@@ -131,4 +165,19 @@ public class UpdateGroupRequest implements RequestType {
   }
 
   public static SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }
+
+  public AccessControl.AccessRequired getAccessRequired(String name) throws RequestValidationFailure {
+    switch (name) {
+    case "ANY":
+      return AccessControl.AccessRequired.ANY;
+    case "MEMBER":
+      return AccessControl.AccessRequired.MEMBER;
+    case "ADMINISTRATOR":
+      return AccessControl.AccessRequired.ADMINISTRATOR;
+    case "UNSATISFIABLE":
+      return AccessControl.AccessRequired.UNSATISFIABLE;
+    default:
+      throw new RequestValidationFailure("invalid role: " + name);
+    }
+  }
 }

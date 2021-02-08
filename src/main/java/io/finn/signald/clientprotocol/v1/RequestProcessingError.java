@@ -18,7 +18,11 @@
 package io.finn.signald.clientprotocol.v1;
 
 public class RequestProcessingError {
+  public String type;
   public String message;
 
-  public RequestProcessingError(Throwable throwable) { message = throwable.getMessage(); }
+  public RequestProcessingError(Throwable throwable) {
+    type = throwable.getClass().getSimpleName();
+    message = throwable.getMessage();
+  }
 }

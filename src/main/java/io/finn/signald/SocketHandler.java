@@ -487,12 +487,20 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, AttachmentInvalidException, NoSuchAccountException {
+  private void setExpiration(JsonRequest request)
+      throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, UnknownGroupException, VerificationFailedException {
     Manager m = Manager.get(request.username);
     List<SendMessageResult> results;
     if (request.recipientGroupId != null) {
-      byte[] groupId = Base64.decode(request.recipientGroupId);
-      results = m.setExpiration(groupId, request.expiresInSeconds);
+      if (request.recipientGroupId.length() == 44) {
+        Pair<SignalServiceDataMessage.Builder, Group> output = m.getGroupsV2Manager().updateGroupTimer(request.recipientGroupId, request.expiresInSeconds);
+        results = m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2());
+        m.getAccountData().groupsV2.update(output.second());
+        m.getAccountData().save();
+      } else {
+        byte[] groupId = Base64.decode(request.recipientGroupId);
+        results = m.setExpiration(groupId, request.expiresInSeconds);
+      }
     } else {
       results = m.setExpiration(request.recipientAddress.getSignalServiceAddress(), request.expiresInSeconds);
     }

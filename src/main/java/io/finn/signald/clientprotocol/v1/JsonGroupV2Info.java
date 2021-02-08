@@ -52,7 +52,11 @@ public class JsonGroupV2Info {
   @JsonProperty public List<JsonAddress> members;
   public List<JsonAddress> pendingMembers;
   public List<JsonAddress> requestingMembers;
-  public String inviteLink;
+  @Doc("the signal.group link, if applicable") public String inviteLink;
+  @Doc("current access control settings for this group") public GroupAccessControl accessControl;
+
+  @Doc("detailed member list") public List<GroupMember> memberDetail;
+  @Doc("detailed pending member list") public List<GroupMember> pendingMemberDetail;
 
   public JsonGroupV2Info() {}
 
@@ -70,6 +74,7 @@ public class JsonGroupV2Info {
     if (decryptedGroup != null) {
       title = decryptedGroup.getTitle();
       timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
+      members = new ArrayList<>();
       members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
       pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
       requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
@@ -78,6 +83,11 @@ public class JsonGroupV2Info {
       if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
         inviteLink = GroupInviteLinkUrl.forGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup).getUrl();
       }
+
+      accessControl = new GroupAccessControl(decryptedGroup.getAccessControl());
+
+      memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+      pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
     }
   }
 

@@ -26,8 +26,10 @@ import io.finn.signald.storage.ProfileCredentialStore;
 import io.finn.signald.util.GroupsUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
+import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
@@ -60,6 +62,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
 
 public class GroupsV2Manager {
   private final GroupsV2Api groupsV2Api;
@@ -187,6 +191,121 @@ public class GroupsV2Manager {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createRemoveMembersChange(members);
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> changeRole(String groupID, UUID uuid, Member.Role role)
+      throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createChangeMemberRole(uuid, role);
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> updateAccessControlJoinByLink(String groupID, AccessControl.AccessRequired access)
+      throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createChangeJoinByLinkRights(access);
+    if (access == UNSATISFIABLE && group.group.getInviteLinkPassword().isEmpty()) {
+      change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
+    }
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> updateAccessControlMembership(String groupID, AccessControl.AccessRequired access)
+      throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createChangeMembershipRights(access);
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> updateAccessControlAttributes(String groupID, AccessControl.AccessRequired access)
+      throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createChangeAttributesRights(access);
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> resetGroupLinkPassword(String groupID) throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createModifyGroupLinkPasswordChange(GroupLinkPassword.createNew().serialize());
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> updateGroupTimer(String groupID, int timer) throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createModifyGroupTimerChange(timer);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
     group.group = groupChangePair.first();

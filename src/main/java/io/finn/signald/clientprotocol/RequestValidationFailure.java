@@ -20,7 +20,7 @@ package io.finn.signald.clientprotocol;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RequestValidationFailure {
+public class RequestValidationFailure extends Exception {
   public List<String> validationResults;
   public final String type = "invalid_request";
   public final String message = "input validation failed, please check the request and try again.";
