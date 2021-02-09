@@ -15,7 +15,7 @@ Vcs-Browser: https://gitlab.com/signald/signald
 Package: signald
 Recommends: signaldctl (>= 0.1.0)
 Architecture: all
-Depends:default-jre, libunixsocket-java, ${misc:Depends}
+Depends:default-jre-headless, libunixsocket-java, ${misc:Depends}
 Description:  an unofficial daemon that facilitates communication with the Signal messaging app.
  signald is a daemon to facilitate communicating with users of the Signal messaging app. It is an
  unofficial signal client and is not in any way endorsed or even approved by Signal Messenger
