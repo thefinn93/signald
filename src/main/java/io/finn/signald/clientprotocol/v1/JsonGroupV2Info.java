@@ -40,9 +40,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class JsonGroupV2Info {
-  @Doc("ignored when creating groups") @ExampleValue(ExampleValue.GROUP_ID) public String id;
-  @Doc("ignored when creating groups") public String masterKey;
-  @Doc("ignored when creating groups") @ExampleValue("5") public int revision;
+  @ExampleValue(ExampleValue.GROUP_ID) public String id;
+  public String masterKey;
+  @ExampleValue("5") public int revision;
 
   // Fields from DecryptedGroup
   @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
@@ -50,13 +50,13 @@ public class JsonGroupV2Info {
   @ExampleValue("604800") public int timer;
 
   @JsonProperty public List<JsonAddress> members;
-  @Doc("ignored when creating groups") public List<JsonAddress> pendingMembers;
-  @Doc("ignored when creating groups") public List<JsonAddress> requestingMembers;
-  @Doc("the signal.group link, if applicable. ignored when creating new groups") public String inviteLink;
+  public List<JsonAddress> pendingMembers;
+  public List<JsonAddress> requestingMembers;
+  @Doc("the signal.group link, if applicable") public String inviteLink;
   @Doc("current access control settings for this group") public GroupAccessControl accessControl;
 
-  @Doc("detailed member list. ignored when creating new groups") public List<GroupMember> memberDetail;
-  @Doc("detailed pending member list. ignored when creating new groups") public List<GroupMember> pendingMemberDetail;
+  @Doc("detailed member list") public List<GroupMember> memberDetail;
+  @Doc("detailed pending member list") public List<GroupMember> pendingMemberDetail;
 
   public JsonGroupV2Info() {}
 
