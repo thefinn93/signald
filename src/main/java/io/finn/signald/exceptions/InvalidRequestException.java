@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.clientprotocol;
+package io.finn.signald.exceptions;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class RequestValidationFailure {
-  public List<String> validationResults;
-  public final String type = "invalid_request";
-  public final String message = "input validation failed, please check the request and try again.";
-
-  public RequestValidationFailure(List<String> p) { validationResults = p; }
-
-  public RequestValidationFailure(String p) {
-    validationResults = new ArrayList<>();
-    validationResults.add(p);
-  }
+public class InvalidRequestException extends Exception {
+  public InvalidRequestException(String message) { super(message); }
 }

@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.JsonMessageWrapper;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.v1.*;
+import io.finn.signald.exceptions.InvalidRequestException;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import org.apache.logging.log4j.LogManager;
@@ -145,6 +146,8 @@ public class Request {
 
     try {
       requestType.run(this);
+    } catch (InvalidRequestException e) {
+      error(e.getMessage());
     } catch (Throwable throwable) {
       error(new RequestProcessingError(throwable));
       logger.error("error while handling request", throwable);

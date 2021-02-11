@@ -21,7 +21,7 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.RequestValidationFailure;
+import io.finn.signald.exceptions.InvalidRequestException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -129,31 +129,31 @@ public class UpdateGroupRequest implements RequestType {
           role = Member.Role.DEFAULT;
           break;
         default:
-          throw new RequestValidationFailure("unknown role requested");
+          throw new InvalidRequestException("unknown role requested");
         }
         output = m.getGroupsV2Manager().changeRole(groupID, uuid, role);
       } else if (updateAccessControl != null) {
         if (updateAccessControl.attributes != null) {
           if (updateAccessControl.members != null || updateAccessControl.link != null) {
-            throw new RequestValidationFailure("only one access control may be updated at once");
+            throw new InvalidRequestException("only one access control may be updated at once");
           }
           output = m.getGroupsV2Manager().updateAccessControlAttributes(groupID, getAccessRequired(updateAccessControl.attributes));
         } else if (updateAccessControl.members != null) {
           if (updateAccessControl.link != null) {
-            throw new RequestValidationFailure("only one access control may be updated at once");
+            throw new InvalidRequestException("only one access control may be updated at once");
           }
           output = m.getGroupsV2Manager().updateAccessControlMembership(groupID, getAccessRequired(updateAccessControl.members));
         } else if (updateAccessControl.link != null) {
           output = m.getGroupsV2Manager().updateAccessControlJoinByLink(groupID, getAccessRequired(updateAccessControl.link));
         } else {
-          throw new RequestValidationFailure("no known access control requested");
+          throw new InvalidRequestException("no known access control requested");
         }
       } else if (resetLink) {
         output = m.getGroupsV2Manager().resetGroupLinkPassword(groupID);
       } else if (updateTimer > -1) {
         output = m.getGroupsV2Manager().updateGroupTimer(groupID, updateTimer);
       } else {
-        throw new RequestValidationFailure("no change requested");
+        throw new InvalidRequestException("no change requested");
       }
 
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
@@ -166,7 +166,7 @@ public class UpdateGroupRequest implements RequestType {
 
   public static SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }
 
-  public AccessControl.AccessRequired getAccessRequired(String name) throws RequestValidationFailure {
+  public AccessControl.AccessRequired getAccessRequired(String name) throws InvalidRequestException {
     switch (name) {
     case "ANY":
       return AccessControl.AccessRequired.ANY;
@@ -177,7 +177,7 @@ public class UpdateGroupRequest implements RequestType {
     case "UNSATISFIABLE":
       return AccessControl.AccessRequired.UNSATISFIABLE;
     default:
-      throw new RequestValidationFailure("invalid role: " + name);
+      throw new InvalidRequestException("invalid role: " + name);
     }
   }
 }

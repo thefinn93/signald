@@ -26,7 +26,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.RequestValidationFailure;
+import io.finn.signald.exceptions.InvalidRequestException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.storage.Group;
@@ -59,7 +59,7 @@ public class CreateGroupRequest implements RequestType {
 
   @Override
   public void run(Request request)
-      throws IOException, NoSuchAccountException, RequestValidationFailure, InvalidGroupStateException, VerificationFailedException, UnknownGroupException {
+      throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException {
     Manager m = Manager.get(account);
     AddressResolver resolver = m.getResolver();
     List<SignalServiceAddress> resolvedMembers = members.stream().map(x -> resolver.resolve(x.getSignalServiceAddress())).collect(Collectors.toList());
@@ -74,7 +74,7 @@ public class CreateGroupRequest implements RequestType {
         role = Member.Role.DEFAULT;
         break;
       default:
-        throw new RequestValidationFailure("member_role must be ADMINISTRATOR or DEFAULT");
+        throw new InvalidRequestException("member_role must be ADMINISTRATOR or DEFAULT");
       }
     }
 
