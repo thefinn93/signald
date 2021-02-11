@@ -468,9 +468,13 @@ public class GroupsV2Manager {
 
     Pair<DecryptedGroup, GroupChange> groupChangePair;
     if (selfPendingMember.isPresent()) {
-      groupChangePair = revokeInvites(group, Set.of(selfPendingMember.get()));
+      Set<DecryptedPendingMember> selfSet = new HashSet<>();
+      selfSet.add(selfPendingMember.get());
+      groupChangePair = revokeInvites(group, selfSet);
     } else {
-      groupChangePair = ejectMembers(group, Set.of(self));
+      Set<UUID> selfSet = new HashSet<>();
+      selfSet.add(self);
+      groupChangePair = ejectMembers(group, selfSet);
     }
 
     group.group = groupChangePair.first();
