@@ -530,7 +530,7 @@ public class SocketHandler implements Runnable {
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
       Set me = new HashSet();
       me.add(m.getUUID());
-      Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.removeMembers(request.recipientGroupId, me);
+      Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.leaveGroup(request.recipientGroupId);
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
       accountData.groupsV2.update(output.second());
       accountData.save();
