@@ -52,7 +52,8 @@ public class RequestUtil {
                     MarkReadRequest.class,                                                   // v1        mark_read
                     GetProfileRequest.class,                                                 // v1        get_profile
                     ListGroupsRequest.class,                                                 // v1        list_groups
-                    ListContactsRequest.class                                                // v1        list_contacts
+                    ListContactsRequest.class,                                               // v1        list_contacts
+                    CreateGroupRequest.class                                                 // v1        create_group
       );
 
   public static String getVersion(Class t) {

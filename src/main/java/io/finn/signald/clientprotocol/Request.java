@@ -84,6 +84,7 @@ public class Request {
     v.put(GetGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(JoinGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(ResolveAddressRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(CreateGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     return v;
   }
 

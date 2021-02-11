@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
@@ -33,6 +34,7 @@ import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
+import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
@@ -44,6 +46,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.ConflictException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
@@ -62,6 +65,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.signal.storageservice.protos.groups.AccessControl.AccessRequired.UNSATISFIABLE;
 
@@ -418,9 +422,42 @@ public class GroupsV2Manager {
     return new Pair<>(decryptedGroupState, signedGroupChange);
   }
 
+  public Group createGroup(String title, String avatar, List<SignalServiceAddress> members, Member.Role memberRole, int timer)
+      throws IOException, VerificationFailedException, InvalidGroupStateException {
+    GroupSecretParams groupSecretParams = GroupSecretParams.generate();
+
+    // TODO: group avatars
+    Optional<byte[]> avatarBytes = Optional.absent();
+
+    GroupCandidate groupCandidateSelf = new GroupCandidate(self, Optional.fromNullable(profileCredentialStore.getProfileKeyCredential(self)));
+    Set<GroupCandidate> candidates = members.stream().map(this ::buildGroupCandidate).collect(Collectors.toSet());
+    GroupsV2Operations.NewGroup newGroup = groupsV2Operations.createNewGroup(groupSecretParams, title, avatarBytes, groupCandidateSelf, candidates, memberRole, timer);
+    groupsV2Api.putNewGroup(newGroup, getAuthorizationForToday(groupSecretParams));
+    return getGroup(groupSecretParams, -1);
+  }
+
   private GroupsV2AuthorizationString getAuthorizationForToday(GroupSecretParams groupSecretParams) throws IOException, VerificationFailedException {
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = storage.getAuthCredential(groupsV2Api, today);
     return groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredential);
+  }
+
+  private GroupCandidate buildGroupCandidate(SignalServiceAddress address) {
+    UUID uuid = address.getUuid().get();
+    ProfileKeyCredential profileCredential = profileCredentialStore.getProfileKeyCredential(uuid);
+    return new GroupCandidate(uuid, Optional.fromNullable(profileCredential));
+  }
+
+  private DecryptedGroup createDecryptedGroup(org.signal.storageservice.protos.groups.Group group) {
+    DecryptedGroup.Builder builder = DecryptedGroup.newBuilder();
+    builder.setTitle(group.getTitle().toString());
+    builder.setAvatarBytes(group.getAvatarBytes());
+    try {
+      builder.setDisappearingMessagesTimer(DecryptedTimer.parseFrom(group.getDisappearingMessagesTimer()));
+    } catch (InvalidProtocolBufferException e) {
+      logger.warn("unparsable disappearing message timer value, please file an issue: " + BuildConfig.ERROR_REPORTING_URL, e);
+    }
+    builder.setAccessControl(group.getAccessControl());
+    return builder.build();
   }
 }

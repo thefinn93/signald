@@ -171,14 +171,14 @@ Returns a list of all groups the specified user is in.
 
 ### `update_group`
 
-Creates or modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example)
+modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example)
 
 for v2 group features like removing members, see [`v1.update_group`](https://docs.signald.org/actions/v1/update_group.html).
 
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The account to use to update the group |
-| `recipientGroupId` | string | no | The base64 encoded group ID. If left out, a new group will be created. |
+| `recipientGroupId` | string | yes | The base64 encoded group ID. |
 | `groupName` | string | no | The value to set the group name to. |
 | `members` | list of strings | no | A list of users (eg full international format phone numbers) that should be added to the group. |
 | `groupAvatar` | string | no | The avatar to set as the group's avatar. Actual format unknown, probably a path to a file on the disk |
@@ -420,6 +420,11 @@ Takes a [`JsonAddress`](https://docs.signald.org/structures/v1/JsonAddress.html)
 ### `join_group`
 
 [see on docs.signald.org](https://docs.signald.org/actions/v1/join_group.html)
+
+### `create_group`
+
+[see on docs.signald.org](https://docs.signald.org/actions/v1/create_group.html)
+
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli).
