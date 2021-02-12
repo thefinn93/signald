@@ -268,10 +268,11 @@ public class AccountData {
   }
 
   @JsonIgnore
-  public ProfileKey getProfileKey() {
+  public ProfileKey getProfileKey() throws InvalidInputException {
     ProfileAndCredentialEntry entry = profileCredentialStore.get(address.getSignalServiceAddress());
     if (entry == null) {
-      return null;
+      generateProfileKey();
+      entry = profileCredentialStore.get(address.getSignalServiceAddress());
     }
     return entry.getProfileKey();
   }

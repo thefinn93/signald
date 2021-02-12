@@ -26,6 +26,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import org.signal.zkgroup.InvalidInputException;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +40,7 @@ public class SetProfile implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @Doc("Path to new profile avatar file, if the avatar should be updated") public String avatarFile;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException {
+  public void run(Request request) throws IOException, NoSuchAccountException, InvalidInputException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
     Manager.get(account).setProfile(name, avatar);
     request.reply(new Empty());

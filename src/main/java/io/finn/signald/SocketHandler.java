@@ -413,7 +413,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException, NoSuchAccountException {
+  private void addDevice(JsonRequest request) throws IOException, InvalidKeyException, AssertionError, URISyntaxException, NoSuchAccountException, InvalidInputException {
     Manager m = Manager.get(request.username);
     m.addDeviceLink(new URI(request.uri));
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
@@ -704,7 +704,7 @@ public class SocketHandler implements Runnable {
     this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
   }
 
-  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException {
+  private void setProfile(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException {
     Manager m = Manager.get(request.username);
     m.setProfile(request.name, null);
     this.reply("profile_set", null, request.id);

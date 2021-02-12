@@ -343,7 +343,7 @@ public class Manager {
     return map;
   }
 
-  public void addDeviceLink(URI linkUri) throws IOException, InvalidKeyException {
+  public void addDeviceLink(URI linkUri) throws IOException, InvalidKeyException, InvalidInputException {
     Map<String, String> query = getQueryMap(linkUri.getRawQuery());
     String deviceIdentifier = query.get("uuid");
     String publicKeyEncoded = query.get("pub_key");
@@ -357,7 +357,7 @@ public class Manager {
     addDevice(deviceIdentifier, deviceKey);
   }
 
-  private void addDevice(String deviceIdentifier, ECPublicKey deviceKey) throws IOException, InvalidKeyException {
+  private void addDevice(String deviceIdentifier, ECPublicKey deviceKey) throws IOException, InvalidKeyException, InvalidInputException {
     IdentityKeyPair identityKeyPair = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
 
@@ -1523,10 +1523,11 @@ public class Manager {
     return Optional.absent();
   }
 
-  public void setProfile(String name, File avatar) throws IOException {
+  public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
       accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, streamDetails);
     }
+    accountData.save();
   }
 
   public SignalServiceProfile getSignalServiceProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
