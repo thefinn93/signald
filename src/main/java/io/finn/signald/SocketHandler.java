@@ -58,6 +58,7 @@ import org.whispersystems.util.Base64;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -140,10 +141,11 @@ public class SocketHandler implements Runnable {
         }
       }
 
+    } catch (SocketException e) {
+      logger.debug("socket exception while reading from client. Likely just means the client disconnected before we expected: ", e.getMessage());
     } catch (IOException e) {
       handleError(e, null);
     } finally {
-
       try {
         reader.close();
         writer.close();
