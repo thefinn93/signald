@@ -6,6 +6,7 @@ case "$1" in
         addgroup --system signald
         adduser --system --home /var/lib/signald signald
         adduser signald signald  # Add signald user to the signald group
+        mkdir -p  /var/lib/signald
         chown -R signald:signald /var/lib/signald
         ;;
 
