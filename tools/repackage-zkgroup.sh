@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# NOTE: this is now outdated and shouldn't be needed.
+# You can specify a target when building signald by setting the environment variable SIGNALD_TARGET.
+# if you need help building for an unsupported target, please open an issue or ask on IRC
 set -euo pipefail
 
 src_file="${1:?Missing source file}"
