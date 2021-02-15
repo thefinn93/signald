@@ -1,5 +1,7 @@
 # Debian Installation
 
+*note that the debian repo is 64 bit x86 only for now ([#130](https://gitlab.com/signald/signald/-/issues/130))*
+
 put the following in `/etc/apt/sources.list.d/signald.list`:
 
 ```
