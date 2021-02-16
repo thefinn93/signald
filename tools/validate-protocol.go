@@ -101,7 +101,7 @@ func checkRequestResponseTypesExist() bool {
 				pass = false
 				log.Println("[MissingRequestType] request", t, version, "has request type", action.Request, "but no such type exists (is it referencing another version?)")
 			}
-			if action.Response != "" {
+			if action.Response != "" && action.Response != "String" {
 				if _, ok := protocol.Types[version][action.Response]; !ok {
 					pass = false
 					log.Println("[MissingResponseType] request", t, version, "has response type", action.Response, "but no such type exists (is it referencing another version?)")
