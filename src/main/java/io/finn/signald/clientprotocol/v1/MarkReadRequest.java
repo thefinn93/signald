@@ -36,6 +36,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSy
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -49,7 +50,7 @@ public class MarkReadRequest implements RequestType {
   @ExampleValue(BuildConfig.BUILD_TIMESTAMP) @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException {
+  public void run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException, SQLException {
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, System.currentTimeMillis());
     Manager m = Manager.get(account);
     SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());

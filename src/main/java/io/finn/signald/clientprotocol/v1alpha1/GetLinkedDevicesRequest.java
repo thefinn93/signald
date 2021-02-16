@@ -29,6 +29,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceInfo;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 
 @SignaldClientRequest(type = "get_linked_devices", ResponseClass = GetLinkedDevicesRequest.LinkedDevices.class)
@@ -38,7 +39,7 @@ public class GetLinkedDevicesRequest implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException {
+  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
     SignalServiceAccountManager accountManager = Manager.get(account).getAccountManager();
     request.reply(new LinkedDevices(accountManager.getDevices()));
   }

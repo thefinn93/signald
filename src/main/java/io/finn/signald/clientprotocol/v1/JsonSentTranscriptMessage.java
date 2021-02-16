@@ -23,6 +23,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptM
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public class JsonSentTranscriptMessage {
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException, SQLException {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }

@@ -31,6 +31,7 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -46,7 +47,7 @@ public class GetProfileRequest implements RequestType {
   public boolean async;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException {
+  public void run(Request request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException, SQLException {
     Manager m = Manager.get(account);
     SignalServiceAddress address = m.getResolver().resolve(requestedAddress.getSignalServiceAddress());
     ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(address);

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.GroupsUtil;
@@ -42,6 +43,7 @@ import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -294,6 +296,11 @@ public class AccountData {
         contactStore.updateContact(c);
       }
     }
+  }
+
+  @JsonIgnore
+  public Database getDatabase() throws SQLException {
+    return new Database(getUUID());
   }
 
   public class Resolver implements AddressResolver {

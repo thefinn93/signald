@@ -38,6 +38,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,7 +50,7 @@ public class LeaveGroupRequest implements RequestType {
 
   @Override
   public void run(Request request)
-      throws IOException, NoSuchAccountException, NotAGroupMemberException, GroupNotFoundException, UnknownGroupException, VerificationFailedException {
+      throws IOException, NoSuchAccountException, NotAGroupMemberException, GroupNotFoundException, UnknownGroupException, VerificationFailedException, SQLException {
     Manager m = Manager.get(account);
 
     if (groupID.length() == 24) { // legacy (v1) group

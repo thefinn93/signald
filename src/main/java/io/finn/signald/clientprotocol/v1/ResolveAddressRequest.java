@@ -28,6 +28,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 @Doc(
     "Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience function for client authors, mostly because signald doesn't resolve all the partials it returns")
@@ -38,7 +39,7 @@ public class ResolveAddressRequest implements RequestType {
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException {
+  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
     SignalServiceAddress resolved = Manager.get(account).getResolver().resolve(partial.getSignalServiceAddress());
     request.reply(new JsonAddress(resolved));
   }

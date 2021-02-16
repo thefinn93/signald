@@ -31,6 +31,7 @@ import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
@@ -45,8 +46,8 @@ public class ReactRequest implements RequestType {
   public long timestamp;
 
   @Override
-  public void run(Request request)
-      throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException, InvalidInputException, UnknownGroupException {
+  public void run(Request request) throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException, InvalidInputException,
+                                          UnknownGroupException, SQLException {
     Manager m = Manager.get(username);
 
     if (timestamp > 0) {

@@ -27,6 +27,7 @@ import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 @SignaldClientRequest(type = "list_groups", ResponseClass = GroupList.class)
 public class ListGroupsRequest implements RequestType {
@@ -34,7 +35,7 @@ public class ListGroupsRequest implements RequestType {
   @Required public String account;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException {
+  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
     GroupList groups = new GroupList();
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();

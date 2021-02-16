@@ -101,6 +101,8 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-core:2.14.0'
     implementation 'org.slf4j:slf4j-nop:1.8.0-beta4'
     implementation 'info.picocli:picocli:4.5.2'
+    implementation 'org.xerial:sqlite-jdbc:3.34.0'
+    implementation 'org.flywaydb:flyway-core:7.5.3'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }

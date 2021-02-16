@@ -20,13 +20,14 @@ package io.finn.signald;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 public class JsonPreview {
   public String url;
   public String title;
   public JsonAttachment attachment;
 
-  public JsonPreview(SignalServiceDataMessage.Preview preview, String username) throws IOException, NoSuchAccountException {
+  public JsonPreview(SignalServiceDataMessage.Preview preview, String username) throws IOException, NoSuchAccountException, SQLException {
     url = preview.getUrl();
     title = preview.getTitle();
     if (preview.getImage().isPresent()) {

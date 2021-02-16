@@ -25,6 +25,7 @@ import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 
 public class JsonAttachment {
   public String contentType;
@@ -46,7 +47,7 @@ public class JsonAttachment {
 
   JsonAttachment(String storedFilename) { this.filename = storedFilename; }
 
-  public JsonAttachment(SignalServiceAttachment attachment, String username) throws IOException, NoSuchAccountException {
+  public JsonAttachment(SignalServiceAttachment attachment, String username) throws IOException, NoSuchAccountException, SQLException {
     this.contentType = attachment.getContentType();
     final SignalServiceAttachmentPointer pointer = attachment.asPointer();
     if (attachment.isPointer()) {

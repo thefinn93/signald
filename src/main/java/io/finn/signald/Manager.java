@@ -82,6 +82,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -142,16 +143,16 @@ public class Manager {
     }
   }
 
-  public static Manager get(String username) throws IOException, NoSuchAccountException { return get(username, false); }
+  public static Manager get(String username) throws IOException, NoSuchAccountException, SQLException { return get(username, false); }
 
-  public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException {
+  public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException, SQLException {
     Logger logger = LogManager.getLogger("manager");
     if (managers.containsKey(username)) {
       return managers.get(username);
     }
-
     managers.put(username, new Manager(username));
     Manager m = managers.get(username);
+    m.getAccountData().getDatabase();
     if (!newUser) {
       try {
         if (m.userExists()) {
@@ -191,7 +192,7 @@ public class Manager {
       if (!account.isDirectory()) {
         try {
           allManagers.add(Manager.get(account.getName()));
-        } catch (IOException | NoSuchAccountException e) {
+        } catch (IOException | NoSuchAccountException | SQLException e) {
           logger.warn("Failed to load account from file: " + account.getAbsolutePath());
           e.printStackTrace();
         }
@@ -251,7 +252,7 @@ public class Manager {
     return new File(cachePath + "/" + now + "_" + envelope.getTimestamp());
   }
 
-  private static void createPrivateDirectories(String path) throws IOException {
+  public static void createPrivateDirectories(String path) throws IOException {
     final Path file = new File(path).toPath();
     try {
       Set<PosixFilePermission> perms = EnumSet.of(OWNER_READ, OWNER_WRITE, OWNER_EXECUTE);
@@ -1009,7 +1010,7 @@ public class Manager {
     return actions;
   }
 
-  public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws IOException, MissingConfigurationException {
+  public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws IOException, MissingConfigurationException, SQLException {
     final File cachePath = new File(getMessageCachePath());
     if (!cachePath.exists()) {
       return;
@@ -1061,6 +1062,32 @@ public class Manager {
       // Try to delete directory if empty
       dir.delete();
     }
+
+    while (true) {
+      SignalServiceEnvelope envelope = accountData.getDatabase().getMessageQueueTable().nextEnvelope();
+      if (envelope == null) {
+        break;
+      }
+      SignalServiceContent content = null;
+      Exception exception = null;
+      if (!envelope.isReceipt()) {
+        try {
+          content = decryptMessage(envelope);
+        } catch (Exception e) {
+          exception = e;
+        }
+        if (exception == null) {
+          try {
+            handleMessage(envelope, content, ignoreAttachments);
+          } catch (VerificationFailedException e) {
+            logger.catching(e);
+          }
+        }
+      }
+      accountData.save();
+      handler.handleMessage(envelope, content, exception);
+      accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
+    }
   }
 
   public void shutdownMessagePipe() {
@@ -1070,7 +1097,7 @@ public class Manager {
   }
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
-      throws IOException, MissingConfigurationException, VerificationFailedException {
+      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
     accountData.saveIfNeeded();
 
@@ -1092,10 +1119,10 @@ public class Manager {
             public void onMessage(SignalServiceEnvelope envelope) {
               // store message on disk, before acknowledging receipt to the server
               try {
-                File cacheFile = getMessageCacheFile(envelope, now);
-                storeEnvelope(envelope, cacheFile);
-              } catch (IOException e) {
-                logger.warn("Failed to store encrypted message in disk cache, ignoring: " + e.getMessage());
+                logger.debug("Storing envelope to database");
+                accountData.getDatabase().getMessageQueueTable().storeEnvelope(envelope);
+              } catch (SQLException e) {
+                logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
               }
             }
           });
@@ -1123,14 +1150,10 @@ public class Manager {
         }
         accountData.save();
         handler.handleMessage(envelope, content, exception);
-        File cacheFile = null;
         try {
-          cacheFile = getMessageCacheFile(envelope, now);
-          Files.delete(cacheFile.toPath());
-          // Try to delete directory if empty
-          new File(getMessageCachePath()).delete();
-        } catch (IOException e) {
-          logger.warn("Failed to delete cached message file “" + cacheFile + "”: " + e.getMessage());
+          accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
+        } catch (SQLException e) {
+          logger.error("failed to remove cached message from database");
         }
       }
     } finally {

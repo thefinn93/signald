@@ -40,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -59,7 +60,7 @@ public class SendRequest implements RequestType {
 
   @Override
   public void run(Request request) throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException,
-                                          NoSuchAccountException, InvalidInputException, UnknownGroupException {
+                                          NoSuchAccountException, InvalidInputException, UnknownGroupException, SQLException {
     Manager manager = Manager.get(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

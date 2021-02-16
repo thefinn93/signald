@@ -32,6 +32,7 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 @SignaldClientRequest(type = "get_group", ResponseClass = JsonGroupV2Info.class)
 @Doc("Query the server for the latest state of a known group")
@@ -44,7 +45,7 @@ public class GetGroupRequest implements RequestType {
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException {
+  public void run(Request request) throws IOException, NoSuchAccountException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Group group = groupsV2Manager.getGroup(groupID, revision);

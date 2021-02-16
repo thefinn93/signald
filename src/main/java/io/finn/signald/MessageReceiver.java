@@ -28,6 +28,7 @@ import org.whispersystems.signalservice.api.messages.*;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 
 class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
@@ -48,7 +49,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       logger.info("Last client for " + Util.redact(this.username) + " unsubscribed, shutting down message pipe!");
       try {
         Manager.get(username).shutdownMessagePipe();
-      } catch (IOException | NoSuchAccountException e) {
+      } catch (IOException | NoSuchAccountException | SQLException e) {
         logger.catching(e);
       }
     }
@@ -113,7 +114,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       } else {
         this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
       }
-    } catch (IOException | NoSuchAccountException e) {
+    } catch (IOException | NoSuchAccountException | SQLException e) {
       logger.catching(e);
     }
   }

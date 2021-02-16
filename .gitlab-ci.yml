@@ -212,8 +212,6 @@ publish debian packages:
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
-    - when: manual
-      allow_failure: true
 
 validate protocol:
   image: golang:latest

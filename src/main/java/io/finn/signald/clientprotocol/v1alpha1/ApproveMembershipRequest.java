@@ -43,6 +43,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -59,7 +60,7 @@ public class ApproveMembershipRequest implements RequestType {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException {
+  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);

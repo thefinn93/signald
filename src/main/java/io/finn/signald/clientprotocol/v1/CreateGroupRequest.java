@@ -38,6 +38,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -59,7 +60,7 @@ public class CreateGroupRequest implements RequestType {
 
   @Override
   public void run(Request request)
-      throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException {
+      throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AddressResolver resolver = m.getResolver();
     List<SignalServiceAddress> resolvedMembers = members.stream().map(x -> resolver.resolve(x.getSignalServiceAddress())).collect(Collectors.toList());

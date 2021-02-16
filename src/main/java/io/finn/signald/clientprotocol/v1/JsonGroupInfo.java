@@ -25,6 +25,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccountException {
+  JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccountException, SQLException {
     Manager manager = Manager.get(username);
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {

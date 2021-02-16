@@ -19,6 +19,7 @@ package io.finn.signald;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
+import io.finn.signald.db.Database;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.Level;
@@ -27,6 +28,9 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.asamk.signal.util.SecurityProvider;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.output.MigrateOutput;
+import org.flywaydb.core.api.output.MigrateResult;
 import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
@@ -51,6 +55,8 @@ public class Main implements Runnable {
   @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = "/var/run/signald/signald.sock";
 
   @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
+
+  @Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db") private String db;
 
   @Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit") private boolean dumpProtocol = false;
 
@@ -80,20 +86,38 @@ public class Main implements Runnable {
       SocketManager socketmanager = new SocketManager();
       ConcurrentHashMap<String, MessageReceiver> receivers = new ConcurrentHashMap<String, MessageReceiver>();
 
+      logger.debug("Using data folder " + data_path);
+
+      Manager.setDataPath(data_path);
+      AccountData.setDataPath(data_path);
+
+      if (db == null) {
+        db = "jdbc:sqlite:" + data_path + "/signald.db";
+        Manager.createPrivateDirectories(data_path);
+      }
+
+      logger.debug("migrating database " + db);
+      Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
+      MigrateResult migrateResult = flyway.migrate();
+      for (String w : migrateResult.warnings) {
+        logger.warn("db migration warning: " + w);
+      }
+      for (MigrateOutput o : migrateResult.migrations) {
+        logger.info("applied migration " + o.description + " (" + o.version + ") in " + o.executionTime + " ms");
+      }
+
+      Database.setConnectionString(db);
+
       // Spins up one thread per inbound connection to the control socket
       File socketFile = new File(socket_path);
       if (socketFile.exists()) {
         logger.debug("Deleting existing socket file");
         Files.delete(socketFile.toPath());
       }
+
       logger.info("Binding to socket " + socket_path);
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
       server.bind(new AFUNIXSocketAddress(socketFile));
-
-      logger.debug("Using data folder " + data_path);
-
-      Manager.setDataPath(data_path);
-      AccountData.setDataPath(data_path);
 
       // Spins up one thread per registered signal number, listens for incoming messages
       File[] users = new File(data_path + "/data").listFiles();

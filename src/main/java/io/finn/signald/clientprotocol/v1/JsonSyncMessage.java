@@ -21,6 +21,7 @@ import io.finn.signald.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException, SQLException {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
     }

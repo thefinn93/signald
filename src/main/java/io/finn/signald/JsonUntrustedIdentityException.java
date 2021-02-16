@@ -24,6 +24,7 @@ import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 class JsonUntrustedIdentityException {
   public JsonAddress local_address;
@@ -49,7 +50,7 @@ class JsonUntrustedIdentityException {
       this.local_address = new JsonAddress(m.getOwnAddress());
       this.safety_number =
           SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
-    } catch (IOException | NoSuchAccountException e) {
+    } catch (IOException | NoSuchAccountException | SQLException e) {
       e.printStackTrace();
     }
   }

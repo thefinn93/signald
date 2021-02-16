@@ -29,6 +29,7 @@ import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
 
 @SignaldClientRequest(type = "finish_link", ResponseClass = Account.class)
@@ -37,7 +38,7 @@ public class FinishLinkRequest implements RequestType {
   @JsonProperty("session_id") public String sessionID;
 
   @Override
-  public void run(Request request) throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccountException {
+  public void run(Request request) throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccountException, SQLException {
     ProvisioningManager pm = ProvisioningManager.get(sessionID);
     if (pm == null) {
       request.error("session not found");

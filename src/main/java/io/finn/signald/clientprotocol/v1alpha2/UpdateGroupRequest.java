@@ -41,6 +41,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -68,7 +69,7 @@ public class UpdateGroupRequest implements RequestType {
 
   @Override
   public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, GroupNotFoundException, NotAGroupMemberException,
-                                          AttachmentInvalidException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException {
+                                          AttachmentInvalidException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
 

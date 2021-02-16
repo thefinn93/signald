@@ -30,6 +30,7 @@ import org.signal.zkgroup.InvalidInputException;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 
 @SignaldClientRequest(type = "set_profile", ResponseClass = Empty.class)
 public class SetProfile implements RequestType {
@@ -40,7 +41,7 @@ public class SetProfile implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @Doc("Path to new profile avatar file, if the avatar should be updated") public String avatarFile;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, InvalidInputException {
+  public void run(Request request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
     Manager.get(account).setProfile(name, avatar);
     request.reply(new Empty());

@@ -29,6 +29,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.messages.shared.SharedContact;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,7 +70,7 @@ public class JsonDataMessage {
 
   @Doc("list of mentions in the message") public List<JsonMention> mentions;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException {
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException, SQLException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {

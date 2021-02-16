@@ -42,6 +42,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -54,7 +55,7 @@ public class AcceptInvitationRequest implements RequestType {
 
   @Override
   public void run(Request request)
-      throws IOException, NoSuchAccountException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException {
+      throws IOException, NoSuchAccountException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);

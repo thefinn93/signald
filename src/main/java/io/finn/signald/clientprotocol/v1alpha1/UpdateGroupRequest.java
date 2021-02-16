@@ -45,6 +45,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -68,7 +69,7 @@ public class UpdateGroupRequest implements RequestType {
   @ExactlyOneOfRequired(GROUP_MODIFICATION) public List<JsonAddress> removeMembers;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException {
+  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);

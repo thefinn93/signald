@@ -21,6 +21,7 @@ import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 public class JsonSticker {
   public String packID;
@@ -28,7 +29,7 @@ public class JsonSticker {
   public int stickerID;
   public JsonAttachment attachment;
 
-  public JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException {
+  public JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException, SQLException {
     packID = Hex.toStringCondensed(sticker.getPackId());
     packKey = Hex.toStringCondensed(sticker.getPackKey());
     stickerID = sticker.getStickerId();
