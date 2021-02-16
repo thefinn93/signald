@@ -21,6 +21,8 @@ clang-format:
   script:
     - ci/format.sh
   needs: []
+  rules:
+    - when: on_success
 
 .build:
   image: openjdk:${JAVA_VERSION}-jdk
@@ -34,6 +36,8 @@ clang-format:
     paths:
       - build/
     expire_in: 30 days
+  rules:
+    - when: on_success
 
 build java8 x86_64-unknown-linux-gnu:
   extends: .build
@@ -148,6 +152,8 @@ integration tests x86:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
     expire_in: 30 days
+  rules:
+    - when: on_success
 
 integration tests aarch64-unknown-linux-gnu:
   image: debian
@@ -216,11 +222,14 @@ validate protocol:
     - apt-get update && apt-get install -y openjdk-11-jdk-headless
   script:
     - build/install/signald/bin/signald --dump-protocol > protocol.json
+    - go run ./tools/validate-protocol.go < protocol.json
   needs: ["build java11 x86_64-unknown-linux-gnu"]
   artifacts:
     paths:
       - protocol.json
     expire_in: 1 year
+  rules:
+    - when: on_success
 
 docs.signald.org:
   stage: downstreams
@@ -228,4 +237,3 @@ docs.signald.org:
   trigger: signald/docs.signald.org
   only:
     - main
-
