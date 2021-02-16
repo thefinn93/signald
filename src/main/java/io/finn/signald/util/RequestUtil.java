@@ -54,7 +54,7 @@ public class RequestUtil {
                     ListGroupsRequest.class,                                                 // v1        list_groups
                     ListContactsRequest.class,                                               // v1        list_contacts
                     CreateGroupRequest.class,                                                // v1        create_group
-                    LeaveGroupRequest.class,                                                  // v1        leave_group
+                    LeaveGroupRequest.class,                                                 // v1        leave_group
                     GenerateLinkingURIRequest.class,                                         // v1        generate_linking_uri
                     FinishLinkRequest.class                                                  // v1        finish_link
       );
