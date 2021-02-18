@@ -1,67 +1,31 @@
 # signald - An (unofficial) Signal Daemon
 
 
-signald is a daemon that facilitates communication over Signal.  Unofficial, unapproved, and [not nearly as secure as the real Signal clients](https://gitlab.com/signald/signald/-/issues/101).
-
+signald is a daemon that facilitates communication over Signal.  It is unofficial, unapproved, and [not nearly as secure as the real Signal clients](https://gitlab.com/signald/signald/-/issues/101).
 
 ## Installation
 
- - [From source](./docs/install/source.md)
- - [Debian](./docs/install/debian.md)
- - [Docker](./docs/install/docker.md)
+* [From source](./docs/install/source.md)
+* [Debian](./docs/install/debian.md)
+* [Docker](./docs/install/docker.md)
 
-## signald clients
-* [libpurple](https://github.com/hoehermann/libpurple-signald)
-* [matrix](https://github.com/tulir/mautrix-signal)
+## Clients
 
-## other things that use signald
-note that this list does not include libraries, which are listed under [lower down](#use-a-library).
-
+* [signaldctl](https://gitlab.com/signald/signald-go/-/blob/main/cmd/signaldctl/README.md) - simple cli for account creation and other maintenance functions
+* [libpurple-signald](https://github.com/hoehermann/libpurple-signald)
+* [matrix-signal](https://github.com/tulir/mautrix-signal)
+* [signal-weechat](https://github.com/thefinn93/signal-weechat)
 * [Adhesive](https://github.com/signalstickers/Adhesive) - A chatbot serving as your glue between Telegram and Signal sticker packs
-* [alertmanager-webhook-signald](https://github.com/dgl/alertmanager-webhook-signald) -  Alertmanager webhook server for Signald 
-
-## Quick Start for developers
-
-### Launch signald
-1. Startup signald depending on your installation method
-1. In a second terminal window, connect to the signald control socket: `nc -U /var/run/signald/signald.sock` (Debian users will need to have `netcat-openbsd` installed)
-1. Responses from signald, including incoming Signal messages, will be sent to the socket and shown on your screen
-
-### Connect an account to Signal
-Either register a new number on Signal or add signald as a linked device on your existing Signal account.
-
-#### To register a new number:
-1. Send something like: `{"type": "register", "username": "+12024561414"}`
-1. Once you receive the verification text, submit it like this: `{"type": "verify", "username": "+12024561414", "code": "000-000"}` where `000-000` is the verification code.
-
-#### To link an account:
-1. Send `{"type": "link", "deviceName": "your-device-name"}`
-1. You'll receive a `uri`, create a QR code from that URI
-1. Open the Signal app, go to Settings -> Linked Devices, tap the + button in the bottom right and scan the QR code.
-
-### Interact with Signal
-- To subscribe to messages being sent to you, use (where username is *your* number):
-```json
-{"type": "subscribe", "username": "+12024561414"}
-```
-
-- To send a message, use something like this:
-```json
-{"type": "send", "username": "+12024561414", "recipientAddress": {"number": "+14235290302"}, "messageBody": "Hello, Dave"}
-```
+* [alertmanager-webhook-signald](https://github.com/dgl/alertmanager-webhook-signald) -  Alertmanager webhook server for Signald
 
 ## Contributing/Feedback/Bugs
 [Issues and MRs are accepted via GitLab.com](https://gitlab.com/signald/signald). There is an IRC channel, `#signald` on Freenode,
-for those that go for that sort of thing. MRs gladly accepted.
-
-## Stability
-This is currently beta software. The public API may have backwards-incompatible, breaking changes before it stabilizes, although we will make an
-effort to not do that. Further, there are no guarantees of safety or security with this software.
+for those that go for that sort of thing, or `#signald:matrix.org` on matrix.
 
 ## Interacting with signald
 
 ### Use a library
-signald's protocol can be somewhat annoying to interact with, and several libraries are available to assist with that:
+There are several libraries to make it easier to interact with signald from your software:
 
 * Python:
   * [pysignald](https://pypi.org/project/pysignald/) - general purpose signald library
@@ -73,11 +37,23 @@ signald's protocol can be somewhat annoying to interact with, and several librar
 When started, signald will create a unix socket at `/var/run/signald/signald.sock` (can be overridden on the command line).
 To interact with it, connect to that socket and send new line (`\n`) terminated JSON strings. The specific protocol is described below.
 
+
+### Manually
+This is useful for debugging mostly. consider using [signaldctl](https://gitlab.com/signald/signald-go/-/blob/main/cmd/signaldctl/README.md) for one off interactions.
+
+To manually type the signald protocol, install a version of netcat that supports connecting to unix sockets (`-U`). On Debian,
+the package is called `netcat-openbsd`. Connect to the signald control socket with netcat `nc -U /var/run/signald/signald.sock`.
+Type JSON requests on a single line and hit enter to send them.
+
 ## Socket protocol.
-Each message sent to the control socket must be valid JSON and have a `type` field. The possible message types and their
+Each message sent to the socket must be valid JSON and have a `type` field. The possible request types and their
 arguments are enumerated below. All messages may optionally include an `id` field. When signald follows up on a previous
 command, it will include the same `id` value. Most commands (but not all) require `username` field, which is the number
 to use for this action, as multiple numbers can be registered with signald at the same time.
+
+What is represented below are the default versions of each request type. New versions are being introduced, sometimes with
+added functionality. See [Protocol Versioning](https://gitlab.com/signald/signald/-/wikis/Protocol-Versioning) for more
+information.
 
 ### `send`
 Sends a signal message to another user or a group. Possible values are:
