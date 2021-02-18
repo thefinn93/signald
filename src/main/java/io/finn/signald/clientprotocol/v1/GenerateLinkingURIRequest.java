@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "generate_linking_uri", ResponseClass = String.class)
+@SignaldClientRequest(type = "generate_linking_uri", ResponseClass = LinkingURI.class)
 @Doc("Generate a linking URI. Typically this is QR encoded and scanned by the primary device. Submit the returned session_id with a finish_link request.")
 public class GenerateLinkingURIRequest implements RequestType {
   @Override
