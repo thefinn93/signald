@@ -29,6 +29,7 @@ There are several libraries to make it easier to interact with signald from your
 
 * Python:
   * [pysignald](https://pypi.org/project/pysignald/) - general purpose signald library
+  * [pysignald-async](https://gitlab.com/nicocool84/pysignald-async) - a signald library using modern Python features generated from the API docs
   * [Semaphore](https://github.com/lwesterhof/semaphore) - a simple (rule-based) bot library for Signal Private Messenger in Python
 * Go:
   * [signald-go](https://gitlab.com/signald/signald-go) - a signald library in go
