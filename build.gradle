@@ -61,7 +61,6 @@ String getTarget() {
                 "\n * arch: " + arch.getName() +
                 "\n * linux: " + os.isLinux() ? "yes" : "no" +
                 "\n * osx:" + os.isMacOsX() ? "yes": "no" +
-                "\n * windows: " + os.isWindows() ? "yes": "no" +
                 "\n\n Set environment variable SIGNALD_TARGET to force a target" +
                 "\n See https://gitlab.com/signald/signald/-/merge_requests/44")
     }
