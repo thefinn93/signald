@@ -26,38 +26,29 @@ import java.util.Map;
 import java.util.UUID;
 
 public class RequestUtil {
-  public static final List<Class<? extends RequestType>> requestTypes =
-      Arrays.asList(SendRequest.class,                                                       // v1        send
-                    ReactRequest.class,                                                      // v1        react
-                    VersionRequest.class,                                                    // v1        version
-                    io.finn.signald.clientprotocol.v1alpha1.ProtocolRequest.class,           // v1alpha1  protocol
-                    io.finn.signald.clientprotocol.v1alpha1.GetLinkedDevicesRequest.class,   // v1alpha1  get_linked_devices
-                    io.finn.signald.clientprotocol.v1alpha1.RemoveLinkedDeviceRequest.class, // v1alpha1  remove_linked_device
-                    io.finn.signald.clientprotocol.v1alpha1.JoinGroupRequest.class,          // v1alpha1  join_group
-                    io.finn.signald.clientprotocol.v1alpha1.UpdateGroupRequest.class,        // v1alpha1  update_group
-                    io.finn.signald.clientprotocol.v1alpha1.AcceptInvitationRequest.class,   // v1alpha1  accept_invitation
-                    io.finn.signald.clientprotocol.v1alpha1.ApproveMembershipRequest.class,  // v1alpha1  approve_membership
-                    io.finn.signald.clientprotocol.v1alpha1.GetGroupRequest.class,           // v1alpha1  get_group
-                    io.finn.signald.clientprotocol.v1alpha2.UpdateGroupRequest.class,        // v1alpha2  update_group
-                    AcceptInvitationRequest.class,                                           // v1        accept_invitation
-                    ApproveMembershipRequest.class,                                          // v1        approve_membership
-                    GetGroupRequest.class,                                                   // v1        get_group
-                    GetLinkedDevicesRequest.class,                                           // v1        get_linked_devices
-                    JoinGroupRequest.class,                                                  // v1        join_group
-                    ProtocolRequest.class,                                                   // v1        protocol
-                    RemoveLinkedDeviceRequest.class,                                         // v1        remove_linked_device
-                    UpdateGroupRequest.class,                                                // v1        update_group
-                    SetProfile.class,                                                        // v1        set_profile
-                    ResolveAddressRequest.class,                                             // v1        resolve_address
-                    MarkReadRequest.class,                                                   // v1        mark_read
-                    GetProfileRequest.class,                                                 // v1        get_profile
-                    ListGroupsRequest.class,                                                 // v1        list_groups
-                    ListContactsRequest.class,                                               // v1        list_contacts
-                    CreateGroupRequest.class,                                                // v1        create_group
-                    LeaveGroupRequest.class,                                                 // v1        leave_group
-                    GenerateLinkingURIRequest.class,                                         // v1        generate_linking_uri
-                    FinishLinkRequest.class                                                  // v1        finish_link
-      );
+  public static final List<Class<? extends RequestType>> requestTypes = Arrays.asList( // version   request_type
+      SendRequest.class,                                                               // v1        send
+      ReactRequest.class,                                                              // v1        react
+      VersionRequest.class,                                                            // v1        version
+      AcceptInvitationRequest.class,                                                   // v1        accept_invitation
+      ApproveMembershipRequest.class,                                                  // v1        approve_membership
+      GetGroupRequest.class,                                                           // v1        get_group
+      GetLinkedDevicesRequest.class,                                                   // v1        get_linked_devices
+      JoinGroupRequest.class,                                                          // v1        join_group
+      ProtocolRequest.class,                                                           // v1        protocol
+      RemoveLinkedDeviceRequest.class,                                                 // v1        remove_linked_device
+      UpdateGroupRequest.class,                                                        // v1        update_group
+      SetProfile.class,                                                                // v1        set_profile
+      ResolveAddressRequest.class,                                                     // v1        resolve_address
+      MarkReadRequest.class,                                                           // v1        mark_read
+      GetProfileRequest.class,                                                         // v1        get_profile
+      ListGroupsRequest.class,                                                         // v1        list_groups
+      ListContactsRequest.class,                                                       // v1        list_contacts
+      CreateGroupRequest.class,                                                        // v1        create_group
+      LeaveGroupRequest.class,                                                         // v1        leave_group
+      GenerateLinkingURIRequest.class,                                                 // v1        generate_linking_uri
+      FinishLinkRequest.class                                                          // v1        finish_link
+  );
 
   public static String getVersion(Class t) {
     if (t == null || t.isPrimitive() || t == UUID.class || t == Map.class) {
