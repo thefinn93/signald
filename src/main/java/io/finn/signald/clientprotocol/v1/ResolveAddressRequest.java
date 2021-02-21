@@ -32,15 +32,15 @@ import java.sql.SQLException;
 
 @Doc(
     "Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience function for client authors, mostly because signald doesn't resolve all the partials it returns")
-@SignaldClientRequest(type = "resolve_address", ResponseClass = JsonAddress.class)
-public class ResolveAddressRequest implements RequestType {
+@SignaldClientRequest(type = "resolve_address")
+public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The signal account to use") @Required public String account;
 
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
+  public JsonAddress run(Request request) throws IOException, NoSuchAccountException, SQLException {
     SignalServiceAddress resolved = Manager.get(account).getResolver().resolve(partial.getSignalServiceAddress());
-    request.reply(new JsonAddress(resolved));
+    return new JsonAddress(resolved);
   }
 }

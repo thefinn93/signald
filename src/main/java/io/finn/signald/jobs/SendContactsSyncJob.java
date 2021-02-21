@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
@@ -36,11 +36,13 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.List;
 
-public class SendContactsSyncAction implements Action {
+public class SendContactsSyncJob implements Job {
   private static final Logger logger = LogManager.getLogger();
+  private final Manager m;
 
+  public SendContactsSyncJob(Manager manager) { m = manager; }
   @Override
-  public void run(Manager m) throws IOException, UntrustedIdentityException {
+  public void run() throws IOException, UntrustedIdentityException {
     File contactsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
 
@@ -91,10 +93,5 @@ public class SendContactsSyncAction implements Action {
       }
     }
     accountData.save();
-  }
-
-  @Override
-  public String getName() {
-    return SendContactsSyncAction.class.getName();
   }
 }

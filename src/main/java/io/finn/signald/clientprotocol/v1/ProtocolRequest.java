@@ -37,12 +37,13 @@ import io.finn.signald.util.RequestUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@SignaldClientRequest(type = "protocol", ResponseClass = Empty.class)
-public class ProtocolRequest implements RequestType {
+@SignaldClientRequest(type = "protocol")
+public class ProtocolRequest implements RequestType<JsonNode> {
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
   private static final Logger logger = LogManager.getLogger();
 
@@ -51,8 +52,8 @@ public class ProtocolRequest implements RequestType {
   public static final String info = "This document describes objects that may be used when communicating with signald.";
 
   @Override
-  public void run(Request request) throws JsonProcessingException {
-    request.reply(GetProtocolDocumentation());
+  public JsonNode run(Request request) throws JsonProcessingException, NoSuchMethodException {
+    return GetProtocolDocumentation();
   }
 
   public static JsonNode GetProtocolDocumentation() throws JsonMappingException {
@@ -63,16 +64,20 @@ public class ProtocolRequest implements RequestType {
     uncheckedTypes.add(JsonMessageEnvelope.class);
     uncheckedTypes.add(JsonAccountList.class);
 
-    for (Class<? extends RequestType> r : RequestUtil.requestTypes) {
+    for (Class<? extends RequestType<?>> r : RequestUtil.requestTypes) {
+      if (r == ProtocolRequest.class) {
+        continue;
+      }
       SignaldClientRequest annotation = r.getAnnotation(SignaldClientRequest.class);
 
       ObjectNode action = JsonNodeFactory.instance.objectNode();
       action.put("request", r.getSimpleName());
       uncheckedTypes.add(r);
 
-      if (annotation.ResponseClass() != Empty.class) {
-        action.put("response", annotation.ResponseClass().getSimpleName());
-        uncheckedTypes.add(annotation.ResponseClass());
+      Class responseType = (Class)((ParameterizedType)r.getGenericInterfaces()[0]).getActualTypeArguments()[0];
+      if (responseType != Empty.class) {
+        action.put("response", responseType.getSimpleName());
+        uncheckedTypes.add(responseType);
       }
 
       if (r.getAnnotation(Doc.class) != null) {

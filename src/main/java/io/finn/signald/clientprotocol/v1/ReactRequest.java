@@ -36,9 +36,9 @@ import java.util.List;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-@SignaldClientRequest(type = "react", ResponseClass = SendResponse.class)
+@SignaldClientRequest(type = "react")
 @Doc("react to a previous message")
-public class ReactRequest implements RequestType {
+public class ReactRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
   @ExactlyOneOfRequired(RECIPIENT) public JsonAddress recipientAddress;
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
@@ -46,8 +46,8 @@ public class ReactRequest implements RequestType {
   public long timestamp;
 
   @Override
-  public void run(Request request) throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException, InvalidInputException,
-                                          UnknownGroupException, SQLException {
+  public SendResponse run(Request request) throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException,
+                                                  InvalidInputException, UnknownGroupException, SQLException {
     Manager m = Manager.get(username);
 
     if (timestamp > 0) {
@@ -59,6 +59,6 @@ public class ReactRequest implements RequestType {
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
     List<SendMessageResult> results = m.send(messageBuilder, recipientAddress, recipientGroupId);
-    request.reply(new SendResponse(results, timestamp));
+    return new SendResponse(results, timestamp);
   }
 }

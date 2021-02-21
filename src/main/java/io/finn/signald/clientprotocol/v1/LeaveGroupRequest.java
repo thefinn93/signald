@@ -42,29 +42,27 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SignaldClientRequest(type = "leave_group", ResponseClass = GroupInfo.class)
-public class LeaveGroupRequest implements RequestType {
+@SignaldClientRequest(type = "leave_group")
+public class LeaveGroupRequest implements RequestType<GroupInfo> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("The group to leave") @Required public String groupID;
 
   @Override
-  public void run(Request request)
+  public GroupInfo run(Request request)
       throws IOException, NoSuchAccountException, NotAGroupMemberException, GroupNotFoundException, UnknownGroupException, VerificationFailedException, SQLException {
     Manager m = Manager.get(account);
 
     if (groupID.length() == 24) { // legacy (v1) group
       m.sendQuitGroupMessage(Base64.decode(groupID));
       io.finn.signald.storage.GroupInfo g = m.getAccountData().groupStore.getGroup(groupID);
-      request.reply(new JsonGroupInfo(g));
-      return;
+      return new GroupInfo(g);
     }
 
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);
     if (group == null) {
-      request.error("group not found");
-      return;
+      throw new UnknownGroupException();
     }
 
     List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(UpdateGroupRequest::getMemberAddress).collect(Collectors.toList());
@@ -75,6 +73,6 @@ public class LeaveGroupRequest implements RequestType {
     m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
     accountData.groupsV2.update(output.second());
     accountData.save();
-    request.reply(new GroupInfo(output.second().getJsonGroupV2Info(m)));
+    return new GroupInfo(output.second().getJsonGroupV2Info(m));
   }
 }

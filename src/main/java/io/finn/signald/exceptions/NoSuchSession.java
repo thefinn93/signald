@@ -15,11 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.exceptions;
 
-import io.finn.signald.Manager;
-
-public interface Action {
-  void run(Manager m) throws Throwable;
-  String getName();
+public class NoSuchSession extends Exception {
+  public NoSuchSession() { super("no such session"); }
 }

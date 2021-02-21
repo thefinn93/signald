@@ -29,13 +29,13 @@ import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "list_groups", ResponseClass = GroupList.class)
-public class ListGroupsRequest implements RequestType {
+@SignaldClientRequest(type = "list_groups")
+public class ListGroupsRequest implements RequestType<GroupList> {
 
   @Required public String account;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
+  public GroupList run(Request request) throws IOException, NoSuchAccountException, SQLException {
     GroupList groups = new GroupList();
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
@@ -48,6 +48,6 @@ public class ListGroupsRequest implements RequestType {
       groups.add(new JsonGroupInfo(g));
     }
 
-    request.reply(groups);
+    return groups;
   }
 }

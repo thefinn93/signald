@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.storage.AccountData;
@@ -31,19 +31,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SendLegacyGroupUpdateAction implements Action {
+public class SendLegacyGroupUpdateJob implements Job {
   private final static Logger logger = LogManager.getLogger();
 
-  private byte[] groupId;
-  private SignalServiceAddress recipient;
+  private final byte[] groupId;
+  private final SignalServiceAddress recipient;
+  private final Manager m;
 
-  public SendLegacyGroupUpdateAction(byte[] g, SignalServiceAddress r) {
+  public SendLegacyGroupUpdateJob(Manager manager, byte[] g, SignalServiceAddress r) {
+    m = manager;
     groupId = g;
     recipient = r;
   }
 
   @Override
-  public void run(Manager m) throws GroupNotFoundException, NotAGroupMemberException, IOException {
+  public void run() throws GroupNotFoundException, NotAGroupMemberException, IOException {
     AccountData accountData = m.getAccountData();
     GroupInfo g = accountData.groupStore.getGroup(groupId);
     if (g == null) {
@@ -59,10 +61,5 @@ public class SendLegacyGroupUpdateAction implements Action {
     final List<SignalServiceAddress> membersSend = new ArrayList<>();
     membersSend.add(recipient);
     m.sendMessage(messageBuilder, membersSend);
-  }
-
-  @Override
-  public String getName() {
-    return SendLegacyGroupUpdateAction.class.getName();
   }
 }

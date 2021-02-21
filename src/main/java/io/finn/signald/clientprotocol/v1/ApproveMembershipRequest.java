@@ -48,9 +48,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@SignaldClientRequest(type = "approve_membership", ResponseClass = JsonGroupV2Info.class)
+@SignaldClientRequest(type = "approve_membership")
 @Doc("approve a request to join a group")
-public class ApproveMembershipRequest implements RequestType {
+public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
@@ -58,7 +58,7 @@ public class ApproveMembershipRequest implements RequestType {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException, SQLException {
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);
@@ -88,6 +88,6 @@ public class ApproveMembershipRequest implements RequestType {
 
     accountData.groupsV2.update(group);
     accountData.save();
-    request.reply(group.getJsonGroupV2Info(m));
+    return group.getJsonGroupV2Info(m);
   }
 }

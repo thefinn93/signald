@@ -34,13 +34,15 @@ import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static io.finn.signald.util.RequestUtil.getVersion;
 import static io.finn.signald.util.RequestUtil.requestTypes;
@@ -147,7 +149,8 @@ public class Request {
     }
 
     try {
-      requestType.run(this);
+      Object r = requestType.run(this);
+      reply(new JsonMessageWrapper(type, r, id));
     } catch (InvalidRequestException e) {
       error(e.getMessage());
     } catch (Throwable throwable) {
@@ -219,30 +222,16 @@ public class Request {
             allOptions.add(f.getName());
           }
         }
-        errors.add("exactly one required of: " + String.join(", ", allOptions) + " (" + String.valueOf(entry.getValue()) + " found)");
+        errors.add("exactly one required of: " + String.join(", ", allOptions) + " (" + entry.getValue() + " found)");
       }
     }
 
     return errors;
   }
 
-  public void error(Object data) throws JsonProcessingException { reply(JsonMessageWrapper.error(type, data, id)); }
-
-  public void reply(Object data) throws JsonProcessingException { reply(new JsonMessageWrapper(type, data, id)); }
+  private void error(Object data) throws JsonProcessingException { reply(JsonMessageWrapper.error(type, data, id)); }
 
   private void reply(JsonMessageWrapper message) throws JsonProcessingException { writer.println(mapper.writeValueAsString(message)); }
-
-  public void replyWithSendResults(List<SendMessageResult> sendMessageResults) throws JsonProcessingException {
-    List<JsonSendMessageResult> results = new ArrayList<>();
-    for (SendMessageResult r : sendMessageResults) {
-      if (r != null) {
-        results.add(new JsonSendMessageResult(r));
-      }
-    }
-    reply(results);
-  }
-
-  public void replyWithSendResult(SendMessageResult sendMessageResults) throws JsonProcessingException { replyWithSendResults(Collections.singletonList(sendMessageResults)); }
 
   public Socket getSocket() { return socket; }
 

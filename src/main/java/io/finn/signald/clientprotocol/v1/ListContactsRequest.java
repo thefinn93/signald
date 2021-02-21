@@ -18,9 +18,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.NoSuchAccountException;
-import io.finn.signald.actions.Action;
-import io.finn.signald.actions.RefreshProfileAction;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
@@ -31,39 +30,34 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "list_contacts", ResponseClass = ProfileList.class)
-public class ListContactsRequest implements RequestType {
+@SignaldClientRequest(type = "list_contacts")
+public class ListContactsRequest implements RequestType<ProfileList> {
   private static final Logger logger = LogManager.getLogger();
 
   @Required public String account;
 
-  @Doc("return results from local store immediately, refreshing from server if needed. If false (default), block until all pending profiles have been retrieved.")
+  @Doc("return results from local store immediately, refreshing from server afterward if needed. If false (default), block until all pending profiles have been retrieved.")
   public boolean async;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
+  public ProfileList run(Request request) throws Exception {
     Manager m = Manager.get(account);
     ProfileList list = new ProfileList();
-    List<Action> actions = new ArrayList<>();
     for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
       ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.address.getSignalServiceAddress());
       if (profileEntry == null) {
         continue;
       }
 
-      RefreshProfileAction action = new RefreshProfileAction(profileEntry);
+      RefreshProfileJob action = new RefreshProfileJob(m, profileEntry);
       if (async) {
-        actions.add(action);
+        BackgroundJobRunnerThread.queue(action);
       } else {
         try {
-          action.run(m);
+          action.run();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
           logger.warn("error refreshing profile:", e);
         }
@@ -73,15 +67,6 @@ public class ListContactsRequest implements RequestType {
       profile.populateAvatar(m);
       list.profiles.add(profile);
     }
-    request.reply(list);
-    for (Action action : actions) {
-      try {
-        logger.debug("running " + action.getName());
-        action.run(m);
-      } catch (Throwable t) {
-        logger.warn("Error running " + action.getName());
-        logger.catching(t);
-      }
-    }
+    return list;
   }
 }

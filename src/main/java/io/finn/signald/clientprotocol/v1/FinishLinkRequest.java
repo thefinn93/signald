@@ -24,6 +24,7 @@ import io.finn.signald.ProvisioningManager;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.NoSuchSession;
 import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -32,19 +33,19 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "finish_link", ResponseClass = Account.class)
-public class FinishLinkRequest implements RequestType {
+@SignaldClientRequest(type = "finish_link")
+public class FinishLinkRequest implements RequestType<Account> {
   @JsonProperty("device_name") public String deviceName = "signald";
   @JsonProperty("session_id") public String sessionID;
 
   @Override
-  public void run(Request request) throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccountException, SQLException {
+  public Account run(Request request)
+      throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccountException, SQLException, NoSuchSession {
     ProvisioningManager pm = ProvisioningManager.get(sessionID);
     if (pm == null) {
-      request.error("session not found");
-      return;
+      throw new NoSuchSession();
     }
     String accountID = pm.finishDeviceLink(deviceName);
-    request.reply(new Account(Manager.get(accountID)));
+    return new Account(Manager.get(accountID));
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,30 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.exceptions;
 
-class JsonAccount {
-  public int deviceId;
-  public String username;
-  public String filename;
-  public String uuid;
-  public boolean registered;
-  public boolean has_keys;
-  public boolean subscribed;
-
-  JsonAccount(Manager m) {
-    this.username = m.getE164();
-    this.deviceId = m.getDeviceId();
-    this.filename = m.getFileName();
-    if (m.getUUID() != null) {
-      this.uuid = m.getUUID().toString();
-    }
-    this.registered = m.isRegistered();
-    this.has_keys = m.userHasKeys();
-  }
-
-  JsonAccount(Manager m, boolean subscribed) {
-    this(m);
-    this.subscribed = subscribed;
+public class UnknownJobName extends Exception {
+  public String name;
+  public UnknownJobName(String jobName) {
+    super("scheduled job of unknown type: " + jobName);
+    name = jobName;
   }
 }

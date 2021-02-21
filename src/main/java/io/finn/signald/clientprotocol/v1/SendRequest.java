@@ -47,8 +47,8 @@ import java.util.stream.Collectors;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-@SignaldClientRequest(type = "send", ResponseClass = SendResponse.class)
-public class SendRequest implements RequestType {
+@SignaldClientRequest(type = "send")
+public class SendRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
   @ExactlyOneOfRequired(RECIPIENT) public JsonAddress recipientAddress;
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
@@ -59,8 +59,8 @@ public class SendRequest implements RequestType {
   public List<JsonMention> mentions;
 
   @Override
-  public void run(Request request) throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException,
-                                          NoSuchAccountException, InvalidInputException, UnknownGroupException, SQLException {
+  public SendResponse run(Request request) throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException,
+                                                  NoSuchAccountException, InvalidInputException, UnknownGroupException, SQLException {
     Manager manager = Manager.get(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -110,6 +110,6 @@ public class SendRequest implements RequestType {
     }
 
     List<SendMessageResult> results = manager.send(messageBuilder, recipientAddress, recipientGroupId);
-    request.reply(new SendResponse(results, timestamp));
+    return new SendResponse(results, timestamp);
   }
 }

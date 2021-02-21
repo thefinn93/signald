@@ -25,6 +25,7 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -46,16 +47,16 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "accept_invitation", ResponseClass = JsonGroupV2Info.class)
+@SignaldClientRequest(type = "accept_invitation")
 @Doc("Accept a v2 group invitation. Note that you must have a profile name set to join groups.")
-public class AcceptInvitationRequest implements RequestType {
+public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
   @Override
-  public void run(Request request)
-      throws IOException, NoSuchAccountException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException {
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException,
+                                                     UnknownGroupException, SQLException, OwnProfileKeyDoesNotExist {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
     Group group = accountData.groupsV2.get(groupID);
@@ -64,8 +65,7 @@ public class AcceptInvitationRequest implements RequestType {
     ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
 
     if (ownProfileKeyCredential == null) {
-      request.error("cannot find own profile key");
-      return;
+      throw new OwnProfileKeyDoesNotExist();
     }
 
     GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownProfileKeyCredential);
@@ -85,6 +85,6 @@ public class AcceptInvitationRequest implements RequestType {
 
     accountData.groupsV2.update(group);
     accountData.save();
-    request.reply(group.getJsonGroupV2Info(m));
+    return group.getJsonGroupV2Info(m);
   }
 }

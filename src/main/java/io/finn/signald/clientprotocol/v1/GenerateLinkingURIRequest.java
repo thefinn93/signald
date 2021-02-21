@@ -27,11 +27,11 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "generate_linking_uri", ResponseClass = LinkingURI.class)
+@SignaldClientRequest(type = "generate_linking_uri")
 @Doc("Generate a linking URI. Typically this is QR encoded and scanned by the primary device. Submit the returned session_id with a finish_link request.")
-public class GenerateLinkingURIRequest implements RequestType {
+public class GenerateLinkingURIRequest implements RequestType<LinkingURI> {
   @Override
-  public void run(Request request) throws IOException, TimeoutException, URISyntaxException {
-    request.reply(new LinkingURI(ProvisioningManager.create()));
+  public LinkingURI run(Request request) throws IOException, TimeoutException, URISyntaxException {
+    return ProvisioningManager.create();
   }
 }

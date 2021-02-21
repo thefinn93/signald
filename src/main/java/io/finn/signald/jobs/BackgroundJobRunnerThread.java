@@ -15,27 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.db;
+package io.finn.signald.jobs;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class Database {
+public class BackgroundJobRunnerThread implements Runnable {
   private static final Logger logger = LogManager.getLogger();
-  private static String connectionString;
+  private static final BlockingQueue<Job> queue = new LinkedBlockingQueue<>();
 
-  private UUID uuid;
+  public static void queue(Job job) { queue.add(job); }
 
-  public static void setConnectionString(String c) { connectionString = c; }
+  @Override
+  public void run() {
+    while (true) {
+      Job job;
+      try {
+        job = queue.take();
+      } catch (InterruptedException e) {
+        logger.catching(e);
+        break;
+      }
 
-  public static Connection getConn() throws SQLException { return DriverManager.getConnection(connectionString); }
-
-  public Database(UUID u) { uuid = u; }
-
-  public MessageQueueTable getMessageQueueTable() { return new MessageQueueTable(uuid); }
+      logger.debug("running job " + job.getClass().getName());
+      try {
+        job.run();
+      } catch (Throwable t) {
+        logger.error("error running background job", t);
+      }
+    }
+  }
 }

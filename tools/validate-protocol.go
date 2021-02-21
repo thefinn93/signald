@@ -67,19 +67,19 @@ func checkMissingCriticalFields() bool {
 	}
 
 	if len(protocol.Actions) == 0 {
-		log.Println("[MissingCriticalFields] actions list is empty")
+		log.Println("[MissingCriticalFields] jobs list is empty")
 		pass = false
 	} else {
-		for version, actions := range protocol.Actions {
-			if len(actions) == 0 {
-				log.Println("[MissingCriticalFields] .actions." + version + " is empty")
+		for version, jobs := range protocol.Actions {
+			if len(jobs) == 0 {
+				log.Println("[MissingCriticalFields] .jobs." + version + " is empty")
 				pass = false
 			}
 		}
 	}
 
 	if len(protocol.Types) == 0 {
-		log.Println("[MissingCriticalFields] actions list is empty")
+		log.Println("[MissingCriticalFields] jobs list is empty")
 		pass = false
 	} else {
 		for version, types := range protocol.Types {
@@ -95,16 +95,16 @@ func checkMissingCriticalFields() bool {
 // validates that all response types exist in the specified version
 func checkRequestResponseTypesExist() bool {
 	pass := true
-	for version, actions := range protocol.Actions {
-		for t, action := range actions {
-			if _, ok := protocol.Types[version][action.Request]; !ok {
+	for version, jobs := range protocol.Actions {
+		for t, job := range jobs {
+			if _, ok := protocol.Types[version][job.Request]; !ok {
 				pass = false
-				log.Println("[MissingRequestType] request", t, version, "has request type", action.Request, "but no such type exists (is it referencing another version?)")
+				log.Println("[MissingRequestType] request", t, version, "has request type", job.Request, "but no such type exists (is it referencing another version?)")
 			}
-			if action.Response != "" && action.Response != "String" {
-				if _, ok := protocol.Types[version][action.Response]; !ok {
+			if job.Response != "" && job.Response != "String" {
+				if _, ok := protocol.Types[version][job.Response]; !ok {
 					pass = false
-					log.Println("[MissingResponseType] request", t, version, "has response type", action.Response, "but no such type exists (is it referencing another version?)")
+					log.Println("[MissingResponseType] request", t, version, "has response type", job.Response, "but no such type exists (is it referencing another version?)")
 				}
 			}
 		}

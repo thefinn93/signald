@@ -26,7 +26,7 @@ public class JsonAccountList {
   JsonAccountList(ArrayList<String> subscribedAccounts) {
     for (Manager m : Manager.getAll()) {
       if (m != null) {
-        accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getUsername())));
+        accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getE164())));
       }
     }
   }

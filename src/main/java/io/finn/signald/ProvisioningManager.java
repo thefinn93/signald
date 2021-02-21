@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.LinkingURI;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import org.asamk.signal.UserAlreadyExists;
@@ -24,7 +25,6 @@ import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
-import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.SleepTimer;
@@ -50,11 +50,11 @@ public class ProvisioningManager {
   private final int registrationId;
   private final String password;
 
-  public static Pair<String, ProvisioningManager> create() {
+  public static LinkingURI create() throws TimeoutException, IOException, URISyntaxException {
     UUID sessionID = UUID.randomUUID();
     ProvisioningManager pm = new ProvisioningManager();
     provisioningManagers.put(sessionID.toString(), pm);
-    return new Pair<>(sessionID.toString(), pm);
+    return new LinkingURI(sessionID.toString(), pm);
   }
 
   public static ProvisioningManager get(String sessionID) { return provisioningManagers.get(sessionID); }

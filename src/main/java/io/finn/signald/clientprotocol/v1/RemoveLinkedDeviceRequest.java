@@ -28,16 +28,16 @@ import io.finn.signald.clientprotocol.RequestType;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 
 @Doc("Remove a linked device from the Signal account. Only allowed when the local device id is 1")
-@SignaldClientRequest(type = "remove_linked_device", ResponseClass = Empty.class)
-public class RemoveLinkedDeviceRequest implements RequestType {
+@SignaldClientRequest(type = "remove_linked_device")
+public class RemoveLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue("3") @Doc("the ID of the device to unlink") @Required public long deviceId;
 
   @Override
-  public void run(Request request) throws Throwable {
+  public Empty run(Request request) throws Throwable {
     SignalServiceAccountManager accountManager = Manager.get(account).getAccountManager();
     accountManager.removeDevice(deviceId);
-    request.reply(null);
+    return new Empty();
   }
 }

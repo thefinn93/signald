@@ -27,6 +27,8 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.InvalidInviteURI;
+import io.finn.signald.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -50,21 +52,21 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "join_group", ResponseClass = JsonGroupJoinInfo.class)
+@SignaldClientRequest(type = "join_group")
 @Doc("Join a group using the a signal.group URL. Note that you must have a profile name set to join groups.")
-public class JoinGroupRequest implements RequestType {
+public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("The signal.group URL") @Required public String uri;
 
   @Override
-  public void run(Request request)
+  public JsonGroupJoinInfo run(Request request)
       throws GroupInviteLinkUrl.InvalidGroupLinkException, GroupInviteLinkUrl.UnknownGroupLinkVersionException, IOException, NoSuchAccountException, InterruptedException,
-             ExecutionException, TimeoutException, GroupLinkNotActiveException, VerificationFailedException, InvalidGroupStateException, UnknownGroupException, SQLException {
+             ExecutionException, TimeoutException, GroupLinkNotActiveException, VerificationFailedException, InvalidGroupStateException, UnknownGroupException, SQLException,
+             InvalidInviteURI, OwnProfileKeyDoesNotExist {
     GroupInviteLinkUrl groupInviteLinkUrl = GroupInviteLinkUrl.fromUri(uri);
     if (groupInviteLinkUrl == null) {
-      request.error("failed to parse invite URL");
-      return;
+      throw new InvalidInviteURI();
     }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupInviteLinkUrl.getGroupMasterKey());
 
@@ -72,8 +74,7 @@ public class JoinGroupRequest implements RequestType {
     ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
 
     if (profileKeyCredential == null) {
-      request.error("cannot get own profileKeyCredential");
-      return;
+      throw new OwnProfileKeyDoesNotExist();
     }
 
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
@@ -91,10 +92,7 @@ public class JoinGroupRequest implements RequestType {
 
     Group group = groupsV2Manager.getGroup(groupSecretParams, decryptedChange.getRevision());
 
-    if (group == null) {
-      request.error("unknown error fetching group");
-      return;
-    }
+    assert group != null;
 
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
     SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build()).withExpiration(group.getTimer());
@@ -104,6 +102,6 @@ public class JoinGroupRequest implements RequestType {
     accountData.groupsV2.update(group);
     accountData.save();
 
-    request.reply(new JsonGroupJoinInfo(groupJoinInfo, groupInviteLinkUrl.getGroupMasterKey()));
+    return new JsonGroupJoinInfo(groupJoinInfo, groupInviteLinkUrl.getGroupMasterKey());
   }
 }

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
@@ -34,11 +34,13 @@ import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSy
 import java.io.*;
 import java.nio.file.Files;
 
-public class SendGroupSyncAction implements Action {
+public class SendGroupSyncJob implements Job {
   private static final Logger logger = LogManager.getLogger();
+  private final Manager m;
 
+  public SendGroupSyncJob(Manager manager) { m = manager; }
   @Override
-  public void run(Manager m) throws IOException, UntrustedIdentityException {
+  public void run() throws IOException, UntrustedIdentityException {
     File groupsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
 
@@ -68,10 +70,5 @@ public class SendGroupSyncAction implements Action {
         logger.warn("Failed to delete groups temp file " + groupsFile + ": " + e.getMessage());
       }
     }
-  }
-
-  @Override
-  public String getName() {
-    return SendGroupSyncAction.class.getName();
   }
 }

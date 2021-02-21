@@ -15,22 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
+import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.storage.AccountData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 
-public class RefreshPreKeysAction implements Action {
+public class RefreshPreKeysJob implements Job {
   public static long INTERVAL = TimeUnit.DAYS.toMillis(3);
-  private static Logger logger = LogManager.getLogger();
+  private static final Logger logger = LogManager.getLogger();
 
+  private final Manager m;
+
+  public RefreshPreKeysJob(Manager manager) { m = manager; }
   @Override
-  public void run(Manager m) throws IOException {
+  public void run() throws IOException, SQLException, NoSuchAccountException {
     AccountData accountData = m.getAccountData();
     if (m.getAccountManager().getPreKeysCount() < Manager.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
@@ -38,10 +43,5 @@ public class RefreshPreKeysAction implements Action {
     }
     accountData.backgroundActionsLastRun.lastPreKeyRefresh = System.currentTimeMillis();
     accountData.save();
-  }
-
-  @Override
-  public String getName() {
-    return RefreshPreKeysAction.class.getName();
   }
 }

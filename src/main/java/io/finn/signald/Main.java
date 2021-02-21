@@ -20,6 +20,7 @@ package io.finn.signald;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.db.Database;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.Level;
@@ -107,6 +108,8 @@ public class Main implements Runnable {
       }
 
       Database.setConnectionString(db);
+
+      new Thread(new BackgroundJobRunnerThread()).start();
 
       // Spins up one thread per inbound connection to the control socket
       File socketFile = new File(socket_path);

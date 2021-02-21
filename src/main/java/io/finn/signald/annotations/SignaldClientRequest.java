@@ -23,5 +23,4 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SignaldClientRequest {
   String type();
-  Class ResponseClass();
 }

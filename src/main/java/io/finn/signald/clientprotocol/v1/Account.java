@@ -33,7 +33,7 @@ public class Account {
   @Doc("The address of this account") public JsonAddress address;
 
   public Account(Manager m) {
-    accountID = m.getUsername();
+    accountID = m.getE164();
     deviceID = m.getDeviceId();
     address = new JsonAddress(m.getOwnAddress());
   }

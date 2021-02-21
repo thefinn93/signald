@@ -44,15 +44,12 @@ public class MessageQueueTable {
   private static final String SERVER_UUID = "server_uuid";
   private static final String SERVER_DELIVERED_TIMESTAMP = "server_delivered_timestamp";
 
-  private Connection conn;
-  private UUID uuid;
+  private final UUID uuid;
 
-  public MessageQueueTable(Connection c, UUID u) {
-    conn = c;
-    uuid = u;
-  }
+  public MessageQueueTable(UUID u) { uuid = u; }
 
   public void storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
+    Connection conn = Database.getConn();
     PreparedStatement statement = conn.prepareStatement("INSERT INTO " + TABLE_NAME + " (" + ACCOUNT + ", " + VERSION + ", " + TYPE + ", " + SOURCE_E164 + ", " + SOURCE_UUID +
                                                         ", " + SOURCE_DEVICE + ", " + TIMESTAMP + ", " + CONTENT + ", " + LEGACY_MESSAGE + ", " + SERVER_RECEIVED_TIMESTAMP + ", " +
                                                         SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
@@ -63,7 +60,7 @@ public class MessageQueueTable {
       statement.setString(4, envelope.getSourceE164().get());
     }
     if (envelope.getSourceUuid().isPresent()) {
-      statement.setString(5, envelope.getSourceUuid().get().toString());
+      statement.setString(5, envelope.getSourceUuid().get());
     }
     statement.setInt(6, envelope.getSourceDevice());
     statement.setLong(7, envelope.getTimestamp());
@@ -80,6 +77,7 @@ public class MessageQueueTable {
   }
 
   public void deleteEnvelope(SignalServiceEnvelope envelope) throws SQLException {
+    Connection conn = Database.getConn();
     PreparedStatement statement = conn.prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + SOURCE_E164 + " = ? AND " + SOURCE_UUID + " = ? AND " + TIMESTAMP + " = ?");
     if (envelope.getSourceE164().isPresent()) {
       statement.setString(1, envelope.getSourceE164().get());
@@ -92,6 +90,7 @@ public class MessageQueueTable {
   }
 
   public SignalServiceEnvelope nextEnvelope() throws SQLException {
+    Connection conn = Database.getConn();
     PreparedStatement statement = conn.prepareStatement("SELECT * FROM " + TABLE_NAME + " WHERE " + ACCOUNT + " = ? LIMIT 1");
     statement.setString(1, uuid.toString());
     ResultSet rows = statement.executeQuery();

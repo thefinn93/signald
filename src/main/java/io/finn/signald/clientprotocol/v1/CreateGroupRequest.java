@@ -42,8 +42,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SignaldClientRequest(type = "create_group", ResponseClass = JsonGroupV2Info.class)
-public class CreateGroupRequest implements RequestType {
+@SignaldClientRequest(type = "create_group")
+public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Required @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
@@ -59,7 +59,7 @@ public class CreateGroupRequest implements RequestType {
   @Doc("the message expiration timer") public int timer;
 
   @Override
-  public void run(Request request)
+  public JsonGroupV2Info run(Request request)
       throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
     Manager m = Manager.get(account);
     AddressResolver resolver = m.getResolver();
@@ -84,6 +84,6 @@ public class CreateGroupRequest implements RequestType {
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.revision).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
     m.sendGroupV2Message(message, signalServiceGroupV2);
-    request.reply(group.getJsonGroupV2Info(m));
+    return group.getJsonGroupV2Info(m);
   }
 }

@@ -21,10 +21,10 @@ import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 
-@SignaldClientRequest(type = "version", ResponseClass = JsonVersionMessage.class)
-public class VersionRequest implements RequestType {
+@SignaldClientRequest(type = "version")
+public class VersionRequest implements RequestType<JsonVersionMessage> {
   @Override
-  public void run(Request request) throws Throwable {
-    request.reply(new JsonVersionMessage());
+  public JsonVersionMessage run(Request request) throws Throwable {
+    return new JsonVersionMessage();
   }
 }

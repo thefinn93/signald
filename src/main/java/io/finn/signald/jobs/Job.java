@@ -15,22 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.clientprotocol.v1;
+package io.finn.signald.jobs;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.ProvisioningManager;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.concurrent.TimeoutException;
-
-public class LinkingURI {
-  public String uri;
-
-  @JsonProperty("session_id") public String sessionID;
-
-  public LinkingURI(String s, ProvisioningManager pm) throws IOException, TimeoutException, URISyntaxException {
-    uri = pm.getDeviceLinkUri().toString();
-    sessionID = s;
-  }
-}
+public interface Job { void run() throws Throwable; }

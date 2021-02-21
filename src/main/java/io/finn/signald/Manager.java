@@ -16,7 +16,7 @@
  */
 package io.finn.signald;
 
-import io.finn.signald.actions.*;
+import io.finn.signald.jobs.*;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidRecipientException;
@@ -227,7 +227,7 @@ public class Manager {
     avatarsPath = settingsPath + "/avatars";
   }
 
-  public String getUsername() { return accountData.username; }
+  public String getE164() { return accountData.username; }
 
   public UUID getUUID() { return accountData.getUUID(); }
 
@@ -280,7 +280,7 @@ public class Manager {
 
   public boolean userHasKeys() { return accountData.axolotlStore != null; }
 
-  public void init() throws IOException {
+  public void init() throws IOException, SQLException, NoSuchAccountException {
     accountData = AccountData.load(new File(getFileName()));
     accountManager = getAccountManager();
     if (accountData.address.uuid == null && accountManager.getOwnUuid() != null) {
@@ -289,7 +289,7 @@ public class Manager {
     }
     groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID());
     if (accountData.backgroundActionsLastRun.refreshPreKeysNeeded()) {
-      new RefreshPreKeysAction().run(this);
+      new RefreshPreKeysJob(this).run();
     }
     refreshAccountIfNeeded();
     try {
@@ -893,10 +893,10 @@ public class Manager {
 
   public interface ReceiveMessageHandler { void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e); }
 
-  private List<Action> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
-                                                      boolean ignoreAttachments) throws MissingConfigurationException, IOException, VerificationFailedException {
+  private List<Job> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
+                                                   boolean ignoreAttachments) throws MissingConfigurationException, IOException, VerificationFailedException {
 
-    List<Action> actions = new ArrayList<>();
+    List<Job> jobs = new ArrayList<>();
     if (message.getGroupContext().isPresent()) {
       SignalServiceGroup groupInfo;
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
@@ -971,7 +971,7 @@ public class Manager {
           break;
         case REQUEST_INFO:
           if (group != null) {
-            actions.add(new SendLegacyGroupUpdateAction(groupInfo.getGroupId(), source));
+            jobs.add(new SendLegacyGroupUpdateJob(this, groupInfo.getGroupId(), source));
           }
           break;
         }
@@ -1007,7 +1007,7 @@ public class Manager {
       }
       accountData.profileCredentialStore.storeProfileKey(source, profileKey);
     }
-    return actions;
+    return jobs;
   }
 
   public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws IOException, MissingConfigurationException, SQLException {
@@ -1167,7 +1167,7 @@ public class Manager {
 
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
       throws IOException, MissingConfigurationException, VerificationFailedException {
-    List<Action> actions = new ArrayList<>();
+    List<Job> jobs = new ArrayList<>();
     if (content == null) {
       return;
     }
@@ -1177,29 +1177,29 @@ public class Manager {
     if (content.getDataMessage().isPresent()) {
       if (content.isNeedsReceipt()) {
         SignalServiceAddress sender = envelope.isUnidentifiedSender() && envelope.hasSource() ? envelope.getSourceAddress() : content.getSender();
-        actions.add(new SendDeliveryReceiptAction(sender, content.getTimestamp()));
+        jobs.add(new SendDeliveryReceiptJob(this, sender, content.getTimestamp()));
       }
       SignalServiceDataMessage message = content.getDataMessage().get();
-      actions.addAll(handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments));
+      jobs.addAll(handleSignalServiceDataMessage(message, false, source, accountData.address.getSignalServiceAddress(), ignoreAttachments));
     }
 
     if (envelope.isPreKeySignalMessage()) {
-      actions.add(new RefreshPreKeysAction());
+      jobs.add(new RefreshPreKeysJob(this));
     }
 
     if (content.getSyncMessage().isPresent()) {
       SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
       if (syncMessage.getSent().isPresent()) {
         SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
-        actions.addAll(handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments));
+        jobs.addAll(handleSignalServiceDataMessage(message, true, source, syncMessage.getSent().get().getDestination().orNull(), ignoreAttachments));
       }
       if (syncMessage.getRequest().isPresent()) {
         RequestMessage rm = syncMessage.getRequest().get();
         if (rm.isContactsRequest()) {
-          actions.add(new SendContactsSyncAction());
+          jobs.add(new SendContactsSyncJob(this));
         }
         if (rm.isGroupsRequest()) {
-          actions.add(new SendGroupSyncAction());
+          jobs.add(new SendGroupSyncJob(this));
         }
       }
 
@@ -1276,12 +1276,12 @@ public class Manager {
         accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
-    for (Action action : actions) {
+    for (Job job : jobs) {
       try {
-        logger.debug("running " + action.getName());
-        action.run(this);
+        logger.debug("running " + job.getClass().getName());
+        job.run();
       } catch (Throwable t) {
-        logger.warn("Error running " + action.getName());
+        logger.warn("Error running " + job.getClass().getName());
         logger.catching(t);
       }
     }
@@ -1597,9 +1597,9 @@ public class Manager {
     if (profileEntry == null) {
       return null;
     }
-    RefreshProfileAction action = new RefreshProfileAction(profileEntry);
+    RefreshProfileJob action = new RefreshProfileJob(this, profileEntry);
     if (action.needsRefresh()) {
-      action.run(this);
+      action.run();
       return accountData.profileCredentialStore.get(address);
     } else {
       return profileEntry;

@@ -26,25 +26,18 @@ import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
-import org.whispersystems.signalservice.api.messages.multidevice.DeviceInfo;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 
-@SignaldClientRequest(type = "get_linked_devices", ResponseClass = GetLinkedDevicesRequest.LinkedDevices.class)
+@SignaldClientRequest(type = "get_linked_devices")
 @Doc("list all linked devices on a Signal account")
-public class GetLinkedDevicesRequest implements RequestType {
+public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, SQLException {
+  public LinkedDevices run(Request request) throws IOException, NoSuchAccountException, SQLException {
     SignalServiceAccountManager accountManager = Manager.get(account).getAccountManager();
-    request.reply(new LinkedDevices(accountManager.getDevices()));
-  }
-
-  public static class LinkedDevices {
-    public List<DeviceInfo> devices;
-    LinkedDevices(List<DeviceInfo> devices) { this.devices = devices; }
+    return new LinkedDevices(accountManager.getDevices());
   }
 }

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -24,27 +24,26 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SendDeliveryReceiptAction implements Action {
+public class SendDeliveryReceiptJob implements Job {
 
-  private SignalServiceAddress to;
-  private List<Long> timestamps = new ArrayList<>();
+  private final SignalServiceAddress to;
+  private final List<Long> timestamps = new ArrayList<>();
+  private final Manager m;
 
-  public SendDeliveryReceiptAction(SignalServiceAddress address) { to = address; }
+  public SendDeliveryReceiptJob(Manager manager, SignalServiceAddress address) {
+    m = manager;
+    to = address;
+  }
 
-  public SendDeliveryReceiptAction(SignalServiceAddress address, Long timestamp) {
-    this(address);
+  public SendDeliveryReceiptJob(Manager manager, SignalServiceAddress address, Long timestamp) {
+    this(manager, address);
     addTimestamp(timestamp);
   }
 
   public void addTimestamp(Long timestamp) { timestamps.add(timestamp); }
 
   @Override
-  public String getName() {
-    return SendDeliveryReceiptAction.class.getName();
-  }
-
-  @Override
-  public void run(Manager m) throws Throwable {
+  public void run() throws Throwable {
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, timestamps, System.currentTimeMillis());
     m.sendReceipt(message, to);
   }

@@ -40,8 +40,8 @@ import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
-@SignaldClientRequest(type = "mark_read", ResponseClass = Empty.class)
-public class MarkReadRequest implements RequestType {
+@SignaldClientRequest(type = "mark_read")
+public class MarkReadRequest implements RequestType<Empty> {
 
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
@@ -50,7 +50,7 @@ public class MarkReadRequest implements RequestType {
   @ExampleValue(BuildConfig.BUILD_TIMESTAMP) @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException, SQLException {
+  public Empty run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException, SQLException {
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, System.currentTimeMillis());
     Manager m = Manager.get(account);
     SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());
@@ -62,6 +62,6 @@ public class MarkReadRequest implements RequestType {
       readMessages.add(new ReadMessage(toAddress, ts));
     }
     sender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
-    request.reply(null);
+    return new Empty();
   }
 }

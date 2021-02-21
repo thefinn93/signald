@@ -22,6 +22,7 @@ import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidRequestException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -41,9 +42,9 @@ import java.util.stream.Collectors;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
-@SignaldClientRequest(type = "update_group", ResponseClass = GroupInfo.class)
+@SignaldClientRequest(type = "update_group")
 @Doc("modify a group. Note that only one modification action may be preformed at once")
-public class UpdateGroupRequest implements RequestType {
+public class UpdateGroupRequest implements RequestType<GroupInfo> {
   private static final Logger logger = LogManager.getLogger();
 
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The identifier of the account to interact with") @Required public String account;
@@ -67,7 +68,7 @@ public class UpdateGroupRequest implements RequestType {
   @Doc("regenerate the group link password, invalidating the old one") @ExactlyOneOfRequired(GROUP_MODIFICATION) public boolean resetLink;
 
   @Override
-  public void run(Request request) throws Exception {
+  public GroupInfo run(Request request) throws Exception {
     Manager m = Manager.get(account);
     AccountData accountData = m.getAccountData();
 
@@ -76,12 +77,12 @@ public class UpdateGroupRequest implements RequestType {
       if (addMembers != null) {
         addMembersSignalServiceAddress = addMembers.stream().map(JsonAddress::getSignalServiceAddress).collect(Collectors.toList());
       }
-      m.sendUpdateGroupMessage(Base64.decode(groupID), title, addMembersSignalServiceAddress, avatar);
+      io.finn.signald.storage.GroupInfo g = m.sendUpdateGroupMessage(Base64.decode(groupID), title, addMembersSignalServiceAddress, avatar);
+      return new GroupInfo(g);
     } else {
       Group group = accountData.groupsV2.get(groupID);
       if (group == null) {
-        request.error("group not found");
-        return;
+        throw new UnknownGroupException();
       }
 
       List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(UpdateGroupRequest::getMemberAddress).collect(Collectors.toList());
@@ -160,7 +161,7 @@ public class UpdateGroupRequest implements RequestType {
 
       accountData.groupsV2.update(output.second());
       accountData.save();
-      request.reply(new GroupInfo(group.getJsonGroupV2Info(m)));
+      return new GroupInfo(group.getJsonGroupV2Info(m));
     }
   }
 

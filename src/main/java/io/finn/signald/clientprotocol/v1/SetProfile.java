@@ -32,8 +32,8 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "set_profile", ResponseClass = Empty.class)
-public class SetProfile implements RequestType {
+@SignaldClientRequest(type = "set_profile")
+public class SetProfile implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The phone number of the account to use") @Required public String account;
 
   @ExampleValue("\"signald user\"") @Doc("New profile name. Set to empty string for no profile name") @Required public String name;
@@ -41,9 +41,9 @@ public class SetProfile implements RequestType {
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @Doc("Path to new profile avatar file, if the avatar should be updated") public String avatarFile;
 
   @Override
-  public void run(Request request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
+  public Empty run(Request request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
     Manager.get(account).setProfile(name, avatar);
-    request.reply(new Empty());
+    return new Empty();
   }
 }

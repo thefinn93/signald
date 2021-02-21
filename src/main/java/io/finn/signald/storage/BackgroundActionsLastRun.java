@@ -17,7 +17,7 @@
 
 package io.finn.signald.storage;
 
-import static io.finn.signald.actions.RefreshPreKeysAction.INTERVAL;
+import static io.finn.signald.jobs.RefreshPreKeysJob.INTERVAL;
 
 public class BackgroundActionsLastRun {
   public long lastPreKeyRefresh;

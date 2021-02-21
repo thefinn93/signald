@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.actions;
+package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.storage.AccountData;
@@ -34,21 +34,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class RefreshProfileAction implements Action {
+public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();
   public static final long PROFILE_REFRESH_INTERVAL = TimeUnit.HOURS.toMillis(12);
 
   public ProfileAndCredentialEntry profileEntry;
+  public Manager m;
 
   // get ProfileAndCredentialEntry with accountData.profileCredentialStore.get(address);
-  public RefreshProfileAction(ProfileAndCredentialEntry p) { profileEntry = p; }
+  public RefreshProfileJob(Manager manager, ProfileAndCredentialEntry p) {
+    profileEntry = p;
+    m = manager;
+  }
 
   public boolean needsRefresh() {
     return profileEntry.getProfileKeyCredential() == null || System.currentTimeMillis() - profileEntry.getLastUpdateTimestamp() > PROFILE_REFRESH_INTERVAL;
   }
 
   @Override
-  public void run(Manager m) throws InterruptedException, ExecutionException, TimeoutException, IOException {
+  public void run() throws InterruptedException, ExecutionException, TimeoutException, IOException {
     AccountData accountData = m.getAccountData();
     if (profileEntry == null) {
       logger.debug("refresh job scheduled for address with no stored profile key. skipping");
@@ -68,10 +72,5 @@ public class RefreshProfileAction implements Action {
     final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
     final SignalProfile profile = m.decryptProfile(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), profileAndCredential.getProfile());
     accountData.profileCredentialStore.update(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), now, profile, profileKeyCredential);
-  }
-
-  @Override
-  public String getName() {
-    return RefreshProfileAction.class.getName();
   }
 }
