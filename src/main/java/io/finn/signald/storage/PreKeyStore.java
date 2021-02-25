@@ -22,18 +22,20 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.db.PreKeysTable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @JsonDeserialize(using = PreKeyStore.JsonPreKeyStoreDeserializer.class)
 @JsonSerialize(using = PreKeyStore.JsonPreKeyStoreSerializer.class)
 public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeyStore {
-
+  private static final Logger logger = LogManager.getLogger();
   private final Map<Integer, byte[]> store = new HashMap<>();
 
   @Override
@@ -46,6 +48,21 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
       return new PreKeyRecord(store.get(preKeyId));
     } catch (IOException e) {
       throw new AssertionError(e);
+    }
+  }
+
+  public void migrateToDB(UUID u) {
+    PreKeysTable table = new PreKeysTable(u);
+    Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
+    logger.info("migrating " + store.size() + " prekeys to database");
+    while (iterator.hasNext()) {
+      Map.Entry<Integer, byte[]> entry = iterator.next();
+      try {
+        table.storePreKey(entry.getKey(), new PreKeyRecord(entry.getValue()));
+        iterator.remove();
+      } catch (IOException e) {
+        logger.warn("failed to migrate prekey record", e);
+      }
     }
   }
 
@@ -75,7 +92,7 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
           try {
             preKeyMap.put(preKeyId, Base64.decode(preKey.get("record").asText()));
           } catch (IOException e) {
-            System.out.println(String.format("Error while decoding prekey for: %s", preKeyId));
+            logger.error("Error while decoding prekey for: " + preKeyId, e);
           }
         }
       }

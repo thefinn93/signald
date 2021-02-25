@@ -39,10 +39,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static io.finn.signald.util.RequestUtil.getVersion;
 import static io.finn.signald.util.RequestUtil.requestTypes;
@@ -90,6 +87,7 @@ public class Request {
     v.put(CreateGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(GenerateLinkingURIRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(FinishLinkRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(DeleteAccountRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     return v;
   }
 

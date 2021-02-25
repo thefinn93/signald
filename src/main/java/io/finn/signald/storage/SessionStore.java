@@ -23,20 +23,23 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.SessionsTable;
 import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.JSONUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 @JsonSerialize(using = SessionStore.SessionStoreSerializer.class)
 @JsonDeserialize(using = SessionStore.SessionStoreDeserializer.class)
 public class SessionStore implements org.whispersystems.libsignal.state.SessionStore {
+  private static final Logger logger = LogManager.getLogger();
+
   private AddressResolver resolver;
   private static ObjectMapper mapper = JSONUtil.GetMapper();
 
@@ -130,6 +133,24 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
   }
 
   public synchronized void deleteAllSessions(SignalServiceAddress serviceAddress) { sessions.removeIf(info -> info.address.matches(serviceAddress)); }
+
+  public void migrateToDB(UUID u) {
+    SessionsTable table = new SessionsTable(u);
+    logger.info("migrating " + sessions.size() + " sessions to the database");
+    Iterator<SessionInfo> iterator = sessions.iterator();
+    while (iterator.hasNext()) {
+      SessionInfo entry = iterator.next();
+      try {
+        if (entry.record == null) {
+          continue;
+        }
+        table.storeSession(new SignalProtocolAddress(entry.address.getIdentifier(), entry.deviceId), new SessionRecord(entry.record));
+        iterator.remove();
+      } catch (IOException e) {
+        logger.warn("failed to migrate session record", e);
+      }
+    }
+  }
 
   public static class SessionStoreDeserializer extends JsonDeserializer<SessionStore> {
 

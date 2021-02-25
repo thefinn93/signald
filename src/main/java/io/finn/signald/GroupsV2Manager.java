@@ -19,6 +19,7 @@ package io.finn.signald;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.GroupsV2Storage;
@@ -169,11 +170,13 @@ public class GroupsV2Manager {
       if (profileAndCredentialEntry != null) {
         profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
       }
-      if (!profileAndCredentialEntry.getServiceAddress().getUuid().isPresent()) {
+      SignalServiceAddress address = new RecipientsTable(self).resolve(profileAndCredentialEntry.getServiceAddress());
+      if (!address.getUuid().isPresent()) {
         logger.warn("cannot add member to group because we do not know their UUID!");
+      } else {
+        UUID uuid = address.getUuid().get();
+        candidates.add(new GroupCandidate(uuid, profileKeyCredential));
       }
-      UUID uuid = profileAndCredentialEntry.getServiceAddress().getUuid().get();
-      candidates.add(new GroupCandidate(uuid, profileKeyCredential));
     }
     GroupChange.Actions.Builder change = groupOperations.createModifyGroupMembershipChange(candidates, self);
 

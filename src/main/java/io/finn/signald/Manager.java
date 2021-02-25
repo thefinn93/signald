@@ -18,13 +18,15 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.db.*;
+import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
+import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.GroupsUtil;
-import io.finn.signald.util.KeyUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
@@ -46,7 +48,6 @@ import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
-import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
@@ -111,8 +112,8 @@ public class Manager {
   public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Manager> pendingManagers = new ConcurrentHashMap<>();
 
-  private static String settingsPath;
   private static String dataPath;
   private static String attachmentsPath;
   private static String avatarsPath;
@@ -120,7 +121,6 @@ public class Manager {
   private AccountData accountData;
 
   private GroupsV2Manager groupsV2Manager;
-  private SignalServiceAccountManager accountManager;
   private SignalServiceMessagePipe messagePipe = null;
   private final SignalServiceMessagePipe unidentifiedMessagePipe = null;
 
@@ -147,40 +147,49 @@ public class Manager {
     }
   }
 
-  public static Manager get(String username) throws IOException, NoSuchAccountException, SQLException { return get(username, false); }
-
-  public static Manager get(String username, boolean newUser) throws IOException, NoSuchAccountException, SQLException {
+  public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException {
     Logger logger = LogManager.getLogger("manager");
-    if (managers.containsKey(username)) {
-      return managers.get(username);
+    if (managers.containsKey(uuid.toString())) {
+      return managers.get(uuid.toString());
     }
-    managers.put(username, new Manager(username));
-    Manager m = managers.get(username);
-    m.getAccountData().getDatabase();
-    if (!newUser) {
-      try {
-        if (m.userExists()) {
-          m.init();
-        } else {
-          throw new NoSuchAccountException(username);
-        }
-      } catch (Exception e) {
-        managers.remove(username);
-        throw e;
-      }
+    AccountData accountData = AccountData.load(AccountsTable.getFile(uuid));
+    Manager m = new Manager(accountData);
+    managers.put(uuid.toString(), m);
+
+    if (accountData.address.uuid == null && m.getAccountManager().getOwnUuid() != null) {
+      accountData.setUUID(m.getAccountManager().getOwnUuid());
+      accountData.save();
     }
-    logger.info("Created a manager for " + Util.redact(username));
+    m.groupsV2Manager = new GroupsV2Manager(m.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID());
+    RefreshPreKeysJob.runIfNeeded(m.getUUID());
+    m.refreshAccountIfNeeded();
+    try {
+      m.getRecipientProfileKeyCredential(m.getOwnAddress());
+    } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
+    }
+
+    logger.info("created a manager for " + accountData.address.toRedactedString());
     return m;
   }
 
-  public static Manager fromAccountData(AccountData a) {
-    Logger logger = LogManager.getLogger("manager");
-    Manager m = new Manager(a.username);
-    managers.put(a.username, m);
-    m.accountData = a;
-    m.accountManager = m.getAccountManager();
-    m.groupsV2Manager = new GroupsV2Manager(m.accountManager.getGroupsV2Api(), m.accountData.groupsV2, m.accountData.profileCredentialStore, m.accountData.getUUID());
-    logger.info("Created a manager for " + Util.redact(a.username));
+  public static Manager get(String e164) throws IOException, NoSuchAccountException, SQLException {
+    AddressResolver resolver = new AddressUtil();
+    SignalServiceAddress address = resolver.resolve(e164);
+    if (!address.getUuid().isPresent()) {
+      throw new NoSuchAccountException(e164);
+    }
+    return Manager.get(address.getUuid().get());
+  }
+
+  public static Manager getPending(String e164) {
+    Logger logger = LogManager.getLogger("new-account-manager");
+    if (pendingManagers.containsKey(e164)) {
+      return pendingManagers.get(e164);
+    }
+    Manager m = new Manager(e164);
+    pendingManagers.put(e164, m);
+    m.accountData.setPending();
+    logger.info("Created a manager for " + Util.redact(e164));
     return m;
   }
 
@@ -197,7 +206,7 @@ public class Manager {
         try {
           allManagers.add(Manager.get(account.getName()));
         } catch (IOException | NoSuchAccountException | SQLException e) {
-          logger.warn("Failed to load account from file: " + account.getAbsolutePath());
+          logger.warn("Failed to load account from " + account.getAbsolutePath() + ": " + e.getMessage());
           e.printStackTrace();
         }
       }
@@ -205,30 +214,29 @@ public class Manager {
     return allManagers;
   }
 
-  public Manager(String username) {
-    logger = LogManager.getLogger("manager-" + Util.redact(username));
-    logger.info("Creating new manager for " + Util.redact(username) + " (stored at " + settingsPath + ")");
-    accountData = new AccountData();
-    accountData.username = username;
-    //        jsonProcessor.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE); // disable autodetect
-    //        jsonProcessor.enable(SerializationFeature.INDENT_OUTPUT); // for pretty print, you can disable it.
-    //        jsonProcessor.enable(SerializationFeature.WRITE_NULL_MAP_VALUES);
-    //        jsonProcessor.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-    //        jsonProcessor.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
-    //        jsonProcessor.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
+  // creates a Manager for an account that has not completed registration
+  Manager(String e164) {
+    logger = LogManager.getLogger("manager-" + Util.redact(e164));
+    logger.info("Creating new manager for " + Util.redact(e164));
+    try {
+      accountData = AccountData.load(new File(Manager.getFileName(e164)));
+    } catch (IOException e) {
+      accountData = new AccountData(e164);
+    }
   }
 
-  public Manager(AccountData account) {
-    accountData = account;
-    logger = LogManager.getLogger("manager-" + Util.redact(accountData.username));
-    logger.info("Creating new manager for " + Util.redact(accountData.username) + " (stored at " + settingsPath + ")");
+  Manager(AccountData a) {
+    logger = LogManager.getLogger("manager-" + Util.redact(a.username));
+    accountData = a;
+    managers.put(a.username, this);
+    groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), a.groupsV2, accountData.profileCredentialStore, a.getUUID());
+    logger.info("Created a manager for " + Util.redact(accountData.username));
   }
 
   public static void setDataPath(String path) {
-    settingsPath = path;
-    dataPath = settingsPath + "/data";
-    attachmentsPath = settingsPath + "/attachments";
-    avatarsPath = settingsPath + "/avatars";
+    dataPath = path + "/data";
+    attachmentsPath = path + "/attachments";
+    avatarsPath = path + "/avatars";
   }
 
   public String getE164() { return accountData.username; }
@@ -237,7 +245,7 @@ public class Manager {
 
   public SignalServiceAddress getOwnAddress() { return accountData.address.getSignalServiceAddress(); }
 
-  public IdentityKey getIdentity() { return accountData.axolotlStore.identityKeyStore.getIdentityKeyPair().getPublicKey(); }
+  public IdentityKey getIdentity() { return accountData.axolotlStore.getIdentityKeyPair().getPublicKey(); }
 
   public int getDeviceId() { return accountData.deviceId; }
 
@@ -246,15 +254,6 @@ public class Manager {
   public static String getFileName(String username) { return dataPath + "/" + username; }
 
   private String getMessageCachePath() { return dataPath + "/" + accountData.username + ".d/msg-cache"; }
-
-  private String getMessageCachePath(String sender) { return getMessageCachePath() + "/" + sender.replace("/", "_"); }
-
-  private File getMessageCacheFile(SignalServiceEnvelope envelope, long now) throws IOException {
-    String source = envelope.getSourceE164().isPresent() ? envelope.getSourceE164().get() : "";
-    String cachePath = getMessageCachePath(source);
-    createPrivateDirectories(cachePath);
-    return new File(cachePath + "/" + now + "_" + envelope.getTimestamp());
-  }
 
   public static void createPrivateDirectories(String path) throws IOException {
     final Path file = new File(path).toPath();
@@ -266,14 +265,6 @@ public class Manager {
     }
   }
 
-  public boolean userExists() {
-    if (accountData.username == null) {
-      return false;
-    }
-    File f = new File(getFileName());
-    return !(!f.exists() || f.isDirectory());
-  }
-
   public static boolean userExists(String username) {
     if (username == null) {
       return false;
@@ -282,45 +273,17 @@ public class Manager {
     return !(!f.exists() || f.isDirectory());
   }
 
-  public boolean userHasKeys() { return accountData.axolotlStore != null; }
-
-  public void init() throws IOException, SQLException, NoSuchAccountException {
-    accountData = AccountData.load(new File(getFileName()));
-    accountManager = getAccountManager();
-    if (accountData.address.uuid == null && accountManager.getOwnUuid() != null) {
-      accountData.address.uuid = accountManager.getOwnUuid().toString();
-      accountData.save();
-    }
-    groupsV2Manager = new GroupsV2Manager(accountManager.getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID());
-    if (accountData.backgroundActionsLastRun.refreshPreKeysNeeded()) {
-      new RefreshPreKeysJob(this).run();
-    }
-    refreshAccountIfNeeded();
-    try {
-      getRecipientProfileKeyCredential(getOwnAddress());
-    } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
-    }
-  }
-
-  public void createNewIdentity() {
-    IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();
-    int registrationId = KeyHelper.generateRegistrationId(false);
-    accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId, accountData.getResolver());
-    accountData.registered = false;
-    logger.info("Generating new identity pair");
-  }
+  public boolean hasPendingKeys() throws SQLException { return PendingAccountDataTable.getBytes(accountData.username, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR) != null; }
 
   public boolean isRegistered() { return accountData.registered; }
 
-  public void register(boolean voiceVerification, Optional<String> captcha) throws IOException, InvalidInputException {
+  public void register(boolean voiceVerification, Optional<String> captcha) throws IOException, InvalidInputException, SQLException, NoSuchAccountException {
     accountData.password = Util.getSecret(18);
 
-    accountManager = getAccountManager();
-
     if (voiceVerification) {
-      accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent()); // TODO: Allow requester to set the locale and challenge
+      getAccountManager().requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent()); // TODO: Allow requester to set the locale and challenge
     } else {
-      accountManager.requestSmsVerificationCode(false, captcha, Optional.absent()); //  TODO: Allow requester to set challenge and androidSmsReceiverSupported
+      getAccountManager().requestSmsVerificationCode(false, captcha, Optional.absent()); //  TODO: Allow requester to set challenge and androidSmsReceiverSupported
     }
 
     accountData.registered = false;
@@ -363,13 +326,13 @@ public class Manager {
   }
 
   private void addDevice(String deviceIdentifier, ECPublicKey deviceKey) throws IOException, InvalidKeyException, InvalidInputException {
-    IdentityKeyPair identityKeyPair = accountData.axolotlStore.identityKeyStore.getIdentityKeyPair();
-    String verificationCode = accountManager.getNewDeviceVerificationCode();
+    IdentityKeyPair identityKeyPair = accountData.axolotlStore.getIdentityKeyPair();
+    String verificationCode = getAccountManager().getNewDeviceVerificationCode();
 
     Optional<byte[]> profileKeyOptional;
     ProfileKey profileKey = accountData.getProfileKey();
     profileKeyOptional = Optional.of(profileKey.serialize());
-    accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, profileKeyOptional, verificationCode);
+    getAccountManager().addDevice(deviceIdentifier, deviceKey, identityKeyPair, profileKeyOptional, verificationCode);
   }
 
   private List<PreKeyRecord> generatePreKeys() throws IOException {
@@ -380,7 +343,7 @@ public class Manager {
       ECKeyPair keyPair = Curve.generateKeyPair();
       PreKeyRecord record = new PreKeyRecord(preKeyId, keyPair);
 
-      accountData.axolotlStore.preKeys.storePreKey(preKeyId, record);
+      accountData.axolotlStore.storePreKey(preKeyId, record);
       records.add(record);
     }
 
@@ -406,13 +369,26 @@ public class Manager {
     }
   }
 
-  public void verifyAccount(String verificationCode) throws IOException, InvalidInputException {
+  public void verifyAccount(String verificationCode) throws IOException, InvalidInputException, SQLException, NoSuchAccountException {
     verificationCode = verificationCode.replace("-", "");
     accountData.signalingKey = Util.getSecret(52);
-    VerifyAccountResponse response = accountManager.verifyAccountWithCode(verificationCode, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null,
-                                                                          null, accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES, true);
+    int registrationID = PendingAccountDataTable.getInt(accountData.username, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
+    VerifyAccountResponse response = getAccountManager().verifyAccountWithCode(verificationCode, accountData.signalingKey, registrationID, true, null, null,
+                                                                               accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES, true);
+    accountData.setUUID(UUID.fromString(response.getUuid()));
+    AccountsTable.add(accountData.address.number, accountData.address.getUUID(), getFileName());
+    accountData.save();
 
-    accountData.address.uuid = response.getUuid();
+    // Once the UUID is set, load accountData fresh
+    accountData = AccountData.load(new File(getFileName()));
+
+    AccountDataTable.set(accountData.address.getUUID(), AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationID);
+
+    byte[] identityKeyPair = PendingAccountDataTable.getBytes(accountData.username, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
+    AccountDataTable.set(accountData.address.getUUID(), AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair);
+
+    PendingAccountDataTable.clear(accountData.username);
+
     accountData.registered = true;
 
     refreshPreKeys();
@@ -423,7 +399,7 @@ public class Manager {
   public void refreshPreKeys() throws IOException {
     List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
     SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(accountData.axolotlStore.getIdentityKeyPair());
-    accountManager.setPreKeys(accountData.axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
+    getAccountManager().setPreKeys(accountData.axolotlStore.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
 
   private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException { return createAttachment(attachmentFile, Optional.absent()); }
@@ -692,7 +668,7 @@ public class Manager {
     try {
       messageSender.sendMessage(message, Optional.absent());
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       throw e;
     }
   }
@@ -705,19 +681,15 @@ public class Manager {
 
     address = accountData.getResolver().resolve(address);
 
-    try {
-      SignalServiceMessageSender messageSender = getMessageSender();
+    SignalServiceMessageSender messageSender = getMessageSender();
 
-      try {
-        // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
-        messageSender.sendTyping(address, getAccessFor(address), message);
-        return null;
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
-        return SendMessageResult.identityFailure(address, e.getIdentityKey());
-      }
-    } finally {
-      accountData.save();
+    try {
+      // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
+      messageSender.sendTyping(address, getAccessFor(address), message);
+      return null;
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
 
@@ -729,26 +701,22 @@ public class Manager {
 
     address = accountData.getResolver().resolve(address);
 
-    try {
-      SignalServiceMessageSender messageSender = getMessageSender();
+    SignalServiceMessageSender messageSender = getMessageSender();
 
-      try {
-        // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
-        messageSender.sendReceipt(address, getAccessFor(address), message);
-        if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
-          List<ReadMessage> readMessages = new LinkedList<>();
-          for (Long ts : message.getTimestamps()) {
-            readMessages.add(new ReadMessage(address, ts));
-          }
-          messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
+    try {
+      // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
+      messageSender.sendReceipt(address, getAccessFor(address), message);
+      if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
+        List<ReadMessage> readMessages = new LinkedList<>();
+        for (Long ts : message.getTimestamps()) {
+          readMessages.add(new ReadMessage(address, ts));
         }
-        return null;
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
-        return SendMessageResult.identityFailure(address, e.getIdentityKey());
+        messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
       }
-    } finally {
-      accountData.save();
+      return null;
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
 
@@ -781,12 +749,12 @@ public class Manager {
           List<SendMessageResult> result = messageSender.sendMessage(new ArrayList<>(recipients), getAccessFor(recipients), isRecipientUpdate, message);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
-              accountData.axolotlStore.identityKeyStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+              accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
             }
           }
           return result;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           return Collections.emptyList();
         }
       } else if (recipients.size() == 1 && recipients.contains(accountData.address.getSignalServiceAddress())) {
@@ -800,7 +768,7 @@ public class Manager {
         try {
           messageSender.sendMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
         }
         return results;
@@ -826,7 +794,7 @@ public class Manager {
               results.add(messageSender.sendMessage(address, getAccessFor(address), message));
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-            accountData.axolotlStore.identityKeyStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+            accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
             results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
           }
         }
@@ -838,7 +806,6 @@ public class Manager {
           handleEndSession(recipient);
         }
       }
-      accountData.save();
     }
   }
 
@@ -1151,7 +1118,6 @@ public class Manager {
             handleMessage(envelope, content, ignoreAttachments);
           }
         }
-        accountData.save();
         handler.handleMessage(envelope, content, exception);
         try {
           accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
@@ -1187,7 +1153,7 @@ public class Manager {
     }
 
     if (envelope.isPreKeySignalMessage()) {
-      jobs.add(new RefreshPreKeysJob(this));
+      jobs.add(new RefreshPreKeysJob(getUUID()));
     }
 
     if (content.getSyncMessage().isPresent()) {
@@ -1276,7 +1242,7 @@ public class Manager {
         final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
         SignalServiceAddress destination = resolver.resolve(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
-        accountData.axolotlStore.identityKeyStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
+        accountData.axolotlStore.saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
       }
     }
     for (Job job : jobs) {
@@ -1337,36 +1303,6 @@ public class Manager {
       }
       Optional<SignalServiceAddress> sourceAddress = sourceUuid == null && source.isEmpty() ? Optional.absent() : Optional.of(new SignalServiceAddress(sourceUuid, source));
       return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
-    }
-  }
-
-  private void storeEnvelope(SignalServiceEnvelope envelope, File file) throws IOException {
-    logger.debug("Storing envelope to disk.");
-    try (FileOutputStream f = new FileOutputStream(file)) {
-      try (DataOutputStream out = new DataOutputStream(f)) {
-        out.writeInt(2); // version
-        out.writeInt(envelope.getType());
-        out.writeUTF(envelope.getSourceE164().isPresent() ? envelope.getSourceE164().get() : "");
-        out.writeUTF(envelope.getSourceUuid().isPresent() ? envelope.getSourceUuid().get() : "");
-        out.writeInt(envelope.getSourceDevice());
-        out.writeLong(envelope.getTimestamp());
-        if (envelope.hasContent()) {
-          out.writeInt(envelope.getContent().length);
-          out.write(envelope.getContent());
-        } else {
-          out.writeInt(0);
-        }
-        if (envelope.hasLegacyMessage()) {
-          out.writeInt(envelope.getLegacyMessage().length);
-          out.write(envelope.getLegacyMessage());
-        } else {
-          out.writeInt(0);
-        }
-        out.writeLong(envelope.getServerReceivedTimestamp());
-        String uuid = envelope.getUuid();
-        out.writeUTF(uuid == null ? "" : uuid);
-        out.writeLong(envelope.getServerDeliveredTimestamp());
-      }
     }
   }
 
@@ -1486,80 +1422,79 @@ public class Manager {
 
   public GroupInfo getGroup(byte[] groupId) { return accountData.groupStore.getGroup(groupId); }
 
-  public List<IdentityKeyStore.Identity> getIdentities() { return accountData.axolotlStore.identityKeyStore.getIdentities(); }
+  public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return accountData.axolotlStore.getIdentities(); }
 
-  public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return accountData.axolotlStore.identityKeyStore.getIdentities(address); }
+  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(SignalServiceAddress address) throws SQLException, InvalidKeyException, InvalidAddressException {
+    return accountData.axolotlStore.getIdentities(address);
+  }
 
-  public boolean trustIdentity(SignalServiceAddress address, byte[] fingerprint, TrustLevel level) throws IOException {
-    List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address);
+  public boolean trustIdentity(SignalServiceAddress address, byte[] fingerprint, TrustLevel level) throws IOException, SQLException, InvalidKeyException, InvalidAddressException {
+    List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(address);
     if (ids == null) {
       return false;
     }
-    for (IdentityKeyStore.Identity id : ids) {
+    for (IdentityKeysTable.IdentityKeyRow id : ids) {
       if (!Arrays.equals(id.getKey().serialize(), fingerprint)) {
         continue;
       }
 
-      accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
+      accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         logger.catching(e);
       }
-      accountData.save();
       return true;
     }
     return false;
   }
 
-  public boolean trustIdentitySafetyNumber(SignalServiceAddress address, String safetyNumber, TrustLevel level) throws IOException {
-    List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address);
+  public boolean trustIdentitySafetyNumber(SignalServiceAddress address, String safetyNumber, TrustLevel level)
+      throws IOException, SQLException, InvalidKeyException, InvalidAddressException {
+    List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(address);
     if (ids == null) {
       return false;
     }
-    for (IdentityKeyStore.Identity id : ids) {
+    for (IdentityKeysTable.IdentityKeyRow id : ids) {
       if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.address.getSignalServiceAddress(), getIdentity(), address, id.getKey()))) {
         continue;
       }
-
-      accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
+      accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         logger.catching(e);
       }
-      accountData.save();
       return true;
     }
     return false;
   }
 
   public boolean trustIdentitySafetyNumber(SignalServiceAddress address, byte[] scannedFingerprintData, TrustLevel level)
-      throws IOException, FingerprintVersionMismatchException, FingerprintParsingException {
-    List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address);
+      throws IOException, FingerprintVersionMismatchException, FingerprintParsingException, SQLException, InvalidKeyException, InvalidAddressException {
+    List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(address);
     if (ids == null) {
       return false;
     }
-    for (IdentityKeyStore.Identity id : ids) {
+    for (IdentityKeysTable.IdentityKeyRow id : ids) {
       Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(getOwnAddress(), getIdentity(), address, id.getKey());
       assert fingerprint != null;
       if (!fingerprint.getScannableFingerprint().compareTo(scannedFingerprintData)) {
         continue;
       }
 
-      accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
+      accountData.axolotlStore.saveIdentity(address, id.getKey(), level);
       try {
         sendVerifiedMessage(address, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         logger.catching(e);
       }
-      accountData.save();
       return true;
     }
     return false;
   }
 
-  public Optional<ContactTokenDetails> getUser(String e164number) throws IOException { return accountManager.getContact(e164number); }
+  public Optional<ContactTokenDetails> getUser(String e164number) throws IOException { return getAccountManager().getContact(e164number); }
 
   public List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients) {
     List<Optional<UnidentifiedAccessPair>> result = new ArrayList<>(recipients.size());
@@ -1576,16 +1511,14 @@ public class Manager {
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, "", "", streamDetails);
+      getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, "", "", streamDetails);
     }
-    accountData.save();
   }
 
   public void setProfile(String name, File avatar, String about, String emoji) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, about, emoji, streamDetails);
+      getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, about, emoji, streamDetails);
     }
-    accountData.save();
   }
 
   public SignalServiceProfile getSignalServiceProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
@@ -1607,10 +1540,10 @@ public class Manager {
 
   public static ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
 
-  public AddressResolver getResolver() { return accountData.getResolver(); }
+  public RecipientsTable getResolver() { return accountData.getResolver(); }
 
   public void refreshAccount() throws IOException {
-    accountManager.setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true, SERVICE_CAPABILITIES, true);
+    getAccountManager().setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true, SERVICE_CAPABILITIES, true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
       accountData.save();
@@ -1641,11 +1574,12 @@ public class Manager {
     }
   }
 
-  public SignalProfile decryptProfile(final SignalServiceAddress address, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) {
+  public SignalProfile decryptProfile(final SignalServiceAddress address, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) throws IOException {
     File localAvatarPath = null;
     if (address.getUuid().isPresent()) {
       localAvatarPath = getProfileAvatarFile(address);
       if (encryptedProfile.getAvatar() != null) {
+        createPrivateDirectories(avatarsPath);
         try (OutputStream outputStream = new FileOutputStream(localAvatarPath)) {
           retrieveProfileAvatar(encryptedProfile.getAvatar(), profileKey, outputStream);
         } catch (IOException e) {
@@ -1688,5 +1622,14 @@ public class Manager {
         logger.warn("Failed to delete received profile avatar temp file “{}”, ignoring: {}", tmpFile, e.getMessage());
       }
     }
+  }
+
+  public void deleteAccount(boolean remote) throws IOException, SQLException {
+    if (remote) {
+      getAccountManager().deleteAccount();
+    }
+    accountData.delete();
+    managers.remove(accountData.username);
+    logger.info("deleted all local account data");
   }
 }

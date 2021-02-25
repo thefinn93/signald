@@ -23,14 +23,17 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 @JsonSerialize(using = RecipientStore.RecipientStoreSerializer.class)
 @JsonDeserialize(using = RecipientStore.RecipientStoreDeserializer.class)
@@ -41,26 +44,16 @@ public class RecipientStore {
 
   public RecipientStore() {}
 
-  private void add(SignalServiceAddress a) {
-    if (a.getNumber().isPresent() && a.getUuid().isPresent()) {
-      JsonAddress jsonAddress = new JsonAddress(a);
-      logger.debug("creating new recipientStore entry: " + jsonAddress.toRedactedString());
-      addresses.add(jsonAddress);
-    } else {
-      logger.debug("not storing unresolved, partial address: " + new JsonAddress(a).toRedactedString());
-    }
-  }
+  public void migrateToDB(UUID u) throws SQLException {
+    RecipientsTable table = new RecipientsTable(u);
+    logger.info("migrating " + addresses.size() + " recipients to the database");
 
-  public SignalServiceAddress resolve(SignalServiceAddress partial) {
-    for (JsonAddress i : addresses) {
-      if (i.getSignalServiceAddress().matches(partial)) {
-        i.update(partial);
-        return i.getSignalServiceAddress();
-      }
+    Iterator<JsonAddress> iterator = addresses.iterator();
+    while (iterator.hasNext()) {
+      JsonAddress entry = iterator.next();
+      table.get(entry.getSignalServiceAddress());
+      iterator.remove();
     }
-
-    add(partial);
-    return partial;
   }
 
   public static class RecipientStoreDeserializer extends JsonDeserializer<RecipientStore> {

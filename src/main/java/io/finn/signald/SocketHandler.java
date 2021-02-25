@@ -30,19 +30,24 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.clientprotocol.v1.UpdateGroupRequest;
+import io.finn.signald.db.PendingAccountDataTable;
+import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.GroupInfo;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.util.KeyUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.*;
 import org.asamk.signal.util.Hex;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
@@ -144,7 +149,7 @@ public class SocketHandler implements Runnable {
       }
 
     } catch (SocketException e) {
-      logger.debug("socket exception while reading from client. Likely just means the client disconnected before we expected: ", e.getMessage());
+      logger.debug("socket exception while reading from client. Likely just means the client disconnected before we expected: " + e.getMessage());
     } catch (IOException e) {
       handleError(e, null);
     } finally {
@@ -386,13 +391,17 @@ public class SocketHandler implements Runnable {
 
   private void register(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
     logger.info("Register request: " + request);
-    Manager m = Manager.get(request.username, true);
+    Manager m = Manager.getPending(request.username);
     boolean voice = false;
     if (request.voice != null) {
       voice = request.voice;
     }
 
-    m.createNewIdentity();
+    IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();
+    PendingAccountDataTable.set(request.username, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, identityKey.serialize());
+
+    int registrationId = KeyHelper.generateRegistrationId(false);
+    PendingAccountDataTable.set(request.username, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registrationId);
 
     logger.info("Registering (voice: " + voice + ")");
     try {
@@ -404,11 +413,13 @@ public class SocketHandler implements Runnable {
   }
 
   private void verify(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
-    Manager m = Manager.get(request.username, true);
-    if (!m.userHasKeys()) {
+    Manager m = Manager.getPending(request.username);
+    if (!m.hasPendingKeys()) {
       logger.warn("User has no keys, first call register.");
+      this.reply("error", "user has no keys, must register first", request.id);
     } else if (m.isRegistered()) {
       logger.warn("User is already verified");
+      this.reply("error", "user is already verified", request.id);
     } else {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
@@ -467,7 +478,7 @@ public class SocketHandler implements Runnable {
       } else if (request.members != null) {
         List<ProfileAndCredentialEntry> members = new ArrayList<>();
         for (String member : request.members) {
-          SignalServiceAddress signalServiceAddress = m.getAccountData().recipientStore.resolve(new SignalServiceAddress(null, member));
+          SignalServiceAddress signalServiceAddress = m.getResolver().resolve(new SignalServiceAddress(null, member));
           ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(signalServiceAddress);
           members.add(profileAndCredentialEntry);
           recipients.add(profileAndCredentialEntry.getServiceAddress());
@@ -588,7 +599,7 @@ public class SocketHandler implements Runnable {
     }
   }
 
-  private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException, SQLException {
+  private void getIdentities(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidAddressException, InvalidKeyException {
     Manager m = Manager.get(request.username);
     SignalServiceAddress address = null;
     if (request.recipientAddress != null) {
@@ -597,7 +608,7 @@ public class SocketHandler implements Runnable {
     this.reply("identities", new JsonIdentityList(address, m), request.id);
   }
 
-  private void trust(JsonRequest request) throws IOException, NoSuchAccountException, SQLException {
+  private void trust(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidAddressException, InvalidKeyException {
     Manager m = Manager.get(request.username);
     TrustLevel trustLevel = TrustLevel.TRUSTED_VERIFIED;
     if (request.fingerprint == null) {

@@ -22,19 +22,20 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.db.SignedPreKeysTable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @JsonDeserialize(using = SignedPreKeyStore.SignedPreKeyStoreDeserializer.class)
 @JsonSerialize(using = SignedPreKeyStore.SignedPreKeyStoreSerializer.class)
 public class SignedPreKeyStore implements org.whispersystems.libsignal.state.SignedPreKeyStore {
+  private static final Logger logger = LogManager.getLogger();
   private final Map<Integer, byte[]> store = new HashMap<>();
 
   @Override
@@ -77,6 +78,24 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
   @Override
   public void removeSignedPreKey(int signedPreKeyId) {
     store.remove(signedPreKeyId);
+  }
+
+  public void migrateToDB(UUID u) {
+    SignedPreKeysTable signedPreKeysTable = new SignedPreKeysTable(u);
+    logger.info("migrating " + store.size() + " signed pre-keys to the database");
+    Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<Integer, byte[]> entry = iterator.next();
+      try {
+        if (entry.getValue() == null) {
+          continue;
+        }
+        signedPreKeysTable.storeSignedPreKey(entry.getKey(), new SignedPreKeyRecord(entry.getValue()));
+        iterator.remove();
+      } catch (IOException e) {
+        logger.warn("failed to migrate session record", e);
+      }
+    }
   }
 
   public static class SignedPreKeyStoreDeserializer extends JsonDeserializer<SignedPreKeyStore> {

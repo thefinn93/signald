@@ -42,6 +42,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static io.finn.signald.util.RequestUtil.requestTypes;
+
 @SignaldClientRequest(type = "protocol")
 public class ProtocolRequest implements RequestType<JsonNode> {
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
@@ -64,7 +66,7 @@ public class ProtocolRequest implements RequestType<JsonNode> {
     uncheckedTypes.add(JsonMessageEnvelope.class);
     uncheckedTypes.add(JsonAccountList.class);
 
-    for (Class<? extends RequestType<?>> r : RequestUtil.requestTypes) {
+    for (Class<? extends RequestType<?>> r : requestTypes) {
       if (r == ProtocolRequest.class) {
         continue;
       }

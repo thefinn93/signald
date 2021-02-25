@@ -121,4 +121,14 @@ class TestRequest {
 
     Thread.sleep(10000);
   }
+
+  @DisplayName("delete account")
+  @Test
+  @Order(4)
+  public void DeleteAccount() throws IOException {
+    Assertions.assertTrue(accounts.size() > 0);
+    writer.println(RequestBuilder.deleteAccount(accounts.get(0)));
+    JsonNode resp = mpr.readTree(reader.readLine());
+    Assertions.assertEquals(resp.findValue("type").textValue(), "delete_account");
+  }
 }

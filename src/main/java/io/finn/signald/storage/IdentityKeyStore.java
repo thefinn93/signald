@@ -21,6 +21,8 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.util.AddressUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,9 +35,8 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.sql.SQLException;
+import java.util.*;
 
 public class IdentityKeyStore implements org.whispersystems.libsignal.state.IdentityKeyStore {
   private static final Logger logger = LogManager.getLogger();
@@ -165,6 +166,30 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
   }
 
   public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
+
+  public void migrateToDB(UUID u) throws SQLException {
+    IdentityKeysTable table = new IdentityKeysTable(u);
+    logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
+    Iterator<Identity> iterator = trustedKeys.iterator();
+    while (iterator.hasNext()) {
+      Identity entry = iterator.next();
+      if (entry.identityKey == null) {
+        continue;
+      }
+      table.saveIdentity(entry.address.getSignalServiceAddress(), entry.identityKey, entry.trustLevel, entry.added);
+      iterator.remove();
+    }
+
+    if (identityKeyPair != null) {
+      AccountDataTable.set(u, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+      identityKeyPair = null;
+    }
+
+    if (registrationId > 0) {
+      AccountDataTable.set(u, AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationId);
+      registrationId = 0;
+    }
+  }
 
   // Getters and setters for Jackson
   @JsonSetter("identityKey")

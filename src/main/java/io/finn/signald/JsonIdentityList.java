@@ -17,30 +17,33 @@
 
 package io.finn.signald;
 
-import io.finn.signald.storage.IdentityKeyStore;
+import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.exceptions.InvalidAddressException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<>();
 
-  JsonIdentityList(List<IdentityKeyStore.Identity> identities, Manager m) {
-    for (IdentityKeyStore.Identity identity : identities) {
+  JsonIdentityList(List<IdentityKeysTable.IdentityKeyRow> identities, Manager m) {
+    for (IdentityKeysTable.IdentityKeyRow identity : identities) {
       this.identities.add(new JsonIdentity(identity, m));
     }
   }
 
-  JsonIdentityList(SignalServiceAddress address, Manager m) {
+  JsonIdentityList(SignalServiceAddress address, Manager m) throws SQLException, InvalidKeyException, InvalidAddressException {
     if (address == null) {
-      for (IdentityKeyStore.Identity identity : m.getIdentities()) {
+      for (IdentityKeysTable.IdentityKeyRow identity : m.getIdentities()) {
         this.identities.add(new JsonIdentity(identity, m));
       }
     } else {
-      List<IdentityKeyStore.Identity> identities = m.getIdentities(address);
+      List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(address);
       if (identities != null) {
-        for (IdentityKeyStore.Identity identity : identities) {
+        for (IdentityKeysTable.IdentityKeyRow identity : identities) {
           this.identities.add(new JsonIdentity(identity, m, address));
         }
       }

@@ -17,6 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
@@ -25,28 +26,22 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.db.IdentityKeysTable;
-import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.storage.IdentityKeyStore;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 
-@Doc("Get information about a known keys for a particular address")
-@SignaldClientRequest(type = "get_identities")
-public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+@SignaldClientRequest(type = "delete_account")
+@Doc(
+    "delete all account data signald has on disk, and optionally delete the account from the server as well. Note that this is not \"unlink\" and will delete the entire account, even from a linked device.")
+public class DeleteAccountRequest implements RequestType<Empty> {
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to delete") @Required public String account;
 
-  @Doc("address to get keys for") @Required public JsonAddress address;
+  @Doc("delete account information from the server as well (default false)") boolean server = false;
 
   @Override
-  public IdentityKeyList run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidAddressException, InvalidKeyException {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException {
     Manager m = Manager.get(account);
-    List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(address.getSignalServiceAddress());
-    SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
-    return new IdentityKeyList(m.getOwnAddress(), m.getIdentity(), addr, identities);
+    m.deleteAccount(server);
+    return new Empty();
   }
 }

@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.storage.IdentityKeyStore;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -30,10 +31,11 @@ public class IdentityKeyList {
   public JsonAddress address;
   public List<IdentityKey> identities;
 
-  public IdentityKeyList(SignalServiceAddress ownAddress, org.whispersystems.libsignal.IdentityKey ownKey, SignalServiceAddress a, List<IdentityKeyStore.Identity> identities) {
+  public IdentityKeyList(SignalServiceAddress ownAddress, org.whispersystems.libsignal.IdentityKey ownKey, SignalServiceAddress a,
+                         List<IdentityKeysTable.IdentityKeyRow> identities) {
     this.address = new JsonAddress(a);
     this.identities = new ArrayList<>();
-    for (IdentityKeyStore.Identity i : identities) {
+    for (IdentityKeysTable.IdentityKeyRow i : identities) {
       this.identities.add(new IdentityKey(i, SafetyNumberHelper.computeFingerprint(ownAddress, ownKey, a, i.getKey())));
     }
   }

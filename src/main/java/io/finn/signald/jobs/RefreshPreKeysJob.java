@@ -19,29 +19,39 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
-import io.finn.signald.storage.AccountData;
+import io.finn.signald.db.AccountDataTable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
 
 public class RefreshPreKeysJob implements Job {
   public static long INTERVAL = TimeUnit.DAYS.toMillis(3);
   private static final Logger logger = LogManager.getLogger();
 
-  private final Manager m;
+  private final UUID uuid;
 
-  public RefreshPreKeysJob(Manager manager) { m = manager; }
+  public RefreshPreKeysJob(UUID u) { uuid = u; }
+
   @Override
   public void run() throws IOException, SQLException, NoSuchAccountException {
-    AccountData accountData = m.getAccountData();
+    Manager m = Manager.get(uuid);
     if (m.getAccountManager().getPreKeysCount() < Manager.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
       m.refreshPreKeys();
     }
-    accountData.backgroundActionsLastRun.lastPreKeyRefresh = System.currentTimeMillis();
-    accountData.save();
+    AccountDataTable.set(uuid, LAST_PRE_KEY_REFRESH, System.currentTimeMillis());
+  }
+
+  public static void runIfNeeded(UUID uuid) throws SQLException, IOException, NoSuchAccountException {
+    if (System.currentTimeMillis() - AccountDataTable.getLong(uuid, LAST_PRE_KEY_REFRESH) > INTERVAL) {
+      RefreshPreKeysJob job = new RefreshPreKeysJob(uuid);
+      job.run();
+    }
   }
 }

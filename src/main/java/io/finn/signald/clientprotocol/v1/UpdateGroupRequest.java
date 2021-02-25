@@ -95,7 +95,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       } else if (addMembers != null && addMembers.size() > 0) {
         List<ProfileAndCredentialEntry> members = new ArrayList<>();
         for (JsonAddress member : addMembers) {
-          SignalServiceAddress signalServiceAddress = m.getAccountData().recipientStore.resolve(member.getSignalServiceAddress());
+          SignalServiceAddress signalServiceAddress = m.getResolver().resolve(member.getSignalServiceAddress());
           ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(signalServiceAddress);
           if (profileAndCredentialEntry == null) {
             logger.warn("Unable to add group member with no profile");
@@ -108,10 +108,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       } else if (removeMembers != null && removeMembers.size() > 0) {
         Set<UUID> members = new HashSet<>();
         for (JsonAddress member : removeMembers) {
-          SignalServiceAddress signalServiceAddress = member.getSignalServiceAddress();
-          if (!signalServiceAddress.getUuid().isPresent()) {
-            signalServiceAddress = m.getAccountData().recipientStore.resolve(member.getSignalServiceAddress());
-          }
+          SignalServiceAddress signalServiceAddress = m.getResolver().resolve(member.getSignalServiceAddress());
           if (!signalServiceAddress.getUuid().isPresent()) {
             logger.warn("cannot remove member " + new JsonAddress(signalServiceAddress).toRedactedString() +
                         " from group if we do not have their UUID! How did they get into the group if we don't know their UUID?");

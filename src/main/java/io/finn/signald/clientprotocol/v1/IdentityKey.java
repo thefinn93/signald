@@ -19,7 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.storage.IdentityKeyStore;
+import io.finn.signald.db.IdentityKeysTable;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.util.Base64;
 
@@ -29,7 +29,7 @@ public class IdentityKey {
   @JsonProperty("trust_level") @Doc("One of TRUSTED_UNVERIFIED, TRUSTED_VERIFIED or UNTRUSTED") public String trustLevel;
   @Doc("the first time this identity key was seen") public long added;
 
-  public IdentityKey(IdentityKeyStore.Identity identity, Fingerprint fingerprint) {
+  public IdentityKey(IdentityKeysTable.IdentityKeyRow identity, Fingerprint fingerprint) {
     trustLevel = identity.getTrustLevelString();
     added = identity.getAddedTimestamp();
     safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();

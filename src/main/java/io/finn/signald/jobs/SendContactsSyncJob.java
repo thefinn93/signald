@@ -19,13 +19,15 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
+import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ContactStore;
-import io.finn.signald.storage.IdentityKeyStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
@@ -34,6 +36,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import java.util.List;
 
 public class SendContactsSyncJob implements Job {
@@ -42,7 +45,7 @@ public class SendContactsSyncJob implements Job {
 
   public SendContactsSyncJob(Manager manager) { m = manager; }
   @Override
-  public void run() throws IOException, UntrustedIdentityException {
+  public void run() throws IOException, UntrustedIdentityException, SQLException, InvalidKeyException, InvalidAddressException {
     File contactsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
 
@@ -51,12 +54,12 @@ public class SendContactsSyncJob implements Job {
         DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
         for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
           VerifiedMessage verifiedMessage = null;
-          List<IdentityKeyStore.Identity> identities = accountData.axolotlStore.identityKeyStore.getIdentities(record.address.getSignalServiceAddress());
+          List<IdentityKeysTable.IdentityKeyRow> identities = accountData.axolotlStore.getIdentities(record.address.getSignalServiceAddress());
           if (identities.size() == 0) {
             continue;
           }
-          IdentityKeyStore.Identity currentIdentity = null;
-          for (IdentityKeyStore.Identity id : identities) {
+          IdentityKeysTable.IdentityKeyRow currentIdentity = null;
+          for (IdentityKeysTable.IdentityKeyRow id : identities) {
             if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
               currentIdentity = id;
             }

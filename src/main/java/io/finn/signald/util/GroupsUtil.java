@@ -17,6 +17,7 @@
 
 package io.finn.signald.util;
 
+import io.finn.signald.BuildConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
@@ -37,7 +38,9 @@ public class GroupsUtil {
       groupsV2Operations = new GroupsV2Operations(ClientZkOperations.create(serviceConfiguration));
     } catch (Throwable ignored) {
       groupsV2Operations = null;
-      logger.warn("Unable to load groups v2 library. likely due to being non-linux or non-x86. See https://gitlab.com/signald/signald/-/issues/85");
+      logger.warn(
+          "Unable to load groups v2 library. likely due to being non-linux or non-x86. See https://gitlab.com/signald/signald/-/issues/85. ANOTHER NATIVE LIBRARY IS BECOMING MANDATORY SOON AND SIGNALD WILL NOT RUN ON THIS SYSTEM! Please open an issue so we can address it before then: " +
+          BuildConfig.ERROR_REPORTING_URL);
     }
     return groupsV2Operations;
   }

@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.Database;
+import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidStorageFileException;
-import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
@@ -43,9 +43,9 @@ import org.whispersystems.util.Base64;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -64,11 +64,12 @@ public class AccountData {
 
   public boolean registered;
 
-  public SignalProtocolStore axolotlStore;
+  @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
+  @JsonIgnore public DatabaseProtocolStore axolotlStore;
   public GroupStore groupStore;
   public GroupsV2Storage groupsV2;
   public ContactStore contactStore;
-  public RecipientStore recipientStore = new RecipientStore();
+  @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
   public BackgroundActionsLastRun backgroundActionsLastRun = new BackgroundActionsLastRun();
 
@@ -80,24 +81,44 @@ public class AccountData {
   private static String dataPath;
   private static final Logger logger = LogManager.getLogger();
 
+  AccountData() {}
+
+  public AccountData(String pendingIdentifier) {
+    username = pendingIdentifier;
+    address = new JsonAddress(pendingIdentifier);
+    axolotlStore = new DatabaseProtocolStore(pendingIdentifier);
+  }
+
   public static AccountData load(File storageFile) throws IOException {
-    logger.debug("Loading account from disk.");
     ObjectMapper mapper = JSONUtil.GetMapper();
 
     // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
     AccountData a = mapper.readValue(storageFile, AccountData.class);
-    logger.debug("Loaded account data from file.");
+    logger.debug("Loaded account data for " + (a.address == null ? "null" : a.address.toRedactedString()));
     a.validate();
-    a.initProtocolStore();
     a.update();
+    a.initialize();
     return a;
   }
 
+  private void initialize() {
+    if (axolotlStore == null) {
+      axolotlStore = new DatabaseProtocolStore(address.getUUID());
+    }
+  }
+
+  public void setPending() {
+    if (axolotlStore == null) {
+      axolotlStore = new DatabaseProtocolStore(username);
+    }
+  }
+
   public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey)
-      throws InvalidInputException, IOException {
+      throws InvalidInputException, IOException, SQLException {
     logger.debug("Creating new local account by linking");
     AccountData a = new AccountData();
     a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
+    a.initialize();
     a.password = password;
 
     if (registration.getProfileKey() != null) {
@@ -108,21 +129,18 @@ public class AccountData {
 
     a.deviceId = registration.getDeviceId();
     a.signalingKey = signalingKey;
-    a.axolotlStore = new SignalProtocolStore(registration.getIdentity(), registrationId, a.getResolver());
     a.registered = true;
     a.init();
+    AccountsTable.add(a.address.number, a.address.getUUID(), Manager.getFileName(a.username));
+    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registration.getIdentity().serialize());
+    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationId);
     a.save();
     return a;
   }
 
   @JsonIgnore
-  public AddressResolver getResolver() {
-    return new Resolver();
-  }
-
-  public void initProtocolStore() {
-    axolotlStore.sessionStore.setResolver(getResolver());
-    axolotlStore.identityKeyStore.setResolver(getResolver());
+  public RecipientsTable getResolver() {
+    return new RecipientsTable(getUUID());
   }
 
   private void update() throws IOException {
@@ -245,6 +263,28 @@ public class AccountData {
     }
   }
 
+  public void delete() throws SQLException, IOException {
+    if (getUUID() != null) {
+      PreKeysTable.deleteAccount(getUUID());
+      SessionsTable.deleteAccount(getUUID());
+      SignedPreKeysTable.deleteAccount(getUUID());
+      IdentityKeysTable.deleteAccount(getUUID());
+      RecipientsTable.deleteAccount(getUUID());
+      AccountDataTable.deleteAccount(getUUID());
+      AccountsTable.deleteAccount(getUUID());
+    }
+
+    MessageQueueTable.deleteAccount(username);
+    try {
+      Files.delete(new File(dataPath + "/" + username).toPath());
+    } catch (NoSuchFileException ignored) {
+    }
+    try {
+      Files.delete(new File(dataPath + "/" + username + ".d").toPath());
+    } catch (NoSuchFileException ignored) {
+    }
+  }
+
   @JsonSetter("groupsV2Supported")
   public void migrateGroupsV2SupportedFlag(boolean flag) {
     // no op
@@ -313,31 +353,12 @@ public class AccountData {
   }
 
   @JsonIgnore
-  public Database getDatabase() throws SQLException {
+  public Database getDatabase() {
     return new Database(getUUID());
   }
 
-  public class Resolver implements AddressResolver {
-
-    public SignalServiceAddress resolve(String identifier) {
-      SignalServiceAddress address = AddressUtil.fromIdentifier(identifier);
-      return resolve(address);
-    }
-
-    public SignalServiceAddress resolve(SignalServiceAddress a) {
-      if (a.matches(address.getSignalServiceAddress())) {
-        return address.getSignalServiceAddress();
-      }
-
-      return recipientStore.resolve(a);
-    }
-
-    public Collection<SignalServiceAddress> resolve(Collection<SignalServiceAddress> partials) {
-      Collection<SignalServiceAddress> full = new ArrayList<>();
-      for (SignalServiceAddress p : partials) {
-        full.add(resolve(p));
-      }
-      return full;
-    }
+  @JsonIgnore
+  public void setUUID(UUID ownUuid) {
+    address.uuid = ownUuid.toString();
   }
 }

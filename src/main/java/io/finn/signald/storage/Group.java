@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @JsonSerialize(using = Group.GroupSerializer.class)
 @JsonDeserialize(using = Group.GroupDeserializer.class)
@@ -132,6 +133,9 @@ public class Group {
     if (avatarFile.exists()) {
       jsonGroupV2Info.avatar = avatarFile.getAbsolutePath();
     }
+    jsonGroupV2Info.members = jsonGroupV2Info.members.stream().map(x -> m.getResolver().resolve(x)).collect(Collectors.toList());
+    jsonGroupV2Info.pendingMembers = jsonGroupV2Info.pendingMembers.stream().map(x -> m.getResolver().resolve(x)).collect(Collectors.toList());
+    jsonGroupV2Info.requestingMembers = jsonGroupV2Info.requestingMembers.stream().map(x -> m.getResolver().resolve(x)).collect(Collectors.toList());
     return jsonGroupV2Info;
   }
 

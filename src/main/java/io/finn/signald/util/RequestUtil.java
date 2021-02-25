@@ -52,7 +52,8 @@ public class RequestUtil {
       RegisterRequest.class,                                                              // v1        register
       VerifyRequest.class,                                                                // v1        verify
       GetIdentitiesRequest.class,                                                         // v1        get_identities
-      TrustRequest.class                                                                  // v1        trust
+      TrustRequest.class,                                                                 // v1        trust
+      DeleteAccountRequest.class                                                          // v1        delete_account
   );
 
   public static String getVersion(Class t) {

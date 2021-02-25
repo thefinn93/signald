@@ -47,8 +47,8 @@ public class VerifyRequest implements RequestType<Account> {
 
   @Override
   public Account run(Request request) throws SQLException, IOException, NoSuchAccountException, JsonifyableException, InvalidInputException {
-    Manager m = Manager.get(account, true);
-    if (!m.userHasKeys()) {
+    Manager m = Manager.getPending(account);
+    if (!m.hasPendingKeys()) {
       throw new AccountHasNoKeys();
     } else if (m.isRegistered()) {
       throw new AccountAlreadyVerified();

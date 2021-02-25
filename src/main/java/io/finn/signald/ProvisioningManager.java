@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
@@ -76,7 +77,8 @@ public class ProvisioningManager {
     return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public String finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException {
+  public String finishDeviceLink(String deviceName)
+      throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException, NoSuchAccountException {
     String signalingKey = Util.getSecret(52);
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, false, true, registrationId, deviceName);
     String username = ret.getNumber();
@@ -85,14 +87,13 @@ public class ProvisioningManager {
       throw new UserAlreadyExists(username, Manager.getFileName(username));
     }
 
-    Manager m = Manager.fromAccountData(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey));
-    m.refreshPreKeys();
+    Manager m = new Manager(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey));
 
+    m.refreshPreKeys();
     m.requestSyncGroups();
     m.requestSyncContacts();
     // m.requestSyncBlocked(); // TODO: implement support for blocking
     m.requestSyncConfiguration();
-
     return username;
   }
 }

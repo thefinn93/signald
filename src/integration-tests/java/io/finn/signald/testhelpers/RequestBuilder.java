@@ -37,4 +37,13 @@ public class RequestBuilder {
     req.put("version", "v0");
     return req.toString();
   }
+
+  public static String deleteAccount(String account) {
+    ObjectNode req = mpr.createObjectNode();
+    req.put("type", "delete_account");
+    req.put("version", "v1");
+    req.put("server", true);
+    req.put("account", account);
+    return req.toString();
+  }
 }

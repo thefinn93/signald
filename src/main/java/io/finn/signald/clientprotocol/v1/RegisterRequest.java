@@ -25,8 +25,12 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.CaptchaRequired;
+import io.finn.signald.util.KeyUtil;
 import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 
@@ -44,8 +48,14 @@ public class RegisterRequest implements RequestType<Account> {
 
   @Override
   public Account run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidInputException, CaptchaRequired {
-    Manager m = Manager.get(account, true);
-    m.createNewIdentity();
+    Manager m = Manager.getPending(account);
+
+    IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();
+    PendingAccountDataTable.set(account, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, identityKey.serialize());
+
+    int registrationId = KeyHelper.generateRegistrationId(false);
+    PendingAccountDataTable.set(account, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registrationId);
+
     try {
       m.register(voice, Optional.fromNullable(captcha));
     } catch (CaptchaRequiredException e) {

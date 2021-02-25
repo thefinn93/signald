@@ -116,4 +116,10 @@ public class MessageQueueTable {
     rows.close();
     return new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
   }
+
+  public static void deleteAccount(String account) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT + " = ?");
+    statement.setString(1, account);
+    statement.executeUpdate();
+  }
 }

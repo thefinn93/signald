@@ -19,7 +19,7 @@ package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.storage.IdentityKeyStore;
+import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
@@ -34,23 +34,23 @@ class JsonIdentity {
   public String qr_code_data;
   public JsonAddress address;
 
-  JsonIdentity(IdentityKeyStore.Identity identity, Manager m) {
+  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m) {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
     if (identity.getAddress() != null) {
-      this.address = identity.getAddress();
+      this.address = new JsonAddress(identity.getAddress());
       generateSafetyNumber(identity, m);
     }
   }
 
-  JsonIdentity(IdentityKeyStore.Identity identity, Manager m, SignalServiceAddress address) {
+  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m, SignalServiceAddress address) {
     this(identity, m);
     this.address = new JsonAddress(address);
     generateSafetyNumber(identity, m);
   }
 
-  private void generateSafetyNumber(IdentityKeyStore.Identity identity, Manager m) {
+  private void generateSafetyNumber(IdentityKeysTable.IdentityKeyRow identity, Manager m) {
     if (address != null) {
       Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnAddress(), m.getIdentity(), address.getSignalServiceAddress(), identity.getKey());
       if (fingerprint == null) {

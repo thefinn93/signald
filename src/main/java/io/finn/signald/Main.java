@@ -19,6 +19,7 @@ package io.finn.signald;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
+import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
@@ -57,7 +58,8 @@ public class Main implements Runnable {
 
   @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
 
-  @Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db") private String db;
+  @Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db. Only sqlite is supported at this time.")
+  private String db;
 
   @Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit") private boolean dumpProtocol = false;
 
@@ -108,6 +110,20 @@ public class Main implements Runnable {
       }
 
       Database.setConnectionString(db);
+
+      // Migrate data as supported from the JSON state files:
+      File[] allAccounts = new File(data_path + "/data").listFiles();
+      if (allAccounts != null) {
+        for (File f : allAccounts) {
+          if (f.isDirectory()) {
+            continue;
+          }
+          if (f.isHidden()) {
+            continue;
+          }
+          AccountsTable.importFromJSON(f);
+        }
+      }
 
       new Thread(new BackgroundJobRunnerThread()).start();
 

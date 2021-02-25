@@ -24,9 +24,11 @@ import io.finn.signald.NoSuchAccountException;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.InvalidRequestException;
 import io.finn.signald.exceptions.UnknownIdentityKey;
 import org.asamk.signal.TrustLevel;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -51,8 +53,8 @@ public class TrustRequest implements RequestType<Empty> {
   @Required @JsonProperty("trust_level") @ExampleValue("\"TRUSTED_VERIFIED\"") @Doc("One of TRUSTED_UNVERIFIED, TRUSTED_VERIFIED or UNTRUSTED") public String trustLevel;
 
   @Override
-  public Empty run(Request request)
-      throws SQLException, IOException, NoSuchAccountException, InvalidRequestException, FingerprintVersionMismatchException, FingerprintParsingException, UnknownIdentityKey {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidRequestException, FingerprintVersionMismatchException,
+                                           FingerprintParsingException, UnknownIdentityKey, InvalidAddressException, InvalidKeyException {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());

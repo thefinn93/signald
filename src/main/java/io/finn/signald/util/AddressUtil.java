@@ -24,8 +24,13 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 public class AddressUtil implements AddressResolver {
+  // Used to resolve local accounts
+  private static final List<SignalServiceAddress> knownAddresses = new ArrayList<>();
+  public static void addKnownAddress(SignalServiceAddress address) { knownAddresses.add(address); }
+
   public static SignalServiceAddress fromIdentifier(String identifier) {
     if (UuidUtil.isUuid(identifier)) {
       return new SignalServiceAddress(UuidUtil.parseOrNull(identifier), null);
@@ -48,11 +53,16 @@ public class AddressUtil implements AddressResolver {
 
   @Override
   public SignalServiceAddress resolve(String identifier) {
-    return fromIdentifier(identifier);
+    return resolve(fromIdentifier(identifier));
   }
 
   @Override
   public SignalServiceAddress resolve(SignalServiceAddress partial) {
+    for (SignalServiceAddress k : knownAddresses) {
+      if (k.matches(partial)) {
+        return k;
+      }
+    }
     return partial;
   }
 
