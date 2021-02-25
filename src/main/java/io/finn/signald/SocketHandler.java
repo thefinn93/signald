@@ -51,6 +51,7 @@ import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.LockedException;
@@ -394,8 +395,12 @@ public class SocketHandler implements Runnable {
     m.createNewIdentity();
 
     logger.info("Registering (voice: " + voice + ")");
-    m.register(voice, Optional.fromNullable(request.captcha));
-    this.reply("verification_required", new JsonAccount(m), request.id);
+    try {
+      m.register(voice, Optional.fromNullable(request.captcha));
+      this.reply("verification_required", new JsonAccount(m), request.id);
+    } catch (CaptchaRequiredException e) {
+      this.reply("captcha_required", "see https://gitlab.com/signald/signald/-/wikis/Captchas", request.id);
+    }
   }
 
   private void verify(JsonRequest request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
