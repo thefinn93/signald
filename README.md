@@ -17,6 +17,8 @@ signald is a daemon that facilitates communication over Signal.  It is unofficia
 * [signal-weechat](https://github.com/thefinn93/signal-weechat)
 * [Adhesive](https://github.com/signalstickers/Adhesive) - A chatbot serving as your glue between Telegram and Signal sticker packs
 * [alertmanager-webhook-signald](https://github.com/dgl/alertmanager-webhook-signald) -  Alertmanager webhook server for Signald
+* [spectrum2_signald](https://gitlab.com/nicocool84/spectrum2_signald/) - An XMPP gateway to signald based on [spectrum](https://spectrum.im/)
+* [slidge](https://gitlab.com/nicocool84/slidge/) - An XMPP gateway to signald using the SliXMPP library.
 
 ## Contributing/Feedback/Bugs
 [Issues and MRs are accepted via GitLab.com](https://gitlab.com/signald/signald). There is an IRC channel, `#signald` on Freenode,
