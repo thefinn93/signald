@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   final String username;
+  private int backoff = 0;
   private SocketManager sockets;
   private static final Logger logger = LogManager.getLogger();
 
@@ -57,6 +58,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   }
 
   public void run() {
+    boolean notifyOnConnect = true;
     try {
       Thread.currentThread().setName(Util.redact(username) + "-receiver");
       Manager manager = Manager.get(username);
@@ -65,17 +67,32 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
         try {
-          this.sockets.broadcast(new JsonMessageWrapper("listen_started", username, (String)null));
+          if (notifyOnConnect) {
+            this.sockets.broadcast(new JsonMessageWrapper("listen_started", username, (String)null));
+          } else {
+            notifyOnConnect = true;
+          }
           manager.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
-          this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String)null));
         } catch (IOException e) {
-          this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, e));
-          if (sockets.size() > 0) {
-            throw e;
+          if (sockets.size() == 0) {
+            return;
+          }
+          if (backoff > 0) {
+            this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String)null));
           }
         } catch (AssertionError e) {
           this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, e));
           logger.catching(e);
+        }
+        if (backoff == 0) {
+          notifyOnConnect = false;
+          backoff = 1;
+        } else {
+          logger.warn("Disconnected from socket, reconnecting in " + backoff + " seconds");
+          if (backoff < 60) {
+            backoff = (int)(backoff * 1.5);
+          }
+          TimeUnit.SECONDS.sleep(backoff);
         }
       }
     } catch (Exception e) {
@@ -85,6 +102,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
   @Override
   public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
+    backoff = 0;
     String type = "message";
     if (exception != null) {
       if (exception instanceof SelfSendException) {

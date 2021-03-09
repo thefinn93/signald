@@ -1112,7 +1112,6 @@ public class Manager {
         SignalServiceEnvelope envelope;
         SignalServiceContent content = null;
         Exception exception = null;
-        final long now = new Date().getTime();
         try {
           envelope = messagePipe.read(timeout, unit, new SignalServiceMessagePipe.MessagePipeCallback() {
             @Override
