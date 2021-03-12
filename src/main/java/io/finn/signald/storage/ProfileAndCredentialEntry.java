@@ -42,7 +42,7 @@ public class ProfileAndCredentialEntry {
   private static final Logger logger = LogManager.getLogger();
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
 
-  private final SignalServiceAddress serviceAddress;
+  private SignalServiceAddress serviceAddress;
 
   private final ProfileKey profileKey;
 
@@ -76,6 +76,8 @@ public class ProfileAndCredentialEntry {
   public boolean isRequestPending() { return requestPending; }
 
   public void setRequestPending(final boolean requestPending) { this.requestPending = requestPending; }
+
+  public void setAddress(SignalServiceAddress address) { serviceAddress = address; }
 
   public static class ProfileAndCredentialEntryDeserializer extends JsonDeserializer<ProfileAndCredentialEntry> {
     @Override

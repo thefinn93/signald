@@ -429,7 +429,7 @@ public class GroupsV2Manager {
     // TODO: group avatars
     Optional<byte[]> avatarBytes = Optional.absent();
 
-    GroupCandidate groupCandidateSelf = new GroupCandidate(self, Optional.fromNullable(profileCredentialStore.getProfileKeyCredential(self)));
+    GroupCandidate groupCandidateSelf = new GroupCandidate(self, Optional.of(profileCredentialStore.getProfileKeyCredential(self)));
     Set<GroupCandidate> candidates = members.stream().map(this ::buildGroupCandidate).collect(Collectors.toSet());
     GroupsV2Operations.NewGroup newGroup = groupsV2Operations.createNewGroup(groupSecretParams, title, avatarBytes, groupCandidateSelf, candidates, memberRole, timer);
     groupsV2Api.putNewGroup(newGroup, getAuthorizationForToday(groupSecretParams));

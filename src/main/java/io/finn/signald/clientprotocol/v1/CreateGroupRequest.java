@@ -27,6 +27,8 @@ import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidRequestException;
+import io.finn.signald.exceptions.NoKnownUUID;
+import io.finn.signald.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.storage.Group;
@@ -39,8 +41,10 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 @SignaldClientRequest(type = "create_group")
 public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
@@ -60,10 +64,22 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request)
-      throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
+      throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
+             InterruptedException, ExecutionException, TimeoutException, NoKnownUUID, OwnProfileKeyDoesNotExist {
     Manager m = Manager.get(account);
     AddressResolver resolver = m.getResolver();
-    List<SignalServiceAddress> resolvedMembers = members.stream().map(x -> resolver.resolve(x.getSignalServiceAddress())).collect(Collectors.toList());
+    List<SignalServiceAddress> resolvedMembers = new ArrayList<>();
+    if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getUUID()) == null) {
+      throw new OwnProfileKeyDoesNotExist();
+    }
+    for (JsonAddress member : members) {
+      SignalServiceAddress address = resolver.resolve(member.getSignalServiceAddress());
+      m.getRecipientProfileKeyCredential(address);
+      resolvedMembers.add(address);
+      if (!address.getUuid().isPresent()) {
+        throw new NoKnownUUID(address.getNumber().orNull());
+      }
+    }
 
     Member.Role role = Member.Role.DEFAULT;
     if (memberRole != null) {

@@ -140,6 +140,13 @@ public class AccountData {
       getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
     }
 
+    ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(address.getSignalServiceAddress());
+    if (profileKeyEntry != null) {
+      if (!profileKeyEntry.getServiceAddress().getUuid().isPresent() && address.uuid != null) {
+        profileKeyEntry.setAddress(address.getSignalServiceAddress());
+      }
+    }
+
     if (version < VERSION_IMPORT_CONTACT_PROFILES) {
       // migrate profile keys from contacts to profileCredentialStore
       for (ContactStore.ContactInfo c : contactStore.getContacts()) {
@@ -217,8 +224,15 @@ public class AccountData {
       contactStore = new ContactStore();
     }
 
-    if (profileCredentialStore.get(address.getSignalServiceAddress()) == null) {
-      generateProfileKey();
+    if (address != null) {
+      ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(address.getSignalServiceAddress());
+      if (profileKeyEntry == null) {
+        generateProfileKey();
+      } else {
+        if (!profileKeyEntry.getServiceAddress().getUuid().isPresent() && address.uuid != null) {
+          profileKeyEntry.setAddress(address.getSignalServiceAddress());
+        }
+      }
     }
   }
 
