@@ -49,7 +49,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @Required @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
 
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) public String avatar;
-  public List<JsonAddress> members;
+  @Required public List<JsonAddress> members;
 
   @JsonProperty("member_role")
   @Doc("The role of all members other than the group creator. Options are ADMINISTRATOR or DEFAULT (case insensitive)")
