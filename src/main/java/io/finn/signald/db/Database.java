@@ -28,12 +28,18 @@ import java.util.UUID;
 public class Database {
   private static final Logger logger = LogManager.getLogger();
   private static String connectionString;
+  private static Connection conn;
 
   private UUID uuid;
 
   public static void setConnectionString(String c) { connectionString = c; }
 
-  public static Connection getConn() throws SQLException { return DriverManager.getConnection(connectionString); }
+  public static Connection getConn() throws SQLException {
+    if (conn == null) {
+      conn = DriverManager.getConnection(connectionString);
+    }
+    return conn;
+  }
 
   public Database(UUID u) { uuid = u; }
 
