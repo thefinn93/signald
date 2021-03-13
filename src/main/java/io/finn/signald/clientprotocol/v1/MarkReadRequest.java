@@ -17,7 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.BuildConfig;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.NoSuchAccountException;
@@ -47,7 +46,7 @@ public class MarkReadRequest implements RequestType<Empty> {
 
   @Doc("The address that sent the message being marked as read") @Required public JsonAddress to;
 
-  @ExampleValue(BuildConfig.BUILD_TIMESTAMP) @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
+  @ExampleValue(ExampleValue.MESSAGE_ID) @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
 
   @Override
   public Empty run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException, SQLException {

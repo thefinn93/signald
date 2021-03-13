@@ -17,8 +17,6 @@
 
 package io.finn.signald.annotations;
 
-import io.finn.signald.BuildConfig;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -35,7 +33,7 @@ public @interface ExampleValue {
   String REMOTE_PHONE_NUMBER = "\"+13215551234\"";
   String REMOTE_UUID = "\"aeed01f0-a234-478e-8cf7-261c283151e7\"";
   String GROUP_ID = "\"EdSqI90cS0UomDpgUXOlCoObWvQOXlH5G3Z2d3f4ayE=\"";
-  String MESSAGE_ID = BuildConfig.BUILD_TIMESTAMP;
+  String MESSAGE_ID = "1615576442475";
   String LOCAL_EXTERNAL_JPG = "\"/tmp/image.jpg\"";
   String GROUP_TITLE = "\"Parkdale Run Club\"";
   String MESSAGE_BODY = "\"hello\"";
