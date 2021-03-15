@@ -32,11 +32,17 @@ class SocketManager {
   private final static ObjectMapper mapper = JSONUtil.GetMapper();
   private final List<Socket> sockets = Collections.synchronizedList(new ArrayList<>());
 
-  public void add(Socket s) { this.sockets.add(s); }
+  public void add(Socket s) {
+    synchronized (this.sockets) { this.sockets.add(s); }
+  }
 
-  public boolean remove(Socket s) { return this.sockets.remove(s); }
+  public boolean remove(Socket s) {
+    synchronized (this.sockets) { return this.sockets.remove(s); }
+  }
 
-  public int size() { return this.sockets.size(); }
+  public int size() {
+    synchronized (this.sockets) { return this.sockets.size(); }
+  }
 
   public void broadcast(JsonMessageWrapper message) throws IOException {
     synchronized (this.sockets) {
