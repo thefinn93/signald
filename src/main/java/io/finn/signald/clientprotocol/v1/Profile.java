@@ -36,6 +36,8 @@ public class Profile {
   @Doc("color of the chat with this user") public String color;
   @JsonProperty("inbox_position") public Integer inboxPosition;
   @JsonProperty("expiration_time") public int expirationTime;
+  public String about;
+  public String emoji;
 
   public Profile(ContactStore.ContactInfo contact) {
     if (contact != null) {

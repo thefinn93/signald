@@ -37,29 +37,33 @@ public class SignalProfile {
 
   @JsonProperty private final Capabilities capabilities;
 
-  public SignalProfile(final String identityKey, final String name, final File avatarFile, final String unidentifiedAccess, final boolean unrestrictedUnidentifiedAccess,
-                       final SignalServiceProfile.Capabilities capabilities) {
-    this.identityKey = identityKey;
-    this.name = name;
+  @JsonProperty private final String about;
+
+  @JsonProperty private final String emoji;
+
+  public SignalProfile(final SignalServiceProfile encryptedProfile, final File avatarFile, final String unidentifiedAccess) {
+    this.identityKey = encryptedProfile.getIdentityKey();
+    this.name = encryptedProfile.getName();
     this.avatarFile = avatarFile;
     this.unidentifiedAccess = unidentifiedAccess;
-    this.unrestrictedUnidentifiedAccess = unrestrictedUnidentifiedAccess;
-    this.capabilities = new Capabilities();
-    this.capabilities.storage = capabilities.isStorage();
-    this.capabilities.gv1Migration = capabilities.isGv1Migration();
-    this.capabilities.gv2 = capabilities.isGv2();
+    this.unrestrictedUnidentifiedAccess = encryptedProfile.isUnrestrictedUnidentifiedAccess();
+    this.capabilities = new Capabilities(encryptedProfile.getCapabilities());
+    this.about = encryptedProfile.getAbout();
+    this.emoji = encryptedProfile.getAboutEmoji();
   }
 
   public SignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
                        @JsonProperty("unidentifiedAccess") final String unidentifiedAccess,
-                       @JsonProperty("unrestrictedUnidentifiedAccess") final boolean unrestrictedUnidentifiedAccess,
-                       @JsonProperty("capabilities") final Capabilities capabilities) {
+                       @JsonProperty("unrestrictedUnidentifiedAccess") final boolean unrestrictedUnidentifiedAccess, @JsonProperty("capabilities") final Capabilities capabilities,
+                       @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji) {
     this.identityKey = identityKey;
     this.name = name;
     this.avatarFile = null;
     this.unidentifiedAccess = unidentifiedAccess;
     this.unrestrictedUnidentifiedAccess = unrestrictedUnidentifiedAccess;
     this.capabilities = capabilities;
+    this.about = about;
+    this.emoji = emoji;
   }
 
   public String getIdentityKey() { return identityKey; }
@@ -117,6 +121,12 @@ public class SignalProfile {
     @JsonProperty public boolean storage;
 
     @JsonProperty public boolean gv1Migration;
+
+    public Capabilities(SignalServiceProfile.Capabilities capabilities) {
+      gv1Migration = capabilities.isGv1Migration();
+      gv2 = capabilities.isGv2();
+      storage = capabilities.isStorage();
+    }
 
     public boolean equals(Capabilities other) { return other.uuid == uuid && other.gv2 == gv2 && other.storage == storage && other.gv1Migration == gv1Migration; }
   }

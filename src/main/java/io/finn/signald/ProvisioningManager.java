@@ -20,6 +20,7 @@ package io.finn.signald;
 import io.finn.signald.clientprotocol.v1.LinkingURI;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
+import io.finn.signald.util.KeyUtil;
 import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -60,13 +61,13 @@ public class ProvisioningManager {
   public static ProvisioningManager get(String sessionID) { return provisioningManagers.get(sessionID); }
 
   public ProvisioningManager() {
-    identityKey = KeyHelper.generateIdentityKeyPair();
+    identityKey = KeyUtil.generateIdentityKeyPair();
     registrationId = KeyHelper.generateRegistrationId(false);
     password = Util.getSecret(18);
     final SleepTimer timer = new UptimeSleepTimer();
-    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, null, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     accountManager =
-        new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), timer);
+        new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true, timer);
   }
 
   public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
@@ -77,7 +78,7 @@ public class ProvisioningManager {
 
   public String finishDeviceLink(String deviceName) throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException {
     String signalingKey = Util.getSecret(52);
-    SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, signalingKey, false, true, registrationId, deviceName);
+    SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, false, true, registrationId, deviceName);
     String username = ret.getNumber();
 
     if (Manager.userExists(username)) {

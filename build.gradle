@@ -92,7 +92,7 @@ configurations {
 }
 
 dependencies {
-    implementation 'com.github.turasa:signal-service-java-' + getTarget() + ':2.15.3_unofficial_17'
+    implementation 'com.github.turasa:signal-service-java-' + getTarget() + ':2.15.3_unofficial_19'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.66'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.3.2'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.3.2'
@@ -102,6 +102,7 @@ dependencies {
     implementation 'info.picocli:picocli:4.5.2'
     implementation 'org.xerial:sqlite-jdbc:3.34.0'
     implementation 'org.flywaydb:flyway-core:7.5.3'
+    implementation 'com.google.protobuf:protobuf-javalite:3.10.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }

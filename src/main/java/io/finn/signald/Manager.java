@@ -16,14 +16,15 @@
  */
 package io.finn.signald;
 
-import io.finn.signald.jobs.*;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.GroupsUtil;
+import io.finn.signald.util.KeyUtil;
 import io.finn.signald.util.SafetyNumberHelper;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
@@ -135,7 +136,7 @@ public class Manager {
                                             new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(BuildConfig.SIGNAL_CONTACT_DISCOVERY_URL, TRUST_STORE)},
                                             new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(BuildConfig.SIGNAL_KEY_BACKUP_URL, TRUST_STORE)},
                                             new SignalStorageUrl[] {new SignalStorageUrl(BuildConfig.SIGNAL_STORAGE_URL, TRUST_STORE)},
-                                            Collections.singletonList(userAgentInterceptor), Optional.absent(),
+                                            Collections.singletonList(userAgentInterceptor), Optional.absent(), Optional.absent(),
                                             Base64.decode(BuildConfig.SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX));
     } catch (IOException e) {
       LogManager.getLogger("manager").catching(e);
@@ -299,7 +300,7 @@ public class Manager {
   }
 
   public void createNewIdentity() {
-    IdentityKeyPair identityKey = KeyHelper.generateIdentityKeyPair();
+    IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();
     int registrationId = KeyHelper.generateRegistrationId(false);
     accountData.axolotlStore = new SignalProtocolStore(identityKey, registrationId, accountData.getResolver());
     accountData.registered = false;
@@ -326,7 +327,7 @@ public class Manager {
 
   public SignalServiceAccountManager getAccountManager() {
     return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
-                                           GroupsUtil.GetGroupsV2Operations(serviceConfiguration), sleepTimer);
+                                           GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true, sleepTimer);
   }
 
   public static Map<String, String> getQueryMap(String query) {
@@ -1547,7 +1548,14 @@ public class Manager {
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, streamDetails);
+      accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, "", "", streamDetails);
+    }
+    accountData.save();
+  }
+
+  public void setProfile(String name, File avatar, String about, String emoji) throws IOException, InvalidInputException {
+    try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
+      accountManager.setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, about, emoji, streamDetails);
     }
     accountData.save();
   }
@@ -1561,12 +1569,12 @@ public class Manager {
   public SignalServiceMessageSender getMessageSender() {
     return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true,
                                           Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
-                                          getClientZkOperations().getProfileOperations(), null, 0);
+                                          getClientZkOperations().getProfileOperations(), null, 0, true);
   }
 
   public SignalServiceMessageReceiver getMessageReceiver() {
-    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId,
-                                            accountData.signalingKey, USER_AGENT, null, sleepTimer, getClientZkOperations().getProfileOperations());
+    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, USER_AGENT, null,
+                                            sleepTimer, getClientZkOperations().getProfileOperations(), true);
   }
 
   public static ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
@@ -1634,8 +1642,7 @@ public class Manager {
       } catch (IOException e) {
         unidentifiedAccess = null;
       }
-      return new SignalProfile(encryptedProfile.getIdentityKey(), name, localAvatarPath, unidentifiedAccess, encryptedProfile.isUnrestrictedUnidentifiedAccess(),
-                               encryptedProfile.getCapabilities());
+      return new SignalProfile(encryptedProfile, localAvatarPath, unidentifiedAccess);
     } catch (InvalidCiphertextException e) {
       e.printStackTrace();
       return null;

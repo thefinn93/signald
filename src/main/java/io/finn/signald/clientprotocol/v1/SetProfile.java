@@ -40,6 +40,10 @@ public class SetProfile implements RequestType<Empty> {
 
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @Doc("Path to new profile avatar file, if the avatar should be updated") public String avatarFile;
 
+  public String about;
+
+  public String emoji;
+
   @Override
   public Empty run(Request request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
     File avatar = avatarFile == null ? null : new File(avatarFile);

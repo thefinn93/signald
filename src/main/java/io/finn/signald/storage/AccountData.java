@@ -270,7 +270,7 @@ public class AccountData {
 
   @JsonIgnore
   public DynamicCredentialsProvider getCredentialsProvider() {
-    return new DynamicCredentialsProvider(getUUID(), username, password, signalingKey, deviceId);
+    return new DynamicCredentialsProvider(getUUID(), username, password, deviceId);
   }
 
   public String getMigratedGroupId(String groupV1Id) throws IOException {

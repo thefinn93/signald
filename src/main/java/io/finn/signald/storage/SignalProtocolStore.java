@@ -27,10 +27,11 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.SignalServiceProtocolStore;
 
 import java.util.List;
 
-public class SignalProtocolStore implements org.whispersystems.libsignal.state.SignalProtocolStore {
+public class SignalProtocolStore implements SignalServiceProtocolStore {
   public PreKeyStore preKeys;
   public SessionStore sessionStore;
   public SignedPreKeyStore signedPreKeyStore;
@@ -151,5 +152,12 @@ public class SignalProtocolStore implements org.whispersystems.libsignal.state.S
   @Override
   public void removeSignedPreKey(int signedPreKeyId) {
     signedPreKeyStore.removeSignedPreKey(signedPreKeyId);
+  }
+
+  @Override
+  public void archiveSession(SignalProtocolAddress address) {
+    SessionRecord session = loadSession(address);
+    session.archiveCurrentState();
+    storeSession(address, session);
   }
 }
