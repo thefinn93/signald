@@ -17,6 +17,8 @@
 
 package io.finn.signald.exceptions;
 
-public class OwnProfileKeyDoesNotExist extends JsonifyableException {
-  public OwnProfileKeyDoesNotExist() { super("cannot find own profile key"); }
+public class CaptchaRequired extends JsonifyableException {
+  public final String more = "https://gitlab.com/signald/signald/-/wikis/Captchas";
+
+  public CaptchaRequired() { super("a captcha token is required to register"); }
 }

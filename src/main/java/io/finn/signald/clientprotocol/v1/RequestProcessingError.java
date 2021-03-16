@@ -17,7 +17,9 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-public class RequestProcessingError {
+import io.finn.signald.exceptions.JsonifyableException;
+
+public class RequestProcessingError extends JsonifyableException {
   public String type;
   public String message;
 

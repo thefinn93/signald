@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class NoSuchSession extends Exception {
+public class NoSuchSession extends JsonifyableException {
   public NoSuchSession() { super("no such session"); }
 }

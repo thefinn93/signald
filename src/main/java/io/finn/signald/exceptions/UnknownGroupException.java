@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class UnknownGroupException extends Exception {
+public class UnknownGroupException extends JsonifyableException {
   public UnknownGroupException() { super("unknown group requested"); }
 }

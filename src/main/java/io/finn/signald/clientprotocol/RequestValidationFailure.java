@@ -17,17 +17,22 @@
 
 package io.finn.signald.clientprotocol;
 
+import io.finn.signald.exceptions.JsonifyableException;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class RequestValidationFailure {
+public class RequestValidationFailure extends JsonifyableException {
   public List<String> validationResults;
   public final String type = "invalid_request";
-  public final String message = "input validation failed, please check the request and try again.";
 
-  public RequestValidationFailure(List<String> p) { validationResults = p; }
+  public RequestValidationFailure(List<String> p) {
+    super("input validation failed, please check the request and try again.");
+    validationResults = p;
+  }
 
   public RequestValidationFailure(String p) {
+    super("input validation failed, please check the request and try again.");
     validationResults = new ArrayList<>();
     validationResults.add(p);
   }

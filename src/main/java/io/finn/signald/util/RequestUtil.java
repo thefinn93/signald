@@ -48,7 +48,9 @@ public class RequestUtil {
       LeaveGroupRequest.class,                                                            // v1        leave_group
       GenerateLinkingURIRequest.class,                                                    // v1        generate_linking_uri
       FinishLinkRequest.class,                                                            // v1        finish_link
-      AddLinkedDeviceRequest.class                                                        // v1        add_device
+      AddLinkedDeviceRequest.class,                                                       // v1        add_device
+      RegisterRequest.class,                                                              // v1        register
+      VerifyRequest.class                                                                 // v1        verify
   );
 
   public static String getVersion(Class t) {

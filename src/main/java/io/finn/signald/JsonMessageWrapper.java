@@ -19,6 +19,8 @@ package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.exceptions.JsonifyableException;
 
 @JsonInclude(Include.NON_NULL)
 public class JsonMessageWrapper {
@@ -27,6 +29,7 @@ public class JsonMessageWrapper {
   public Object data;
   public Object error;
   public String exception;
+  @JsonProperty("error_type") public String errorType;
 
   public JsonMessageWrapper(String type, Object data, String id) {
     this.type = type;
@@ -44,7 +47,11 @@ public class JsonMessageWrapper {
 
   public static JsonMessageWrapper error(String type, Object error, String id) {
     JsonMessageWrapper j = new JsonMessageWrapper(type, null, id);
+    if (error instanceof JsonifyableException) {
+      j.errorType = ((JsonifyableException)error).getType();
+    }
     j.error = error;
+
     return j;
   }
 }

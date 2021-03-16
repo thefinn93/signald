@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class InvalidRequestException extends Exception {
+public class InvalidRequestException extends JsonifyableException {
   public InvalidRequestException(String message) { super(message); }
 }

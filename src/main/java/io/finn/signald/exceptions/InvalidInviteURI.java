@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class InvalidInviteURI extends Exception {
+public class InvalidInviteURI extends JsonifyableException {
   public InvalidInviteURI() { super("failed to parse invite URL"); }
 }

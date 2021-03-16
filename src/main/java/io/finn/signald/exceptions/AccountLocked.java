@@ -17,6 +17,7 @@
 
 package io.finn.signald.exceptions;
 
-public class OwnProfileKeyDoesNotExist extends JsonifyableException {
-  public OwnProfileKeyDoesNotExist() { super("cannot find own profile key"); }
+public class AccountLocked extends JsonifyableException {
+  public final String more = "see https://gitlab.com/signald/signald/-/issues/47";
+  public AccountLocked() { super("account is locked with a PIN"); }
 }

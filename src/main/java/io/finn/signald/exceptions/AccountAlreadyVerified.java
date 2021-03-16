@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class OwnProfileKeyDoesNotExist extends JsonifyableException {
-  public OwnProfileKeyDoesNotExist() { super("cannot find own profile key"); }
+public class AccountAlreadyVerified extends JsonifyableException {
+  public AccountAlreadyVerified() { super("account has already been verified"); }
 }

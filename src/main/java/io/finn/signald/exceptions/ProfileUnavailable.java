@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class ProfileUnavailable extends Exception {
+public class ProfileUnavailable extends JsonifyableException {
   public ProfileUnavailable() { super("profile unavailable"); }
 }

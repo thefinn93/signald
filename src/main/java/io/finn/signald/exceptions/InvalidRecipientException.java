@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class InvalidRecipientException extends Exception {
+public class InvalidRecipientException extends JsonifyableException {
   public InvalidRecipientException() { super("request must specify either recipientGroupId or recipientAddress"); }
 }

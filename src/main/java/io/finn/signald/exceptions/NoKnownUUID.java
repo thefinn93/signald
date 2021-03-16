@@ -17,8 +17,7 @@
 
 package io.finn.signald.exceptions;
 
-public class NoKnownUUID extends Exception {
-
+public class NoKnownUUID extends JsonifyableException {
   String e164;
   public NoKnownUUID(String e164) {
     super("No known UUID for that Signal account");

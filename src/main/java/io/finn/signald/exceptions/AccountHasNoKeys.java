@@ -17,10 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class UnknownJobName extends Exception {
-  public String name;
-  public UnknownJobName(String jobName) {
-    super("scheduled job of unknown type: " + jobName);
-    name = jobName;
-  }
+public class AccountHasNoKeys extends JsonifyableException {
+  public AccountHasNoKeys() { super("requested account has no keys generated"); }
 }
