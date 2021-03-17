@@ -167,14 +167,10 @@ public class Request {
     HashMap<String, Integer> exactlyOneOfRequired = new HashMap<>();
 
     for (Field f : requestType.getClass().getFields()) {
-      String name = f.getName();
-      if (f.getAnnotation(JsonProperty.class) != null && !f.getAnnotation(JsonProperty.class).value().equals("")) {
-        name = f.getAnnotation(JsonProperty.class).value();
-      }
       // Field does not exist in request
-      if (!request.has(name)) {
+      if (!request.has(getName(f))) {
         if (f.getAnnotation(Required.class) != null || f.getAnnotation(RequiredNonEmpty.class) != null) {
-          errors.add("missing required argument: " + name);
+          errors.add("missing required argument: " + getName(f));
         }
         if (f.getAnnotation(AtLeastOneOfRequired.class) != null) {
           AtLeastOneOfRequired requirement = f.getAnnotation(AtLeastOneOfRequired.class);
@@ -185,15 +181,15 @@ public class Request {
             }
           }
           if (found == 0) {
-            errors.add("at least one required of: " + name + " or " + String.join(" or ", requirement.value()));
+            errors.add("at least one required of: " + getName(f) + " or " + String.join(" or ", requirement.value()));
           }
         }
       } else { // argument is present
         if (f.getAnnotation(RequiredNonEmpty.class) != null) {
-          JsonNode field = request.get(name);
+          JsonNode field = request.get(getName(f));
           if (field.isArray()) {
             if (field.size() == 0) {
-              errors.add(name + " must have at least 1 entry");
+              errors.add(getName(f) + " must have at least 1 entry");
             }
           }
         }
@@ -208,7 +204,7 @@ public class Request {
           value = exactlyOneOfRequired.get(key);
         }
 
-        if (request.has(f.getName())) {
+        if (request.has(getName(f))) {
           value++;
         }
 
@@ -222,7 +218,7 @@ public class Request {
         for (Field f : requestType.getClass().getFields()) {
           ExactlyOneOfRequired requirement = f.getAnnotation(ExactlyOneOfRequired.class);
           if (requirement != null && requirement.value().equals(entry.getKey())) {
-            allOptions.add(f.getName());
+            allOptions.add(getName(f));
           }
         }
         errors.add("exactly one required of: " + String.join(", ", allOptions) + " (" + entry.getValue() + " found)");
@@ -243,5 +239,12 @@ public class Request {
     mapper.setSerializationInclusion(Include.NON_NULL);
     mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
     mapper.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
+  }
+
+  private String getName(Field f) {
+    if (f.getAnnotation(JsonProperty.class) != null && !f.getAnnotation(JsonProperty.class).value().equals("")) {
+      return f.getAnnotation(JsonProperty.class).value();
+    }
+    return f.getName();
   }
 }

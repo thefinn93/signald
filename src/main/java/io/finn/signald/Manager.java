@@ -41,6 +41,9 @@ import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.fingerprint.Fingerprint;
+import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
+import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.KeyHelper;
@@ -1516,6 +1519,31 @@ public class Manager {
     }
     for (IdentityKeyStore.Identity id : ids) {
       if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(accountData.address.getSignalServiceAddress(), getIdentity(), address, id.getKey()))) {
+        continue;
+      }
+
+      accountData.axolotlStore.identityKeyStore.saveIdentity(address, id.getKey(), level);
+      try {
+        sendVerifiedMessage(address, id.getKey(), level);
+      } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+        logger.catching(e);
+      }
+      accountData.save();
+      return true;
+    }
+    return false;
+  }
+
+  public boolean trustIdentitySafetyNumber(SignalServiceAddress address, byte[] scannedFingerprintData, TrustLevel level)
+      throws IOException, FingerprintVersionMismatchException, FingerprintParsingException {
+    List<IdentityKeyStore.Identity> ids = accountData.axolotlStore.identityKeyStore.getIdentities(address);
+    if (ids == null) {
+      return false;
+    }
+    for (IdentityKeyStore.Identity id : ids) {
+      Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(getOwnAddress(), getIdentity(), address, id.getKey());
+      assert fingerprint != null;
+      if (!fingerprint.getScannableFingerprint().compareTo(scannedFingerprintData)) {
         continue;
       }
 

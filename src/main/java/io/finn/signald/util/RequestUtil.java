@@ -50,7 +50,9 @@ public class RequestUtil {
       FinishLinkRequest.class,                                                            // v1        finish_link
       AddLinkedDeviceRequest.class,                                                       // v1        add_device
       RegisterRequest.class,                                                              // v1        register
-      VerifyRequest.class                                                                 // v1        verify
+      VerifyRequest.class,                                                                // v1        verify
+      GetIdentitiesRequest.class,                                                         // v1        get_identities
+      TrustRequest.class                                                                  // v1        trust
   );
 
   public static String getVersion(Class t) {

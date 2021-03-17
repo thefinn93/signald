@@ -122,6 +122,8 @@ public class SignalProfile {
 
     @JsonProperty public boolean gv1Migration;
 
+    public Capabilities() {}
+
     public Capabilities(SignalServiceProfile.Capabilities capabilities) {
       gv1Migration = capabilities.isGv1Migration();
       gv2 = capabilities.isGv2();
