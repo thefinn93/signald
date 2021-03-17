@@ -229,7 +229,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
       this.identityKey = new IdentityKey(org.whispersystems.util.Base64.decode(identityKey), 0);
     }
 
-    @JsonSetter("identityKey")
+    @JsonGetter("identityKey")
     public String getIdentityKey() {
       return Base64.encodeBytes(identityKey.serialize());
     }

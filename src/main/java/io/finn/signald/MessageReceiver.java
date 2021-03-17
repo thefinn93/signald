@@ -77,7 +77,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           if (sockets.size() == 0) {
             return;
           }
-          logger.debug("disconnected from socket with IOError: " + e.getMessage());
+          logger.debug("disconnected from socket", e);
           if (backoff > 0) {
             this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String)null));
           }
