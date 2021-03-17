@@ -77,6 +77,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           if (sockets.size() == 0) {
             return;
           }
+          logger.debug("disconnected from socket with IOError: " + e.getMessage());
           if (backoff > 0) {
             this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String)null));
           }
@@ -88,10 +89,10 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           notifyOnConnect = false;
           backoff = 1;
         } else {
-          logger.warn("Disconnected from socket, reconnecting in " + backoff + " seconds");
           if (backoff < 60) {
             backoff = (int)(backoff * 1.5);
           }
+          logger.warn("Disconnected from socket, reconnecting in " + backoff + " seconds");
           TimeUnit.SECONDS.sleep(backoff);
         }
       }
