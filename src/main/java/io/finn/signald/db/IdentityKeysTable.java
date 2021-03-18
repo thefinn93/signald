@@ -197,10 +197,10 @@ public class IdentityKeysTable implements IdentityKeyStore {
   }
 
   public List<IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." +
-                                                                      RecipientsTable.E164 + "," + RecipientsTable.ROW_ID + "," + IDENTITY_KEY + "," + TRUST_LEVEL + "," + ADDED +
-                                                                      " FROM" + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " +
-                                                                      RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " WHERE " + ACCOUNT_UUID + " = ?");
+    PreparedStatement statement = Database.getConn().prepareStatement(
+        "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
+        TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " + RecipientsTable.TABLE_NAME +
+        "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
     ResultSet row = statement.executeQuery();
     List<IdentityKeyRow> results = new ArrayList<>();
