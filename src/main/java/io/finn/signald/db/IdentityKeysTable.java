@@ -173,9 +173,9 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public List<IdentityKeyRow> getIdentities(SignalServiceAddress a) throws SQLException, InvalidKeyException, InvalidAddressException {
     Integer recipient = new RecipientsTable(uuid).get(a).first();
     PreparedStatement statement = Database.getConn().prepareStatement(
-        "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + RecipientsTable.ROW_ID + "," +
-        IDENTITY_KEY + "," + TRUST_LEVEL + "," + ADDED + " FROM" + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " +
-        RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
+        "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
+        TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " + RecipientsTable.TABLE_NAME +
+        "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
     statement.setString(1, uuid.toString());
     statement.setInt(2, recipient);
     ResultSet row = statement.executeQuery();
