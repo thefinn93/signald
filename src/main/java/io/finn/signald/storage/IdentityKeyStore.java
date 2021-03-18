@@ -231,6 +231,9 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
     @JsonGetter("identityKey")
     public String getIdentityKey() {
+      if (identityKey == null) {
+        return null;
+      }
       return Base64.encodeBytes(identityKey.serialize());
     }
 
