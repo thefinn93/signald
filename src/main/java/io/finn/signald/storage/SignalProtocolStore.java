@@ -19,7 +19,7 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.PreKeysTable;
 import io.finn.signald.db.SessionsTable;

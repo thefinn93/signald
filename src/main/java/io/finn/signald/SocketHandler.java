@@ -33,6 +33,7 @@ import io.finn.signald.clientprotocol.v1.UpdateGroupRequest;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;

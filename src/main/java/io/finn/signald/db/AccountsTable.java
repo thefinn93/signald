@@ -17,7 +17,7 @@
 
 package io.finn.signald.db;
 
-import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.AddressUtil;

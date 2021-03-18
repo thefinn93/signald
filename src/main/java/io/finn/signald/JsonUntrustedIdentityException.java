@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.util.SafetyNumberHelper;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;

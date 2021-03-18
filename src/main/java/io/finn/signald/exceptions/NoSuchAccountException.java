@@ -15,8 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.exceptions;
 
-public class NoSuchAccountException extends Exception {
-  public NoSuchAccountException(String username) { super("Attempted to connect to a non-existant user " + username); }
+public class NoSuchAccountException extends JsonifyableException {
+  public String account;
+  public NoSuchAccountException(String account) {
+    super("account not found");
+    this.account = account;
+  }
 }

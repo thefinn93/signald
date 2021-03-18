@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;

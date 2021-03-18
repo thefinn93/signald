@@ -20,7 +20,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;

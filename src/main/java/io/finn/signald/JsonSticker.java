@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.exceptions.NoSuchAccountException;
 import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 

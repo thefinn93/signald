@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;

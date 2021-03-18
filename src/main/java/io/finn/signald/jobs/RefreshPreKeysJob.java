@@ -18,7 +18,7 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
-import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.db.AccountDataTable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

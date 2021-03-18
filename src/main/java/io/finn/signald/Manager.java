@@ -21,6 +21,7 @@ import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;

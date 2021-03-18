@@ -17,7 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;

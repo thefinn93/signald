@@ -18,7 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.NoSuchAccountException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
