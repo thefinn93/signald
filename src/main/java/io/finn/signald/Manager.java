@@ -1584,47 +1584,46 @@ public class Manager {
         try (OutputStream outputStream = new FileOutputStream(localAvatarPath)) {
           retrieveProfileAvatar(encryptedProfile.getAvatar(), profileKey, outputStream);
         } catch (IOException e) {
-          System.err.println("Failed to retrieve profile avatar, ignoring: " + e.getMessage());
+          logger.info("Failed to retrieve profile avatar, ignoring: " + e.getMessage());
         }
       }
     }
 
     ProfileCipher profileCipher = new ProfileCipher(profileKey);
+
+    String name;
     try {
-      String name;
-      try {
-        name = encryptedProfile.getName() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getName())));
-      } catch (IOException e) {
-        name = null;
-      }
-
-      String about;
-      try {
-        about = encryptedProfile.getAbout() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAbout())));
-      } catch (IOException e) {
-        about = null;
-      }
-
-      String aboutEmoji;
-      try {
-        aboutEmoji = encryptedProfile.getAboutEmoji() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAboutEmoji())));
-      } catch (IOException e) {
-        aboutEmoji = null;
-      }
-
-      String unidentifiedAccess;
-      try {
-        unidentifiedAccess = encryptedProfile.getUnidentifiedAccess() == null || !profileCipher.verifyUnidentifiedAccess(Base64.decode(encryptedProfile.getUnidentifiedAccess()))
-                                 ? null
-                                 : encryptedProfile.getUnidentifiedAccess();
-      } catch (IOException e) {
-        unidentifiedAccess = null;
-      }
-      return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess);
+      name = encryptedProfile.getName() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getName())));
     } catch (InvalidCiphertextException e) {
-      e.printStackTrace();
-      return null;
+      name = null;
+      logger.debug("error decrypting profile name.", e);
     }
+
+    String about;
+    try {
+      about = encryptedProfile.getAbout() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAbout())));
+    } catch (InvalidCiphertextException e) {
+      about = null;
+      logger.debug("error decrypting profile about text.", e);
+    }
+
+    String aboutEmoji;
+    try {
+      aboutEmoji = encryptedProfile.getAboutEmoji() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAboutEmoji())));
+    } catch (InvalidCiphertextException e) {
+      aboutEmoji = null;
+      logger.debug("error decrypting profile emoji.", e);
+    }
+
+    String unidentifiedAccess;
+    try {
+      unidentifiedAccess = encryptedProfile.getUnidentifiedAccess() == null || !profileCipher.verifyUnidentifiedAccess(Base64.decode(encryptedProfile.getUnidentifiedAccess()))
+                               ? null
+                               : encryptedProfile.getUnidentifiedAccess();
+    } catch (IOException e) {
+      unidentifiedAccess = null;
+    }
+    return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess);
   }
 
   private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {
