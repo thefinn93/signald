@@ -55,6 +55,8 @@ public class Profile {
     if (profile != null) {
       profileName = profile.getName();
       capabilities = new Capabilities(profile.getCapabilities());
+      about = profile.getAbout();
+      emoji = profile.getEmoji();
     }
 
     if (address == null) {

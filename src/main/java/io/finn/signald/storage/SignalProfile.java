@@ -41,15 +41,15 @@ public class SignalProfile {
 
   @JsonProperty private final String emoji;
 
-  public SignalProfile(final SignalServiceProfile encryptedProfile, String name, final File avatarFile, final String unidentifiedAccess) {
+  public SignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess) {
     this.identityKey = encryptedProfile.getIdentityKey();
     this.name = name;
     this.avatarFile = avatarFile;
     this.unidentifiedAccess = unidentifiedAccess;
     this.unrestrictedUnidentifiedAccess = encryptedProfile.isUnrestrictedUnidentifiedAccess();
     this.capabilities = new Capabilities(encryptedProfile.getCapabilities());
-    this.about = encryptedProfile.getAbout();
-    this.emoji = encryptedProfile.getAboutEmoji();
+    this.about = about;
+    this.emoji = aboutEmoji;
   }
 
   public SignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
@@ -69,6 +69,10 @@ public class SignalProfile {
   public String getIdentityKey() { return identityKey; }
 
   public String getName() { return name; }
+
+  public String getAbout() { return about; }
+
+  public String getEmoji() { return emoji; }
 
   public File getAvatarFile() { return avatarFile; }
 

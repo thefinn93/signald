@@ -1597,6 +1597,21 @@ public class Manager {
       } catch (IOException e) {
         name = null;
       }
+
+      String about;
+      try {
+        about = encryptedProfile.getAbout() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAbout())));
+      } catch (IOException e) {
+        about = null;
+      }
+
+      String aboutEmoji;
+      try {
+        aboutEmoji = encryptedProfile.getAboutEmoji() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAboutEmoji())));
+      } catch (IOException e) {
+        aboutEmoji = null;
+      }
+
       String unidentifiedAccess;
       try {
         unidentifiedAccess = encryptedProfile.getUnidentifiedAccess() == null || !profileCipher.verifyUnidentifiedAccess(Base64.decode(encryptedProfile.getUnidentifiedAccess()))
@@ -1605,7 +1620,7 @@ public class Manager {
       } catch (IOException e) {
         unidentifiedAccess = null;
       }
-      return new SignalProfile(encryptedProfile, name, localAvatarPath, unidentifiedAccess);
+      return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess);
     } catch (InvalidCiphertextException e) {
       e.printStackTrace();
       return null;
