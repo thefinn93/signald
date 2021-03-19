@@ -98,7 +98,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
     try {
       Integer recipientID = new RecipientsTable(uuid).get(address).first();
       PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + "," +
-                                                                        TRUST_LEVEL + "," + ADDED + ") VALUES (?, ?, ?, ?, ?)");
+                                                                        TRUST_LEVEL + "," + ADDED + ") VALUES (?, ?, ?, ?, ?) ON CONFLICT IGNORE");
       statement.setString(1, uuid.toString());
       statement.setInt(2, recipientID);
       statement.setBytes(3, identityKey.serialize());
