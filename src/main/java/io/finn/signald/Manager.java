@@ -1605,7 +1605,7 @@ public class Manager {
       } catch (IOException e) {
         unidentifiedAccess = null;
       }
-      return new SignalProfile(encryptedProfile, localAvatarPath, unidentifiedAccess);
+      return new SignalProfile(encryptedProfile, name, localAvatarPath, unidentifiedAccess);
     } catch (InvalidCiphertextException e) {
       e.printStackTrace();
       return null;

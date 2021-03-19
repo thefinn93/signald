@@ -41,9 +41,9 @@ public class SignalProfile {
 
   @JsonProperty private final String emoji;
 
-  public SignalProfile(final SignalServiceProfile encryptedProfile, final File avatarFile, final String unidentifiedAccess) {
+  public SignalProfile(final SignalServiceProfile encryptedProfile, String name, final File avatarFile, final String unidentifiedAccess) {
     this.identityKey = encryptedProfile.getIdentityKey();
-    this.name = encryptedProfile.getName();
+    this.name = name;
     this.avatarFile = avatarFile;
     this.unidentifiedAccess = unidentifiedAccess;
     this.unrestrictedUnidentifiedAccess = encryptedProfile.isUnrestrictedUnidentifiedAccess();
