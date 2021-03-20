@@ -63,7 +63,8 @@ public class PreKeysTable implements PreKeyStore {
   @Override
   public void storePreKey(int preKeyId, PreKeyRecord record) {
     try {
-      PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?);");
+      PreparedStatement statement =
+          Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?);");
       statement.setString(1, uuid.toString());
       statement.setInt(2, preKeyId);
       statement.setBytes(3, record.serialize());

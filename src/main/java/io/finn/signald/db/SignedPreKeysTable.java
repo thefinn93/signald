@@ -85,8 +85,8 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
   public void storeSignedPreKey(int signedPreKeyId, SignedPreKeyRecord record) {
     try {
       PreparedStatement statement =
-          Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
-                                              ID + ") DO UPDATE SET " + RECORD + " = excluded." + RECORD);
+          Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?) ON CONFLICT(" +
+                                              ACCOUNT_UUID + "," + ID + ") DO UPDATE SET " + RECORD + " = excluded." + RECORD);
       statement.setString(1, uuid.toString());
       statement.setInt(2, signedPreKeyId);
       statement.setBytes(3, record.serialize());
