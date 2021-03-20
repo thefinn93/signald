@@ -50,7 +50,10 @@ public class TrustRequest implements RequestType<Empty> {
 
   @ExactlyOneOfRequired(FINGERPRINT_TYPE) @JsonProperty("qr_code_data") @Doc("base64-encoded QR code data. required if safety_number is absent") public String qrCodeData;
 
-  @Required @JsonProperty("trust_level") @ExampleValue("\"TRUSTED_VERIFIED\"") @Doc("One of TRUSTED_UNVERIFIED, TRUSTED_VERIFIED or UNTRUSTED") public String trustLevel;
+  @JsonProperty("trust_level")
+  @ExampleValue("\"TRUSTED_VERIFIED\"")
+  @Doc("One of TRUSTED_UNVERIFIED, TRUSTED_VERIFIED or UNTRUSTED. Default is TRUSTED_VERIFIED")
+  public String trustLevel = "TRUSTED_VERIFIED";
 
   @Override
   public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidRequestException, FingerprintVersionMismatchException,

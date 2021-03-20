@@ -1450,8 +1450,7 @@ public class Manager {
     return false;
   }
 
-  public boolean trustIdentitySafetyNumber(SignalServiceAddress address, String safetyNumber, TrustLevel level)
-      throws IOException, SQLException, InvalidKeyException, InvalidAddressException {
+  public boolean trustIdentitySafetyNumber(SignalServiceAddress address, String safetyNumber, TrustLevel level) throws SQLException, InvalidKeyException, InvalidAddressException {
     List<IdentityKeysTable.IdentityKeyRow> ids = accountData.axolotlStore.getIdentities(address);
     if (ids == null) {
       return false;

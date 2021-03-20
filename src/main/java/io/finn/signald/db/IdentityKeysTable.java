@@ -89,7 +89,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
 
   @Override
   public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-    return saveIdentity(address.getName(), identityKey, TrustLevel.TRUSTED_UNVERIFIED);
+    return saveIdentity(address.getName(), identityKey, null);
   }
 
   public boolean saveIdentity(String address, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(AddressUtil.fromIdentifier(address), identityKey, trustLevel); }
@@ -97,14 +97,21 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
     try {
       Integer recipientID = new RecipientsTable(uuid).get(address).first();
-      PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR IGNORE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + "," +
-                                                                        TRUST_LEVEL + "," + ADDED + ") VALUES (?, ?, ?, ?, ?)");
+      String query;
+      if (trustLevel != null) {
+        query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + "," + TRUST_LEVEL + "," + ADDED +
+                ") VALUES (?, ?, ?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + ") DO UPDATE SET " + TRUST_LEVEL + " = excluded." + TRUST_LEVEL;
+      } else {
+        query = "INSERT OR IGNORE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + "," + TRUST_LEVEL + "," + ADDED + ") VALUES (?, ?, ?, ?, ?)";
+        trustLevel = TrustLevel.TRUSTED_UNVERIFIED;
+      }
+      PreparedStatement statement = Database.getConn().prepareStatement(query);
       statement.setString(1, uuid.toString());
       statement.setInt(2, recipientID);
       statement.setBytes(3, identityKey.serialize());
       statement.setString(4, trustLevel.name());
       statement.setLong(5, added.getTime());
-      statement.executeUpdate();
+      return statement.executeUpdate() > 0;
     } catch (SQLException e) {
       logger.catching(e);
     }
