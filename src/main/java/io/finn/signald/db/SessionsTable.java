@@ -98,9 +98,8 @@ public class SessionsTable implements SessionStore {
   public void storeSession(SignalProtocolAddress address, SessionRecord record) {
     try {
       Pair<Integer, SignalServiceAddress> recipient = recipientsTable.get(address.getName());
-      PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," + RECORD +
-                                                                        ") VALUES (?, ?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID +
-                                                                        ") DO UPDATE SET " + RECORD + " = excluded." + RECORD);
+      PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," +
+                                                                        RECORD + ") VALUES (?, ?, ?, ?)");
       statement.setString(1, uuid.toString());
       statement.setInt(2, recipient.first());
       statement.setInt(3, address.getDeviceId());

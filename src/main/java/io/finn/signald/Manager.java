@@ -1090,7 +1090,6 @@ public class Manager {
             public void onMessage(SignalServiceEnvelope envelope) {
               // store message on disk, before acknowledging receipt to the server
               try {
-                logger.debug("Storing envelope to database");
                 accountData.getDatabase().getMessageQueueTable().storeEnvelope(envelope);
               } catch (SQLException e) {
                 logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
