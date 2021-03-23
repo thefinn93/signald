@@ -17,6 +17,7 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -62,10 +63,12 @@ public class SessionsTable implements SessionStore {
       ResultSet rows = statement.executeQuery();
       if (!rows.next()) {
         rows.close();
+        logger.debug("loadSession() called but no sessions found: " + new JsonAddress(recipient.second()).toRedactedString() + " device " + address.getDeviceId());
         return new SessionRecord();
       }
       SessionRecord sessionRecord = new SessionRecord(rows.getBytes(RECORD));
       rows.close();
+      logger.debug("loadSession() successfully loaded session");
       return sessionRecord;
     } catch (SQLException | IOException e) {
       logger.catching(e);
