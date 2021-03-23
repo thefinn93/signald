@@ -89,6 +89,7 @@ public class Request {
     v.put(FinishLinkRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(DeleteAccountRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     v.put(TypingRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(ResetSessionRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
     return v;
   }
 

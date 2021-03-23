@@ -54,7 +54,9 @@ public class RequestUtil {
       GetIdentitiesRequest.class,                                                         // v1        get_identities
       TrustRequest.class,                                                                 // v1        trust
       DeleteAccountRequest.class,                                                         // v1        delete_account
-      TypingRequest.class                                                                 // v1        typing
+      TypingRequest.class,                                                                // v1        typing
+      ResetSessionRequest.class                                                           // v1        reset_session
+
   );
 
   public static String getVersion(Class t) {
