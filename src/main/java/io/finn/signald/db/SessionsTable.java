@@ -68,7 +68,6 @@ public class SessionsTable implements SessionStore {
       }
       SessionRecord sessionRecord = new SessionRecord(rows.getBytes(RECORD));
       rows.close();
-      logger.debug("loadSession() successfully loaded session");
       return sessionRecord;
     } catch (SQLException | IOException e) {
       logger.catching(e);
