@@ -56,7 +56,8 @@ public class RequestUtil {
       DeleteAccountRequest.class,                                                         // v1        delete_account
       TypingRequest.class,                                                                // v1        typing
       ResetSessionRequest.class,                                                          // v1        reset_session
-      RequestSyncRequest.class                                                            // v1        request_sync
+      RequestSyncRequest.class,                                                           // v1        request_sync
+      ListAccountsRequest.class                                                           // v1        list_accounts
 
   );
 
