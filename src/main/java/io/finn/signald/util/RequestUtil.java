@@ -58,7 +58,8 @@ public class RequestUtil {
       ResetSessionRequest.class,                                                          // v1        reset_session
       RequestSyncRequest.class,                                                           // v1        request_sync
       ListAccountsRequest.class,                                                          // v1        list_accounts
-      GroupLinkInfoRequest.class                                                          // v1        group_link_info
+      GroupLinkInfoRequest.class,                                                         // v1        group_link_info
+      UpdateContactRequest.class                                                          // v1        update_contact
 
   );
 

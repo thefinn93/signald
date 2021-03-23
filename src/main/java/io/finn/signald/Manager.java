@@ -615,9 +615,11 @@ public class Manager {
     return sendMessage(messageBuilder, membersSend);
   }
 
-  public void updateContact(ContactStore.ContactInfo contact) throws IOException {
-    accountData.contactStore.updateContact(contact);
+  public ContactStore.ContactInfo updateContact(ContactStore.ContactInfo contact) throws IOException {
+    contact.address = getResolver().resolve(contact.address);
+    ContactStore.ContactInfo c = accountData.contactStore.updateContact(contact);
     accountData.save();
+    return c;
   }
 
   public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar) throws IOException, GroupNotFoundException, NotAGroupMemberException {

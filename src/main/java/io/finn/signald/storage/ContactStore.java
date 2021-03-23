@@ -30,14 +30,15 @@ import java.util.List;
 public class ContactStore {
   public List<ContactInfo> contacts = new ArrayList<>();
 
-  public void updateContact(ContactInfo contact) {
+  public ContactInfo updateContact(ContactInfo contact) {
     for (ContactInfo c : contacts) {
       if (c.address.matches(contact.address)) {
         c.update(contact);
-        return;
+        return c;
       }
     }
     contacts.add(contact);
+    return contact;
   }
 
   public ContactInfo getContact(String identifier) { return getContact(AddressUtil.fromIdentifier(identifier)); }
