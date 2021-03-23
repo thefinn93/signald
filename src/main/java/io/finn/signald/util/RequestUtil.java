@@ -55,7 +55,8 @@ public class RequestUtil {
       TrustRequest.class,                                                                 // v1        trust
       DeleteAccountRequest.class,                                                         // v1        delete_account
       TypingRequest.class,                                                                // v1        typing
-      ResetSessionRequest.class                                                           // v1        reset_session
+      ResetSessionRequest.class,                                                          // v1        reset_session
+      RequestSyncRequest.class                                                            // v1        request_sync
 
   );
 

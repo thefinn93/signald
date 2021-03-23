@@ -17,6 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -24,36 +25,40 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.UnknownGroupException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 
-@Doc("reset a session with a particular user")
-@SignaldClientRequest(type = "reset_session")
-public class ResetSessionRequest implements RequestType<SendResponse> {
+@Doc("Request other devices on the account send us their group list, syncable config and contact list.")
+@SignaldClientRequest(type = "request_sync")
+public class RequestSyncRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
-  @Doc("the user to reset session with") @Required public JsonAddress address;
-
-  public Long timestamp;
+  @Doc("request group sync (default true)") public boolean groups = true;
+  @Doc("request configuration sync (default true)") public boolean configuration = true;
+  @Doc("request contact sync (default true)") public boolean contacts = true;
+  @Doc("request block list sync (default true)") public boolean blocked = true;
 
   @Override
-  public SendResponse run(Request request)
-      throws SQLException, IOException, NoSuchAccountException, UnknownGroupException, InvalidRecipientException, GroupNotFoundException, NotAGroupMemberException {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, UntrustedIdentityException {
     Manager m = Manager.get(account);
-    SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
-    if (timestamp == null) {
-      timestamp = System.currentTimeMillis();
+    if (groups) {
+      m.requestSyncGroups();
     }
-    messageBuilder.withTimestamp(timestamp);
-    List<SendMessageResult> results = m.send(messageBuilder, address, null);
-    return new SendResponse(results, timestamp);
+
+    if (configuration) {
+      m.requestSyncConfiguration();
+    }
+
+    if (contacts) {
+      m.requestSyncConfiguration();
+    }
+
+    if (blocked) {
+      m.requestSyncBlocked();
+    }
+
+    return new Empty();
   }
 }

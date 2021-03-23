@@ -634,7 +634,7 @@ public class Manager {
     return sendUpdateGroupMessage(groupId, name, members, avatar);
   }
 
-  void requestSyncGroups() throws IOException {
+  public void requestSyncGroups() throws IOException {
     SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.GROUPS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     try {
@@ -662,6 +662,12 @@ public class Manager {
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       logger.catching(e);
     }
+  }
+
+  public void requestSyncBlocked() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
+    SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.BLOCKED).build();
+    SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
+    sendSyncMessage(message);
   }
 
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
