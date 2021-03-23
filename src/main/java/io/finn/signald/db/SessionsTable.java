@@ -86,7 +86,10 @@ public class SessionsTable implements SessionStore {
       ResultSet rows = statement.executeQuery();
       List<Integer> results = new ArrayList<>();
       while (rows.next()) {
-        results.add(rows.getInt(DEVICE_ID));
+        int deviceId = rows.getInt(DEVICE_ID);
+        if (deviceId != SignalServiceAddress.DEFAULT_DEVICE_ID) {
+          results.add(deviceId);
+        }
       }
       rows.close();
       return results;
