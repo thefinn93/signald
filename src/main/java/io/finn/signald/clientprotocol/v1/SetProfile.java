@@ -47,7 +47,7 @@ public class SetProfile implements RequestType<Empty> {
   @Override
   public Empty run(Request request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
-    Manager.get(account).setProfile(name, avatar);
+    Manager.get(account).setProfile(name, avatar, about, emoji);
     return new Empty();
   }
 }
