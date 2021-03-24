@@ -59,7 +59,8 @@ public class RequestUtil {
       RequestSyncRequest.class,                                                           // v1        request_sync
       ListAccountsRequest.class,                                                          // v1        list_accounts
       GroupLinkInfoRequest.class,                                                         // v1        group_link_info
-      UpdateContactRequest.class                                                          // v1        update_contact
+      UpdateContactRequest.class,                                                         // v1        update_contact
+      SetExpirationRequest.class                                                          // v1        set_expiration
 
   );
 
