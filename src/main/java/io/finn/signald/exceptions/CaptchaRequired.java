@@ -18,7 +18,7 @@
 package io.finn.signald.exceptions;
 
 public class CaptchaRequired extends JsonifyableException {
-  public final String more = "https://gitlab.com/signald/signald/-/wikis/Captchas";
+  public final String more = "https://docs.signald.org/articles/captcha/";
 
   public CaptchaRequired() { super("a captcha token is required to register"); }
 }
