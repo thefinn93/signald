@@ -5,13 +5,13 @@ signald is a daemon that facilitates communication over Signal.  It is unofficia
 
 ## Installation
 
-* [From source](./docs/install/source.md)
-* [Debian](./docs/install/debian.md)
-* [Docker](./docs/install/docker.md)
+* [From source](https://signald.org/articles/install/source/)
+* [Debian](https://signald.org/articles/install/debian/)
+* [Docker](https://signald.org/articles/install/docker/)
 
 ## Clients
 
-* [signaldctl](https://gitlab.com/signald/signald-go/-/blob/main/cmd/signaldctl/README.md) - simple cli for account creation and other maintenance functions
+* [signaldctl](https://signald.org/signaldctl/) - simple cli for account creation and other maintenance functions
 * [libpurple-signald](https://github.com/hoehermann/libpurple-signald)
 * [matrix-signal](https://github.com/tulir/mautrix-signal)
 * [signal-weechat](https://github.com/thefinn93/signal-weechat)
@@ -42,7 +42,7 @@ To interact with it, connect to that socket and send new line (`\n`) terminated 
 
 
 ### Manually
-This is useful for debugging mostly. consider using [signaldctl](https://gitlab.com/signald/signald-go/-/blob/main/cmd/signaldctl/README.md) for one off interactions.
+This is useful for debugging mostly. consider using [signaldctl](https://signald.org/signaldctl/) for one off interactions.
 
 To manually type the signald protocol, install a version of netcat that supports connecting to unix sockets (`-U`). On Debian,
 the package is called `netcat-openbsd`. Connect to the signald control socket with netcat `nc -U /var/run/signald/signald.sock`.
@@ -55,7 +55,7 @@ command, it will include the same `id` value. Most commands (but not all) requir
 to use for this action, as multiple numbers can be registered with signald at the same time.
 
 What is represented below are the default versions of each request type. New versions are being introduced, sometimes with
-added functionality. See [Protocol Versioning](https://docs.signald.org/articles/protocol-versioning/) for more
+added functionality. See [Protocol Versioning](https://signald.org/articles/protocol-versioning/) for more
 information.
 
 ### `send`
@@ -64,11 +64,11 @@ Sends a signal message to another user or a group. Possible values are:
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The signal number you are sending *from*. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | no | The address you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
-| `attachments` | list of [`JsonAttachment`](https://docs.signald.org/protocol/structures/v0/JsonAttachment/) | no | A list of attachments |
-| `quote` | [`JsonQuote`](https://docs.signald.org/protocol/structures/v1/JsonQuote/) | no | The message to quote |
+| `attachments` | list of [`JsonAttachment`](https://signald.org/protocol/structures/v0/JsonAttachment/) | no | A list of attachments |
+| `quote` | [`JsonQuote`](https://signald.org/protocol/structures/v1/JsonQuote/) | no | The message to quote |
 | `timestamp` | int | no | The timestamp (in milliseconds) for the message, which also acts as the message identifier. Defaults to the current time. |
 
 ### `register`
@@ -78,7 +78,7 @@ Begins the process of registering a new number on signal for use with signald. P
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The phone number to register |
-| `captcha` | string | no | The captcha value to use, if you get `CaptchaRequiredException` when trying to register. See the [Captchas](https://docs.signald.org/articles/captcha/) wiki page for info. |
+| `captcha` | string | no | The captcha value to use, if you get `CaptchaRequiredException` when trying to register. See the [Captchas](https://signald.org/articles/captcha/) wiki page for info. |
 | `voice` | boolean | no | Indicates if the verification code should be sent via a phone call. If `false` or not set the verification is done via SMS |
 
 
@@ -99,7 +99,7 @@ Send a typing started message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the typing message. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to send typing message to. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to send typing message to. |
 | `recipientGroupId` | string | no | The base64 encoded group ID. |
 
 
@@ -110,7 +110,7 @@ Send a typing stopped message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the typing message. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to send typing message to. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to send typing message to. |
 | `recipientGroupId` | string | no | The base64 encoded group ID. |
 
 
@@ -121,7 +121,7 @@ Mark a received message as "read" by sending a receipt message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the read receipt. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number that sent the original message. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number that sent the original message. |
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
@@ -152,7 +152,7 @@ Returns a list of all groups the specified user is in.
 
 modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example)
 
-for v2 group features like removing members, see [`v1.update_group`](https://docs.signald.org/protocol/actions/v1/update_group/).
+for v2 group features like removing members, see [`v1.update_group`](https://signald.org/protocol/actions/v1/update_group/).
 
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
@@ -188,7 +188,7 @@ Checks whether a contact is currently registered with the server. Returns the co
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use to check the registration. It may be possible remove this requirement |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes | The address of the user to look up. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The address of the user to look up. |
 
 
 ### `get_identities`
@@ -198,7 +198,7 @@ Returns all known identities/keys, optionally just for a specific number.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | no | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | no | The full number to look up. |
 
 
 ### `trust`
@@ -208,7 +208,7 @@ Trust's a safety number or fingerprint.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to check the identity |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to look up. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to look up. |
 | `fingerprint` | `string` | yes | The safety number or fingerprint to trust. |
 | `trustLevel` | `string` | no | The level at which to trust the identity. |
 
@@ -305,7 +305,7 @@ As one might expect, `recipientAddress` and `recipientGroupId` are mutually excl
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The account to use. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | no | The address to change the expiration with. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | no | The address to change the expiration with. |
 | `recipientGroupId` | `string` | no | The group ID to update expiration for. |
 | `expiresInSeconds` | `int` | yes | The number of seconds after which messages in the conversation should expire. Set to 0 to turn of disappearing messages. |
 
@@ -317,12 +317,12 @@ Gets a user's profile. At this time only the name is available. Must have the us
 | Field             | Type     | Required | Description |
 |-------------------|----------|----------|-------------|
 | `username`        | `string` | yes      | The account to use. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes      | The number of the user who's profile is being checked. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes      | The number of the user who's profile is being checked. |
 
 
 ### `set_profile`
 
-note: [`set_profile` v1](https://docs.signald.org/protocol/actions/v1/set_profile/) supports setting avatar.
+note: [`set_profile` v1](https://signald.org/protocol/actions/v1/set_profile/) supports setting avatar.
 
 Sets the user's profile. At this time only the name is available.
 
@@ -333,14 +333,14 @@ Sets the user's profile. At this time only the name is available.
 
 ### `react`
 
-React to a message. For details see the [`JsonReaction`](https://docs.signald.org/protocol/structures/v1/JsonReaction/) wiki page.
+React to a message. For details see the [`JsonReaction`](https://signald.org/protocol/structures/v1/JsonReaction/) wiki page.
 
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `username` | `string` | yes      | The account to use. |
-| `recipientAddress` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | no | The address you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
-| `reaction` | [`JsonReaction`](https://docs.signald.org/protocol/structures/v1/JsonReaction/) | yes | the reaction message to send |
+| `reaction` | [`JsonReaction`](https://signald.org/protocol/structures/v1/JsonReaction/) | yes | the reaction message to send |
 
 ### `group_link_info`
 
@@ -354,7 +354,7 @@ Get information about a v2 group from a signal.group link
 
 ### `get_linked_devices`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/get_linked_devices/)
+[see on signald.org](https://signald.org/protocol/actions/v1/get_linked_devices/)
 
 list all linked devices on a Signal account
 
@@ -364,7 +364,7 @@ list all linked devices on a Signal account
 
 ### `remove_linked_device`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/remove_linked_device/)
+[see on signald.org](https://signald.org/protocol/actions/v1/remove_linked_device/)
 
 Remove a linked device from the Signal account. Unavailable on non-primary devices (device ID != 1)
 
@@ -375,34 +375,34 @@ Remove a linked device from the Signal account. Unavailable on non-primary devic
 
 ### `protocol`
 
-returns a JSON document that describes the next generation of the signald protocol. For more information, see [docs.signald.org](https://docs.signald.org)
+returns a JSON document that describes the next generation of the signald protocol. For more information, see [signald.org](https://signald.org)
 
 ### `resolve_address`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/resolve_address/)
+[see on signald.org](https://signald.org/protocol/actions/v1/resolve_address/)
 
-Takes a [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) with missing fields and populates any available fields.
+Takes a [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) with missing fields and populates any available fields.
 
 | Field      | Type     | Required | Description |
 |------------|----------|----------|-------------|
 | `account`  | `string` | yes      | The account to use. |
-| `partial` | [`JsonAddress`](https://docs.signald.org/protocol/structures/v1/JsonAddress/) | yes      | incomplete address to be populated |
+| `partial` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes      | incomplete address to be populated |
 
 ### `accept_invitation`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/accept_invitation/)
+[see on signald.org](https://signald.org/protocol/actions/v1/accept_invitation/)
 
 ### `approve_membership`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/approve_membership/)
+[see on signald.org](https://signald.org/protocol/actions/v1/approve_membership/)
 
 ### `join_group`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/join_group/)
+[see on signald.org](https://signald.org/protocol/actions/v1/join_group/)
 
 ### `create_group`
 
-[see on docs.signald.org](https://docs.signald.org/protocol/actions/v1/create_group/)
+[see on signald.org](https://signald.org/protocol/actions/v1/create_group/)
 
 
 ## License

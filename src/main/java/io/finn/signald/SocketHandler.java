@@ -133,7 +133,7 @@ public class SocketHandler implements Runnable {
 
           if (!rawRequest.has("version")) {
             logger.debug("consider adding \"version\": \"" + version + "\"  to your request to prevent future API breakage. "
-                         + "See https://docs.signald.org/articles/protocol-versioning/");
+                         + "See https://signald.org/articles/protocol-versioning/");
           }
 
           if (version.equals("v0")) {
@@ -409,7 +409,7 @@ public class SocketHandler implements Runnable {
       m.register(voice, Optional.fromNullable(request.captcha));
       this.reply("verification_required", new JsonAccount(m), request.id);
     } catch (CaptchaRequiredException e) {
-      this.reply("captcha_required", "see https://docs.signald.org/articles/captcha/", request.id);
+      this.reply("captcha_required", "see https://signald.org/articles/captcha/", request.id);
     }
   }
 

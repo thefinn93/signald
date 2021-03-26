@@ -229,9 +229,9 @@ validate protocol:
   rules:
     - when: on_success
 
-docs.signald.org:
+signald.org:
   stage: downstreams
   needs: ["validate protocol"]
-  trigger: signald/docs.signald.org
+  trigger: signald/signald.org
   only:
     - main

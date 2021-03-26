@@ -44,7 +44,7 @@ public class RegisterRequest implements RequestType<Account> {
 
   @Doc("set to true to request a voice call instead of an SMS for verification") public boolean voice = false;
 
-  @Doc("See https://docs.signald.org/articles/captcha/") public String captcha;
+  @Doc("See https://signald.org/articles/captcha/") public String captcha;
 
   @Override
   public Account run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidInputException, CaptchaRequired {
