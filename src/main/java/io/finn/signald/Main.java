@@ -43,6 +43,7 @@ import picocli.CommandLine.Option;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
@@ -136,7 +137,12 @@ public class Main implements Runnable {
 
       logger.info("Binding to socket " + socket_path);
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
-      server.bind(new AFUNIXSocketAddress(socketFile));
+      try {
+        server.bind(new AFUNIXSocketAddress(socketFile));
+      } catch (SocketException e) {
+        logger.fatal("Error creating socket at " + socketFile + ": " + e.getMessage());
+        System.exit(1);
+      }
 
       // Spins up one thread per registered signal number, listens for incoming messages
       File[] users = new File(data_path + "/data").listFiles();
