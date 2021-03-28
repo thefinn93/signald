@@ -17,7 +17,6 @@
 
 package io.finn.signald.db;
 
-import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.util.AddressUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -95,6 +94,9 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public boolean saveIdentity(String address, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(AddressUtil.fromIdentifier(address), identityKey, trustLevel); }
   public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(address, identityKey, trustLevel, new Date()); }
   public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
+    if (identityKey == null) {
+      return false;
+    }
     try {
       Integer recipientID = new RecipientsTable(uuid).get(address).first();
       String query;
@@ -123,11 +125,10 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
     try {
       Integer recipientID = new RecipientsTable(uuid).get(address.getName()).first();
-      PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID +
-                                                                        " = ? AND " + RECIPIENT + " = ? AND " + IDENTITY_KEY + " != ?");
+      PreparedStatement statement =
+          Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
       statement.setString(1, uuid.toString());
       statement.setInt(2, recipientID);
-      statement.setBytes(3, identityKey.serialize());
       ResultSet rows = statement.executeQuery();
 
       boolean moreRows = rows.next();
@@ -138,8 +139,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
       }
       while (moreRows) {
         try {
-          IdentityKey key = new IdentityKey(rows.getBytes(IDENTITY_KEY), 0);
-          if (key.equals(identityKey)) {
+          if (identityKey.equals(new IdentityKey(rows.getBytes(IDENTITY_KEY), 0))) {
             TrustLevel trustLevel = TrustLevel.valueOf(rows.getString(TRUST_LEVEL));
             return trustLevel == TrustLevel.TRUSTED_UNVERIFIED || trustLevel == TrustLevel.TRUSTED_VERIFIED;
           }
@@ -160,7 +160,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
     try {
       Integer recipientID = new RecipientsTable(uuid).get(address.getName()).first();
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT +
-                                                                        " = ? ORDER BY " + ADDED + " LIMIT 1");
+                                                                        " = ? ORDER BY " + ADDED + " DESC LIMIT 1");
       statement.setString(1, uuid.toString());
       statement.setInt(2, recipientID);
       ResultSet rows = statement.executeQuery();
@@ -177,7 +177,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
     }
   }
 
-  public List<IdentityKeyRow> getIdentities(SignalServiceAddress a) throws SQLException, InvalidKeyException, InvalidAddressException {
+  public List<IdentityKeyRow> getIdentities(SignalServiceAddress a) throws SQLException, InvalidKeyException {
     Integer recipient = new RecipientsTable(uuid).get(a).first();
     PreparedStatement statement = Database.getConn().prepareStatement(
         "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +

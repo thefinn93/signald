@@ -45,12 +45,16 @@ class JsonUntrustedIdentityException {
   public JsonUntrustedIdentityException(UntrustedIdentityException exception, String username) {
     this.local_address = new JsonAddress(username);
     this.remote_address = new JsonAddress(exception.getName());
-    this.fingerprint = Hex.toStringCondensed(exception.getUntrustedIdentity().getPublicKey().serialize());
+    if (exception.getUntrustedIdentity() != null) {
+      this.fingerprint = Hex.toStringCondensed(exception.getUntrustedIdentity().getPublicKey().serialize());
+    }
     try {
       Manager m = Manager.get(username);
       this.local_address = new JsonAddress(m.getOwnAddress());
-      this.safety_number =
-          SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
+      if (exception.getUntrustedIdentity() != null) {
+        this.safety_number =
+            SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
+      }
     } catch (IOException | NoSuchAccountException | SQLException e) {
       e.printStackTrace();
     }
