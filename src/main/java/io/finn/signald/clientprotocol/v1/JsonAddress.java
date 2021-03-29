@@ -92,7 +92,13 @@ public class JsonAddress {
     }
   }
 
-  public JsonAddress(String number) { this.number = number; }
+  public JsonAddress(String identifier) {
+    if (identifier.startsWith("+")) {
+      this.number = identifier;
+    } else {
+      this.uuid = identifier;
+    }
+  }
 
   public JsonAddress(UUID uuid) { this.uuid = uuid.toString(); }
 
