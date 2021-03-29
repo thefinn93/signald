@@ -47,6 +47,7 @@ import java.net.SocketException;
 import java.nio.file.Files;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Command(name = BuildConfig.NAME, mixinStandardHelpOptions = true, version = BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {
@@ -115,14 +116,16 @@ public class Main implements Runnable {
       // Migrate data as supported from the JSON state files:
       File[] allAccounts = new File(data_path + "/data").listFiles();
       if (allAccounts != null) {
+        Pattern e164Pattern = Pattern.compile("^\\+?[1-9]\\d{1,14}$");
         for (File f : allAccounts) {
           if (f.isDirectory()) {
             continue;
           }
-          if (f.isHidden()) {
-            continue;
+          if (e164Pattern.matcher(f.getName()).matches()) {
+            AccountsTable.importFromJSON(f);
+          } else {
+            logger.warn("account file " + f.getAbsolutePath() + " does NOT appear to have a valid phone number in the filename!");
           }
-          AccountsTable.importFromJSON(f);
         }
       }
 
