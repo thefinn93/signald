@@ -21,6 +21,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
 import org.whispersystems.libsignal.util.Pair;
@@ -125,10 +126,14 @@ public class SessionsTable implements SessionStore {
       statement.setInt(2, recipient.first());
       statement.setInt(3, address.getDeviceId());
       ResultSet rows = statement.executeQuery();
-      boolean result = rows.next();
+      if (!rows.next()) {
+        rows.close();
+        return false;
+      }
+      SessionRecord sessionRecord = new SessionRecord(rows.getBytes(RECORD));
       rows.close();
-      return result;
-    } catch (SQLException e) {
+      return sessionRecord.hasSenderChain() && sessionRecord.getSessionVersion() == CiphertextMessage.CURRENT_VERSION;
+    } catch (SQLException | IOException e) {
       logger.catching(e);
       return false;
     }
