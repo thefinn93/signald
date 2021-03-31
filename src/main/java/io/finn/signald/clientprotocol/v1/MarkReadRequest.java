@@ -48,9 +48,14 @@ public class MarkReadRequest implements RequestType<Empty> {
 
   @ExampleValue(ExampleValue.MESSAGE_ID) @Doc("List of messages to mark as read") @Required public List<Long> timestamps;
 
+  public Long when;
+
   @Override
   public Empty run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException, SQLException {
-    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, System.currentTimeMillis());
+    if (when == null) {
+      when = System.currentTimeMillis();
+    }
+    SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, when);
     Manager m = Manager.get(account);
     SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());
     SignalServiceMessageSender sender = m.getMessageSender();
