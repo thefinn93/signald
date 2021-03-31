@@ -149,6 +149,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
         moreRows = rows.next();
       }
       rows.close();
+      saveIdentity(address.getName(), identityKey, TrustLevel.UNTRUSTED);
     } catch (SQLException e) {
       logger.catching(e);
     }

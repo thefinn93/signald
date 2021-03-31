@@ -803,7 +803,9 @@ public class Manager {
               results.add(messageSender.sendMessage(address, getAccessFor(address), message));
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-            accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+            if (e.getIdentityKey() != null) {
+              accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+            }
             results.add(SendMessageResult.identityFailure(address, e.getIdentityKey()));
           }
         }
