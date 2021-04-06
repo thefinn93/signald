@@ -1525,6 +1525,15 @@ public class Manager {
   }
 
   public void setProfile(String name, File avatar, String about, String emoji) throws IOException, InvalidInputException {
+    if (name == null) {
+      name = "";
+    }
+    if (about == null) {
+      about = "";
+    }
+    if (emoji == null) {
+      emoji = "";
+    }
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
       getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, about, emoji, streamDetails);
     }
