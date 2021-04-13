@@ -80,6 +80,7 @@ build deb x86:
   before_script:
     - export VERSION="$(./version.sh)"
     - echo "Building signald version $VERSION"
+    - "sed -i 's/^Architecture:.*/Architecture: amd64/g' debian/control"
   script:
     - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
     - dpkg-buildpackage -b
@@ -102,6 +103,7 @@ build deb aarch64:
   before_script:
     - export VERSION="$(./version.sh)"
     - echo "Building signald version $VERSION"
+    - "sed -i 's/^Architecture:.*/Architecture: arm64/g' debian/control"
   script:
     - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
     - dpkg-buildpackage -b
