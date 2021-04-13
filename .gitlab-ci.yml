@@ -94,6 +94,28 @@ build deb x86:
     - when: manual
       allow_failure: true
 
+build deb aarch64:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-arm
+  stage: build
+  needs: []
+  tags: [arm-builder]
+  before_script:
+    - export VERSION="$(./version.sh)"
+    - echo "Building signald version $VERSION"
+  script:
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
+    - dpkg-buildpackage -b
+    - mv ../signald_* .
+  artifacts:
+    paths:
+      - "signald_*"
+    expire_in: 30 days
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 build-docker x86:
   image: docker:latest
   stage: build
@@ -204,7 +226,7 @@ publish debian packages:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
   stage: publish
   tags: [deb-signer]
-  needs: ["build deb x86"]
+  needs: ["build deb x86", "build deb aarch64"]
   script:
     - tools/aptly-publish.sh
   variables:
