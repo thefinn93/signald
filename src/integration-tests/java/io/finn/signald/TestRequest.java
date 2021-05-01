@@ -112,13 +112,24 @@ class TestRequest {
     Assertions.assertTrue(accounts.size() > 0);
 
     writer.println(RequestBuilder.subscribe(accounts.get(0)));
-    JsonNode root = mpr.readTree(reader.readLine());
-    Assertions.assertEquals(root.findValue("type").textValue(), "subscribed");
+    boolean subscribed = false;
+    boolean listenStarted = false;
 
-    root = mpr.readTree(reader.readLine());
-    Assertions.assertEquals(root.findValue("type").textValue(), "listen_started");
-    Assertions.assertEquals(root.findValue("data").textValue(), accounts.get(0));
-
+    while (!subscribed || !listenStarted) {
+      JsonNode root = mpr.readTree(reader.readLine());
+      String t = root.findValue("type").textValue();
+      switch (t) {
+      case "subscribed":
+        subscribed = true;
+        break;
+      case "listen_started":
+        listenStarted = true;
+        Assertions.assertEquals(root.findValue("data").textValue(), accounts.get(0));
+        break;
+      default:
+        throw new AssertionError("unexpected response type to subscribe: " + t);
+      }
+    }
     Thread.sleep(10000);
   }
 
