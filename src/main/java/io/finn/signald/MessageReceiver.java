@@ -43,10 +43,14 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     this.sockets = new SocketManager();
   }
 
-  public void subscribe(Socket s) { this.sockets.add(s); }
+  public void subscribe(Socket s) {
+    this.sockets.add(s);
+    logger.debug("message receiver for " + Util.redact(username) + " got new subscriber. subscriber count: " + this.sockets.size());
+  }
 
   public boolean unsubscribe(Socket s) {
     boolean removed = sockets.remove(s);
+    logger.debug("message receiver for " + Util.redact(username) + " lost a subscriber. subscriber count: " + this.sockets.size());
     if (removed && sockets.size() == 0) {
       logger.info("Last client for " + Util.redact(this.username) + " unsubscribed, shutting down message pipe!");
       try {
@@ -60,6 +64,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
 
   public void run() {
     boolean notifyOnConnect = true;
+    logger.debug("starting message receiver for " + Util.redact(username));
     try {
       Thread.currentThread().setName(Util.redact(username) + "-receiver");
       Manager manager = Manager.get(username);
@@ -73,6 +78,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           } else {
             notifyOnConnect = true;
           }
+          logger.debug("connecting to socket");
           manager.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
         } catch (IOException e) {
           if (sockets.size() == 0) {
@@ -88,6 +94,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
         }
         if (backoff == 0) {
           notifyOnConnect = false;
+          logger.debug("reconnecting immediately");
           backoff = 1;
         } else {
           if (backoff < 60) {
@@ -97,8 +104,9 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           TimeUnit.SECONDS.sleep(backoff);
         }
       }
+      logger.debug("shutting down message receiver for " + Util.redact(username));
     } catch (Exception e) {
-      logger.catching(e);
+      logger.error("shutting down message receiver for " + Util.redact(username));
     }
   }
 
