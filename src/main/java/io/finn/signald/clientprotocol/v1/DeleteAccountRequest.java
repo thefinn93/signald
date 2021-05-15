@@ -36,7 +36,7 @@ import java.sql.SQLException;
 public class DeleteAccountRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to delete") @Required public String account;
 
-  @Doc("delete account information from the server as well (default false)") boolean server = false;
+  @Doc("delete account information from the server as well (default false)") public boolean server = false;
 
   @Override
   public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException {
