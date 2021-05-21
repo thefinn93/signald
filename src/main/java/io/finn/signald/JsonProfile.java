@@ -43,7 +43,7 @@ public class JsonProfile {
     ProfileCipher profileCipher = new ProfileCipher(profileKey);
     if (p.getName() != null) {
       try {
-        name = new String(profileCipher.decryptName(Base64.decode(p.getName())));
+        name = profileCipher.decryptString(Base64.decode(p.getName()));
       } catch (InvalidCiphertextException e) {
       }
     }

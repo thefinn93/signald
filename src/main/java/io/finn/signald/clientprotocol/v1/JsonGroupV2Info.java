@@ -46,6 +46,7 @@ public class JsonGroupV2Info {
 
   // Fields from DecryptedGroup
   @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
+  public String description;
   @ExampleValue(ExampleValue.LOCAL_GROUP_AVATAR_PATH) @Doc("path to the group's avatar on local disk, if available") public String avatar;
   @ExampleValue("604800") public int timer;
 
@@ -73,6 +74,7 @@ public class JsonGroupV2Info {
 
     if (decryptedGroup != null) {
       title = decryptedGroup.getTitle();
+      description = decryptedGroup.getDescription();
       timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
       members = new ArrayList<>();
       members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
@@ -96,6 +98,7 @@ public class JsonGroupV2Info {
     assert masterKey.equals(other.masterKey);
     revision = other.revision;
     title = other.title;
+    description = other.description;
     timer = other.timer;
     inviteLink = other.inviteLink;
 

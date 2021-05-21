@@ -113,8 +113,8 @@ public class AccountData {
     }
   }
 
-  public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey)
-      throws InvalidInputException, IOException, SQLException {
+  public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey,
+                                                int deviceId) throws InvalidInputException, IOException, SQLException {
     logger.debug("Creating new local account by linking");
     AccountData a = new AccountData();
     a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
@@ -122,12 +122,12 @@ public class AccountData {
     a.password = password;
 
     if (registration.getProfileKey() != null) {
-      a.profileCredentialStore.storeProfileKey(a.address.getSignalServiceAddress(), new ProfileKey(registration.getProfileKey()));
+      a.profileCredentialStore.storeProfileKey(a.address.getSignalServiceAddress(), registration.getProfileKey());
     } else {
       a.generateProfileKey();
     }
 
-    a.deviceId = registration.getDeviceId();
+    a.deviceId = deviceId;
     a.signalingKey = signalingKey;
     a.registered = true;
     a.init();

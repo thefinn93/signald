@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -24,27 +26,23 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.stream.Collectors;
 
-@SignaldClientRequest(type = "get_linked_devices")
-@Doc("list all linked devices on a Signal account")
-public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
-  private static final Logger logger = LogManager.getLogger();
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+@SignaldClientRequest(type = "set_device_name")
+@Doc("set this device's name. This will show up on the mobile device on the same account under ")
+public class SetDeviceNameRequest implements RequestType<Empty> {
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to set the device name of") @Required public String account;
 
+  @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override
-  public LinkedDevices run(Request request) throws IOException, NoSuchAccountException, SQLException {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException {
     Manager m = Manager.get(account);
-    ECPrivateKey profileKey = m.getAccountData().axolotlStore.getIdentityKeyPair().getPrivateKey();
-    List<DeviceInfo> devices = m.getAccountManager().getDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
-    return new LinkedDevices(devices);
+    AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
+    m.refreshAccount();
+    return new Empty();
   }
 }

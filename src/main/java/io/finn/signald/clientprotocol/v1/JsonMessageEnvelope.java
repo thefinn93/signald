@@ -54,8 +54,8 @@ public class JsonMessageEnvelope {
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException, SQLException {
     this.username = username;
 
-    if (envelope.hasUuid()) {
-      uuid = envelope.getUuid();
+    if (envelope.hasServerGuid()) {
+      uuid = envelope.getServerGuid();
     }
 
     Manager m = Manager.get(username);

@@ -60,7 +60,8 @@ public class RequestUtil {
       ListAccountsRequest.class,                                                          // v1        list_accounts
       GroupLinkInfoRequest.class,                                                         // v1        group_link_info
       UpdateContactRequest.class,                                                         // v1        update_contact
-      SetExpirationRequest.class                                                          // v1        set_expiration
+      SetExpirationRequest.class,                                                         // v1        set_expiration
+      SetDeviceNameRequest.class                                                          // v1        set_device_name
 
   );
 

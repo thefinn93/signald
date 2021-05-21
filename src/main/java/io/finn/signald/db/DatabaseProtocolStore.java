@@ -20,6 +20,7 @@ package io.finn.signald.db;
 import io.finn.signald.exceptions.InvalidAddressException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
@@ -168,5 +169,15 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
     SessionRecord session = loadSession(address);
     session.archiveCurrentState();
     storeSession(address, session);
+  }
+
+  @Override
+  public void storeSenderKey(SignalProtocolAddress signalProtocolAddress, UUID uuid, SenderKeyRecord senderKeyRecord) {
+    // TODO: Signal Android doesn't implement this yet. wtf?
+  }
+
+  @Override
+  public SenderKeyRecord loadSenderKey(SignalProtocolAddress signalProtocolAddress, UUID uuid) {
+    return null; // TODO: Signal Android doesn't implement this yet. wtf?
   }
 }

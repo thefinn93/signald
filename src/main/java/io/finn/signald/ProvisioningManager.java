@@ -18,17 +18,17 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
 import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.SleepTimer;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -78,17 +78,19 @@ public class ProvisioningManager {
     return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public String finishDeviceLink(String deviceName)
-      throws IOException, InvalidKeyException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException, NoSuchAccountException {
+  public String finishDeviceLink(String deviceName) throws IOException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException {
     String signalingKey = Util.getSecret(52);
-    SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.finishNewDeviceRegistration(identityKey, false, true, registrationId, deviceName);
+    SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
+    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, ret.getIdentity().getPrivateKey());
+    int deviceId = accountManager.finishNewDeviceRegistration(ret.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
     String username = ret.getNumber();
 
     if (Manager.userExists(username)) {
       throw new UserAlreadyExists(username, Manager.getFileName(username));
     }
 
-    Manager m = new Manager(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey));
+    Manager m = new Manager(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey, deviceId));
+    AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
 
     m.refreshPreKeys();
     m.requestSyncGroups();

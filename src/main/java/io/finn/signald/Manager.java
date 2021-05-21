@@ -69,6 +69,7 @@ import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
+import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.api.util.UuidUtil;
@@ -413,7 +414,7 @@ public class Manager {
       mime = "application/octet-stream";
     }
     // TODO mabybe add a parameter to set the voiceNote, preview, and caption option
-    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, Optional.absent(), 0, 0,
+    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.absent(), 0, 0,
                                              System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
   }
 
@@ -833,7 +834,8 @@ public class Manager {
       throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
              SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException {
-    SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, getCertificateValidator());
+    SignalServiceCipher cipher =
+        new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), getCertificateValidator());
     try {
       return cipher.decrypt(envelope);
     } catch (ProtocolUntrustedIdentityException e) {
@@ -1520,7 +1522,7 @@ public class Manager {
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, "", "", streamDetails);
+      getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, "", "", Optional.absent(), streamDetails);
     }
   }
 
@@ -1535,7 +1537,7 @@ public class Manager {
       emoji = "";
     }
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, about, emoji, streamDetails);
+      getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, about, emoji, Optional.absent(), streamDetails);
     }
   }
 
@@ -1546,8 +1548,8 @@ public class Manager {
   }
 
   public SignalServiceMessageSender getMessageSender() {
-    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, BuildConfig.SIGNAL_AGENT, true,
-                                          Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
+    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(getUUID()),
+                                          BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
                                           getClientZkOperations().getProfileOperations(), null, 0, true);
   }
 
@@ -1560,8 +1562,14 @@ public class Manager {
 
   public RecipientsTable getResolver() { return accountData.getResolver(); }
 
-  public void refreshAccount() throws IOException {
-    getAccountManager().setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true, SERVICE_CAPABILITIES, true);
+  public void refreshAccount() throws IOException, SQLException {
+    String deviceName = AccountDataTable.getString(getUUID(), AccountDataTable.Key.DEVICE_NAME);
+    if (deviceName == null) {
+      deviceName = "signald";
+    }
+    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, accountData.axolotlStore.getIdentityKeyPair().getPrivateKey());
+    getAccountManager().setAccountAttributes(deviceName, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true,
+                                             SERVICE_CAPABILITIES, true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
       accountData.save();
@@ -1570,7 +1578,7 @@ public class Manager {
 
   public GroupsV2Manager getGroupsV2Manager() { return groupsV2Manager; }
 
-  private void refreshAccountIfNeeded() throws IOException {
+  private void refreshAccountIfNeeded() throws IOException, SQLException {
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       refreshAccount();
     }
@@ -1610,7 +1618,7 @@ public class Manager {
 
     String name;
     try {
-      name = encryptedProfile.getName() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getName())));
+      name = encryptedProfile.getName() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getName()));
     } catch (InvalidCiphertextException e) {
       name = null;
       logger.debug("error decrypting profile name.", e);
@@ -1618,7 +1626,7 @@ public class Manager {
 
     String about;
     try {
-      about = encryptedProfile.getAbout() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAbout())));
+      about = encryptedProfile.getAbout() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getAbout()));
     } catch (InvalidCiphertextException e) {
       about = null;
       logger.debug("error decrypting profile about text.", e);
@@ -1626,7 +1634,7 @@ public class Manager {
 
     String aboutEmoji;
     try {
-      aboutEmoji = encryptedProfile.getAboutEmoji() == null ? null : new String(profileCipher.decryptName(Base64.decode(encryptedProfile.getAboutEmoji())));
+      aboutEmoji = encryptedProfile.getAboutEmoji() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getAboutEmoji()));
     } catch (InvalidCiphertextException e) {
       aboutEmoji = null;
       logger.debug("error decrypting profile emoji.", e);

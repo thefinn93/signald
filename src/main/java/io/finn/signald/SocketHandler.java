@@ -294,7 +294,7 @@ public class SocketHandler implements Runnable {
             customFilename = attachment.customFilename;
           }
           attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false,
-                                                            attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(),
+                                                            false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(),
                                                             Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
         } catch (IOException e) {
           throw new AttachmentInvalidException(attachment.filename, e);

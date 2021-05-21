@@ -72,7 +72,7 @@ public class MessageQueueTable {
     }
     statement.setLong(10, envelope.getServerReceivedTimestamp());
     statement.setLong(11, envelope.getServerDeliveredTimestamp());
-    statement.setString(12, envelope.getUuid());
+    statement.setString(12, envelope.getServerGuid());
     statement.executeUpdate();
   }
 

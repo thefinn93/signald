@@ -17,8 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import org.whispersystems.signalservice.api.messages.multidevice.DeviceInfo;
-
 import java.util.List;
 
 public class LinkedDevices {
