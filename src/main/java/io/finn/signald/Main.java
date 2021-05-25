@@ -25,10 +25,13 @@ import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.SocketException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Security;
@@ -107,14 +110,16 @@ public class Main implements Runnable {
         Manager.createPrivateDirectories(data_path);
       }
 
-      logger.debug("migrating database " + db);
+      sdnotify("STATUS=migrating database " + db);
       Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
       MigrateResult migrateResult = flyway.migrate();
       for (String w : migrateResult.warnings) {
         logger.warn("db migration warning: " + w);
       }
       for (MigrateOutput o : migrateResult.migrations) {
-        logger.info("applied migration " + o.description + " (" + o.version + ") in " + o.executionTime + " ms");
+        String message = "applied migration " + o.version + "/" + migrateResult.migrations.size() + ": " + o.description + " [" + o.executionTime + " ms]";
+        logger.info(message);
+        sdnotify("STATUS=" + message);
       }
 
       Database.setConnectionString(db);
@@ -167,9 +172,7 @@ public class Main implements Runnable {
         System.exit(1);
       }
 
-      // Spins up one thread per registered signal number, listens for incoming messages
       File[] users = new File(data_path + "/data").listFiles();
-
       if (users == null) {
         logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
       }
@@ -177,6 +180,7 @@ public class Main implements Runnable {
       SignalProtocolLoggerProvider.setProvider(new ProtocolLogger());
 
       logger.info("Started " + BuildConfig.NAME + " " + BuildConfig.VERSION);
+      sdnotify("READY=1");
 
       while (!Thread.interrupted()) {
         try {
@@ -189,8 +193,42 @@ public class Main implements Runnable {
         }
       }
     } catch (Exception e) {
+      sdnotify("STATUS=" + e.getMessage());
       logger.catching(e);
       System.exit(1);
+    }
+  }
+
+  // sdnotify is based on https://gist.github.com/yrro/18dc22513f1001d0ec8d
+  public static void sdnotify(String arg) {
+    try {
+      String notifySocket = System.getenv("NOTIFY_SOCKET");
+      if (notifySocket == null || !Files.isDirectory(Paths.get("/run/systemd/system"), LinkOption.NOFOLLOW_LINKS)) {
+        return;
+      }
+      Process p = new ProcessBuilder("systemd-notify", arg).redirectErrorStream(true).start();
+      if (ignoreInterruptedException(p::waitFor) == 0)
+        return;
+
+      logger.error("Failed to notify systemd of/that {}; systemd-notify exited with status {}", arg, p.exitValue());
+      try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+        r.lines().forEach(l -> logger.error("systemd-notify: {}", l));
+      }
+    } catch (IOException e) {
+      logger.debug("Exception while notifying socket manager: " + e.getMessage());
+    }
+  }
+
+  private interface ThrowingSupplier<T, E extends Throwable> {
+    T get() throws E;
+  }
+
+  private static <T> T ignoreInterruptedException(ThrowingSupplier<T, InterruptedException> r) {
+    for (;;) {
+      try {
+        return r.get();
+      } catch (InterruptedException e) {
+      }
     }
   }
 }
