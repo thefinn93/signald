@@ -106,7 +106,7 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       }
       logger.debug("shutting down message receiver for " + Util.redact(username));
     } catch (Exception e) {
-      logger.error("shutting down message receiver for " + Util.redact(username));
+      logger.error("shutting down message receiver for " + Util.redact(username), e);
     }
   }
 
