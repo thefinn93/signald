@@ -102,8 +102,8 @@ public class MessageQueueTable {
     Optional<SignalServiceAddress> sender = Optional.absent();
     String senderE164 = rows.getString(SOURCE_E164);
     String senderUUIDString = rows.getString(SOURCE_UUID);
-    if (senderE164 != null || senderUUIDString != null) {
-      UUID senderUUID = senderUUIDString == null ? null : UUID.fromString(senderUUIDString);
+    if (senderE164 != null || (senderUUIDString != null && senderUUIDString.length() > 0)) {
+      UUID senderUUID = (senderUUIDString != null && senderUUIDString.length() > 0) ? null : UUID.fromString(senderUUIDString);
       sender = Optional.of(new SignalServiceAddress(senderUUID, senderE164));
     }
     int senderDevice = rows.getInt(SOURCE_DEVICE);
