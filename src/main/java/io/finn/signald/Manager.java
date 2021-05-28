@@ -1052,25 +1052,28 @@ public class Manager {
       if (envelope == null) {
         break;
       }
-      SignalServiceContent content = null;
-      Exception exception = null;
-      if (!envelope.isReceipt()) {
-        try {
-          content = decryptMessage(envelope);
-        } catch (Exception e) {
-          exception = e;
-        }
-        if (exception == null) {
+      try {
+        SignalServiceContent content = null;
+        Exception exception = null;
+        if (!envelope.isReceipt()) {
           try {
-            handleMessage(envelope, content, ignoreAttachments);
-          } catch (VerificationFailedException e) {
-            logger.catching(e);
+            content = decryptMessage(envelope);
+          } catch (Exception e) {
+            exception = e;
+          }
+          if (exception == null) {
+            try {
+              handleMessage(envelope, content, ignoreAttachments);
+            } catch (VerificationFailedException e) {
+              logger.catching(e);
+            }
           }
         }
+        accountData.save();
+        handler.handleMessage(envelope, content, exception);
+      } finally {
+        accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
       }
-      accountData.save();
-      handler.handleMessage(envelope, content, exception);
-      accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
     }
   }
 
