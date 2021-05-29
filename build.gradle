@@ -140,6 +140,10 @@ jar {
     }
 }
 
+test {
+    useJUnitPlatform()
+}
+
 // Find any 3rd party libraries which have released new versions
 // to the central Maven repo since we last upgraded.
 // http://daniel.gredler.net/2011/08/08/gradle-keeping-libraries-up-to-date/
