@@ -41,6 +41,15 @@ public class Database {
     return conn;
   }
 
+  public static void close() {
+    try {
+      conn.close();
+    } catch (SQLException e) {
+      logger.warn("Failed to close database connection", e);
+    }
+    conn = null;
+  }
+
   public Database(UUID u) { uuid = u; }
 
   public MessageQueueTable getMessageQueueTable() { return new MessageQueueTable(uuid); }

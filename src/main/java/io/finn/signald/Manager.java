@@ -25,10 +25,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
-import io.finn.signald.util.AddressUtil;
-import io.finn.signald.util.AttachmentUtil;
-import io.finn.signald.util.GroupsUtil;
-import io.finn.signald.util.SafetyNumberHelper;
+import io.finn.signald.util.*;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -1048,7 +1045,8 @@ public class Manager {
     }
 
     while (true) {
-      SignalServiceEnvelope envelope = accountData.getDatabase().getMessageQueueTable().nextEnvelope();
+      StoredEnvelope storedEnvelope = accountData.getDatabase().getMessageQueueTable().nextEnvelope();
+      SignalServiceEnvelope envelope = storedEnvelope.envelope;
       if (envelope == null) {
         break;
       }
@@ -1072,7 +1070,7 @@ public class Manager {
         accountData.save();
         handler.handleMessage(envelope, content, exception);
       } finally {
-        accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
+        accountData.getDatabase().getMessageQueueTable().deleteEnvelope(storedEnvelope.databaseId);
       }
     }
   }
@@ -1099,13 +1097,15 @@ public class Manager {
         SignalServiceEnvelope envelope;
         SignalServiceContent content = null;
         Exception exception = null;
+        MutableLong databaseId = new MutableLong();
         try {
           envelope = messagePipe.read(timeout, unit, new SignalServiceMessagePipe.MessagePipeCallback() {
             @Override
             public void onMessage(SignalServiceEnvelope envelope) {
               // store message on disk, before acknowledging receipt to the server
               try {
-                accountData.getDatabase().getMessageQueueTable().storeEnvelope(envelope);
+                long id = accountData.getDatabase().getMessageQueueTable().storeEnvelope(envelope);
+                databaseId.setValue(id);
               } catch (SQLException e) {
                 logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
               }
@@ -1135,7 +1135,10 @@ public class Manager {
         }
         handler.handleMessage(envelope, content, exception);
         try {
-          accountData.getDatabase().getMessageQueueTable().deleteEnvelope(envelope);
+          Long id = databaseId.getValue();
+          if (id != null) {
+            accountData.getDatabase().getMessageQueueTable().deleteEnvelope(id);
+          }
         } catch (SQLException e) {
           logger.error("failed to remove cached message from database");
         }

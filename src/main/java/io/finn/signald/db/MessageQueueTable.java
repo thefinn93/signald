@@ -48,7 +48,7 @@ public class MessageQueueTable {
 
   public MessageQueueTable(UUID u) { uuid = u; }
 
-  public void storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
+  public long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
     Connection conn = Database.getConn();
     PreparedStatement statement = conn.prepareStatement("INSERT INTO " + TABLE_NAME + " (" + ACCOUNT + ", " + VERSION + ", " + TYPE + ", " + SOURCE_E164 + ", " + SOURCE_UUID +
                                                         ", " + SOURCE_DEVICE + ", " + TIMESTAMP + ", " + CONTENT + ", " + LEGACY_MESSAGE + ", " + SERVER_RECEIVED_TIMESTAMP + ", " +
@@ -74,30 +74,29 @@ public class MessageQueueTable {
     statement.setLong(11, envelope.getServerDeliveredTimestamp());
     statement.setString(12, envelope.getServerGuid());
     statement.executeUpdate();
+
+    ResultSet generatedKeys = statement.getGeneratedKeys();
+    generatedKeys.next();
+    return generatedKeys.getLong(1);
   }
 
-  public void deleteEnvelope(SignalServiceEnvelope envelope) throws SQLException {
+  public void deleteEnvelope(long id) throws SQLException {
     Connection conn = Database.getConn();
-    PreparedStatement statement = conn.prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + SOURCE_E164 + " = ? AND " + SOURCE_UUID + " = ? AND " + TIMESTAMP + " = ?");
-    if (envelope.getSourceE164().isPresent()) {
-      statement.setString(1, envelope.getSourceE164().get());
-    }
-    if (envelope.getSourceUuid().isPresent()) {
-      statement.setString(2, envelope.getSourceUuid().get());
-    }
-    statement.setLong(3, envelope.getTimestamp());
+    PreparedStatement statement = conn.prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ID + " = ?");
+    statement.setLong(1, id);
     statement.executeUpdate();
   }
 
-  public SignalServiceEnvelope nextEnvelope() throws SQLException {
+  public StoredEnvelope nextEnvelope() throws SQLException {
     Connection conn = Database.getConn();
-    PreparedStatement statement = conn.prepareStatement("SELECT * FROM " + TABLE_NAME + " WHERE " + ACCOUNT + " = ? LIMIT 1");
+    PreparedStatement statement = conn.prepareStatement("SELECT * FROM " + TABLE_NAME + " WHERE " + ACCOUNT + " = ? ORDER BY " + ID + " LIMIT 1");
     statement.setString(1, uuid.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
       return null;
     }
+    long id = rows.getLong(ID);
     int type = rows.getInt(TYPE);
     Optional<SignalServiceAddress> sender = Optional.absent();
     String senderE164 = rows.getString(SOURCE_E164);
@@ -114,7 +113,9 @@ public class MessageQueueTable {
     long serverDeliveredTimestamp = rows.getLong(SERVER_DELIVERED_TIMESTAMP);
     String uuid = rows.getString(SERVER_UUID);
     rows.close();
-    return new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
+    SignalServiceEnvelope signalServiceEnvelope =
+        new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
+    return new StoredEnvelope(id, signalServiceEnvelope);
   }
 
   public static void deleteAccount(String account) throws SQLException {
