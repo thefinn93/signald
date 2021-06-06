@@ -1046,10 +1046,11 @@ public class Manager {
 
     while (true) {
       StoredEnvelope storedEnvelope = accountData.getDatabase().getMessageQueueTable().nextEnvelope();
-      SignalServiceEnvelope envelope = storedEnvelope.envelope;
-      if (envelope == null) {
+      if (storedEnvelope == null) {
         break;
       }
+      SignalServiceEnvelope envelope = storedEnvelope.envelope;
+
       try {
         SignalServiceContent content = null;
         Exception exception = null;
