@@ -3,6 +3,8 @@
 
 signald is a daemon that facilitates communication over Signal.  It is unofficial, unapproved, and [not nearly as secure as the real Signal clients](https://gitlab.com/signald/signald/-/issues/101).
 
+Most of this information presented here, as well as a lot more, is also available on [signald.org](https://signald.org).
+
 ## Installation
 
 * [From source](https://signald.org/articles/install/source/)
@@ -20,9 +22,10 @@ signald is a daemon that facilitates communication over Signal.  It is unofficia
 * [spectrum2_signald](https://gitlab.com/nicocool84/spectrum2_signald/) - An XMPP gateway to signald based on [spectrum](https://spectrum.im/)
 * [slidge](https://gitlab.com/nicocool84/slidge/) - An XMPP gateway to signald using the SliXMPP library.
 
-## Contributing/Feedback/Bugs
-[Issues and MRs are accepted via GitLab.com](https://gitlab.com/signald/signald). There is an IRC channel, `#signald` on Freenode,
-for those that go for that sort of thing, or `#signald:matrix.org` on matrix.
+## Contributing/Questions/Feedback/Bugs
+
+[Issues and MRs are accepted via GitLab.com](https://gitlab.com/signald/signald). There is also an [IRC/matrix channel](https://signald.org/articles/IRC/).
+if you have a question, open an issue or come by the channel. Some aspects of signald aren't well documented, don't be afraid to ask "stupid" questions.
 
 ## Interacting with signald
 
@@ -40,7 +43,6 @@ There are several libraries to make it easier to interact with signald from your
 When started, signald will create a unix socket at `/var/run/signald/signald.sock` (can be overridden on the command line).
 To interact with it, connect to that socket and send new line (`\n`) terminated JSON strings. The specific protocol is described below.
 
-
 ### Manually
 This is useful for debugging mostly. consider using [signaldctl](https://signald.org/signaldctl/) for one off interactions.
 
@@ -49,14 +51,16 @@ the package is called `netcat-openbsd`. Connect to the signald control socket wi
 Type JSON requests on a single line and hit enter to send them.
 
 ## Socket protocol.
-Each message sent to the socket must be valid JSON and have a `type` field. The possible request types and their
-arguments are enumerated below. All messages may optionally include an `id` field. When signald follows up on a previous
-command, it will include the same `id` value. Most commands (but not all) require `username` field, which is the number
-to use for this action, as multiple numbers can be registered with signald at the same time.
+Each message sent to the socket must be valid JSON and have a `type` field and `version` field. All messages may
+optionally include an `id` field. When signald follows up on a previous request, it will include an `id` field with the
+same string provided in the request. Most requests (but not all) require an `account` (or `username`) field, which is the
+phone number to use for the action, as multiple accounts (multiple numbers) can be registered to a single signald instance.
+The phone number must be in [E.164](https://en.wikipedia.org/wiki/E.164) format starting with a `+` character.
 
-What is represented below are the default versions of each request type. New versions are being introduced, sometimes with
+What is represented below are legacy (`v0`) requests. New versions are being introduced, sometimes with
 added functionality. See [Protocol Versioning](https://signald.org/articles/protocol-versioning/) for more
-information.
+information. The v1 protocol is fully documented on [signald.org](https://signald.org/), which is automatically re-generated
+when signald is updated.
 
 ### `send`
 Sends a signal message to another user or a group. Possible values are:
