@@ -244,7 +244,7 @@ validate protocol:
     - apt-get update && apt-get install -y openjdk-11-jdk-headless
   script:
     - build/install/signald/bin/signald --dump-protocol > protocol.json
-    - go run ./tools/validate-protocol.go < protocol.json
+    - go run ./tools/protocol-validator < protocol.json
   needs: ["build java11 x86_64-unknown-linux-gnu"]
   artifacts:
     paths:
