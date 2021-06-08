@@ -49,6 +49,7 @@ public class ListContactsRequest implements RequestType<ProfileList> {
     for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
       ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.address.getSignalServiceAddress());
       if (profileEntry == null) {
+        list.profiles.add(new Profile(c));
         continue;
       }
 
