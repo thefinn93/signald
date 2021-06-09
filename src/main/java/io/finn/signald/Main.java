@@ -143,7 +143,7 @@ public class Main implements Runnable {
         if (userDir != null) {
           Path userSocketDir = Paths.get(userDir, "signald");
           Files.createDirectories(userSocketDir);
-          socket_path = userSocketDir.resolveSibling("signald.sock").toString();
+          socket_path = Paths.get(userSocketDir.toString(), "signald.sock").toString();
         }
       } else if (socket_path.equals("/var/run/signald/signald.sock")) {
         if (userDir != null) {
