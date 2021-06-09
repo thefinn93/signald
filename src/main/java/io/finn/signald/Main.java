@@ -45,6 +45,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Security;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -57,6 +59,10 @@ public class Main implements Runnable {
   @Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting.") private boolean verbose = false;
 
   @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = "/var/run/signald/signald.sock";
+
+  @Option(names = {"-u", "--user-socket"},
+          description = "put the socket in the user runtime directory ($XDG_RUNTIME_DIR). Currently disabled by default. Will be enabled by default in 0.15.0")
+  private boolean user_socket = false;
 
   @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
 
@@ -130,6 +136,20 @@ public class Main implements Runnable {
       }
 
       new Thread(new BackgroundJobRunnerThread()).start();
+
+      String userDir = System.getenv("XDG_RUNTIME_DIR");
+
+      if (user_socket) {
+        if (userDir != null) {
+          Path userSocketDir = Paths.get(userDir, "signald");
+          Files.createDirectories(userSocketDir);
+          socket_path = userSocketDir.resolveSibling("signald.sock").toString();
+        }
+      } else if (socket_path.equals("/var/run/signald/signald.sock")) {
+        if (userDir != null) {
+          logger.info("the default socket path is changing in an upcoming release. See https://signald.org/articles/socket-protocol/#socket-file-location");
+        }
+      }
 
       // Spins up one thread per inbound connection to the control socket
       File socketFile = new File(socket_path);
