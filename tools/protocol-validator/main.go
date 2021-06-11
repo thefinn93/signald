@@ -17,7 +17,11 @@ type checkOutput struct {
 
 type check func() checkOutput
 
+type fieldCheck func(string, string, string, DataType) checkOutput
+
 var checks = []check{checkRequestResponseTypesExist, checkMissingCriticalFields}
+
+var fieldChecks = []fieldCheck{checkTypeFieldCasing, checkCrossVersionReferences}
 
 func main() {
 	err := json.NewDecoder(os.Stdin).Decode(&protocol)

@@ -5,7 +5,7 @@ import (
 	"unicode"
 )
 
-func checkTypeFieldCasing(version, t, field string) (response checkOutput) {
+func checkTypeFieldCasing(version, t, field string, _ DataType) (response checkOutput) {
 	if !unicode.IsUpper(rune(t[0])) {
 		m := fmt.Sprintf("[TypeNameStartsWithLowerCase] %s.%s does not start with a capital letter", version, t)
 		response.failures = append(response.failures, m)

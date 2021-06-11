@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	aurora "github.com/logrusorgru/aurora/v3"
 )
@@ -11,7 +12,7 @@ import (
 func checkDiff() (response checkOutput, err error) {
 	resp, err := http.Get("https://signald.org/protocol.json")
 	if err != nil {
-		return response, err
+		return
 	}
 	defer resp.Body.Close()
 	var current Protocol
@@ -40,35 +41,46 @@ func checkDiff() (response checkOutput, err error) {
 			fmt.Println(aurora.Bold(aurora.Green("New version: " + version)))
 		}
 		for typeName, t := range types {
-			if _, ok := current.Types[version][typeName]; !ok {
+			c, ok := current.Types[version][typeName]
+			if !ok {
 				// new action
 				fmt.Println(aurora.Bold(aurora.Green("new type: " + version + "." + typeName)))
+				c = &Type{}
+			} else {
+				if c.Deprecated != t.Deprecated {
+					fmt.Println(aurora.Blue(version + "." + typeName + " has changed deprecated status"))
+					stringDiff(strconv.FormatBool(t.Deprecated), strconv.FormatBool(t.Deprecated))
+				}
+				if c.Doc != t.Doc {
+					fmt.Println(aurora.Blue(version + "." + typeName + " has changed its doc string"))
+					stringDiff(t.Doc, c.Doc)
+				}
 			}
-			if current.Types[version][typeName].Deprecated != t.Deprecated {
-				fmt.Println(aurora.Blue(version + "." + typeName + " has changed deprecated status"))
-			}
-			if current.Types[version][typeName].Doc != t.Doc {
-				fmt.Println(aurora.Blue(version + "." + typeName + " has changed its doc string"))
-			}
-			for fieldName := range t.Fields {
-				field, ok := current.Types[version][typeName].Fields[fieldName]
+			for fieldName, field := range t.Fields {
+				currentField, ok := c.Fields[fieldName]
 				if !ok {
 					fmt.Println(aurora.Bold(aurora.Green("new field in " + version + "." + typeName + ": " + fieldName)))
-					r := checkTypeFieldCasing(version, typeName, fieldName)
-					response.failures = append(response.failures, r.failures...)
-					response.warnings = append(response.warnings, r.warnings...)
+					for _, fieldCheck := range fieldChecks {
+						result := fieldCheck(version, typeName, fieldName, *field)
+						response.failures = append(response.failures, result.failures...)
+						response.warnings = append(response.warnings, result.warnings...)
+					}
 				} else {
-					if field.Type != current.Types[version][typeName].Fields[fieldName].Type {
+					if field.Type != currentField.Type {
 						response.failures = append(response.failures, version+"."+typeName+" field "+fieldName+" changed types")
+						stringDiff(currentField.Type, field.Type)
 					}
-					if field.List != current.Types[version][typeName].Fields[fieldName].List {
+					if field.List != currentField.List {
 						response.failures = append(response.failures, version+"."+typeName+" field "+fieldName+" changed list state")
+						stringDiff(strconv.FormatBool(currentField.List), strconv.FormatBool(field.List))
 					}
-					if field.Doc != current.Types[version][typeName].Fields[fieldName].Doc {
+					if field.Doc != currentField.Doc {
 						fmt.Println(aurora.Blue(version + "." + typeName + " field " + fieldName + " changed it's doc string"))
+						stringDiff(currentField.Doc, field.Doc)
 					}
-					if field.Example != current.Types[version][typeName].Fields[fieldName].Example {
+					if field.Example != currentField.Example {
 						fmt.Println(aurora.Blue(version + "." + typeName + " field " + fieldName + " changed it's example string"))
+						stringDiff(currentField.Example, field.Example)
 					}
 				}
 			}
@@ -108,4 +120,9 @@ func checkDiff() (response checkOutput, err error) {
 		}
 	}
 	return
+}
+
+func stringDiff(old, new string) {
+	fmt.Println(aurora.Red("- " + old))
+	fmt.Println(aurora.Green("+ " + new))
 }
