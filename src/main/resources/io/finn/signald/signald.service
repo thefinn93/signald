@@ -5,12 +5,13 @@ After=network.target
 
 [Service]
 Type=simple
-PermissionsStartOnly=true
 RuntimeDirectory=signald
+RuntimeDirectoryMode=0770
 User=signald
 Group=signald
 ExecStart=/usr/bin/signald -d /var/lib/signald
 Restart=on-failure
+UMask=0007
 
 [Install]
 WantedBy=default.target
