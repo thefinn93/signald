@@ -17,10 +17,11 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.db.IdentityKeysTable;
-import io.finn.signald.storage.IdentityKeyStore;
 import io.finn.signald.util.SafetyNumberHelper;
+import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
@@ -28,15 +29,30 @@ import java.util.List;
 
 @Doc("a list of identity keys associated with a particular address")
 public class IdentityKeyList {
-  public JsonAddress address;
-  public List<IdentityKey> identities;
+  @JsonIgnore private final SignalServiceAddress ownAddress;
+  @JsonIgnore private final org.whispersystems.libsignal.IdentityKey ownKey;
+
+  public final JsonAddress address;
+  public final List<IdentityKey> identities = new ArrayList<>();
 
   public IdentityKeyList(SignalServiceAddress ownAddress, org.whispersystems.libsignal.IdentityKey ownKey, SignalServiceAddress a,
                          List<IdentityKeysTable.IdentityKeyRow> identities) {
+    this.ownAddress = ownAddress;
+    this.ownKey = ownKey;
     this.address = new JsonAddress(a);
-    this.identities = new ArrayList<>();
-    for (IdentityKeysTable.IdentityKeyRow i : identities) {
-      this.identities.add(new IdentityKey(i, SafetyNumberHelper.computeFingerprint(ownAddress, ownKey, a, i.getKey())));
+    if (identities == null) {
+      return;
     }
+    for (IdentityKeysTable.IdentityKeyRow i : identities) {
+      addKey(i);
+    }
+  }
+
+  public void addKey(IdentityKeysTable.IdentityKeyRow identity) {
+    Fingerprint safetyNumber = SafetyNumberHelper.computeFingerprint(ownAddress, ownKey, address.getSignalServiceAddress(), identity.getKey());
+    if (safetyNumber == null) {
+      return;
+    }
+    identities.add(new IdentityKey(identity, safetyNumber));
   }
 }
