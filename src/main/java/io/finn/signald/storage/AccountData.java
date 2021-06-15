@@ -122,7 +122,7 @@ public class AccountData {
     a.password = password;
 
     if (registration.getProfileKey() != null) {
-      a.profileCredentialStore.storeProfileKey(a.address.getSignalServiceAddress(), new ProfileKey(registration.getProfileKey()));
+      a.profileCredentialStore.storeProfileKey(a.address.getSignalServiceAddress(), registration.getProfileKey());
     } else {
       a.generateProfileKey();
     }

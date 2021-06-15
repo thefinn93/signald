@@ -25,11 +25,15 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceProtocolStore;
+import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   private final PreKeysTable preKeys;
@@ -90,6 +94,12 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   @Override
   public PreKeyRecord loadPreKey(int preKeyId) throws InvalidKeyIdException {
     return preKeys.loadPreKey(preKeyId);
+  }
+
+  public List<SessionRecord> loadExistingSessions(List<SignalProtocolAddress> addresses) {
+    return addresses.stream()
+            .map(this::loadSession)
+            .collect(Collectors.toList());
   }
 
   @Override
@@ -179,5 +189,20 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   @Override
   public SenderKeyRecord loadSenderKey(SignalProtocolAddress signalProtocolAddress, UUID uuid) {
     return null; // TODO: Signal Android doesn't implement this yet. wtf?
+  }
+
+  @Override
+  public Set<SignalProtocolAddress> getSenderKeySharedWith(DistributionId distributionId) {
+    return Set.of();
+  }
+
+  @Override
+  public void markSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
+
+  }
+
+  @Override
+  public void clearSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
+
   }
 }

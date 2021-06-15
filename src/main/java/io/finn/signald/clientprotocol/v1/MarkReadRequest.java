@@ -65,7 +65,7 @@ public class MarkReadRequest implements RequestType<Empty> {
     for (Long ts : timestamps) {
       readMessages.add(new ReadMessage(toAddress, ts));
     }
-    sender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
+    sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
     return new Empty();
   }
 }

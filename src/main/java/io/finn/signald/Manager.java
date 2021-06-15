@@ -1594,14 +1594,14 @@ SignalServiceConfiguration configuration,
   }
 
   public SignalServiceMessageSender getMessageSender() {
-    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore,
+    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(accountData.getUUID()),
                                           BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
                                           getClientZkOperations().getProfileOperations(), null, 0, true);
   }
 
   public SignalServiceMessageReceiver getMessageReceiver() {
     //SignalServiceConfiguration urls, UUID uuid, String e164, String password, int deviceId, String signalingKey, String signalAgent, ConnectivityListener listener, SleepTimer timer, ClientZkProfileOperations clientZkProfileOperations, boolean automaticNetworkRetry
-    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null,
+    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, USER_AGENT, null,
                                             sleepTimer, getClientZkOperations().getProfileOperations(), true);
   }
 
@@ -1615,7 +1615,7 @@ SignalServiceConfiguration configuration,
       deviceName = "signald";
     }
     deviceName = DeviceNameUtil.encryptDeviceName(deviceName, accountData.axolotlStore.getIdentityKeyPair().getPrivateKey());
-    getAccountManager().setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true,
+    getAccountManager().setAccountAttributes(deviceName, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true,
                                              SERVICE_CAPABILITIES, true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;

@@ -20,6 +20,7 @@ package io.finn.signald.db;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -34,6 +35,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class SessionsTable implements SessionStore {
   private static final Logger logger = LogManager.getLogger();
@@ -75,6 +77,13 @@ public class SessionsTable implements SessionStore {
     }
     return new SessionRecord();
   }
+
+  @Override
+  public List<SessionRecord> loadExistingSessions(List<SignalProtocolAddress> addresses) throws NoSessionException {
+      return addresses.stream()
+              .map(this::loadSession)
+              .collect(Collectors.toList());
+    }
 
   @Override
   public List<Integer> getSubDeviceSessions(String name) {
