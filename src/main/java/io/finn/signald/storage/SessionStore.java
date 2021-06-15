@@ -28,12 +28,14 @@ import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @JsonSerialize(using = SessionStore.SessionStoreSerializer.class)
 @JsonDeserialize(using = SessionStore.SessionStoreDeserializer.class)
@@ -75,6 +77,13 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
     }
 
     return new SessionRecord();
+  }
+
+  @Override
+  public List<SessionRecord> loadExistingSessions(List<SignalProtocolAddress> addresses) throws NoSessionException {
+    return addresses.stream()
+            .map(this::loadSession)
+            .collect(Collectors.toList());
   }
 
   public synchronized List<SessionInfo> getSessions() { return sessions; }
