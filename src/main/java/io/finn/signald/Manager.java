@@ -38,6 +38,7 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -53,10 +54,7 @@ import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
-import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
-import org.whispersystems.signalservice.api.crypto.ProfileCipher;
-import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
-import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
+import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
@@ -93,6 +91,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import org.whispersystems.signalservice.api.account.AccountAttributes.Capabilities;
 
 import static java.nio.file.attribute.PosixFilePermission.*;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
@@ -102,7 +101,7 @@ public class Manager {
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
   public final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true);
+  private static final Capabilities SERVICE_CAPABILITIES = new Capabilities(false, true, false, true, true);
   private final static int ACCOUNT_REFRESH_VERSION = 2;
 
   public final static int PREKEY_MINIMUM_COUNT = 20;
@@ -291,8 +290,20 @@ public class Manager {
   }
 
   public SignalServiceAccountManager getAccountManager() {
-    return new SignalServiceAccountManager(serviceConfiguration, accountData.getCredentialsProvider(), BuildConfig.SIGNAL_AGENT,
-                                           GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true, sleepTimer);
+    /*
+SignalServiceConfiguration configuration,
+                                     DynamicCredentialsProvider credentialsProvider,
+                                     String signalAgent,
+                                     GroupsV2Operations groupsV2Operations,
+                                     boolean automaticNetworkRetry,
+                                     SleepTimer timer)     */
+    return new SignalServiceAccountManager(
+            serviceConfiguration,
+            accountData.getCredentialsProvider(),
+            BuildConfig.SIGNAL_AGENT,
+            GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
+            false,
+            sleepTimer);
   }
 
   public static Map<String, String> getQueryMap(String query) {
@@ -410,6 +421,25 @@ public class Manager {
     if (mime == null) {
       mime = "application/octet-stream";
     }
+
+    /*
+    InputStream inputStream,
+                                       String contentType,
+                                       long length,
+                                       Optional<String> fileName,
+                                       boolean voiceNote,
+                                       boolean borderless,
+                                       boolean gif,
+                                       Optional<byte[]> preview,
+                                       int width,
+                                       int height,
+                                       long uploadTimestamp,
+                                       Optional<String> caption,
+                                       Optional<String> blurHash,
+                                       ProgressListener listener,
+                                       CancelationSignal cancelationSignal,
+                                       Optional<ResumableUploadSpec> resumableUploadSpec
+     */
     // TODO mabybe add a parameter to set the voiceNote, preview, and caption option
     return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.absent(), 0, 0,
                                              System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
@@ -673,7 +703,7 @@ public class Manager {
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     SignalServiceMessageSender messageSender = getMessageSender();
     try {
-      messageSender.sendMessage(message, Optional.absent());
+      messageSender.sendSyncMessage(message, Optional.absent());
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       throw e;
@@ -718,7 +748,7 @@ public class Manager {
         for (Long ts : message.getTimestamps()) {
           readMessages.add(new ReadMessage(address, ts));
         }
-        messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
+        messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -753,7 +783,16 @@ public class Manager {
       if (message.getGroupContext().isPresent()) {
         try {
           final boolean isRecipientUpdate = false;
-          List<SendMessageResult> result = messageSender.sendMessage(new ArrayList<>(recipients), getAccessFor(recipients), isRecipientUpdate, message);
+          /*
+          List<SignalServiceAddress>             recipients,
+                                                 List<Optional<UnidentifiedAccessPair>> unidentifiedAccess,
+                                                 boolean                                isRecipientUpdate,
+                                                 ContentHint                            contentHint,
+                                                 SignalServiceDataMessage
+           */
+
+          List<SignalServiceAddress> recipientList = new ArrayList<>(recipients);
+          List<SendMessageResult> result = messageSender.sendDataMessage(recipientList, getAccessFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
@@ -773,7 +812,7 @@ public class Manager {
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
         try {
-          messageSender.sendMessage(syncMessage, unidentifiedAccess);
+          messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
@@ -795,10 +834,10 @@ public class Manager {
                                                                            Collections.singletonMap(recipient, unidentifiedAccess.isPresent()), false);
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               long start = System.currentTimeMillis();
-              messageSender.sendMessage(syncMessage, unidentifiedAccess);
+              messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
               results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false, System.currentTimeMillis() - start));
             } else {
-              results.add(messageSender.sendMessage(address, getAccessFor(address), message));
+              results.add(messageSender.sendDataMessage(address, getAccessFor(address), ContentHint.DEFAULT, message));
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
@@ -832,7 +871,7 @@ public class Manager {
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
              SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException {
     SignalServiceCipher cipher =
-        new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), getCertificateValidator());
+        new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(accountData.getUUID()), getCertificateValidator());
     try {
       return cipher.decrypt(envelope);
     } catch (ProtocolUntrustedIdentityException e) {
@@ -1555,13 +1594,14 @@ public class Manager {
   }
 
   public SignalServiceMessageSender getMessageSender() {
-    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(getUUID()),
+    return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore,
                                           BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
                                           getClientZkOperations().getProfileOperations(), null, 0, true);
   }
 
   public SignalServiceMessageReceiver getMessageReceiver() {
-    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, USER_AGENT, null,
+    //SignalServiceConfiguration urls, UUID uuid, String e164, String password, int deviceId, String signalingKey, String signalAgent, ConnectivityListener listener, SleepTimer timer, ClientZkProfileOperations clientZkProfileOperations, boolean automaticNetworkRetry
+    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, accountData.signalingKey, USER_AGENT, null,
                                             sleepTimer, getClientZkOperations().getProfileOperations(), true);
   }
 
@@ -1575,7 +1615,7 @@ public class Manager {
       deviceName = "signald";
     }
     deviceName = DeviceNameUtil.encryptDeviceName(deviceName, accountData.axolotlStore.getIdentityKeyPair().getPrivateKey());
-    getAccountManager().setAccountAttributes(deviceName, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true,
+    getAccountManager().setAccountAttributes(accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true,
                                              SERVICE_CAPABILITIES, true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
