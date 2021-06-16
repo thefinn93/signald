@@ -57,31 +57,28 @@ public class ProfileCredentialStore {
 
   public void markSaved() { unsaved = false; }
 
-  public void storeProfileKey(SignalServiceAddress address, ProfileKey profileKey) {
-    ProfileAndCredentialEntry newEntry = new ProfileAndCredentialEntry(address, profileKey, 0, null, null);
+  public ProfileAndCredentialEntry storeProfileKey(SignalServiceAddress address, ProfileKey profileKey) {
+    ProfileAndCredentialEntry newEntry = new ProfileAndCredentialEntry(address, profileKey, 0, null, null, ProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
     for (int i = 0; i < profiles.size(); i++) {
       if (profiles.get(i).getServiceAddress().matches(address)) {
         if (!profiles.get(i).getProfileKey().equals(profileKey)) {
           profiles.set(i, newEntry);
           unsaved = true;
         }
-        return;
+        return newEntry;
       }
     }
     profiles.add(newEntry);
     unsaved = true;
+    return newEntry;
   }
 
-  public ProfileAndCredentialEntry update(SignalServiceAddress address, ProfileKey profileKey, long now, SignalProfile profile, ProfileKeyCredential profileKeyCredential) {
-    ProfileAndCredentialEntry entry = new ProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential);
+  public ProfileAndCredentialEntry update(SignalServiceAddress address, ProfileKey profileKey, long now, SignalProfile profile, ProfileKeyCredential profileKeyCredential,
+                                          ProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode) {
+    ProfileAndCredentialEntry entry = new ProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential, unidentifiedAccessMode);
     for (int i = 0; i < profiles.size(); i++) {
       if (profiles.get(i).getServiceAddress().matches(address)) {
-        //        ProfileAndCredentialEntry p = profiles.get(i);
-        //        Profile profile = p.getProfile();
-        //        if(profile != null && profile.matches(entry.getProfile()))
-        //        if (!p.getProfile().matches(entry.getProfile())) {
-        //          // TODO: announce profile change
-        //        }
+        // TODO: announce profile change
         profiles.set(i, entry);
         unsaved = true;
         return entry;

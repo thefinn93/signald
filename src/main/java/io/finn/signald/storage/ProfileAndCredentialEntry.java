@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.util.JSONUtil;
 import org.apache.logging.log4j.LogManager;
@@ -31,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
@@ -55,12 +57,13 @@ public class ProfileAndCredentialEntry {
   private boolean requestPending;
 
   public ProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final ProfileKey profileKey, final long lastUpdateTimestamp, final SignalProfile profile,
-                                   final ProfileKeyCredential profileKeyCredential) {
+                                   final ProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
     this.serviceAddress = serviceAddress;
     this.profileKey = profileKey;
     this.lastUpdateTimestamp = lastUpdateTimestamp;
     this.profile = profile;
     this.profileKeyCredential = profileKeyCredential;
+    this.unidentifiedAccessMode = unidentifiedAccessMode;
   }
 
   public SignalServiceAddress getServiceAddress() { return serviceAddress; }
@@ -78,6 +81,21 @@ public class ProfileAndCredentialEntry {
   public void setRequestPending(final boolean requestPending) { this.requestPending = requestPending; }
 
   public void setAddress(SignalServiceAddress address) { serviceAddress = address; }
+
+  public UnidentifiedAccessMode unidentifiedAccessMode;
+
+  public byte[] getUnidentifiedAccessKey() {
+    if (profile == null) {
+      return null;
+    }
+    if (profile.isUnrestrictedUnidentifiedAccess()) {
+      return Util.getSecretBytes(16);
+    }
+
+    return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
+  }
+
+  public UnidentifiedAccessMode getUnidentifiedAccessMode() { return unidentifiedAccessMode; }
 
   public static class ProfileAndCredentialEntryDeserializer extends JsonDeserializer<ProfileAndCredentialEntry> {
     @Override
@@ -114,7 +132,12 @@ public class ProfileAndCredentialEntry {
         }
       }
 
-      return new ProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, profileKeyCredential);
+      UnidentifiedAccessMode unidentifiedAccessMode = UnidentifiedAccessMode.UNKNOWN;
+      if (node.has("unidentifiedAccessMode")) {
+        unidentifiedAccessMode = UnidentifiedAccessMode.fromMode(node.get("unidentifiedAccessMode").asInt());
+      }
+
+      return new ProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, profileKeyCredential, unidentifiedAccessMode);
     }
   }
 
@@ -139,7 +162,25 @@ public class ProfileAndCredentialEntry {
       if (value.profileKeyCredential != null) {
         node.put("profileKeyCredential", Base64.encodeBytes(value.profileKeyCredential.serialize()));
       }
+
+      node.put("unidentifiedAccessMode", value.unidentifiedAccessMode.getMode());
+
       gen.writeObject(node);
     }
+  }
+
+  public enum UnidentifiedAccessMode {
+    UNKNOWN(0),
+    DISABLED(1),
+    ENABLED(2),
+    UNRESTRICTED(3);
+
+    private final int mode;
+
+    UnidentifiedAccessMode(int mode) { this.mode = mode; }
+
+    public int getMode() { return mode; }
+
+    public static UnidentifiedAccessMode fromMode(int mode) { return values()[mode]; }
   }
 }

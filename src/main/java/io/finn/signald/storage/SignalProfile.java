@@ -33,6 +33,8 @@ public class SignalProfile {
 
   @JsonProperty private final String unidentifiedAccess;
 
+  @JsonProperty private int unidentifiedAccessMode;
+
   @JsonProperty private final boolean unrestrictedUnidentifiedAccess;
 
   @JsonProperty private final Capabilities capabilities;

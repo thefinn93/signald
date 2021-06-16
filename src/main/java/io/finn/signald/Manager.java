@@ -34,6 +34,7 @@ import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
+import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
@@ -53,10 +54,7 @@ import org.whispersystems.signalservice.api.SignalServiceMessagePipe;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.account.AccountAttributes;
-import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
-import org.whispersystems.signalservice.api.crypto.ProfileCipher;
-import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
-import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
+import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
@@ -103,7 +101,7 @@ public class Manager {
   public final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
   private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true);
-  private final static int ACCOUNT_REFRESH_VERSION = 2;
+  private final static int ACCOUNT_REFRESH_VERSION = 3;
 
   public final static int PREKEY_MINIMUM_COUNT = 20;
   private final static int PREKEY_BATCH_SIZE = 100;
@@ -121,7 +119,7 @@ public class Manager {
 
   private GroupsV2Manager groupsV2Manager;
   private SignalServiceMessagePipe messagePipe = null;
-  private final SignalServiceMessagePipe unidentifiedMessagePipe = null;
+  private SignalServiceMessagePipe unidentifiedMessagePipe = null;
 
   private final UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
@@ -673,7 +671,7 @@ public class Manager {
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     SignalServiceMessageSender messageSender = getMessageSender();
     try {
-      messageSender.sendMessage(message, Optional.absent());
+      messageSender.sendMessage(message, getAccessFor(getOwnAddress()));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       throw e;
@@ -718,7 +716,7 @@ public class Manager {
         for (Long ts : message.getTimestamps()) {
           readMessages.add(new ReadMessage(address, ts));
         }
-        messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
+        messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessFor(getOwnAddress()));
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -986,7 +984,11 @@ public class Manager {
       } catch (InvalidInputException e) {
         throw new AssertionError(e);
       }
-      accountData.profileCredentialStore.storeProfileKey(source, profileKey);
+      ProfileAndCredentialEntry entry = accountData.profileCredentialStore.storeProfileKey(source, profileKey);
+      RefreshProfileJob j = new RefreshProfileJob(this, entry);
+      if (j.needsRefresh()) {
+        jobs.add(j);
+      }
     }
     return jobs;
   }
@@ -1149,6 +1151,7 @@ public class Manager {
         messagePipe.shutdown();
         messagePipe = null;
       }
+
       accountData.save();
     }
   }
@@ -1516,15 +1519,60 @@ public class Manager {
 
   public List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients) {
     List<Optional<UnidentifiedAccessPair>> result = new ArrayList<>(recipients.size());
-    for (SignalServiceAddress ignored : recipients) {
-      result.add(Optional.absent());
+    for (SignalServiceAddress recipient : recipients) {
+      result.add(getAccessFor(recipient));
     }
     return result;
   }
 
   public Optional<UnidentifiedAccessPair> getAccessFor(SignalServiceAddress recipient) {
-    // TODO implement
-    return Optional.absent();
+    ProfileAndCredentialEntry recipientProfileKeyCredential = accountData.profileCredentialStore.get(recipient);
+    if (recipientProfileKeyCredential == null) {
+      return Optional.absent();
+    }
+
+    byte[] recipientUnidentifiedAccessKey = recipientProfileKeyCredential.getUnidentifiedAccessKey();
+
+    ProfileKey selfProfileKey;
+    try {
+      selfProfileKey = accountData.getProfileKey();
+    } catch (InvalidInputException e) {
+      logger.warn("unexpected error while getting own profile key: " + e);
+      return Optional.absent();
+    }
+
+    byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(selfProfileKey);
+    byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
+
+    if (recipientUnidentifiedAccessKey == null || selfUnidentifiedAccessKey == null || selfUnidentifiedAccessCertificate == null) {
+      return Optional.absent();
+    }
+
+    try {
+      return Optional.of(new UnidentifiedAccessPair(new UnidentifiedAccess(recipientUnidentifiedAccessKey, selfUnidentifiedAccessCertificate),
+                                                    new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate)));
+    } catch (InvalidCertificateException e) {
+      return Optional.absent();
+    }
+  }
+
+  private byte[] getSenderCertificate() {
+    try {
+      long lastRefresh = AccountDataTable.getLong(getUUID(), AccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME);
+      byte[] cert;
+      if (System.currentTimeMillis() - lastRefresh > TimeUnit.DAYS.toMillis(1)) {
+        logger.debug("refreshing unidentified access sender certificate");
+        cert = getAccountManager().getSenderCertificateForPhoneNumberPrivacy();
+        AccountDataTable.set(getUUID(), AccountDataTable.Key.SENDER_CERTIFICATE, cert);
+        AccountDataTable.set(getUUID(), AccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME, System.currentTimeMillis());
+      } else {
+        cert = AccountDataTable.getBytes(getUUID(), AccountDataTable.Key.SENDER_CERTIFICATE);
+      }
+      return cert;
+    } catch (IOException | SQLException e) {
+      logger.warn("Failed to get sealed sender certificate, ignoring: {}", e.getMessage());
+      return null;
+    }
   }
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
@@ -1550,17 +1598,27 @@ public class Manager {
 
   public SignalServiceProfile getSignalServiceProfile(SignalServiceAddress address, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
     final SignalServiceMessageReceiver messageReceiver = getMessageReceiver();
-    ListenableFuture<ProfileAndCredential> profile = messageReceiver.retrieveProfile(address, Optional.of(profileKey), Optional.absent(), SignalServiceProfile.RequestType.PROFILE);
+    ListenableFuture<ProfileAndCredential> profile =
+        messageReceiver.retrieveProfile(address, Optional.of(profileKey), getUnidentifiedAccess(), SignalServiceProfile.RequestType.PROFILE);
     return profile.get(10, TimeUnit.SECONDS).getProfile();
   }
 
   public SignalServiceMessageSender getMessageSender() {
+    if (messagePipe == null) {
+      messagePipe = getMessageReceiver().createMessagePipe();
+    }
+
+    if (unidentifiedMessagePipe == null) {
+      unidentifiedMessagePipe = getMessageReceiver().createUnidentifiedMessagePipe();
+    }
+
     return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(getUUID()),
                                           BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
                                           getClientZkOperations().getProfileOperations(), null, 0, true);
   }
 
   public SignalServiceMessageReceiver getMessageReceiver() {
+
     return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, USER_AGENT, null,
                                             sleepTimer, getClientZkOperations().getProfileOperations(), true);
   }
@@ -1573,10 +1631,11 @@ public class Manager {
     String deviceName = AccountDataTable.getString(getUUID(), AccountDataTable.Key.DEVICE_NAME);
     if (deviceName == null) {
       deviceName = "signald";
+      AccountDataTable.set(getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
     }
     deviceName = DeviceNameUtil.encryptDeviceName(deviceName, accountData.axolotlStore.getIdentityKeyPair().getPrivateKey());
-    getAccountManager().setAccountAttributes(deviceName, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null, null, true,
-                                             SERVICE_CAPABILITIES, true);
+    getAccountManager().setAccountAttributes(deviceName, accountData.signalingKey, accountData.axolotlStore.getLocalRegistrationId(), true, null, null,
+                                             accountData.getSelfUnidentifiedAccessKey(), true, SERVICE_CAPABILITIES, true);
     if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
       accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
       accountData.save();
@@ -1678,5 +1737,21 @@ public class Manager {
     accountData.delete();
     managers.remove(accountData.username);
     logger.info("deleted all local account data");
+  }
+
+  public Optional<UnidentifiedAccess> getUnidentifiedAccess() {
+    byte[] selfUnidentifiedAccessKey;
+    try {
+      selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(accountData.getProfileKey());
+    } catch (InvalidInputException e) {
+      return Optional.absent();
+    }
+    byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
+
+    try {
+      return Optional.of(new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate));
+    } catch (InvalidCertificateException e) {
+      return Optional.absent();
+    }
   }
 }

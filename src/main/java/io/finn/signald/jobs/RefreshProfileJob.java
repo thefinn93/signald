@@ -26,8 +26,11 @@ import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -66,11 +69,51 @@ public class RefreshProfileJob implements Job {
     ProfileAndCredential profileAndCredential;
     SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
     Optional<ProfileKey> profileKeyOptional = Optional.fromNullable(profileEntry.getProfileKey());
-    profileAndCredential = m.getMessageReceiver().retrieveProfile(profileEntry.getServiceAddress(), profileKeyOptional, Optional.absent(), requestType).get(10, TimeUnit.SECONDS);
+    SignalServiceAddress address = profileEntry.getServiceAddress();
+    profileAndCredential = m.getMessageReceiver().retrieveProfile(address, profileKeyOptional, Optional.absent(), requestType).get(10, TimeUnit.SECONDS);
 
     long now = System.currentTimeMillis();
     final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
     final SignalProfile profile = m.decryptProfile(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), profileAndCredential.getProfile());
-    accountData.profileCredentialStore.update(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), now, profile, profileKeyCredential);
+    final ProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode =
+        getUnidentifiedAccessMode(profile.getUnidentifiedAccess(), profile.isUnrestrictedUnidentifiedAccess());
+
+    accountData.profileCredentialStore.update(profileEntry.getServiceAddress(), profileEntry.getProfileKey(), now, profile, profileKeyCredential, unidentifiedAccessMode);
+  }
+
+  private ProfileAndCredentialEntry.UnidentifiedAccessMode getUnidentifiedAccessMode(String unidentifiedAccessVerifier, boolean unrestrictedUnidentifiedAccess) {
+    ProfileAndCredentialEntry currentEntry = m.getAccountData().profileCredentialStore.get(profileEntry.getServiceAddress());
+    ProfileKey profileKey = currentEntry.getProfileKey();
+
+    if (unrestrictedUnidentifiedAccess && unidentifiedAccessVerifier != null) {
+      if (currentEntry.getUnidentifiedAccessMode() != ProfileAndCredentialEntry.UnidentifiedAccessMode.UNRESTRICTED) {
+        logger.info("Marking recipient UD status as unrestricted.");
+        return ProfileAndCredentialEntry.UnidentifiedAccessMode.UNRESTRICTED;
+      }
+    } else if (profileKey == null || unidentifiedAccessVerifier == null) {
+      if (currentEntry.getUnidentifiedAccessMode() != ProfileAndCredentialEntry.UnidentifiedAccessMode.DISABLED) {
+        logger.info("Marking recipient UD status as disabled.");
+        return ProfileAndCredentialEntry.UnidentifiedAccessMode.DISABLED;
+      }
+    } else {
+      ProfileCipher profileCipher = new ProfileCipher(profileKey);
+      boolean verifiedUnidentifiedAccess;
+
+      try {
+        verifiedUnidentifiedAccess = profileCipher.verifyUnidentifiedAccess(Base64.decode(unidentifiedAccessVerifier));
+      } catch (IOException e) {
+        logger.warn("error verifying unidentified access", e);
+        verifiedUnidentifiedAccess = false;
+      }
+
+      ProfileAndCredentialEntry.UnidentifiedAccessMode mode =
+          verifiedUnidentifiedAccess ? ProfileAndCredentialEntry.UnidentifiedAccessMode.ENABLED : ProfileAndCredentialEntry.UnidentifiedAccessMode.DISABLED;
+
+      if (currentEntry.getUnidentifiedAccessMode() != mode) {
+        logger.info("Marking recipient UD status as " + mode.name() + " after verification.");
+        return mode;
+      }
+    }
+    return currentEntry.getUnidentifiedAccessMode(); // no change
   }
 }

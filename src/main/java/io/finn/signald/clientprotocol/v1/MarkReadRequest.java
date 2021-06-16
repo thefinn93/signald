@@ -19,14 +19,13 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import org.whispersystems.libsignal.util.guava.Optional;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -59,13 +58,13 @@ public class MarkReadRequest implements RequestType<Empty> {
     Manager m = Manager.get(account);
     SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());
     SignalServiceMessageSender sender = m.getMessageSender();
-    sender.sendReceipt(toAddress, Optional.absent(), message);
+    sender.sendReceipt(toAddress, m.getAccessFor(toAddress), message);
 
     List<ReadMessage> readMessages = new LinkedList<>();
     for (Long ts : timestamps) {
       readMessages.add(new ReadMessage(toAddress, ts));
     }
-    sender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), Optional.absent());
+    sender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessFor(m.getOwnAddress()));
     return new Empty();
   }
 }

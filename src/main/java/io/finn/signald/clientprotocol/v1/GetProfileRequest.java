@@ -39,7 +39,8 @@ public class GetProfileRequest implements RequestType<Profile> {
 
   @Required @Doc("the address to look up") @JsonProperty("address") public JsonAddress requestedAddress;
 
-  @Doc("return results from local store immediately, refreshing from server if needed. If false (default), block until all pending profiles have been retrieved.")
+  @Doc("if true, return results from local store immediately, refreshing from server in the background if needed. "
+       + "if false (default), block until profile can be retrieved from server")
   public boolean async;
 
   @Override
