@@ -25,10 +25,13 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceProtocolStore;
+import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class DatabaseProtocolStore implements SignalServiceProtocolStore {
@@ -36,12 +39,16 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   private final SessionsTable sessions;
   private final SignedPreKeysTable signedPrekeys;
   private final IdentityKeysTable identityKeys;
+  private final SenderKeysTable senderKeys;
+  private final SenderKeySharedTable senderKeyShared;
 
   public DatabaseProtocolStore(UUID uuid) {
     preKeys = new PreKeysTable(uuid);
     sessions = new SessionsTable(uuid);
     signedPrekeys = new SignedPreKeysTable(uuid);
     identityKeys = new IdentityKeysTable(uuid);
+    senderKeys = new SenderKeysTable(uuid);
+    senderKeyShared = new SenderKeySharedTable(uuid);
   }
 
   public DatabaseProtocolStore(String identifier) {
@@ -50,6 +57,8 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
     sessions = new SessionsTable(uuid);
     signedPrekeys = new SignedPreKeysTable(uuid);
     identityKeys = new IdentityKeysTable(identifier);
+    senderKeys = new SenderKeysTable(uuid);
+    senderKeyShared = new SenderKeySharedTable(uuid);
   }
 
   @Override
@@ -113,6 +122,11 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   }
 
   @Override
+  public List<SessionRecord> loadExistingSessions(List<SignalProtocolAddress> list) throws NoSessionException {
+    return sessions.loadExistingSessions(list);
+  }
+
+  @Override
   public List<Integer> getSubDeviceSessions(String name) {
     return sessions.getSubDeviceSessions(name);
   }
@@ -172,12 +186,27 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   }
 
   @Override
-  public void storeSenderKey(SignalProtocolAddress signalProtocolAddress, UUID uuid, SenderKeyRecord senderKeyRecord) {
-    // TODO: Signal Android doesn't implement this yet. wtf?
+  public void storeSenderKey(SignalProtocolAddress signalProtocolAddress, UUID distributionId, SenderKeyRecord senderKeyRecord) {
+    senderKeys.storeSenderKey(signalProtocolAddress, distributionId, senderKeyRecord);
   }
 
   @Override
-  public SenderKeyRecord loadSenderKey(SignalProtocolAddress signalProtocolAddress, UUID uuid) {
-    return null; // TODO: Signal Android doesn't implement this yet. wtf?
+  public SenderKeyRecord loadSenderKey(SignalProtocolAddress signalProtocolAddress, UUID distributionId) {
+    return senderKeys.loadSenderKey(signalProtocolAddress, distributionId);
+  }
+
+  @Override
+  public Set<SignalProtocolAddress> getSenderKeySharedWith(DistributionId distributionId) {
+    return senderKeyShared.getSenderKeySharedWith(distributionId);
+  }
+
+  @Override
+  public void markSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
+    senderKeyShared.markSenderKeySharedWith(distributionId, addresses);
+  }
+
+  @Override
+  public void clearSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
+    senderKeyShared.clearSenderKeySharedWith(distributionId, addresses);
   }
 }

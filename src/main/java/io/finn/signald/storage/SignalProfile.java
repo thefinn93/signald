@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -128,14 +128,19 @@ public class SignalProfile {
 
     @JsonProperty public boolean gv1Migration;
 
+    @JsonProperty public boolean senderKey;
+
     public Capabilities() {}
 
     public Capabilities(SignalServiceProfile.Capabilities capabilities) {
       gv1Migration = capabilities.isGv1Migration();
       gv2 = capabilities.isGv2();
       storage = capabilities.isStorage();
+      senderKey = capabilities.isSenderKey();
     }
 
-    public boolean equals(Capabilities other) { return other.uuid == uuid && other.gv2 == gv2 && other.storage == storage && other.gv1Migration == gv1Migration; }
+    public boolean equals(Capabilities other) {
+      return other.uuid == uuid && other.gv2 == gv2 && other.storage == storage && other.gv1Migration == gv1Migration && other.senderKey == senderKey;
+    }
   }
 }

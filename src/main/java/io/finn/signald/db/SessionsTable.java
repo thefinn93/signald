@@ -20,6 +20,7 @@ package io.finn.signald.db;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -74,6 +75,31 @@ public class SessionsTable implements SessionStore {
       logger.catching(e);
     }
     return new SessionRecord();
+  }
+
+  @Override
+  public List<SessionRecord> loadExistingSessions(List<SignalProtocolAddress> list) throws NoSessionException {
+    List<SessionRecord> sessions = new ArrayList<>();
+    for (SignalProtocolAddress address : list) {
+      try {
+        Pair<Integer, SignalServiceAddress> recipient = recipientsTable.get(address.getName());
+        PreparedStatement statement =
+            Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?");
+        statement.setString(1, uuid.toString());
+        statement.setInt(2, recipient.first());
+        statement.setInt(3, address.getDeviceId());
+        ResultSet rows = statement.executeQuery();
+        if (!rows.next()) {
+          rows.close();
+          throw new NoSessionException("Unable to find session for at least one recipient");
+        }
+        sessions.add(new SessionRecord(rows.getBytes(RECORD)));
+        rows.close();
+      } catch (SQLException | IOException e) {
+        logger.warn("exception while loading session", e);
+      }
+    }
+    return sessions;
   }
 
   @Override

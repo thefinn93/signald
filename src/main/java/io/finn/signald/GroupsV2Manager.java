@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -390,7 +390,7 @@ public class GroupsV2Manager {
       GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredential);
       try {
         DecryptedGroup decryptedGroup = groupsV2Api.getGroup(groupSecretParams, authorization);
-        group = new Group(groupSecretParams.getMasterKey(), decryptedGroup.getRevision(), decryptedGroup, 0);
+        group = new Group(groupSecretParams.getMasterKey(), decryptedGroup.getRevision(), decryptedGroup, null, 0);
         storage.update(group);
       } catch (NotInGroupException e) {
         if (group != null) {

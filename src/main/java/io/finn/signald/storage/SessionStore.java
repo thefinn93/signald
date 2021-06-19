@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ import java.util.*;
 
 @JsonSerialize(using = SessionStore.SessionStoreSerializer.class)
 @JsonDeserialize(using = SessionStore.SessionStoreDeserializer.class)
-public class SessionStore implements org.whispersystems.libsignal.state.SessionStore {
+public class SessionStore {
   private static final Logger logger = LogManager.getLogger();
 
   private AddressResolver resolver;
@@ -59,7 +59,6 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
     }
   }
 
-  @Override
   public synchronized SessionRecord loadSession(SignalProtocolAddress address) {
     SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
     for (SessionInfo info : sessions) {
@@ -79,7 +78,6 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
 
   public synchronized List<SessionInfo> getSessions() { return sessions; }
 
-  @Override
   public synchronized List<Integer> getSubDeviceSessions(String name) {
     SignalServiceAddress serviceAddress = resolveSignalServiceAddress(name);
 
@@ -93,7 +91,6 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
     return deviceIds;
   }
 
-  @Override
   public synchronized void storeSession(SignalProtocolAddress address, SessionRecord record) {
     SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
     for (SessionInfo info : sessions) {
@@ -109,7 +106,6 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
     sessions.add(new SessionInfo(serviceAddress, address.getDeviceId(), record.serialize()));
   }
 
-  @Override
   public synchronized boolean containsSession(SignalProtocolAddress address) {
     SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
     for (SessionInfo info : sessions) {
@@ -120,13 +116,11 @@ public class SessionStore implements org.whispersystems.libsignal.state.SessionS
     return false;
   }
 
-  @Override
   public synchronized void deleteSession(SignalProtocolAddress address) {
     SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
     sessions.removeIf(info -> info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId());
   }
 
-  @Override
   public synchronized void deleteAllSessions(String name) {
     SignalServiceAddress serviceAddress = resolveSignalServiceAddress(name);
     deleteAllSessions(serviceAddress);

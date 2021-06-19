@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
@@ -63,11 +64,13 @@ public class Group {
   public int revision;
   public DecryptedGroup group;
   private int lastAvatarFetch;
+  private DistributionId distributionId;
 
-  public Group(GroupMasterKey m, int r, DecryptedGroup d, int l) {
+  public Group(GroupMasterKey m, int r, DecryptedGroup d, DistributionId dist, int l) {
     masterKey = m;
     revision = r;
     group = d;
+    distributionId = dist;
     lastAvatarFetch = l;
   }
 
@@ -106,6 +109,16 @@ public class Group {
 
   public DecryptedGroup getGroup() { return group; }
 
+  public boolean hasDistributionId() { return distributionId != null; }
+
+  public void generateDistributionId() {
+    if (distributionId == null) {
+      distributionId = DistributionId.create();
+    }
+  }
+
+  public DistributionId getDistributionId() { return distributionId; }
+
   public boolean isPendingMember(UUID query) {
     for (UUID m : DecryptedGroupUtil.pendingToUuidList(group.getPendingMembersList())) {
       if (m.equals(query)) {
@@ -126,7 +139,7 @@ public class Group {
     try {
       fetchAvatar(m);
     } catch (IOException e) {
-      logger.warn("Failed to fetch group avatar:", e.getMessage());
+      logger.warn("Failed to fetch group avatar:" + e.getMessage());
     }
     JsonGroupV2Info jsonGroupV2Info = new JsonGroupV2Info(SignalServiceGroupV2.newBuilder(masterKey).withRevision(revision).build(), group);
     File avatarFile = m.getGroupAvatarFile(getGroupID());
@@ -174,7 +187,7 @@ public class Group {
       try {
         Files.delete(tmpFile.toPath());
       } catch (IOException e) {
-        logger.warn("Failed to delete received group avatar temp file “{}”, ignoring: {}", tmpFile, e.getMessage());
+        logger.warn("Failed to delete received group avatar temp file " + tmpFile + ", ignoring: " + e.getMessage());
       }
     }
   }
@@ -249,7 +262,11 @@ public class Group {
 
           group = builder.build();
         }
-        return new Group(masterKey, revision, group, lastAvatarFetch);
+        DistributionId distributionId = null;
+        if (node.has("distributionId")) {
+          distributionId = DistributionId.from(node.get("distributionId").asText());
+        }
+        return new Group(masterKey, revision, group, distributionId, lastAvatarFetch);
       } catch (InvalidInputException e) {
         e.printStackTrace();
         throw new IOException(e.getMessage());
@@ -267,6 +284,9 @@ public class Group {
         node.put("group", Base64.encodeBytes(value.group.toByteArray()));
       }
       node.put("lastAvatarFetch", value.lastAvatarFetch);
+      if (value.hasDistributionId()) {
+        node.put("distributionId", value.getDistributionId().toString());
+      }
       gen.writeObject(node);
     }
   }

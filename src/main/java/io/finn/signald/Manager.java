@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ public class Manager {
   private final static TrustStore TRUST_STORE = new WhisperTrustStore();
   public final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
-  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true);
+  private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false);
   private final static int ACCOUNT_REFRESH_VERSION = 3;
 
   public final static int PREKEY_MINIMUM_COUNT = 20;
@@ -203,8 +203,7 @@ public class Manager {
         try {
           allManagers.add(Manager.get(account.getName()));
         } catch (IOException | NoSuchAccountException | SQLException e) {
-          logger.warn("Failed to load account from " + account.getAbsolutePath() + ": " + e.getMessage());
-          e.printStackTrace();
+          logger.warn("Failed to load account from " + account.getAbsolutePath(), e);
         }
       }
     }
@@ -671,7 +670,7 @@ public class Manager {
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException {
     SignalServiceMessageSender messageSender = getMessageSender();
     try {
-      messageSender.sendMessage(message, getAccessFor(getOwnAddress()));
+      messageSender.sendSyncMessage(message, getAccessPairFor(getOwnAddress()));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
       throw e;
@@ -690,7 +689,7 @@ public class Manager {
 
     try {
       // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
-      messageSender.sendTyping(address, getAccessFor(address), message);
+      messageSender.sendTyping(address, getAccessPairFor(address), message);
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
@@ -710,13 +709,13 @@ public class Manager {
 
     try {
       // TODO: this just calls sendMessage() under the hood. We should call sendMessage() directly so we can get the return value
-      messageSender.sendReceipt(address, getAccessFor(address), message);
+      messageSender.sendReceipt(address, getAccessPairFor(address), message);
       if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
         List<ReadMessage> readMessages = new LinkedList<>();
         for (Long ts : message.getTimestamps()) {
           readMessages.add(new ReadMessage(address, ts));
         }
-        messageSender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessFor(getOwnAddress()));
+        messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(getOwnAddress()));
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -751,7 +750,8 @@ public class Manager {
       if (message.getGroupContext().isPresent()) {
         try {
           final boolean isRecipientUpdate = false;
-          List<SendMessageResult> result = messageSender.sendMessage(new ArrayList<>(recipients), getAccessFor(recipients), isRecipientUpdate, message);
+          List<SendMessageResult> result =
+              messageSender.sendDataMessage(new ArrayList<>(recipients), getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               accountData.axolotlStore.saveIdentity(r.getAddress(), r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
@@ -764,14 +764,14 @@ public class Manager {
         }
       } else if (recipients.size() == 1 && recipients.contains(accountData.address.getSignalServiceAddress())) {
         SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
-        final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessFor(recipient);
+        final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
         SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient), message.getTimestamp(), message, message.getExpiresInSeconds(),
                                                                      Collections.singletonMap(recipient, unidentifiedAccess.isPresent()), false);
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
         try {
-          messageSender.sendMessage(syncMessage, unidentifiedAccess);
+          messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           accountData.axolotlStore.saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
           results.add(SendMessageResult.identityFailure(recipient, e.getIdentityKey()));
@@ -788,15 +788,15 @@ public class Manager {
             if (accountData.address.matches(address)) {
               SignalServiceAddress recipient = accountData.address.getSignalServiceAddress();
 
-              final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessFor(recipient);
+              final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
               SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient), message.getTimestamp(), message, message.getExpiresInSeconds(),
                                                                            Collections.singletonMap(recipient, unidentifiedAccess.isPresent()), false);
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               long start = System.currentTimeMillis();
-              messageSender.sendMessage(syncMessage, unidentifiedAccess);
+              messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
               results.add(SendMessageResult.success(recipient, unidentifiedAccess.isPresent(), false, System.currentTimeMillis() - start));
             } else {
-              results.add(messageSender.sendMessage(address, getAccessFor(address), message));
+              results.add(messageSender.sendDataMessage(address, getAccessPairFor(address), ContentHint.DEFAULT, message));
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
@@ -1517,15 +1517,15 @@ public class Manager {
 
   public Optional<ContactTokenDetails> getUser(String e164number) throws IOException { return getAccountManager().getContact(e164number); }
 
-  public List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients) {
+  public List<Optional<UnidentifiedAccessPair>> getAccessPairFor(Collection<SignalServiceAddress> recipients) {
     List<Optional<UnidentifiedAccessPair>> result = new ArrayList<>(recipients.size());
     for (SignalServiceAddress recipient : recipients) {
-      result.add(getAccessFor(recipient));
+      result.add(getAccessPairFor(recipient));
     }
     return result;
   }
 
-  public Optional<UnidentifiedAccessPair> getAccessFor(SignalServiceAddress recipient) {
+  public Optional<UnidentifiedAccessPair> getAccessPairFor(SignalServiceAddress recipient) {
     ProfileAndCredentialEntry recipientProfileKeyCredential = accountData.profileCredentialStore.get(recipient);
     if (recipientProfileKeyCredential == null) {
       return Optional.absent();
@@ -1555,6 +1555,16 @@ public class Manager {
       return Optional.absent();
     }
   }
+
+  public List<UnidentifiedAccess> getAccessFor(Collection<SignalServiceAddress> recipients) {
+    List<UnidentifiedAccess> result = new ArrayList<>(recipients.size());
+    for (SignalServiceAddress recipient : recipients) {
+      result.add(getAccessFor(recipient));
+    }
+    return result;
+  }
+
+  public UnidentifiedAccess getAccessFor(SignalServiceAddress recipient) { return getAccessPairFor(recipient).get().getTargetUnidentifiedAccess().get(); }
 
   private byte[] getSenderCertificate() {
     try {

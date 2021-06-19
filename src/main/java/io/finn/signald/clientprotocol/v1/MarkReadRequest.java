@@ -58,13 +58,13 @@ public class MarkReadRequest implements RequestType<Empty> {
     Manager m = Manager.get(account);
     SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());
     SignalServiceMessageSender sender = m.getMessageSender();
-    sender.sendReceipt(toAddress, m.getAccessFor(toAddress), message);
+    sender.sendReceipt(toAddress, m.getAccessPairFor(toAddress), message);
 
     List<ReadMessage> readMessages = new LinkedList<>();
     for (Long ts : timestamps) {
       readMessages.add(new ReadMessage(toAddress, ts));
     }
-    sender.sendMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessFor(m.getOwnAddress()));
+    sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnAddress()));
     return new Empty();
   }
 }
