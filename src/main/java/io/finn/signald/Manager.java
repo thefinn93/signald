@@ -146,12 +146,16 @@ public class Manager {
 
   public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException {
     Logger logger = LogManager.getLogger("manager");
-    if (managers.containsKey(uuid.toString())) {
-      return managers.get(uuid.toString());
+    AccountData accountData;
+    Manager m;
+    synchronized (managers) {
+      if (managers.containsKey(uuid.toString())) {
+        return managers.get(uuid.toString());
+      }
+      accountData = AccountData.load(AccountsTable.getFile(uuid));
+      m = new Manager(accountData);
+      managers.put(uuid.toString(), m);
     }
-    AccountData accountData = AccountData.load(AccountsTable.getFile(uuid));
-    Manager m = new Manager(accountData);
-    managers.put(uuid.toString(), m);
 
     if (accountData.address.uuid == null && m.getAccountManager().getOwnUuid() != null) {
       accountData.setUUID(m.getAccountManager().getOwnUuid());
@@ -224,7 +228,7 @@ public class Manager {
   Manager(AccountData a) {
     logger = LogManager.getLogger("manager-" + Util.redact(a.username));
     accountData = a;
-    managers.put(a.username, this);
+    synchronized (managers) { managers.put(a.username, this); }
     groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), a.groupsV2, accountData.profileCredentialStore, a.getUUID());
     logger.info("Created a manager for " + Util.redact(accountData.username));
   }
@@ -1628,9 +1632,8 @@ public class Manager {
   }
 
   public SignalServiceMessageReceiver getMessageReceiver() {
-
-    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.address.getUUID(), accountData.username, accountData.password, accountData.deviceId, USER_AGENT, null,
-                                            sleepTimer, getClientZkOperations().getProfileOperations(), true);
+    return new SignalServiceMessageReceiver(serviceConfiguration, accountData.getCredentialsProvider(), USER_AGENT, null, sleepTimer,
+                                            getClientZkOperations().getProfileOperations(), true);
   }
 
   public static ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
@@ -1741,11 +1744,14 @@ public class Manager {
   }
 
   public void deleteAccount(boolean remote) throws IOException, SQLException {
+    accountData.markForDeletion();
+    shutdownMessagePipe(); // disconnect all subscribers
     if (remote) {
       getAccountManager().deleteAccount();
     }
+    String identifier = accountData.getUUID().toString();
     accountData.delete();
-    managers.remove(accountData.username);
+    synchronized (managers) { managers.remove(identifier); }
     logger.info("deleted all local account data");
   }
 

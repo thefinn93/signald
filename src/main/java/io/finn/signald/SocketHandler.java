@@ -579,7 +579,7 @@ public class SocketHandler implements Runnable {
       logger.info("Generating linking URI");
       URI uri = pm.getDeviceLinkUri();
       this.reply("linking_uri", new JsonLinkingURI(uri), request.id);
-      String username = pm.finishDeviceLink(deviceName);
+      String username = pm.finishDeviceLink(deviceName, false);
       Manager m = Manager.get(username);
       this.reply("linking_successful", new JsonAccount(m), request.id);
     } catch (TimeoutException e) {

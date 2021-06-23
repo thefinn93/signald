@@ -76,6 +76,8 @@ public class AccountData {
   public int lastAccountRefresh;
   public int version;
 
+  @JsonIgnore private boolean deleted = false;
+
   static final int VERSION_IMPORT_CONTACT_PROFILES = 1;
 
   private static String dataPath;
@@ -200,6 +202,10 @@ public class AccountData {
   }
 
   public void save() throws IOException {
+    if (deleted) {
+      logger.debug("refusing to save deleted account");
+      return;
+    }
     validate();
 
     ObjectWriter writer = JSONUtil.GetWriter();
@@ -262,6 +268,10 @@ public class AccountData {
       profileCredentialStore.storeProfileKey(address.getSignalServiceAddress(), new ProfileKey(key));
     }
   }
+
+  public void markForDeletion() { deleted = true; }
+
+  public boolean isDeleted() { return deleted; }
 
   public void delete() throws SQLException, IOException {
     if (getUUID() != null) {

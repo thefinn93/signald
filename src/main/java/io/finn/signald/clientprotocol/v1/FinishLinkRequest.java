@@ -19,11 +19,12 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.ProvisioningManager;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.NoSuchSession;
 import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
@@ -34,9 +35,17 @@ import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
 
 @SignaldClientRequest(type = "finish_link")
+@Doc("After a linking URI has been requested, finish_link must be called with the session_id provided with the URI. "
+     + "it will return information about the new account once the linking process is completed by the other device.")
 public class FinishLinkRequest implements RequestType<Account> {
   @JsonProperty("device_name") public String deviceName = "signald";
   @JsonProperty("session_id") public String sessionID;
+
+  // this doesn't work yet
+  //  @Doc("overwrite existing account data if the phone number conflicts. false by default, raises an error when there "
+  //       + "is a conflict")
+  //  public boolean overwrite = false;
+  private boolean overwrite = false;
 
   @Override
   public Account run(Request request)
@@ -45,7 +54,7 @@ public class FinishLinkRequest implements RequestType<Account> {
     if (pm == null) {
       throw new NoSuchSession();
     }
-    String accountID = pm.finishDeviceLink(deviceName);
+    String accountID = pm.finishDeviceLink(deviceName, overwrite);
     return new Account(Manager.get(accountID));
   }
 }

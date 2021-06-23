@@ -92,6 +92,9 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
           this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, e));
           logger.catching(e);
         }
+        if (manager.getAccountData().isDeleted()) {
+          return; // exit the receive thread
+        }
         if (backoff == 0) {
           notifyOnConnect = false;
           logger.debug("reconnecting immediately");

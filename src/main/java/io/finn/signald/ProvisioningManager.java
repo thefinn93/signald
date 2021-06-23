@@ -19,6 +19,7 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
 import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
@@ -78,9 +79,15 @@ public class ProvisioningManager {
     return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public String finishDeviceLink(String deviceName) throws IOException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException {
+  public String finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException {
     String signalingKey = Util.getSecret(52);
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
+    if (overwrite) {
+      try {
+        Manager.get(ret.getNumber()).deleteAccount(false);
+      } catch (NoSuchAccountException ignored) {
+      }
+    }
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, ret.getIdentity().getPrivateKey());
     int deviceId = accountManager.finishNewDeviceRegistration(ret.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
     String username = ret.getNumber();
