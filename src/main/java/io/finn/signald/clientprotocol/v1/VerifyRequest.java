@@ -18,16 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.AccountAlreadyVerified;
-import io.finn.signald.exceptions.AccountHasNoKeys;
-import io.finn.signald.exceptions.JsonifyableException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
@@ -36,7 +33,7 @@ import org.whispersystems.signalservice.internal.push.LockedException;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "verify")
+@ProtocolType("verify")
 @Doc("verify an account's phone number with a code after registering, completing the account creation process")
 public class VerifyRequest implements RequestType<Account> {
   private static final Logger logger = LogManager.getLogger();
@@ -46,7 +43,8 @@ public class VerifyRequest implements RequestType<Account> {
   @ExampleValue("\"555555\"") @Doc("the verification code, dash (-) optional") @Required public String code;
 
   @Override
-  public Account run(Request request) throws SQLException, IOException, NoSuchAccountException, JsonifyableException, InvalidInputException {
+  public Account run(Request request)
+      throws SQLException, IOException, NoSuchAccount, InvalidInputException, AccountHasNoKeys, AccountAlreadyVerified, ExceptionWrapper, AccountLocked {
     Manager m = Manager.getPending(account);
     if (!m.hasPendingKeys()) {
       throw new AccountHasNoKeys();
@@ -57,7 +55,7 @@ public class VerifyRequest implements RequestType<Account> {
         m.verifyAccount(code);
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
-        throw new JsonifyableException(e);
+        throw new AccountLocked();
       }
     }
     return new Account(m);

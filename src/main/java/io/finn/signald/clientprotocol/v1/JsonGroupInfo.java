@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.storage.GroupInfo;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -29,6 +30,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Doc("information about a legacy group")
 public class JsonGroupInfo {
   public String groupId;
   public List<JsonAddress> members;
@@ -36,8 +38,13 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccountException, SQLException {
-    Manager manager = Manager.get(username);
+  JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccount, SQLException {
+    Manager manager = null;
+    try {
+      manager = Manager.get(username);
+    } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
+      throw new NoSuchAccount(e);
+    }
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
       this.members = new ArrayList<>();

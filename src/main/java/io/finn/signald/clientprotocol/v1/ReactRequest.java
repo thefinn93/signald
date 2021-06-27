@@ -21,8 +21,8 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
@@ -36,7 +36,7 @@ import java.util.List;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-@SignaldClientRequest(type = "react")
+@ProtocolType("react")
 @Doc("react to a previous message")
 public class ReactRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
@@ -46,10 +46,9 @@ public class ReactRequest implements RequestType<SendResponse> {
   public long timestamp;
 
   @Override
-  public SendResponse run(Request request) throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccountException,
-                                                  InvalidInputException, UnknownGroupException, SQLException {
-    Manager m = Manager.get(username);
-
+  public SendResponse run(Request request)
+      throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException, UnknownGroupException, SQLException, NoSuchAccount {
+    Manager m = Utils.getManager(username);
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();
     }
@@ -58,7 +57,14 @@ public class ReactRequest implements RequestType<SendResponse> {
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
-    List<SendMessageResult> results = m.send(messageBuilder, recipientAddress, recipientGroupId);
+    List<SendMessageResult> results = null;
+    try {
+      results = m.send(messageBuilder, recipientAddress, recipientGroupId);
+    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
+      throw new InvalidRecipientException();
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
     return new SendResponse(results, timestamp);
   }
 }

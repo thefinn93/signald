@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -24,6 +25,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import java.io.IOException;
 import java.sql.SQLException;
 
+@Deprecated(1641027661)
 public class JsonSticker {
   public String packID;
   public String packKey;

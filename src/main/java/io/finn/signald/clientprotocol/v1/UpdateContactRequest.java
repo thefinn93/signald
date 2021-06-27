@@ -20,17 +20,17 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.storage.ContactStore;
 
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "update_contact")
+@ProtocolType("update_contact")
 @Doc("update information about a local contact")
 public class UpdateContactRequest implements RequestType<Profile> {
   @Required public String account;
@@ -40,13 +40,18 @@ public class UpdateContactRequest implements RequestType<Profile> {
   @JsonProperty("inbox_position") public Integer inboxPosition;
 
   @Override
-  public Profile run(Request request) throws SQLException, IOException, NoSuchAccountException {
+  public Profile run(Request request) throws SQLException, IOException, NoSuchAccount {
     ContactStore.ContactInfo c = new ContactStore.ContactInfo();
     c.address = address;
     c.name = name;
     c.color = color;
     c.inboxPosition = inboxPosition;
-    ContactStore.ContactInfo contactInfo = Manager.get(account).updateContact(c);
+    ContactStore.ContactInfo contactInfo;
+    try {
+      contactInfo = Manager.get(account).updateContact(c);
+    } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
+      throw new NoSuchAccount(e);
+    }
     return new Profile(contactInfo);
   }
 }

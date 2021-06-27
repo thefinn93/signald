@@ -207,3 +207,13 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
     outputs.upToDateWhen { false }
 }
+
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:cast" << "-Xlint:deprecation" << "-Xlint:divzero" << "-Xlint:empty"
+            options.compilerArgs << "-Xlint:fallthrough" << "-Xlint:finally" << "-Xlint:overrides" << "-Xlint:path"
+            options.compilerArgs << "-Xlint:unchecked"
+        }
+    }
+}

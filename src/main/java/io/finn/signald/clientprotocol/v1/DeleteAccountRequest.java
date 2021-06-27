@@ -19,18 +19,18 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.RequestType;
 
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "delete_account")
+@ProtocolType("delete_account")
 @Doc(
     "delete all account data signald has on disk, and optionally delete the account from the server as well. Note that this is not \"unlink\" and will delete the entire account, even from a linked device.")
 public class DeleteAccountRequest implements RequestType<Empty> {
@@ -39,8 +39,8 @@ public class DeleteAccountRequest implements RequestType<Empty> {
   @Doc("delete account information from the server as well (default false)") public boolean server = false;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException {
-    Manager m = Manager.get(account);
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount {
+    Manager m = Utils.getManager(account);
     m.deleteAccount(server);
     return new Empty();
   }

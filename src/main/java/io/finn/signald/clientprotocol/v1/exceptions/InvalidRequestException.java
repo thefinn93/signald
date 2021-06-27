@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountHasNoKeys extends JsonifyableException {
-  public AccountHasNoKeys() { super("requested account has no keys generated"); }
+public class InvalidRequestException extends Exception {
+  public InvalidRequestException(String message) { super(message); }
 }

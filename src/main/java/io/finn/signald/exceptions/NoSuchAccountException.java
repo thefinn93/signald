@@ -17,7 +17,7 @@
 
 package io.finn.signald.exceptions;
 
-public class NoSuchAccountException extends JsonifyableException {
+public class NoSuchAccountException extends Exception {
   public String account;
   public NoSuchAccountException(String account) {
     super("account not found");

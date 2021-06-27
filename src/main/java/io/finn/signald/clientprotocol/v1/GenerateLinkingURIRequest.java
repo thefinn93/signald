@@ -19,7 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.ProvisioningManager;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 
@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "generate_linking_uri")
+@ProtocolType("generate_linking_uri")
 @Doc("Generate a linking URI. Typically this is QR encoded and scanned by the primary device. Submit the returned session_id with a finish_link request.")
 public class GenerateLinkingURIRequest implements RequestType<LinkingURI> {
   @Override

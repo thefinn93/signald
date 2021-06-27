@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,11 @@
 
 package io.finn.signald.clientprotocol;
 
-import io.finn.signald.exceptions.JsonifyableException;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class RequestValidationFailure extends JsonifyableException {
+public class RequestValidationFailure extends Exception {
   public List<String> validationResults;
-  public final String type = "invalid_request";
 
   public RequestValidationFailure(List<String> p) {
     super("input validation failed, please check the request and try again.");

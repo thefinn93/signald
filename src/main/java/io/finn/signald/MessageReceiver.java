@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,49 +17,76 @@
 
 package io.finn.signald;
 
-import io.finn.signald.clientprotocol.v1.JsonMessageEnvelope;
+import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.InvalidMetadataMessageException;
+import org.signal.libsignal.metadata.ProtocolException;
 import org.signal.libsignal.metadata.SelfSendException;
 import org.whispersystems.libsignal.DuplicateMessageException;
+import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
+public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   final String username;
+  private final Manager m;
   private int backoff = 0;
-  private SocketManager sockets;
+  private final SocketManager sockets;
   private static final Logger logger = LogManager.getLogger();
+  private static final HashMap<String, MessageReceiver> receivers = new HashMap<>();
 
-  public MessageReceiver(String username) {
+  public MessageReceiver(String username) throws SQLException, IOException, NoSuchAccountException {
     this.username = username;
+    this.m = Manager.get(username);
     this.sockets = new SocketManager();
   }
 
-  public void subscribe(Socket s) {
-    this.sockets.add(s);
-    logger.debug("message receiver for " + Util.redact(username) + " got new subscriber. subscriber count: " + this.sockets.size());
+  public static synchronized void subscribe(String username, MessageEncoder receiver) throws SQLException, IOException, NoSuchAccountException {
+    if (!receivers.containsKey(username)) {
+      MessageReceiver r = new MessageReceiver(username);
+      new Thread(r).start();
+      receivers.put(username, r);
+    }
+    receivers.get(username).sockets.add(receiver);
+    logger.debug("message receiver for " + Util.redact(username) + " got new subscriber. subscriber count: " + receivers.get(username).sockets.size());
   }
 
-  public boolean unsubscribe(Socket s) {
-    boolean removed = sockets.remove(s);
-    logger.debug("message receiver for " + Util.redact(username) + " lost a subscriber. subscriber count: " + this.sockets.size());
-    if (removed && sockets.size() == 0) {
-      logger.info("Last client for " + Util.redact(this.username) + " unsubscribed, shutting down message pipe!");
+  public static synchronized boolean unsubscribe(String username, Socket s) {
+    if (!receivers.containsKey(username)) {
+      return false;
+    }
+
+    boolean removed = receivers.get(username).remove(s);
+    if (removed) {
+      logger.debug("message receiver for " + Util.redact(username) + " lost a subscriber. subscriber count: " + receivers.get(username).sockets.size());
+    }
+    if (removed && receivers.get(username).sockets.size() == 0) {
+      logger.info("Last client for " + Util.redact(username) + " unsubscribed, shutting down message pipe");
       try {
         Manager.get(username).shutdownMessagePipe();
       } catch (IOException | NoSuchAccountException | SQLException e) {
         logger.catching(e);
       }
+      receivers.remove(username);
     }
     return removed;
+  }
+
+  private boolean remove(Socket socket) { return sockets.remove(socket); }
+
+  public static void unsubscribeAll(Socket s) {
+    for (String r : receivers.keySet()) {
+      unsubscribe(r, s);
+    }
   }
 
   public void run() {
@@ -67,32 +94,31 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
     logger.debug("starting message receiver for " + Util.redact(username));
     try {
       Thread.currentThread().setName(Util.redact(username) + "-receiver");
-      Manager manager = Manager.get(username);
       while (sockets.size() > 0) {
         double timeout = 3600;
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
         try {
           if (notifyOnConnect) {
-            this.sockets.broadcast(new JsonMessageWrapper("listen_started", username, (String)null));
+            this.sockets.broadcastListenStarted();
           } else {
             notifyOnConnect = true;
           }
           logger.debug("connecting to socket");
-          manager.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
+          m.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
         } catch (IOException e) {
           if (sockets.size() == 0) {
             return;
           }
           logger.debug("disconnected from socket", e);
           if (backoff > 0) {
-            this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, (String)null));
+            this.sockets.broadcastListenStopped(e);
           }
         } catch (AssertionError e) {
-          this.sockets.broadcast(new JsonMessageWrapper("listen_stopped", username, e));
+          this.sockets.broadcastListenStopped(e);
           logger.catching(e);
         }
-        if (manager.getAccountData().isDeleted()) {
+        if (m.getAccountData().isDeleted()) {
           return; // exit the receive thread
         }
         if (backoff == 0) {
@@ -110,59 +136,75 @@ class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
       logger.debug("shutting down message receiver for " + Util.redact(username));
     } catch (Exception e) {
       logger.error("shutting down message receiver for " + Util.redact(username), e);
+      sockets.broadcastListenStopped(e);
     }
   }
 
   @Override
   public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
     backoff = 0;
-    String type = "message";
     if (exception != null) {
       if (exception instanceof SelfSendException) {
         logger.debug("ignoring SelfSendException (see https://gitlab.com/signald/signald/-/issues/24)");
       } else if (exception instanceof DuplicateMessageException || exception.getCause() instanceof DuplicateMessageException) {
         logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/signald/signald/-/issues/50): " + exception.toString());
       } else if (exception instanceof UntrustedIdentityException) {
-        logger.debug("UntrustedIdentityException", exception.toString());
+        logger.debug("UntrustedIdentityException: " + exception.toString());
       } else if (exception instanceof InvalidMetadataMessageException) {
         logger.warn("Received invalid metadata in incoming message: " + exception.toString());
+      } else if (exception instanceof ProtocolException) {
+        logger.warn("ProtocolException thrown while receiving: " + exception.toString());
+      } else if (exception instanceof InvalidMessageException) {
+        logger.warn("InvalidMessageException thrown while receiving");
       } else {
         logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
       }
-      type = "unreadable_message";
-    }
-
-    try {
-      if (exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, username);
-        this.sockets.broadcast(new JsonMessageWrapper("inbound_identity_failure", message, (Throwable)null));
-      }
-      if (envelope != null) {
-        JsonMessageEnvelope message = new JsonMessageEnvelope(envelope, content, username);
-        if (shouldBroadcast(content)) {
-          this.sockets.broadcast(new JsonMessageWrapper(type, message, exception));
-        }
-      } else {
-        this.sockets.broadcast(new JsonMessageWrapper(type, null, exception));
-      }
-    } catch (IOException | NoSuchAccountException | SQLException e) {
-      logger.catching(e);
+      this.sockets.broadcastReceiveFailure(exception);
+    } else {
+      this.sockets.broadcastIncomingMessage(envelope, content);
     }
   }
 
-  private boolean shouldBroadcast(SignalServiceContent content) {
-    if (content == null) {
-      return true;
+  static class SocketManager {
+    private final List<MessageEncoder> listeners = Collections.synchronizedList(new ArrayList<>());
+
+    public synchronized void add(MessageEncoder b) { listeners.add(b); }
+
+    public synchronized boolean remove(Socket b) {
+      Iterator<MessageEncoder> i = listeners.iterator();
+      while (i.hasNext()) {
+        MessageEncoder r = i.next();
+        if (r.equals(b)) {
+          return listeners.remove(r);
+        }
+      }
+      return false;
     }
-    if (content.getDataMessage().isPresent()) {
-      SignalServiceDataMessage dataMessage = content.getDataMessage().get();
-      if (dataMessage.getGroupContext().isPresent()) {
-        SignalServiceGroupContext group = dataMessage.getGroupContext().get();
-        if (group.getGroupV1Type() == SignalServiceGroup.Type.REQUEST_INFO) {
-          return false;
+
+    public synchronized int size() { return listeners.size(); }
+
+    private void broadcast(broadcastMessage b) {
+      for (MessageEncoder l : this.listeners) {
+        if (l.isClosed()) {
+          listeners.remove(l);
+          continue;
+        }
+        try {
+          b.broadcast(l);
+        } catch (IOException e) {
+          logger.warn("IOException while writing to client socket: " + e.getMessage());
         }
       }
     }
-    return true;
+
+    public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) { broadcast(r -> r.broadcastIncomingMessage(envelope, content)); }
+
+    public void broadcastReceiveFailure(Throwable exception) { broadcast(r -> r.broadcastReceiveFailure(exception)); }
+
+    public void broadcastListenStarted() { broadcast(MessageEncoder::broadcastListenStarted); }
+
+    public void broadcastListenStopped(Throwable exception) { broadcast(r -> r.broadcastListenStopped(exception)); }
+
+    private interface broadcastMessage { void broadcast(MessageEncoder r) throws IOException; }
   }
 }

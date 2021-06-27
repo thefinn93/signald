@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 
-@SignaldClientRequest(type = "version")
+@ProtocolType("version")
 public class VersionRequest implements RequestType<JsonVersionMessage> {
   @Override
   public JsonVersionMessage run(Request request) throws Throwable {

@@ -21,20 +21,19 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.InvalidRequestException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestException;
+import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.util.GroupsUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.Member;
-import org.signal.storageservice.protos.groups.local.DecryptedMember;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
 
 import java.util.*;
@@ -42,7 +41,7 @@ import java.util.stream.Collectors;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
-@SignaldClientRequest(type = "update_group")
+@ProtocolType("update_group")
 @Doc("modify a group. Note that only one modification action may be preformed at once")
 public class UpdateGroupRequest implements RequestType<GroupInfo> {
   private static final Logger logger = LogManager.getLogger();
@@ -85,7 +84,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         throw new UnknownGroupException();
       }
 
-      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(UpdateGroupRequest::getMemberAddress).collect(Collectors.toList());
+      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList());
       Pair<SignalServiceDataMessage.Builder, Group> output;
 
       if (title != null) {
@@ -161,8 +160,6 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       return new GroupInfo(group.getJsonGroupV2Info(m));
     }
   }
-
-  public static SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }
 
   public AccessControl.AccessRequired getAccessRequired(String name) throws InvalidRequestException {
     switch (name) {

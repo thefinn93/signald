@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,10 @@ package io.finn.signald;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.exceptions.JsonifyableException;
+import io.finn.signald.annotations.Deprecated;
 
 @JsonInclude(Include.NON_NULL)
+@Deprecated(1641027661)
 public class JsonMessageWrapper {
   public String id;
   public String type;
@@ -30,6 +31,11 @@ public class JsonMessageWrapper {
   public Object error;
   public String exception;
   @JsonProperty("error_type") public String errorType;
+
+  public JsonMessageWrapper(String type, Object data) {
+    this.type = type;
+    this.data = data;
+  }
 
   public JsonMessageWrapper(String type, Object data, String id) {
     this.type = type;
@@ -47,11 +53,7 @@ public class JsonMessageWrapper {
 
   public static JsonMessageWrapper error(String type, Object error, String id) {
     JsonMessageWrapper j = new JsonMessageWrapper(type, null, id);
-    if (error instanceof JsonifyableException) {
-      j.errorType = ((JsonifyableException)error).getType();
-    }
     j.error = error;
-
     return j;
   }
 }

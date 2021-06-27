@@ -21,11 +21,11 @@ import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -38,7 +38,7 @@ import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
-@SignaldClientRequest(type = "mark_read")
+@ProtocolType("mark_read")
 public class MarkReadRequest implements RequestType<Empty> {
 
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -50,12 +50,12 @@ public class MarkReadRequest implements RequestType<Empty> {
   public Long when;
 
   @Override
-  public Empty run(Request request) throws IOException, NoSuchAccountException, UntrustedIdentityException, SQLException {
+  public Empty run(Request request) throws IOException, UntrustedIdentityException, SQLException, NoSuchAccount {
     if (when == null) {
       when = System.currentTimeMillis();
     }
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, when);
-    Manager m = Manager.get(account);
+    Manager m = Utils.getManager(account);
     SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());
     SignalServiceMessageSender sender = m.getMessageSender();
     sender.sendReceipt(toAddress, m.getAccessPairFor(toAddress), message);

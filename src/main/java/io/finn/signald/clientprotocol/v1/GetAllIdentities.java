@@ -20,8 +20,8 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidAddressException;
@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 @Doc("get all known identity keys")
-@SignaldClientRequest(type = "get_all_identities")
+@ProtocolType("get_all_identities")
 public class GetAllIdentities implements RequestType<AllIdentityKeyList> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 

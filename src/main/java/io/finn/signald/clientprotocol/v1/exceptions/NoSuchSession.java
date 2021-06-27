@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountAlreadyVerified extends JsonifyableException {
-  public AccountAlreadyVerified() { super("account has already been verified"); }
+public class NoSuchSession extends Exception {
+  public NoSuchSession() { super("no such session"); }
 }

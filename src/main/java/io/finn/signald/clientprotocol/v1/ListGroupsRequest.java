@@ -18,26 +18,26 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
-import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.annotations.Required;
+import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "list_groups")
+@ProtocolType("list_groups")
 public class ListGroupsRequest implements RequestType<GroupList> {
 
   @Required public String account;
 
   @Override
-  public GroupList run(Request request) throws IOException, NoSuchAccountException, SQLException {
+  public GroupList run(Request request) throws IOException, NoSuchAccount, SQLException {
     GroupList groups = new GroupList();
-    Manager m = Manager.get(account);
+    Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();
 
     for (Group g : accountData.groupsV2.groups) {

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class InvalidRequestException extends JsonifyableException {
-  public InvalidRequestException(String message) { super(message); }
+public class GroupLinkNotActive extends Exception {
+  public GroupLinkNotActive() { super("group link not active"); }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import org.signal.zkgroup.profiles.ProfileKey;
@@ -28,6 +29,7 @@ import org.whispersystems.util.Base64;
 
 import java.io.IOException;
 
+@Deprecated(1641027661)
 public class JsonProfile {
   public String name;
   public String avatar;

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class UnknownIdentityKey extends JsonifyableException {
-  public UnknownIdentityKey() { super("no matching identity key in database"); }
+public class AccountHasNoKeys extends Exception {
+  public AccountHasNoKeys() { super("requested account has no keys generated"); }
 }

@@ -28,3 +28,6 @@ setup:
 
 src/integration-tests/resources/io/finn/signald/whisper.store: tools/letsencrypt-x1.pem
 	keytool -import -file tools/letsencrypt-x1.pem -keystore src/integration-tests/resources/io/finn/signald/whisper.store -storepass whisper -storetype BKS -provider org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath build/install/signald/lib/bcprov-jdk15on-1.66.jar
+
+validate-protocol: installDist
+	build/install/signald/bin/signald --dump-protocol | go run ./tools/protocol-validator

@@ -22,7 +22,7 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -36,7 +36,7 @@ import java.sql.SQLException;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-@SignaldClientRequest(type = "typing")
+@ProtocolType("typing")
 @Doc("send a typing started or stopped message")
 public class TypingRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
@@ -46,8 +46,8 @@ public class TypingRequest implements RequestType<Empty> {
   public long when;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, UntrustedIdentityException {
-    Manager m = Manager.get(account);
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, UntrustedIdentityException {
+    Manager m = Utils.getManager(account);
 
     byte[] groupId = null;
     if (group != null) {

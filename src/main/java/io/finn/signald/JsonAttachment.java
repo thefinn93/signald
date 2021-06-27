@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
@@ -28,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
+@Deprecated(1641027661)
 public class JsonAttachment {
   public String contentType;
   public String id;

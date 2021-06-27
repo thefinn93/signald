@@ -21,18 +21,18 @@ import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 
 import java.io.IOException;
 import java.sql.SQLException;
 
 @Doc("Request other devices on the account send us their group list, syncable config and contact list.")
-@SignaldClientRequest(type = "request_sync")
+@ProtocolType("request_sync")
 public class RequestSyncRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
   @Doc("request group sync (default true)") public boolean groups = true;
@@ -41,8 +41,8 @@ public class RequestSyncRequest implements RequestType<Empty> {
   @Doc("request block list sync (default true)") public boolean blocked = true;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, UntrustedIdentityException {
-    Manager m = Manager.get(account);
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, UntrustedIdentityException {
+    Manager m = Utils.getManager(account);
     if (groups) {
       m.requestSyncGroups();
     }

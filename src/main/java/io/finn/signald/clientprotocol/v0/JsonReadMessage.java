@@ -15,10 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v0;
 
-public class CaptchaRequired extends JsonifyableException {
-  public final String more = "https://signald.org/articles/captcha/";
+import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.annotations.ExampleValue;
+import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 
-  public CaptchaRequired() { super("a captcha token is required to register"); }
+@Deprecated(1641027661)
+public class JsonReadMessage {
+  public JsonAddress sender;
+  @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
+
+  public JsonReadMessage(ReadMessage r) {
+    sender = new JsonAddress(r.getSender());
+    timestamp = r.getTimestamp();
+  }
 }

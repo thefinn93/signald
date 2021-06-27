@@ -18,13 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
+import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -48,7 +48,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@SignaldClientRequest(type = "approve_membership")
+@ProtocolType("approve_membership")
 @Doc("approve a request to join a group")
 public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -58,10 +58,15 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, UnknownGroupException, SQLException {
-    Manager m = Manager.get(account);
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, VerificationFailedException, UnknownGroupException, SQLException {
+    Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();
-    Group group = accountData.groupsV2.get(groupID);
+    Group group;
+    try {
+      group = accountData.groupsV2.get(groupID);
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
 
     List<SignalServiceAddress> recipients = group.getMembers();
     recipients.addAll(members.stream().map(JsonAddress::getSignalServiceAddress).collect(Collectors.toSet()));

@@ -19,13 +19,17 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
+import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoKnownUUID;
+import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
+import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.storage.Group;
 import org.signal.storageservice.protos.groups.Member;
@@ -42,7 +46,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "create_group")
+@ProtocolType("create_group")
 public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
@@ -60,9 +64,9 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request)
-      throws IOException, NoSuchAccountException, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
+      throws IOException, NoSuchAccount, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
              InterruptedException, ExecutionException, TimeoutException, NoKnownUUID, OwnProfileKeyDoesNotExist {
-    Manager m = Manager.get(account);
+    Manager m = Utils.getManager(account);
     AddressResolver resolver = m.getResolver();
     List<SignalServiceAddress> resolvedMembers = new ArrayList<>();
     if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getUUID()) == null) {
@@ -95,7 +99,11 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     m.getAccountData().save();
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.revision).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
-    m.sendGroupV2Message(message, signalServiceGroupV2);
+    try {
+      m.sendGroupV2Message(message, signalServiceGroupV2);
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
     return group.getJsonGroupV2Info(m);
   }
 }

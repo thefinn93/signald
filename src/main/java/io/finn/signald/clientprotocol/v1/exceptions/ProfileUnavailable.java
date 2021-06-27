@@ -15,9 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountLocked extends JsonifyableException {
-  public final String more = "see https://gitlab.com/signald/signald/-/issues/47";
-  public AccountLocked() { super("account is locked with a PIN"); }
+public class ProfileUnavailable extends Exception {
+  public ProfileUnavailable() { super("profile unavailable"); }
 }

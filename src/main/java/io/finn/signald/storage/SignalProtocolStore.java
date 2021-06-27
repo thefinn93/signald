@@ -19,7 +19,7 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.PreKeysTable;
 import io.finn.signald.db.SessionsTable;
@@ -43,7 +43,7 @@ public class SignalProtocolStore {
 
   public SignalProtocolStore() {}
 
-  public SignalProtocolStore(IdentityKeyPair identityKey, int registrationId, AddressResolver resolver, UUID u) throws SQLException, IOException, NoSuchAccountException {
+  public SignalProtocolStore(IdentityKeyPair identityKey, int registrationId, AddressResolver resolver, UUID u) throws SQLException, IOException, NoSuchAccount {
     legacySessionStore = new SessionStore(resolver);
     legacySignedPreKeyStore = new SignedPreKeyStore();
     legacyIdentityKeyStore = new IdentityKeyStore(identityKey, registrationId, resolver);

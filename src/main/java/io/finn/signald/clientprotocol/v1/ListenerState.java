@@ -15,8 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1;
 
-public class NoSuchSession extends JsonifyableException {
-  public NoSuchSession() { super("no such session"); }
+import io.finn.signald.annotations.Doc;
+
+@Doc("indicates when the incoming connection to the signal server has started or stopped")
+public class ListenerState {
+  public boolean connected;
+  public ListenerState(boolean c) { connected = c; }
 }

@@ -77,6 +77,7 @@ public class GroupsV2Manager {
   private final UUID self;
   private final static GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration);
   private final static Logger logger = LogManager.getLogger();
+
   public GroupsV2Manager(GroupsV2Api groupsV2Api, GroupsV2Storage storage, ProfileCredentialStore profileCredentialStore, UUID self) {
     this.groupsV2Api = groupsV2Api;
     this.storage = storage;

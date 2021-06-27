@@ -15,8 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.annotations;
 
-public class ProfileUnavailable extends JsonifyableException {
-  public ProfileUnavailable() { super("profile unavailable"); }
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ProtocolType {
+  String value();
 }

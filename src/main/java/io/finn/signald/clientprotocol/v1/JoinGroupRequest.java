@@ -20,16 +20,16 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.GroupsV2Manager;
 import io.finn.signald.Manager;
+import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.InvalidInviteURI;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidInviteURI;
+import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
@@ -52,7 +52,7 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "join_group")
+@ProtocolType("join_group")
 @Doc("Join a group using the a signal.group URL. Note that you must have a profile name set to join groups.")
 public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -61,7 +61,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
   @Override
   public JsonGroupJoinInfo run(Request request)
-      throws GroupInviteLinkUrl.InvalidGroupLinkException, GroupInviteLinkUrl.UnknownGroupLinkVersionException, IOException, NoSuchAccountException, InterruptedException,
+      throws GroupInviteLinkUrl.InvalidGroupLinkException, GroupInviteLinkUrl.UnknownGroupLinkVersionException, IOException, NoSuchAccount, InterruptedException,
              ExecutionException, TimeoutException, GroupLinkNotActiveException, VerificationFailedException, InvalidGroupStateException, UnknownGroupException, SQLException,
              InvalidInviteURI, OwnProfileKeyDoesNotExist {
     GroupInviteLinkUrl groupInviteLinkUrl = GroupInviteLinkUrl.fromUri(uri);
@@ -70,7 +70,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupInviteLinkUrl.getGroupMasterKey());
 
-    Manager m = Manager.get(account);
+    Manager m = Utils.getManager(account);
     ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
 
     if (profileKeyCredential == null) {
@@ -96,7 +96,11 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
 
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
     SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build()).withExpiration(group.getTimer());
-    m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
+    try {
+      m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
 
     AccountData accountData = m.getAccountData();
     accountData.groupsV2.update(group);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.util.SafetyNumberHelper;
@@ -26,6 +27,7 @@ import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
+@Deprecated(1641027661)
 class JsonIdentity {
   public String trust_level;
   public long added;

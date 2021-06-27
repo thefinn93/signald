@@ -21,8 +21,8 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
@@ -38,7 +38,7 @@ import java.util.List;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-@SignaldClientRequest(type = "set_expiration")
+@ProtocolType("set_expiration")
 @Doc("Set the message expiration timer for a thread. Expiration must be specified in seconds, set to 0 to disable timer")
 public class SetExpirationRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
@@ -48,14 +48,19 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request)
-      throws SQLException, IOException, NoSuchAccountException, UnknownGroupException, VerificationFailedException, NotAGroupMemberException, GroupNotFoundException {
-    Manager m = Manager.get(account);
+      throws SQLException, IOException, NoSuchAccount, UnknownGroupException, VerificationFailedException, NotAGroupMemberException, GroupNotFoundException {
+    Manager m = Utils.getManager(account);
     List<SendMessageResult> results;
 
     if (group != null) {
       if (group.length() == 44) {
-        Pair<SignalServiceDataMessage.Builder, Group> output = m.getGroupsV2Manager().updateGroupTimer(group, expiration);
-        results = m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2());
+        Pair<SignalServiceDataMessage.Builder, Group> output = null;
+        try {
+          output = m.getGroupsV2Manager().updateGroupTimer(group, expiration);
+          results = m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2());
+        } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+          throw new UnknownGroupException();
+        }
         m.getAccountData().groupsV2.update(output.second());
         m.getAccountData().save();
       } else {

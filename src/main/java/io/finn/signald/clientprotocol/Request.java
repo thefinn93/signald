@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,9 +27,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.JsonMessageWrapper;
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.v1.*;
-import io.finn.signald.exceptions.JsonifyableException;
+import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import org.apache.logging.log4j.LogManager;
@@ -39,7 +40,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static io.finn.signald.util.RequestUtil.getVersion;
 import static io.finn.signald.util.RequestUtil.requestTypes;
@@ -49,48 +53,47 @@ public class Request {
   public static final Map<String, String> defaultVersions = getDefaultVersions();
 
   private RequestType requestType;
-  private String type;
+  private final String type;
   private String version;
   private String id;
-  private Socket socket;
-  private PrintWriter writer;
-  private Logger logger;
+  private final Socket socket;
+  private final PrintWriter writer;
 
   private final ObjectMapper mapper = JSONUtil.GetMapper();
 
   public static Map<String, Map<String, Class<? extends RequestType>>> getRequests() {
     Map<String, Map<String, Class<? extends RequestType>>> requests = new HashMap<>();
     for (Class<? extends RequestType> t : requestTypes) {
-      SignaldClientRequest annotation = t.getDeclaredAnnotation(SignaldClientRequest.class);
-      if (!requests.containsKey(annotation.type())) {
-        requests.put(annotation.type(), new HashMap<>());
+      ProtocolType annotation = t.getDeclaredAnnotation(ProtocolType.class);
+      if (!requests.containsKey(annotation.value())) {
+        requests.put(annotation.value(), new HashMap<>());
       }
-      Map<String, Class<? extends RequestType>> versions = requests.get(annotation.type());
+      Map<String, Class<? extends RequestType>> versions = requests.get(annotation.value());
       versions.put(RequestUtil.getVersion(t), t);
-      requests.put(annotation.type(), versions);
-      requests.get(annotation.type()).put(getVersion(t), t);
+      requests.put(annotation.value(), versions);
+      requests.get(annotation.value()).put(getVersion(t), t);
     }
     return requests;
   }
 
   public static Map<String, String> getDefaultVersions() {
     Map<String, String> v = new HashMap<>();
-    v.put(VersionRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(ProtocolRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(GetLinkedDevicesRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(RemoveLinkedDeviceRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(AcceptInvitationRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(ApproveMembershipRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(GetGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(JoinGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(ResolveAddressRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(CreateGroupRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(GenerateLinkingURIRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(FinishLinkRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(DeleteAccountRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(TypingRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(ResetSessionRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
-    v.put(RequestSyncRequest.class.getAnnotation(SignaldClientRequest.class).type(), "v1");
+    v.put(VersionRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(ProtocolRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(GetLinkedDevicesRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(RemoveLinkedDeviceRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(AcceptInvitationRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(ApproveMembershipRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(GetGroupRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(JoinGroupRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(ResolveAddressRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(CreateGroupRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(GenerateLinkingURIRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(FinishLinkRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(DeleteAccountRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(TypingRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(ResetSessionRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
+    v.put(RequestSyncRequest.class.getAnnotation(ProtocolType.class).value(), "v1");
     return v;
   }
 
@@ -110,6 +113,8 @@ public class Request {
 
     type = request.get("type").asText();
 
+    Thread.currentThread().setName(id != null ? id + "-" + type : type);
+
     if (request.has("version")) {
       version = request.get("version").asText();
     } else if (defaultVersions.containsKey(type)) {
@@ -123,7 +128,7 @@ public class Request {
       return;
     }
 
-    logger = LogManager.getLogger(type);
+    Logger logger = LogManager.getLogger(type);
 
     if (!requests.containsKey(type)) {
       error(new RequestValidationFailure("Unknown request type: " + type));
@@ -152,7 +157,7 @@ public class Request {
     try {
       Object r = requestType.run(this);
       reply(new JsonMessageWrapper(type, r, id));
-    } catch (JsonifyableException e) {
+    } catch (ExceptionWrapper e) {
       error(e);
       if (e.isUnexpected()) {
         logger.error("error while handling request", e);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.logging.SignalProtocolLogger;
 
 class ProtocolLogger implements SignalProtocolLogger {
-  private static final Logger logger = LogManager.getLogger();
+  private static final Logger logger = LogManager.getLogger("libsignal");
 
   public void log(int priority, String tag, String message) { logger.debug("[" + tag + "] " + message); }
 }

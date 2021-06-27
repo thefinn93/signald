@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.annotations;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+public class NoSuchAccount extends Exception {
+  public String account;
+  public NoSuchAccount(io.finn.signald.exceptions.NoSuchAccountException e) {
+    super(e.getMessage());
+    account = e.account;
+  }
 
-@Retention(RetentionPolicy.RUNTIME)
-public @interface SignaldClientRequest {
-  String type();
+  public NoSuchAccount(String account) {
+    super("account not found");
+    this.account = account;
+  }
 }

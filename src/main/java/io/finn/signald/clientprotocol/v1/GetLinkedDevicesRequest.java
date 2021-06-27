@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
@@ -34,15 +34,15 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SignaldClientRequest(type = "get_linked_devices")
+@ProtocolType("get_linked_devices")
 @Doc("list all linked devices on a Signal account")
 public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   private static final Logger logger = LogManager.getLogger();
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public LinkedDevices run(Request request) throws IOException, NoSuchAccountException, SQLException {
-    Manager m = Manager.get(account);
+  public LinkedDevices run(Request request) throws IOException, NoSuchAccount, SQLException {
+    Manager m = Utils.getManager(account);
     ECPrivateKey profileKey = m.getAccountData().axolotlStore.getIdentityKeyPair().getPrivateKey();
     List<DeviceInfo> devices = m.getAccountManager().getDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
     return new LinkedDevices(devices);

@@ -18,13 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -35,15 +35,15 @@ import java.sql.SQLException;
 import java.util.List;
 
 @Doc("Get information about a known keys for a particular address")
-@SignaldClientRequest(type = "get_identities")
+@ProtocolType("get_identities")
 public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Doc("address to get keys for") @Required public JsonAddress address;
 
   @Override
-  public IdentityKeyList run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidAddressException, InvalidKeyException {
-    Manager m = Manager.get(account);
+  public IdentityKeyList run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidAddressException, InvalidKeyException {
+    Manager m = Utils.getManager(account);
     List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(address.getSignalServiceAddress());
     SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
     return new IdentityKeyList(m.getOwnAddress(), m.getIdentity(), addr, identities);

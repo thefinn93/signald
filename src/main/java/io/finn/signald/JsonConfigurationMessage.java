@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,11 @@
 
 package io.finn.signald;
 
+import io.finn.signald.annotations.Deprecated;
 import org.whispersystems.signalservice.api.messages.multidevice.ConfigurationMessage;
 
+@Deprecated(1641027661)
 class JsonConfigurationMessage {
-
   boolean readReceipts;
   boolean unidentifiedDeliveryIndicators;
   boolean typingIndicators;

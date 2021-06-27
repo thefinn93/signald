@@ -19,13 +19,13 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 
@@ -34,7 +34,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "add_device")
+@ProtocolType("add_device")
 @Doc("Link a new device to a local Signal account")
 public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -42,8 +42,8 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LINKING_URI) @Doc("the tsdevice:/ uri provided (typically in qr code form) by the new device") @Required public String uri;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, URISyntaxException, InvalidInputException, InvalidKeyException {
-    Manager m = Manager.get(account);
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, URISyntaxException, InvalidInputException, InvalidKeyException {
+    Manager m = Utils.getManager(account);
     m.addDeviceLink(new URI(uri));
     return new Empty();
   }

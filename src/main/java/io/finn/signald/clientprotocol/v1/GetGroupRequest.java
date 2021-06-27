@@ -19,14 +19,14 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.GroupsV2Manager;
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
@@ -34,7 +34,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "get_group")
+@ProtocolType("get_group")
 @Doc("Query the server for the latest state of a known group")
 public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -44,11 +44,15 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws IOException, NoSuchAccountException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
-    Manager m = Manager.get(account);
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
+    Manager m = Utils.getManager(account);
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
-    Group group = groupsV2Manager.getGroup(groupID, revision);
+    Group group;
+    try {
+      group = groupsV2Manager.getGroup(groupID, revision);
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
     return group.getJsonGroupV2Info(m);
   }
 }

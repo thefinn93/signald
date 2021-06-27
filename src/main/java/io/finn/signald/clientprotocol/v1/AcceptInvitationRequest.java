@@ -18,15 +18,15 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
@@ -47,7 +47,7 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "accept_invitation")
+@ProtocolType("accept_invitation")
 @Doc("Accept a v2 group invitation. Note that you must have a profile name set to join groups.")
 public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -55,11 +55,16 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccountException, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException,
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException,
                                                      UnknownGroupException, SQLException, OwnProfileKeyDoesNotExist {
-    Manager m = Manager.get(account);
+    Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();
-    Group group = accountData.groupsV2.get(groupID);
+    Group group = null;
+    try {
+      group = accountData.groupsV2.get(groupID);
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
     ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
@@ -81,7 +86,11 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
     SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
 
-    m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
+    try {
+      m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
 
     accountData.groupsV2.update(group);
     accountData.save();

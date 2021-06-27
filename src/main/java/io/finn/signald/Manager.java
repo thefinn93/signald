@@ -18,11 +18,11 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.*;
@@ -277,7 +277,7 @@ public class Manager {
 
   public boolean isRegistered() { return accountData.registered; }
 
-  public void register(boolean voiceVerification, Optional<String> captcha) throws IOException, InvalidInputException, SQLException, NoSuchAccountException {
+  public void register(boolean voiceVerification, Optional<String> captcha) throws IOException, InvalidInputException {
     accountData.password = Util.getSecret(18);
 
     if (voiceVerification) {
@@ -369,7 +369,7 @@ public class Manager {
     }
   }
 
-  public void verifyAccount(String verificationCode) throws IOException, InvalidInputException, SQLException, NoSuchAccountException {
+  public void verifyAccount(String verificationCode) throws IOException, InvalidInputException, SQLException {
     verificationCode = verificationCode.replace("-", "");
     accountData.signalingKey = Util.getSecret(52);
     int registrationID = PendingAccountDataTable.getInt(accountData.username, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
@@ -1277,7 +1277,7 @@ public class Manager {
         job.run();
       } catch (Throwable t) {
         logger.warn("Error running " + job.getClass().getName());
-        logger.catching(t);
+        logger.debug(t);
       }
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,10 @@
 
 package io.finn.signald;
 
-class JsonStatusMessage {
+import io.finn.signald.annotations.Deprecated;
+
+@Deprecated(1641027661)
+public class JsonStatusMessage {
   public int msg_number;
   public String message;
   public boolean error;
@@ -29,7 +32,7 @@ class JsonStatusMessage {
     this.error = false;
   }
 
-  JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
+  public JsonStatusMessage(int msgNumber, String message, JsonRequest request) {
     this.msg_number = msgNumber;
     this.message = message;
     this.error = true;

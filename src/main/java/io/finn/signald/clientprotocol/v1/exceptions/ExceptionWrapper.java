@@ -15,22 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ProtocolIgnore;
 
-// JsonifyableException is an exception that doesn't show a stack trace in the log, just report to the client, because they're not actually problems
-public class JsonifyableException extends Exception {
+@Doc("a warpper for exceptions that are not in the documented protocol")
+public class ExceptionWrapper extends Exception {
   private boolean unexpected = false;
 
-  public JsonifyableException() {}
+  public ExceptionWrapper() {}
 
-  public JsonifyableException(String message) { super(message); }
+  public ExceptionWrapper(Throwable cause) { super(cause); }
 
-  public JsonifyableException(String message, Throwable cause) { super(message, cause); }
-
-  public JsonifyableException(Throwable cause) { super(cause); }
+  public static ExceptionWrapper fromThrowable(Throwable e) {
+    if (e instanceof ExceptionWrapper) {
+      return (ExceptionWrapper)e;
+    }
+    return new ExceptionWrapper(e);
+  }
 
   public void setUnexpected(boolean u) { unexpected = u; }
 
@@ -45,36 +50,43 @@ public class JsonifyableException extends Exception {
   }
 
   @JsonGetter("stackTrace")
+  @ProtocolIgnore
   public String getJSONStackTrace() {
     return null;
   }
 
   @JsonGetter("suppressedExceptions")
+  @ProtocolIgnore
   public String getJSONSuppressedExceptions() {
     return null;
   }
 
   @JsonGetter("suppressed")
+  @ProtocolIgnore
   public String getJSONSuppressed() {
     return null;
   }
 
   @JsonGetter("ourStackTrace")
+  @ProtocolIgnore
   public String getJSONOurStackTrace() {
     return null;
   }
 
   @JsonGetter("detailMessage")
+  @ProtocolIgnore
   public String getJSONDetailMessage() {
     return null;
   }
 
   @JsonGetter("localizedMessage")
+  @ProtocolIgnore
   public String getJSONLocalizedMessage() {
     return null;
   }
 
   @JsonGetter("cause")
+  @ProtocolIgnore
   public String getJSONCause() {
     return null;
   }

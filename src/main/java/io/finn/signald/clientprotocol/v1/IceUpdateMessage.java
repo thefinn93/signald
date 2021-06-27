@@ -15,8 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1;
 
-public class OwnProfileKeyDoesNotExist extends JsonifyableException {
-  public OwnProfileKeyDoesNotExist() { super("cannot find own profile key"); }
+import org.whispersystems.util.Base64;
+
+public class IceUpdateMessage {
+  public final long id;
+  public final String opaque;
+  public final String sdp;
+
+  public IceUpdateMessage(org.whispersystems.signalservice.api.messages.calls.IceUpdateMessage message) {
+    id = message.getId();
+    opaque = Base64.encodeBytes(message.getOpaque());
+    sdp = message.getSdp();
+  }
 }

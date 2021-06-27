@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,13 +23,11 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.clientprotocol.v1.JsonSendMessageResult;
-import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
-import io.finn.signald.clientprotocol.v1.UpdateGroupRequest;
+import io.finn.signald.clientprotocol.MessageEncoder;
+import io.finn.signald.clientprotocol.v0.JsonAddress;
+import io.finn.signald.clientprotocol.v0.JsonMessageEnvelope;
+import io.finn.signald.clientprotocol.v0.JsonSendMessageResult;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.InvalidRecipientException;
@@ -39,6 +37,8 @@ import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.GroupInfo;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.util.GroupsUtil;
+import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.KeyUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -58,38 +58,33 @@ import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
-import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class SocketHandler implements Runnable {
+public class LegacySocketHandler {
   private BufferedReader reader;
   private PrintWriter writer;
-  private ConcurrentHashMap<String, MessageReceiver> receivers;
   private ObjectMapper mpr = new ObjectMapper();
   private static final Logger logger = LogManager.getLogger();
   private Socket socket;
   private ArrayList<String> subscribedAccounts = new ArrayList<>();
 
-  public SocketHandler(Socket socket, ConcurrentHashMap<String, MessageReceiver> receivers) throws IOException {
+  public LegacySocketHandler(Socket socket) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     this.writer = new PrintWriter(socket.getOutputStream(), true);
     this.socket = socket;
-    this.receivers = receivers;
 
     this.mpr.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY); // disable autodetect
     this.mpr.setSerializationInclusion(Include.NON_NULL);
@@ -97,80 +92,7 @@ public class SocketHandler implements Runnable {
     this.mpr.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
   }
 
-  public void run() {
-    logger.info("Client connected");
-
-    try {
-      reply("version", new JsonVersionMessage(), null);
-
-      while (true) {
-        final String line = reader.readLine();
-
-        /* client disconnected */
-        if (line == null) {
-          logger.info("Client disconnected");
-          break;
-        }
-
-        /* client sent whitespace -- ignore */
-        if (line.trim().length() == 0) {
-          continue;
-        }
-
-        logger.debug(line);
-
-        JsonRequest request = null;
-
-        try {
-          JsonNode rawRequest = mpr.readTree(line);
-          String version = "v0";
-          if (rawRequest.has("version")) {
-            version = rawRequest.get("version").asText();
-          } else if (rawRequest.has("type") && Request.defaultVersions.containsKey(rawRequest.get("type").asText())) {
-            String type = rawRequest.get("type").asText();
-            version = Request.defaultVersions.get(type);
-          }
-
-          if (!rawRequest.has("version")) {
-            logger.debug("consider adding \"version\": \"" + version + "\"  to your request to prevent future API breakage. "
-                         + "See https://signald.org/articles/protocol-versioning/");
-          }
-
-          if (version.equals("v0")) {
-            request = mpr.convertValue(rawRequest, JsonRequest.class);
-            handleRequest(request);
-          } else {
-            new Request(rawRequest, socket);
-          }
-        } catch (JsonProcessingException e) {
-          handleError(e, null);
-        } catch (Throwable e) {
-          handleError(e, request);
-        }
-      }
-
-    } catch (SocketException e) {
-      logger.debug("socket exception while reading from client. Likely just means the client disconnected before we expected: " + e.getMessage());
-    } catch (IOException e) {
-      handleError(e, null);
-    } finally {
-      try {
-        reader.close();
-        writer.close();
-      } catch (IOException e) {
-        logger.catching(e);
-      }
-
-      for (Map.Entry<String, MessageReceiver> entry : receivers.entrySet()) {
-        if (entry.getValue().unsubscribe(socket)) {
-          logger.info("Unsubscribed from " + entry.getKey());
-          receivers.remove(entry.getKey());
-        }
-      }
-    }
-  }
-
-  private void handleRequest(JsonRequest request) throws Throwable {
+  public void handleRequest(JsonRequest request) throws Throwable {
     switch (request.type) {
     case "send":
       send(request);
@@ -267,7 +189,7 @@ public class SocketHandler implements Runnable {
   }
 
   private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException,
-                                                InvalidRecipientException, UnknownGroupException, SQLException {
+                                                InvalidRecipientException, UnknownGroupException, SQLException, io.finn.signald.exceptions.InvalidRecipientException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -546,11 +468,9 @@ public class SocketHandler implements Runnable {
         return;
       }
 
-      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(UpdateGroupRequest::getMemberAddress).collect(Collectors.toList());
+      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList());
 
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
-      Set me = new HashSet();
-      me.add(m.getUUID());
       Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.leaveGroup(request.recipientGroupId);
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
       accountData.groupsV2.update(output.second());
@@ -692,22 +612,13 @@ public class SocketHandler implements Runnable {
 
   private void subscribe(JsonRequest request) throws IOException, NoSuchAccountException, SQLException {
     Manager.get(request.username); // throws an exception if the user doesn't exist
-    if (!this.receivers.containsKey(request.username)) {
-      MessageReceiver receiver = new MessageReceiver(request.username);
-      this.receivers.put(request.username, receiver);
-      Thread messageReceiverThread = new Thread(receiver);
-      messageReceiverThread.start();
-    } else {
-      logger.debug("Additional subscribe request, re-using existing MessageReceiver");
-    }
-    this.receivers.get(request.username).subscribe(this.socket);
+    MessageReceiver.subscribe(request.username, new LegacyMessageEncoder(socket, request.username));
     this.subscribedAccounts.add(request.username);
     this.reply("subscribed", null, request.id);
   }
 
   private void unsubscribe(JsonRequest request) throws IOException {
-    this.receivers.get(request.username).unsubscribe(this.socket);
-    this.receivers.remove(request.username);
+    MessageReceiver.unsubscribe(request.username, socket);
     this.subscribedAccounts.remove(request.username);
     this.reply("unsubscribed", null, request.id); // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
   }
@@ -766,22 +677,75 @@ public class SocketHandler implements Runnable {
     this.reply("send_results", results, request.id);
   }
 
-  private void handleError(Throwable error, JsonRequest request) {
-    if (error instanceof NoSuchAccountException) {
-      logger.warn("unable to process request for non-existent account");
-    } else if (error instanceof UnregisteredUserException) {
-      logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
-    } else {
-      logger.catching(error);
+  class LegacyMessageEncoder implements MessageEncoder {
+    private final ObjectMapper mapper = JSONUtil.GetMapper();
+    private final Socket socket;
+    private final String account;
+
+    LegacyMessageEncoder(Socket s, String a) {
+      socket = s;
+      account = a;
     }
-    String requestid = "";
-    if (request != null) {
-      requestid = request.id;
+
+    private void broadcast(JsonMessageWrapper o) throws IOException {
+      PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+      out.println(mapper.writeValueAsString(o));
     }
-    try {
-      this.reply("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestid);
-    } catch (JsonProcessingException e) {
-      logger.catching(e);
+    @Override
+    public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException {
+      if (!shouldBroadcast(content)) {
+        return;
+      }
+      try {
+        JsonMessageEnvelope e = new JsonMessageEnvelope(envelope, content, account);
+        broadcast(new JsonMessageWrapper("message", e));
+      } catch (NoSuchAccountException | SQLException e) {
+        logger.warn("Unexpected exception while broadcasting incoming message: " + e.toString());
+      }
+    }
+
+    @Override
+    public void broadcastReceiveFailure(Throwable exception) throws IOException {
+      if (exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, account);
+        broadcast(new JsonMessageWrapper("inbound_identity_failure", message));
+      } else {
+        broadcast(new JsonMessageWrapper("unreadable_message", null, exception));
+      }
+    }
+
+    @Override
+    public void broadcastListenStarted() throws IOException {
+      broadcast(new JsonMessageWrapper("listen_started", account, (String)null));
+    }
+
+    @Override
+    public void broadcastListenStopped(Throwable exception) throws IOException {
+      broadcast(new JsonMessageWrapper("listener_stopped", account, exception));
+    }
+
+    @Override
+    public boolean isClosed() {
+      return socket.isClosed();
+    }
+
+    @Override
+    public boolean equals(Socket s) {
+      return socket.equals(s);
+    }
+
+    private boolean shouldBroadcast(SignalServiceContent content) {
+      if (content == null) {
+        return true;
+      }
+      if (content.getDataMessage().isPresent()) {
+        SignalServiceDataMessage dataMessage = content.getDataMessage().get();
+        if (dataMessage.getGroupContext().isPresent()) {
+          SignalServiceGroupContext group = dataMessage.getGroupContext().get();
+          return group.getGroupV1Type() != SignalServiceGroup.Type.REQUEST_INFO;
+        }
+      }
+      return true;
     }
   }
 }

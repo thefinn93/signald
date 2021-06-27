@@ -17,15 +17,14 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.GroupLinkNotActive;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.GroupLinkNotActive;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
@@ -33,7 +32,7 @@ import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "group_link_info")
+@ProtocolType("group_link_info")
 @Doc("Get information about a group from a signal.group link")
 public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
@@ -41,9 +40,9 @@ public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
   @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("the signald.group link") @Required public String uri;
 
   @Override
-  public JsonGroupJoinInfo run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidInputException, VerificationFailedException, GroupLinkNotActive {
+  public JsonGroupJoinInfo run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidInputException, VerificationFailedException, GroupLinkNotActive {
     try {
-      return Manager.get(account).getGroupsV2Manager().getGroupJoinInfo(uri);
+      return Utils.getManager(account).getGroupsV2Manager().getGroupJoinInfo(uri);
     } catch (GroupLinkNotActiveException e) {
       throw new GroupLinkNotActive();
     }

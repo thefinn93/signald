@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonQuote;
@@ -25,6 +26,7 @@ import io.finn.signald.storage.ContactStore;
 
 import java.util.List;
 
+@Deprecated(1641027661)
 public class JsonRequest {
   public String type;
   @Doc("the request type") public String id;

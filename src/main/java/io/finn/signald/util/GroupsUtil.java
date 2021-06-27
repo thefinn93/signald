@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ package io.finn.signald.util;
 import io.finn.signald.BuildConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.storageservice.protos.groups.local.DecryptedMember;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupMasterKey;
@@ -27,6 +28,8 @@ import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.libsignal.kdf.HKDFv3;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 
 public class GroupsUtil {
@@ -61,4 +64,6 @@ public class GroupsUtil {
       throw new AssertionError(e);
     }
   }
+
+  public static SignalServiceAddress getMemberAddress(DecryptedMember member) { return new SignalServiceAddress(UuidUtil.fromByteString(member.getUuid()), null); }
 }

@@ -15,12 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.exceptions;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoKnownUUID extends JsonifyableException {
-  String e164;
-  public NoKnownUUID(String e164) {
-    super("No known UUID for that Signal account");
-    this.e164 = e164;
-  }
+public class InvalidInviteURI extends Exception {
+  public InvalidInviteURI() { super("failed to parse invite URL"); }
 }

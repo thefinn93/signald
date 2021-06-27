@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.Database;
@@ -34,7 +35,9 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.output.MigrateOutput;
 import org.flywaydb.core.api.output.MigrateResult;
 import org.newsclub.net.unix.AFUNIXServerSocket;
+import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
+import org.newsclub.net.unix.AFUNIXSocketCredentials;
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -42,19 +45,20 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
 import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Security;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 @Command(name = BuildConfig.NAME, mixinStandardHelpOptions = true, version = BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {
 
-  public static void main(String[] args) { CommandLine.run(new Main(), System.err, args); }
+  public static void main(String[] args) {
+    int exitCode = new CommandLine(new Main()).execute(args);
+    System.exit(exitCode);
+  }
 
   @Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting.") private boolean verbose = false;
 
@@ -93,9 +97,6 @@ public class Main implements Runnable {
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
       Security.addProvider(new BouncyCastleProvider());
-
-      SocketManager socketmanager = new SocketManager();
-      ConcurrentHashMap<String, MessageReceiver> receivers = new ConcurrentHashMap<String, MessageReceiver>();
 
       logger.debug("Using data folder " + data_path);
 
@@ -180,13 +181,10 @@ public class Main implements Runnable {
 
       while (!Thread.interrupted()) {
         try {
-          Socket socket = server.accept();
-          socketmanager.add(socket);
-
-          // Kick off the thread to read input
-          Thread socketHandlerThread = new Thread(new SocketHandler(socket, receivers), "socketlistener");
-          socketHandlerThread.start();
-
+          AFUNIXSocket socket = server.accept();
+          AFUNIXSocketCredentials credentials = socket.getPeerCredentials();
+          logger.debug("Connection from pid " + credentials.getPid() + " uid " + credentials.getUid());
+          new Thread(new ClientConnection(socket), "connection-pid-" + credentials.getPid()).start();
         } catch (IOException e) {
           logger.catching(e);
         }

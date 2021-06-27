@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,9 +17,9 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.exceptions.JsonifyableException;
+import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 
-public class RequestProcessingError extends JsonifyableException {
+public class RequestProcessingError extends ExceptionWrapper {
   public String type;
   public String message;
 

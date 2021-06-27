@@ -19,11 +19,11 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 
-@SignaldClientRequest(type = "list_accounts")
+@ProtocolType("list_accounts")
 @Doc("return all local accounts")
 public class ListAccountsRequest implements RequestType<AccountList> {
   @Override

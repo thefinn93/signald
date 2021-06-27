@@ -20,13 +20,13 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidRecipientException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
@@ -37,7 +37,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 @Doc("reset a session with a particular user")
-@SignaldClientRequest(type = "reset_session")
+@ProtocolType("reset_session")
 public class ResetSessionRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
   @Doc("the user to reset session with") @Required public JsonAddress address;
@@ -46,14 +46,21 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request)
-      throws SQLException, IOException, NoSuchAccountException, UnknownGroupException, InvalidRecipientException, GroupNotFoundException, NotAGroupMemberException {
-    Manager m = Manager.get(account);
+      throws SQLException, IOException, NoSuchAccount, UnknownGroupException, InvalidRecipientException, GroupNotFoundException, NotAGroupMemberException {
+    Manager m = Utils.getManager(account);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
     if (timestamp == null) {
       timestamp = System.currentTimeMillis();
     }
     messageBuilder.withTimestamp(timestamp);
-    List<SendMessageResult> results = m.send(messageBuilder, address, null);
+    List<SendMessageResult> results = null;
+    try {
+      results = m.send(messageBuilder, address, null);
+    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
+      throw new InvalidRecipientException();
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupException();
+    }
     return new SendResponse(results, timestamp);
   }
 }

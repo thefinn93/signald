@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.ExampleValue;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -35,7 +35,7 @@ public class JsonSentTranscriptMessage {
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException, SQLException {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccount, SQLException {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }

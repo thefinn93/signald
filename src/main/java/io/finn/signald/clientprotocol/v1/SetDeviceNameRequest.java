@@ -22,25 +22,25 @@ import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.db.AccountDataTable;
-import io.finn.signald.exceptions.NoSuchAccountException;
 
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "set_device_name")
+@ProtocolType("set_device_name")
 @Doc("set this device's name. This will show up on the mobile device on the same account under ")
 public class SetDeviceNameRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to set the device name of") @Required public String account;
 
   @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException {
-    Manager m = Manager.get(account);
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount {
+    Manager m = Utils.getManager(account);
     AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
     m.refreshAccount();
     return new Empty();

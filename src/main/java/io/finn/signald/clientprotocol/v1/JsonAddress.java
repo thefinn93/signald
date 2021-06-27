@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,8 +42,8 @@ public class JsonAddress {
 
   public JsonAddress(String n, UUID uuid) {
     if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
-      logger.warn(
-          "Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
+      logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration "
+                  + "issue in signald, do not rely on this behavior when using the socket API)");
       uuid = UUID.fromString(n);
     } else {
       number = n;
@@ -75,8 +75,8 @@ public class JsonAddress {
     if (address.getNumber().isPresent()) {
       String n = address.getNumber().get();
       if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
-        logger.warn(
-            "Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration issue in signald, do not rely on this behavior when using the socket API)");
+        logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration "
+                    + "issue in signald, do not rely on this behavior when using the socket API)");
         uuid = n;
       } else {
         number = n;

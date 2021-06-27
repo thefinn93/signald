@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.*;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -51,14 +51,14 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccountException, SQLException {
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccount, SQLException {
     this.username = username;
 
     if (envelope.hasServerGuid()) {
       uuid = envelope.getServerGuid();
     }
 
-    Manager m = Manager.get(username);
+    Manager m = Utils.getManager(username);
     if (envelope.hasSource()) {
       source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
     } else if (c != null) {

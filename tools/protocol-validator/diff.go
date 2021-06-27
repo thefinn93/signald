@@ -49,11 +49,11 @@ func checkDiff() (response checkOutput, err error) {
 			} else {
 				if c.Deprecated != t.Deprecated {
 					fmt.Println(aurora.Blue(version + "." + typeName + " has changed deprecated status"))
-					stringDiff(strconv.FormatBool(t.Deprecated), strconv.FormatBool(t.Deprecated))
+					stringDiff(strconv.FormatBool(c.Deprecated), strconv.FormatBool(t.Deprecated))
 				}
 				if c.Doc != t.Doc {
 					fmt.Println(aurora.Blue(version + "." + typeName + " has changed its doc string"))
-					stringDiff(t.Doc, c.Doc)
+					stringDiff(c.Doc, t.Doc)
 				}
 			}
 			for fieldName, field := range t.Fields {
@@ -102,19 +102,33 @@ func checkDiff() (response checkOutput, err error) {
 	}
 
 	for version, types := range current.Types {
-		if _, ok := protocol.Types[version]; !ok {
-			// new version
-			response.failures = append(response.failures, "removed version: "+version)
+		v, ok := protocol.Types[version]
+		if !ok {
+			if version == "v0" {
+				response.warnings = append(response.warnings, "Version "+version+". removed")
+			} else {
+				response.failures = append(response.failures, "Version "+version+". removed")
+			}
 		}
 		for typeName, t := range types {
-			if _, ok := protocol.Types[version][typeName]; !ok {
-				// new action
-				response.failures = append(response.failures, "removed type: "+version+"."+typeName)
+			oldType, ok := v[typeName]
+			if !ok {
+				if version == "v0" {
+					response.warnings = append(response.warnings, "removed type: "+version+"."+typeName)
+				} else {
+					response.failures = append(response.failures, "removed type: "+version+"."+typeName)
+				}
+
 			}
 			for fieldName := range t.Fields {
-				_, ok := protocol.Types[version][typeName].Fields[fieldName]
+				_, ok = oldType.Fields[fieldName]
 				if !ok {
-					response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+					if version == "v0" {
+						response.warnings = append(response.warnings, "field in "+version+"."+typeName+" removed: "+fieldName)
+					} else {
+						response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+					}
+					continue
 				}
 			}
 		}

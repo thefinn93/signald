@@ -44,7 +44,8 @@ public class BackgroundJobRunnerThread implements Runnable {
       try {
         job.run();
       } catch (Throwable t) {
-        logger.error("error running background job", t);
+        logger.warn("error running" + job.getClass().getName());
+        logger.debug(t);
       }
     }
   }

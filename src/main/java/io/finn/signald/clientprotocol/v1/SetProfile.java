@@ -18,21 +18,20 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
-import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.signal.zkgroup.InvalidInputException;
 
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "set_profile")
+@ProtocolType("set_profile")
 public class SetProfile implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The phone number of the account to use") @Required public String account;
 
@@ -45,9 +44,9 @@ public class SetProfile implements RequestType<Empty> {
   public String emoji;
 
   @Override
-  public Empty run(Request request) throws IOException, NoSuchAccountException, InvalidInputException, SQLException {
+  public Empty run(Request request) throws IOException, NoSuchAccount, InvalidInputException, SQLException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
-    Manager.get(account).setProfile(name, avatar, about, emoji);
+    Utils.getManager(account).setProfile(name, avatar, about, emoji);
     return new Empty();
   }
 }

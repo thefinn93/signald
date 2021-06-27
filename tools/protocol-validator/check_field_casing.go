@@ -14,7 +14,11 @@ func checkTypeFieldCasing(version, t, field string, _ DataType) (response checkO
 	for _, r := range field {
 		if unicode.IsUpper(r) {
 			m := fmt.Sprintf("[UpperCaseInFieldName] %s.%s has a field name with an upper case letter in it: %s", version, t, field)
-			response.failures = append(response.failures, m)
+			if version == "v0" {
+				response.warnings = append(response.warnings, m)
+			} else {
+				response.failures = append(response.failures, m)
+			}
 			break
 		}
 	}

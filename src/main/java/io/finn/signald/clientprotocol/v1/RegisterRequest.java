@@ -18,15 +18,14 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequired;
 import io.finn.signald.db.PendingAccountDataTable;
-import io.finn.signald.exceptions.CaptchaRequired;
 import io.finn.signald.util.KeyUtil;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -37,7 +36,7 @@ import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredExcep
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "register")
+@ProtocolType("register")
 @Doc("begin the account registration process by requesting a phone number verification code. when the code is received, submit it with a verify request")
 public class RegisterRequest implements RequestType<Account> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("the e164 phone number to register with") @Required public String account;
@@ -47,7 +46,7 @@ public class RegisterRequest implements RequestType<Account> {
   @Doc("See https://signald.org/articles/captcha/") public String captcha;
 
   @Override
-  public Account run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidInputException, CaptchaRequired {
+  public Account run(Request request) throws SQLException, IOException, InvalidInputException, CaptchaRequired {
     Manager m = Manager.getPending(account);
 
     IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();

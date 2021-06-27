@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,6 @@
 
 package io.finn.signald.exceptions;
 
-public class InvalidRecipientException extends JsonifyableException {
+public class InvalidRecipientException extends Exception {
   public InvalidRecipientException() { super("request must specify either recipientGroupId or recipientAddress"); }
 }

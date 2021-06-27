@@ -20,13 +20,13 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.UnknownIdentityKey;
 import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.exceptions.InvalidRequestException;
-import io.finn.signald.exceptions.UnknownIdentityKey;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
@@ -37,7 +37,7 @@ import org.whispersystems.util.Base64;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@SignaldClientRequest(type = "trust")
+@ProtocolType("trust")
 @Doc("Trust another user's safety number using either the QR code data or the safety number text")
 public class TrustRequest implements RequestType<Empty> {
   private static final String FINGERPRINT_TYPE = "fingerprint-type";
@@ -56,8 +56,8 @@ public class TrustRequest implements RequestType<Empty> {
   public String trustLevel = "TRUSTED_VERIFIED";
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccountException, InvalidRequestException, FingerprintVersionMismatchException,
-                                           FingerprintParsingException, UnknownIdentityKey, InvalidAddressException, InvalidKeyException {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidRequestException, FingerprintVersionMismatchException, FingerprintParsingException,
+                                           UnknownIdentityKey, InvalidAddressException, InvalidKeyException {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());
@@ -65,8 +65,7 @@ public class TrustRequest implements RequestType<Empty> {
       throw new InvalidRequestException("invalid trust_level: " + trustLevel);
     }
 
-    Manager m = Manager.get(account);
-
+    Manager m = Utils.getManager(account);
     SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
 
     boolean result;

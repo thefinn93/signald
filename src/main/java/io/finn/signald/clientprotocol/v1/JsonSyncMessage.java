@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.*;
-import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 import java.io.IOException;
@@ -41,19 +41,27 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException, SQLException {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccount, SQLException {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
     }
 
     if (syncMessage.getContacts().isPresent()) {
       ContactsMessage c = syncMessage.getContacts().get();
-      contacts = new JsonAttachment(c.getContactsStream(), username);
+      try {
+        contacts = new JsonAttachment(c.getContactsStream(), username);
+      } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
+        throw new NoSuchAccount(e);
+      }
       contactsComplete = c.isComplete();
     }
 
     if (syncMessage.getGroups().isPresent()) {
-      groups = new JsonAttachment(syncMessage.getGroups().get(), username);
+      try {
+        groups = new JsonAttachment(syncMessage.getGroups().get(), username);
+      } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
+        throw new NoSuchAccount(e);
+      }
     }
 
     if (syncMessage.getBlockedList().isPresent()) {

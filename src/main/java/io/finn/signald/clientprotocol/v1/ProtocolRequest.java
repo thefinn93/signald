@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,16 +26,12 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.finn.signald.Empty;
 import io.finn.signald.JsonAccountList;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
+import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
@@ -44,10 +40,9 @@ import java.util.UUID;
 
 import static io.finn.signald.util.RequestUtil.requestTypes;
 
-@SignaldClientRequest(type = "protocol")
+@ProtocolType("protocol")
 public class ProtocolRequest implements RequestType<JsonNode> {
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
-  private static final Logger logger = LogManager.getLogger();
 
   // the version of the protocol documentation format
   public static final String docVersion = "v1";
@@ -60,23 +55,27 @@ public class ProtocolRequest implements RequestType<JsonNode> {
 
   public static JsonNode GetProtocolDocumentation() throws JsonMappingException {
     ObjectNode actions = JsonNodeFactory.instance.objectNode();
-    List<Class> uncheckedTypes = new ArrayList<>();
+    List<Class<?>> uncheckedTypes = new ArrayList<>();
 
     // some classes not referenced by any currently documented request or reply
     uncheckedTypes.add(JsonMessageEnvelope.class);
     uncheckedTypes.add(JsonAccountList.class);
+    uncheckedTypes.add(IncomingMessage.class);
+    uncheckedTypes.add(ListenerState.class);
+    uncheckedTypes.add(ClientMessageWrapper.class);
+    uncheckedTypes.add(io.finn.signald.clientprotocol.v0.JsonMessageEnvelope.class);
 
-    for (Class<? extends RequestType<?>> r : requestTypes) {
+    for (Class<? extends io.finn.signald.clientprotocol.RequestType<?>> r : requestTypes) {
       if (r == ProtocolRequest.class) {
         continue;
       }
-      SignaldClientRequest annotation = r.getAnnotation(SignaldClientRequest.class);
+      ProtocolType annotation = r.getAnnotation(ProtocolType.class);
 
       ObjectNode action = JsonNodeFactory.instance.objectNode();
       action.put("request", r.getSimpleName());
       uncheckedTypes.add(r);
 
-      Class responseType = (Class)((ParameterizedType)r.getGenericInterfaces()[0]).getActualTypeArguments()[0];
+      Class<?> responseType = (Class<?>)((ParameterizedType)r.getGenericInterfaces()[0]).getActualTypeArguments()[0];
       if (responseType != Empty.class) {
         action.put("response", responseType.getSimpleName());
         uncheckedTypes.add(responseType);
@@ -88,18 +87,19 @@ public class ProtocolRequest implements RequestType<JsonNode> {
 
       if (r.getAnnotation(Deprecated.class) != null) {
         action.put("deprecated", true);
+        action.put("removal_date", r.getAnnotation(Deprecated.class).value());
       }
 
       String version = RequestUtil.getVersion(r);
       ObjectNode versionedActions = actions.has(version) ? (ObjectNode)actions.get(version) : JsonNodeFactory.instance.objectNode();
-      versionedActions.set(annotation.type(), action);
+      versionedActions.set(annotation.value(), action);
       if (!actions.has(version)) {
         actions.set(version, versionedActions);
       }
     }
     ObjectNode types = JsonNodeFactory.instance.objectNode();
     while (uncheckedTypes.size() > 0) {
-      Class type = uncheckedTypes.remove(0);
+      Class<?> type = uncheckedTypes.remove(0);
       if (type == null) {
         continue;
       }
@@ -121,7 +121,7 @@ public class ProtocolRequest implements RequestType<JsonNode> {
     return response;
   }
 
-  static JsonNode scanObject(Class<?> type, List<Class> types) throws JsonMappingException {
+  static JsonNode scanObject(Class<?> type, List<Class<?>> types) throws JsonMappingException {
     ObjectNode output = JsonNodeFactory.instance.objectNode();
 
     PropertyVisitorWrapper v = new PropertyVisitorWrapper(types);
@@ -134,6 +134,7 @@ public class ProtocolRequest implements RequestType<JsonNode> {
 
     if (type.getAnnotation(Deprecated.class) != null) {
       output.put("deprecated", true);
+      output.put("removal_date", type.getAnnotation(Deprecated.class).value());
     }
 
     return output;
@@ -141,9 +142,9 @@ public class ProtocolRequest implements RequestType<JsonNode> {
 
   public static class PropertyVisitorWrapper extends JsonFormatVisitorWrapper.Base {
     ObjectNode response = JsonNodeFactory.instance.objectNode();
-    List<Class> types;
+    List<Class<?>> types;
 
-    PropertyVisitorWrapper(List<Class> t) { types = t; }
+    PropertyVisitorWrapper(List<Class<?>> t) { types = t; }
 
     public void addProperty(String key, JavaType t, Doc doc, ExampleValue exampleValue, boolean required) {
       ObjectNode property = JsonNodeFactory.instance.objectNode();
@@ -155,11 +156,9 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       }
 
       String typeName = type.getRawClass().getSimpleName();
-      switch (type.getRawClass().getSimpleName()) {
-      case "byte[]":
+      if ("byte[]".equals(type.getRawClass().getSimpleName())) {
         property.put("type", "String");
-        break;
-      default:
+      } else {
         property.put("type", typeName);
         String version = RequestUtil.getVersion(type.getRawClass());
         if (version != null) {
@@ -182,11 +181,11 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       response.set(key, property);
     }
 
-    private void addType(Class toAdd) {
+    private void addType(Class<?> toAdd) {
       if (toAdd == String.class || toAdd == long.class || toAdd == UUID.class || toAdd == Long.class || toAdd == int.class || toAdd == boolean.class || toAdd == byte[].class) {
         return;
       }
-      for (Class t : types) {
+      for (Class<?> t : types) {
         if (t == toAdd) {
           return;
         }
@@ -201,7 +200,7 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       return new ProtocolObjectFormatVisitor(this);
     }
 
-    public List<Class> getTypes() { return types; }
+    public List<Class<?>> getTypes() { return types; }
   }
 
   public static class ProtocolObjectFormatVisitor extends JsonObjectFormatVisitor.Base {
@@ -217,6 +216,9 @@ public class ProtocolRequest implements RequestType<JsonNode> {
 
     @Override
     public void optionalProperty(BeanProperty writer) {
+      if (writer.getAnnotation(ProtocolIgnore.class) != null) {
+        return;
+      }
       Doc doc = writer.getAnnotation(Doc.class);
       ExampleValue example = writer.getAnnotation(ExampleValue.class);
       boolean required = writer.getAnnotation(Required.class) != null;
@@ -229,10 +231,10 @@ public class ProtocolRequest implements RequestType<JsonNode> {
 
   public static class DocumentedRequest {
     String type;
-    Class<? extends RequestType> request;
-    Class response;
+    Class<? extends io.finn.signald.clientprotocol.RequestType<?>> request;
+    Class<?> response;
 
-    DocumentedRequest(String type, Class<? extends RequestType> request, Class response) {
+    DocumentedRequest(String type, Class<? extends io.finn.signald.clientprotocol.RequestType<?>> request, Class<?> response) {
       this.type = type;
       this.request = request;
       this.response = response;

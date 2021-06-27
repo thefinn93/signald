@@ -18,13 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.jobs.BackgroundJobRunnerThread;
-import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
-import io.finn.signald.annotations.SignaldClientRequest;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import org.apache.logging.log4j.LogManager;
@@ -33,7 +33,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@SignaldClientRequest(type = "list_contacts")
+@ProtocolType("list_contacts")
 public class ListContactsRequest implements RequestType<ProfileList> {
   private static final Logger logger = LogManager.getLogger();
 
