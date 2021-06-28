@@ -41,5 +41,5 @@ public @interface ExampleValue {
   String LOCAL_GROUP_AVATAR_PATH = "\"/var/lib/signald/avatars/group-EdSqI90cS0UomDpgUXOlCoObWvQOXlH5G3Z2d3f4ayE=\"";
   String GROUP_JOIN_URI = "\"https://signal.group/#CjQKINH_GZhXhfifTcnBkaKTNRxW-hHKnGSq-cJNyPVqHRp8EhDUB7zjKNEl0NaULhsqJCX3\"";
   String LINKING_URI = "\"tsdevice:/?uuid=jAaZ5lxLfh7zVw5WELd6-Q&pub_key=BfFbjSwmAgpVJBXUdfmSgf61eX3a%2Bq9AoxAVpl1HUap9\"";
-  String SAFETY_NUMBER = "\"37345 35585 86758 07668 05805 48714 98975 19432 47272 72741 60915 64451\"";
+  String SAFETY_NUMBER = "\"373453558586758076680580548714989751943247272727416091564451\"";
 }
