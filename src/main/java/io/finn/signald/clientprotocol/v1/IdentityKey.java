@@ -19,12 +19,13 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.db.IdentityKeysTable;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.util.Base64;
 
 public class IdentityKey {
-  @JsonProperty("safety_number") public String safetyNumber;
+  @ExampleValue(ExampleValue.SAFETY_NUMBER) @JsonProperty("safety_number") public String safetyNumber;
   @JsonProperty("qr_code_data") @Doc("base64-encoded QR code data") public String qrCodeData;
   @JsonProperty("trust_level") @Doc("One of TRUSTED_UNVERIFIED, TRUSTED_VERIFIED or UNTRUSTED") public String trustLevel;
   @Doc("the first time this identity key was seen") public long added;

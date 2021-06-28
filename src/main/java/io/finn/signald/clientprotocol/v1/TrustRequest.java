@@ -46,7 +46,11 @@ public class TrustRequest implements RequestType<Empty> {
 
   @Doc("The user to query identity keys for") @Required public JsonAddress address;
 
-  @ExactlyOneOfRequired(FINGERPRINT_TYPE) @JsonProperty("safety_number") @Doc("required if qr_code_data is absent") public String safetyNumber;
+  @ExampleValue(ExampleValue.SAFETY_NUMBER)
+  @ExactlyOneOfRequired(FINGERPRINT_TYPE)
+  @JsonProperty("safety_number")
+  @Doc("required if qr_code_data is absent")
+  public String safetyNumber;
 
   @ExactlyOneOfRequired(FINGERPRINT_TYPE) @JsonProperty("qr_code_data") @Doc("base64-encoded QR code data. required if safety_number is absent") public String qrCodeData;
 
