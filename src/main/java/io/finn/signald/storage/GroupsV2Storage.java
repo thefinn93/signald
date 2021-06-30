@@ -27,15 +27,14 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.util.GroupsUtil;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class GroupsV2Storage {
   public Map<Integer, JsonAuthCredential> credentials;

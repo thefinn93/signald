@@ -21,7 +21,6 @@ import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonGroupInfo;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.storage.GroupInfo;
-
 import java.util.ArrayList;
 import java.util.List;
 

@@ -19,7 +19,6 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.ProvisioningManager;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeoutException;

@@ -29,6 +29,14 @@ import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.util.RandomUtils;
@@ -40,15 +48,6 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.util.Base64;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class AccountData {

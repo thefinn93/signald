@@ -18,9 +18,8 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
-
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 
 @Deprecated(1641027661)
 public class JsonReceiptMessage {

@@ -26,10 +26,9 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 
 @Doc("Request other devices on the account send us their group list, syncable config and contact list.")
 @ProtocolType("request_sync")

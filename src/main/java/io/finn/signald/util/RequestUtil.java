@@ -19,7 +19,6 @@ package io.finn.signald.util;
 
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.v1.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;

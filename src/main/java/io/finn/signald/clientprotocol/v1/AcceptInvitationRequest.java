@@ -18,18 +18,22 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.Required;
 import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.VerificationFailedException;
@@ -41,11 +45,6 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 @ProtocolType("accept_invitation")
 @Doc("Accept a v2 group invitation. Note that you must have a profile name set to join groups.")

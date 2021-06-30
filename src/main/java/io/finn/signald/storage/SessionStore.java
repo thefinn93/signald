@@ -26,14 +26,13 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.SessionsTable;
 import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.JSONUtil;
+import java.io.IOException;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import java.io.IOException;
-import java.util.*;
 
 @JsonSerialize(using = SessionStore.SessionStoreSerializer.class)
 @JsonDeserialize(using = SessionStore.SessionStoreDeserializer.class)

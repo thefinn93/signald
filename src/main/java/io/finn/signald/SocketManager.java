@@ -20,17 +20,16 @@ package io.finn.signald;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.util.JSONUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
 class SocketManager {
   private final static ObjectMapper mapper = JSONUtil.GetMapper();

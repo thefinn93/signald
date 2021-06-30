@@ -24,16 +24,15 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 @Deprecated(1641027661)
 public class JsonMessageEnvelope {

@@ -17,15 +17,14 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.ExampleValue;
-import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class JsonSentTranscriptMessage {
   public JsonAddress destination;

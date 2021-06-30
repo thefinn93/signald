@@ -30,6 +30,10 @@ import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.VerificationFailedException;
@@ -37,11 +41,6 @@ import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @ProtocolType("leave_group")
 public class LeaveGroupRequest implements RequestType<GroupInfo> {

@@ -17,4 +17,6 @@
 
 package io.finn.signald.jobs;
 
-public interface Job { void run() throws Throwable; }
+public interface Job {
+  void run() throws Throwable;
+}

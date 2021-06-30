@@ -25,12 +25,11 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.GroupLinkNotActive;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
-
-import java.io.IOException;
-import java.sql.SQLException;
 
 @ProtocolType("group_link_info")
 @Doc("Get information about a group from a signal.group link")

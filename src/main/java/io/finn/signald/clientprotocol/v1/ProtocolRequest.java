@@ -17,6 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import static io.finn.signald.util.RequestUtil.requestTypes;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable;
@@ -26,19 +28,16 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.finn.signald.Empty;
 import io.finn.signald.JsonAccountList;
-import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.*;
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
-
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import static io.finn.signald.util.RequestUtil.requestTypes;
 
 @ProtocolType("protocol")
 public class ProtocolRequest implements RequestType<JsonNode> {

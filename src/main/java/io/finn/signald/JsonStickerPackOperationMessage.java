@@ -18,8 +18,8 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
 import org.thoughtcrime.securesms.util.Hex;
+import org.whispersystems.signalservice.api.messages.multidevice.StickerPackOperationMessage;
 
 @Deprecated(1641027661)
 public class JsonStickerPackOperationMessage {

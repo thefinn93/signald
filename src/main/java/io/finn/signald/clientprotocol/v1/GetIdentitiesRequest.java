@@ -18,21 +18,20 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.exceptions.InvalidAddressException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("Get information about a known keys for a particular address")
 @ProtocolType("get_identities")

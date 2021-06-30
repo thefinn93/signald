@@ -17,6 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
+
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
@@ -27,6 +29,8 @@ import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
@@ -35,11 +39,6 @@ import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
 @ProtocolType("update_group")
 @Doc("modify a group. Note that only one modification action may be preformed at once")

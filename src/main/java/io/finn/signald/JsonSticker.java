@@ -19,11 +19,10 @@ package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
 import java.io.IOException;
 import java.sql.SQLException;
+import org.thoughtcrime.securesms.util.Hex;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @Deprecated(1641027661)
 public class JsonSticker {

@@ -18,7 +18,6 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-
 import java.util.ArrayList;
 import java.util.List;
 

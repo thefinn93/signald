@@ -19,9 +19,8 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
-
 import java.io.File;
+import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 
 public class SignalProfile {
 

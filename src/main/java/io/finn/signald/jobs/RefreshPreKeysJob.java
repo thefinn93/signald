@@ -17,18 +17,17 @@
 
 package io.finn.signald.jobs;
 
-import io.finn.signald.Manager;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.db.AccountDataTable;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
 
+import io.finn.signald.Manager;
+import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class RefreshPreKeysJob implements Job {
   public static long INTERVAL = TimeUnit.DAYS.toMillis(3);

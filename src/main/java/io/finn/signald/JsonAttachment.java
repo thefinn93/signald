@@ -20,14 +20,13 @@ package io.finn.signald;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import java.io.File;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.util.Base64;
-
-import java.io.File;
-import java.io.IOException;
-import java.sql.SQLException;
 
 @Deprecated(1641027661)
 public class JsonAttachment {

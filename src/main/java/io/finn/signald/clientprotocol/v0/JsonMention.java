@@ -20,9 +20,8 @@ package io.finn.signald.clientprotocol.v0;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
 import java.util.UUID;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @Deprecated(1641027661)
 public class JsonMention {

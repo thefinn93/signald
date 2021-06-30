@@ -18,6 +18,11 @@
 package io.finn.signald.db;
 
 import io.finn.signald.exceptions.InvalidAddressException;
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
@@ -27,12 +32,6 @@ import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceProtocolStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import java.sql.SQLException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   private final PreKeysTable preKeys;

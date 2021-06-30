@@ -1,3 +1,4 @@
+# clang-format: 11
 ---
 Language: Java
 ColumnLimit: 180

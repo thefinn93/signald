@@ -24,6 +24,10 @@ import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import java.io.*;
+import java.nio.file.Files;
+import java.sql.SQLException;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
@@ -33,11 +37,6 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
-
-import java.io.*;
-import java.nio.file.Files;
-import java.sql.SQLException;
-import java.util.List;
 
 public class SendContactsSyncJob implements Job {
   private static final Logger logger = LogManager.getLogger();

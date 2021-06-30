@@ -27,14 +27,13 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequired;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.util.KeyUtil;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
-
-import java.io.IOException;
-import java.sql.SQLException;
 
 @ProtocolType("register")
 @Doc("begin the account registration process by requesting a phone number verification code. when the code is received, submit it with a verify request")

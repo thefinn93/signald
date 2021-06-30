@@ -20,16 +20,15 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.*;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class JsonMessageEnvelope {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String username;

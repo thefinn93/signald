@@ -19,23 +19,22 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.jobs.BackgroundJobRunnerThread;
-import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ProfileUnavailable;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("Get all information available about a user")
 @ProtocolType("get_profile")

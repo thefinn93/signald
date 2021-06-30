@@ -19,12 +19,11 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.db.IdentityKeysTable;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class AllIdentityKeyList {
   @JsonProperty("identity_keys") List<IdentityKeyList> identityKeys;

@@ -17,14 +17,13 @@
 
 package io.finn.signald.db;
 
+import java.sql.*;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import java.sql.*;
-import java.util.UUID;
 
 public class MessageQueueTable {
   private static final Logger logger = LogManager.getLogger();

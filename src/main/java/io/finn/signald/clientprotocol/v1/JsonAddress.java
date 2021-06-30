@@ -22,12 +22,11 @@ import io.finn.signald.Util;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.storage.AddressResolver;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-
-import java.util.UUID;
 
 public class JsonAddress {
   private static final Logger logger = LogManager.getLogger();

@@ -17,19 +17,18 @@
 
 package io.finn.signald.db;
 
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.AddressUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.File;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class AccountsTable {
   private static final Logger logger = LogManager.getLogger();

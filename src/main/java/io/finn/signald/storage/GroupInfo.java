@@ -3,12 +3,11 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class GroupInfo {
   @JsonProperty public byte[] groupId;

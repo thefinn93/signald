@@ -18,9 +18,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
-import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
-
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 
 public class ReceiptMessage {
   @Doc("options: UNKNOWN, DELIVERY, READ, VIEWED") public String type;

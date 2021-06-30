@@ -20,16 +20,15 @@ package io.finn.signald.jobs;
 import io.finn.signald.Manager;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.GroupInfo;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class SendLegacyGroupUpdateJob implements Job {
   private final static Logger logger = LogManager.getLogger();

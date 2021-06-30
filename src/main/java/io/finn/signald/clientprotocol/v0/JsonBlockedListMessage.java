@@ -18,12 +18,11 @@
 package io.finn.signald.clientprotocol.v0;
 
 import io.finn.signald.annotations.Deprecated;
+import java.util.ArrayList;
+import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.BlockedListMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Deprecated(1641027661)
 public class JsonBlockedListMessage {

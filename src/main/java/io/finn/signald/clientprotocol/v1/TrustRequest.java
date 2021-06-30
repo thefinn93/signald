@@ -27,15 +27,14 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownIdentityKey;
 import io.finn.signald.exceptions.InvalidAddressException;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.sql.SQLException;
 
 @ProtocolType("trust")
 @Doc("Trust another user's safety number using either the QR code data or the safety number text")

@@ -21,12 +21,11 @@ import io.finn.signald.JsonAttachment;
 import io.finn.signald.JsonStickerPackOperationMessage;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import org.whispersystems.signalservice.api.messages.multidevice.*;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 @Deprecated(1641027661)
 public class JsonSyncMessage {

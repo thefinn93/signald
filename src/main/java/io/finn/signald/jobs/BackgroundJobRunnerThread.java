@@ -17,11 +17,10 @@
 
 package io.finn.signald.jobs;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class BackgroundJobRunnerThread implements Runnable {
   private static final Logger logger = LogManager.getLogger();

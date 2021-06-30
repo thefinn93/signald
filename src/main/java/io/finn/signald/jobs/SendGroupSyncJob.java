@@ -21,6 +21,8 @@ import io.finn.signald.Manager;
 import io.finn.signald.Util;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.GroupInfo;
+import java.io.*;
+import java.nio.file.Files;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -30,9 +32,6 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStre
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroupsOutputStream;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
-
-import java.io.*;
-import java.nio.file.Files;
 
 public class SendGroupSyncJob implements Job {
   private static final Logger logger = LogManager.getLogger();

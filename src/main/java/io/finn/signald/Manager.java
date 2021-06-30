@@ -16,16 +16,35 @@
  */
 package io.finn.signald;
 
+import static java.nio.file.attribute.PosixFilePermission.*;
+import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
+
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidAddressException;
+import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.*;
+import java.io.*;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -74,26 +93,6 @@ import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageExce
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
-
-import java.io.*;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-
-import static java.nio.file.attribute.PosixFilePermission.*;
-import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 public class Manager {
   private final Logger logger;
@@ -874,7 +873,9 @@ public class Manager {
     }
   }
 
-  public interface ReceiveMessageHandler { void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e); }
+  public interface ReceiveMessageHandler {
+    void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
+  }
 
   private List<Job> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, SignalServiceAddress source, SignalServiceAddress destination,
                                                    boolean ignoreAttachments) throws MissingConfigurationException, IOException, VerificationFailedException {

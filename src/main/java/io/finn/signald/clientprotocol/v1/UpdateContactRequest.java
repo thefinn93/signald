@@ -26,7 +26,6 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.storage.ContactStore;
-
 import java.io.IOException;
 import java.sql.SQLException;
 

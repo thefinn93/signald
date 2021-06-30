@@ -30,6 +30,13 @@ import io.finn.signald.Manager;
 import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.util.GroupsUtil;
+import java.io.*;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.GroupChange;
@@ -46,14 +53,6 @@ import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
-
-import java.io.*;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @JsonSerialize(using = Group.GroupSerializer.class)
 @JsonDeserialize(using = Group.GroupDeserializer.class)

@@ -17,12 +17,16 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
+
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -30,11 +34,6 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.sql.SQLException;
-
-import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 @ProtocolType("typing")
 @Doc("send a typing started or stopped message")

@@ -17,13 +17,12 @@
 
 package io.finn.signald.util;
 
-import org.whispersystems.signalservice.api.util.StreamDetails;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import org.whispersystems.signalservice.api.util.StreamDetails;
 
 public class AttachmentUtil {
   public static StreamDetails createStreamDetailsFromFile(File file) throws IOException {

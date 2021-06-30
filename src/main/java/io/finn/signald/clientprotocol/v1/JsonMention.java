@@ -19,9 +19,8 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
 import java.util.UUID;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 public class JsonMention {
   @ExampleValue(ExampleValue.REMOTE_UUID) @Doc("The UUID of the account being mentioned") public String uuid;

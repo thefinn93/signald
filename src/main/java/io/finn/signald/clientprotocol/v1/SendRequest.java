@@ -17,6 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
+
 import io.finn.signald.JsonAttachment;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
@@ -25,16 +27,6 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -44,8 +36,15 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
+import org.asamk.signal.AttachmentInvalidException;
+import org.asamk.signal.GroupNotFoundException;
+import org.asamk.signal.NotAGroupMemberException;
+import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.messages.SendMessageResult;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {

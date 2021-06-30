@@ -20,12 +20,11 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.util.AddressUtil;
+import java.util.ArrayList;
+import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class ContactStore {
   public List<ContactInfo> contacts = new ArrayList<>();

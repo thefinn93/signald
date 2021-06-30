@@ -18,7 +18,6 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-
 import java.net.URI;
 
 @Deprecated(1641027661)

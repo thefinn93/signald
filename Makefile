@@ -20,7 +20,7 @@ integrationTest:
 	$(GRADLE) integrationTest --info
 
 format:
-	find src/ -name '*.java' -exec clang-format -i {} \;
+	find src/ -name '*.java' -exec clang-format-11 -i {} \;
 
 setup:
 	sudo mkdir -p /var/run/signald

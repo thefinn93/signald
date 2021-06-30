@@ -21,12 +21,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.storage.AddressResolver;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-
-import java.util.UUID;
 
 @Deprecated(1641027661)
 public class JsonAddress {

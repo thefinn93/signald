@@ -20,4 +20,6 @@ package io.finn.signald.clientprotocol.v1;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AccountList { public List<Account> accounts = new ArrayList<>(); }
+public class AccountList {
+  public List<Account> accounts = new ArrayList<>();
+}

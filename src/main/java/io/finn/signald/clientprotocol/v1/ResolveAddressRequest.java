@@ -24,10 +24,9 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc(
     "Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience function for client authors, mostly because signald doesn't resolve all the partials it returns")

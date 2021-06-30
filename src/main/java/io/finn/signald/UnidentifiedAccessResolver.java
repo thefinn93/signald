@@ -17,11 +17,12 @@
 
 package io.finn.signald;
 
+import java.util.Collection;
+import java.util.List;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-import java.util.Collection;
-import java.util.List;
-
-public interface UnidentifiedAccessResolver { List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients); }
+public interface UnidentifiedAccessResolver {
+  List<Optional<UnidentifiedAccessPair>> getAccessFor(Collection<SignalServiceAddress> recipients);
+}

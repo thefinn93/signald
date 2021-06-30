@@ -17,6 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
+
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
@@ -24,6 +26,9 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.VerificationFailedException;
@@ -31,12 +36,6 @@ import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
-
-import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 @ProtocolType("set_expiration")
 @Doc("Set the message expiration timer for a thread. Expiration must be specified in seconds, set to 0 to disable timer")

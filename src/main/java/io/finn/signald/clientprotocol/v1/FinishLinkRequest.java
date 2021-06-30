@@ -25,13 +25,12 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchSession;
-import org.asamk.signal.UserAlreadyExists;
-import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.InvalidKeyException;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
+import org.asamk.signal.UserAlreadyExists;
+import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 @Doc("After a linking URI has been requested, finish_link must be called with the session_id provided with the URI. "
      + "it will return information about the new account once the linking process is completed by the other device.")

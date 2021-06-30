@@ -17,4 +17,6 @@
 
 package io.finn.signald.clientprotocol;
 
-public interface RequestType<T> { T run(Request request) throws Throwable; }
+public interface RequestType<T> {
+  T run(Request request) throws Throwable;
+}

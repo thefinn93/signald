@@ -17,9 +17,8 @@
 
 package io.finn.signald;
 
-import org.whispersystems.signalservice.api.push.TrustStore;
-
 import java.io.InputStream;
+import org.whispersystems.signalservice.api.push.TrustStore;
 
 class WhisperTrustStore implements TrustStore {
   @Override

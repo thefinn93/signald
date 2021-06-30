@@ -21,11 +21,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.util.SafetyNumberHelper;
-import org.whispersystems.libsignal.fingerprint.Fingerprint;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.libsignal.fingerprint.Fingerprint;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("a list of identity keys associated with a particular address")
 public class IdentityKeyList {

@@ -25,14 +25,13 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.ecc.ECPrivateKey;
 
 @ProtocolType("get_linked_devices")
 @Doc("list all linked devices on a Signal account")

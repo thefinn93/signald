@@ -21,6 +21,10 @@ import io.finn.signald.Manager;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.storage.SignalProfile;
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
@@ -31,11 +35,6 @@ import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();

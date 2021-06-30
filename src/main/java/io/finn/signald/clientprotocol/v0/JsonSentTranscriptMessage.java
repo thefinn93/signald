@@ -20,13 +20,12 @@ package io.finn.signald.clientprotocol.v0;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Deprecated(1641027661)
 public class JsonSentTranscriptMessage {

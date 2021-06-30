@@ -18,10 +18,9 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
-
 import java.util.List;
 import java.util.stream.Collectors;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 
 public class CallMessage {
   @JsonProperty("offer_message") public OfferMessage offerMessage;

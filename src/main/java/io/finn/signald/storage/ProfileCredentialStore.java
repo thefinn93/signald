@@ -18,14 +18,13 @@
 package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 public class ProfileCredentialStore {
   private static boolean unsaved = false;

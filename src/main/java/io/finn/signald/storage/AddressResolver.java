@@ -17,9 +17,8 @@
 
 package io.finn.signald.storage;
 
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.util.Collection;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 // Based on signal-cli's SignalServiceAddressResolver
 public interface AddressResolver {

@@ -19,14 +19,13 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
-
+import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import java.io.IOException;
 import java.sql.SQLException;
 

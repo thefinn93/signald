@@ -26,10 +26,9 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import org.whispersystems.libsignal.InvalidKeyException;
-
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 @Doc("get all known identity keys")
 @ProtocolType("get_all_identities")

@@ -28,11 +28,10 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
-import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
-
 import java.io.IOException;
 import java.sql.SQLException;
+import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 @ProtocolType("get_group")
 @Doc("Query the server for the latest state of a known group")

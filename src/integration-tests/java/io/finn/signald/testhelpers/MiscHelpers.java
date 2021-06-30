@@ -1,14 +1,12 @@
 package io.finn.signald.testhelpers;
 
-import okhttp3.OkHttpClient;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
-import okhttp3.Request;
-import okhttp3.Response;
-
-import java.io.IOException;
-
 import io.finn.signald.BuildConfig;
+import java.io.IOException;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class MiscHelpers {
 

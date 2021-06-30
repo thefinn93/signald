@@ -25,11 +25,10 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.signal.zkgroup.InvalidInputException;
-
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.signal.zkgroup.InvalidInputException;
 
 @ProtocolType("set_profile")
 public class SetProfile implements RequestType<Empty> {

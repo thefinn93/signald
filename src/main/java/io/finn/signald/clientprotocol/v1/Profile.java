@@ -22,9 +22,8 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.io.File;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("Information about a Signal user")
 public class Profile {

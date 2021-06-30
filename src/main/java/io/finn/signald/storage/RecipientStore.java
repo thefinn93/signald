@@ -25,15 +25,14 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.JSONUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @JsonSerialize(using = RecipientStore.RecipientStoreSerializer.class)
 @JsonDeserialize(using = RecipientStore.RecipientStoreDeserializer.class)

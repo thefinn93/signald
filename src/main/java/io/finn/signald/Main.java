@@ -25,6 +25,14 @@ import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
+import java.io.File;
+import java.io.IOException;
+import java.net.SocketException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.Security;
+import java.util.regex.Pattern;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,15 +50,6 @@ import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.SocketException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.Security;
-import java.util.regex.Pattern;
 
 @Command(name = BuildConfig.NAME, mixinStandardHelpOptions = true, version = BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {

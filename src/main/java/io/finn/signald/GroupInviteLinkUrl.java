@@ -18,16 +18,14 @@
 package io.finn.signald;
 
 import com.google.protobuf.ByteString;
-
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.whispersystems.util.Base64UrlSafe;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 public final class GroupInviteLinkUrl {
 

@@ -19,12 +19,11 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.*;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.whispersystems.signalservice.api.messages.multidevice.*;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 public class JsonSyncMessage {
   public JsonSentTranscriptMessage sent;

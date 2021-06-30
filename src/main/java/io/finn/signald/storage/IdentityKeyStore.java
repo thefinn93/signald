@@ -24,6 +24,9 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.util.AddressUtil;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
@@ -33,10 +36,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.*;
 
 public class IdentityKeyStore implements org.whispersystems.libsignal.state.IdentityKeyStore {
   private static final Logger logger = LogManager.getLogger();

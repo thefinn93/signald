@@ -18,11 +18,10 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
-import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class SendDeliveryReceiptJob implements Job {
 

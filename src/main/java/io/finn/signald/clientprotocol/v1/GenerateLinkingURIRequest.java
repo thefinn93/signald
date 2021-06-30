@@ -22,7 +22,6 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.TimeoutException;

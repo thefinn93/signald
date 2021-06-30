@@ -27,14 +27,13 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidRecipientException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
 
 @Doc("reset a session with a particular user")
 @ProtocolType("reset_session")

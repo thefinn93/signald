@@ -27,11 +27,10 @@ import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @ProtocolType("list_contacts")
 public class ListContactsRequest implements RequestType<ProfileList> {

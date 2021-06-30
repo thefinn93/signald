@@ -17,6 +17,9 @@
 
 package io.finn.signald.clientprotocol;
 
+import static io.finn.signald.util.RequestUtil.getVersion;
+import static io.finn.signald.util.RequestUtil.requestTypes;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,15 +30,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.JsonMessageWrapper;
-import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.*;
+import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.*;
 import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -44,9 +44,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static io.finn.signald.util.RequestUtil.getVersion;
-import static io.finn.signald.util.RequestUtil.requestTypes;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Request {
   public static final Map<String, Map<String, Class<? extends RequestType>>> requests = getRequests();

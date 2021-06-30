@@ -19,7 +19,6 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-
 import java.io.IOException;
 import java.sql.SQLException;
 

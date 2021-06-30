@@ -22,10 +22,9 @@ import io.finn.signald.JsonQuotedAttachment;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @Doc("A quote is a reply to a previous message. ID is the sent time of the message being replied to")
 @Deprecated(1641027661)

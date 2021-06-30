@@ -17,11 +17,10 @@
 
 package io.finn.signald;
 
-import org.whispersystems.util.Base64;
-
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import org.whispersystems.util.Base64;
 
 public class Util {
   public static String getSecret(int size) {

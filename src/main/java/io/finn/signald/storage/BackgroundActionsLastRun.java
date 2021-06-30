@@ -17,12 +17,11 @@
 
 package io.finn.signald.storage;
 
-import io.finn.signald.db.AccountDataTable;
+import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
 
+import io.finn.signald.db.AccountDataTable;
 import java.sql.SQLException;
 import java.util.UUID;
-
-import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
 
 public class BackgroundActionsLastRun {
   public long lastPreKeyRefresh;

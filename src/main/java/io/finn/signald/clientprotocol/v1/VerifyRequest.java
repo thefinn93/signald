@@ -25,13 +25,12 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.internal.push.LockedException;
-
-import java.io.IOException;
-import java.sql.SQLException;
 
 @ProtocolType("verify")
 @Doc("verify an account's phone number with a code after registering, completing the account creation process")

@@ -23,14 +23,13 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.db.PreKeysTable;
+import java.io.IOException;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.util.Base64;
-
-import java.io.IOException;
-import java.util.*;
 
 @JsonDeserialize(using = PreKeyStore.JsonPreKeyStoreDeserializer.class)
 @JsonSerialize(using = PreKeyStore.JsonPreKeyStoreSerializer.class)

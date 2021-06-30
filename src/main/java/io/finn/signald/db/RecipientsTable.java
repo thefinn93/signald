@@ -20,11 +20,6 @@ package io.finn.signald.db;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.util.AddressUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,6 +28,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.util.Pair;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class RecipientsTable implements AddressResolver {
   private static final Logger logger = LogManager.getLogger();

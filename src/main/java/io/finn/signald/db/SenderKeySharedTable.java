@@ -17,11 +17,6 @@
 
 package io.finn.signald.db;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.signalservice.api.push.DistributionId;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,6 +24,10 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.signalservice.api.push.DistributionId;
 
 public class SenderKeySharedTable {
   private static final Logger logger = LogManager.getLogger();

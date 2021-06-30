@@ -24,11 +24,10 @@ import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.PreKeysTable;
 import io.finn.signald.db.SessionsTable;
 import io.finn.signald.db.SignedPreKeysTable;
-import org.whispersystems.libsignal.IdentityKeyPair;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
+import org.whispersystems.libsignal.IdentityKeyPair;
 
 public class SignalProtocolStore {
   @JsonIgnore public PreKeysTable preKeys;

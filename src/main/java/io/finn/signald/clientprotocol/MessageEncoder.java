@@ -17,11 +17,10 @@
 
 package io.finn.signald.clientprotocol;
 
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-
 import java.io.IOException;
 import java.net.Socket;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
 public interface MessageEncoder {
   void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException;

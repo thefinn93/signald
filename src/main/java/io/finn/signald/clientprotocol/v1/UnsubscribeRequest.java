@@ -25,7 +25,6 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-
 import java.io.IOException;
 import java.sql.SQLException;
 

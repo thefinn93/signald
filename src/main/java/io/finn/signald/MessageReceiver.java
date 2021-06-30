@@ -19,6 +19,11 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import java.io.IOException;
+import java.net.Socket;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.InvalidMetadataMessageException;
@@ -29,12 +34,6 @@ import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-
-import java.io.IOException;
-import java.net.Socket;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   final String username;
@@ -205,6 +204,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
     public void broadcastListenStopped(Throwable exception) { broadcast(r -> r.broadcastListenStopped(exception)); }
 
-    private interface broadcastMessage { void broadcast(MessageEncoder r) throws IOException; }
+    private interface broadcastMessage {
+      void broadcast(MessageEncoder r) throws IOException;
+    }
   }
 }

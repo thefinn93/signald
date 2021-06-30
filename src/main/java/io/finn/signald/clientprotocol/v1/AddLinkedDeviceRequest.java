@@ -26,13 +26,12 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.InvalidKeyException;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("add_device")
 @Doc("Link a new device to a local Signal account")
