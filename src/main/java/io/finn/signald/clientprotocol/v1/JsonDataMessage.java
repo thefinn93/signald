@@ -45,7 +45,9 @@ public class JsonDataMessage {
 
   @Doc("if the incoming message was sent to a v1 group, information about that group will be here") public JsonGroupInfo group;
 
-  @Doc("is the incoming message was sent to a v2 group, basic identifying information about that group will be here. For full information, use list_groups")
+  @Doc("if the incoming message was sent to a v2 group, basic identifying information about that group will be here. "
+       + "If group information changes, JsonGroupV2Info.revision is incremented. If the group revision is higher than "
+       + "previously seen, a client can retrieve the group information by calling get_group.")
   public JsonGroupV2Info groupV2;
 
   public boolean endSession;
