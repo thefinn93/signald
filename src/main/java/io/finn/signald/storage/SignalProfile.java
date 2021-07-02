@@ -20,7 +20,9 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.File;
+import java.io.IOException;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class SignalProfile {
 
@@ -42,7 +44,10 @@ public class SignalProfile {
 
   @JsonProperty private final String emoji;
 
-  public SignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess) {
+  @JsonProperty private final PaymentAddress paymentAddress;
+
+  public SignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess,
+                       final SignalServiceProtos.PaymentAddress paymentAddress) {
     this.identityKey = encryptedProfile.getIdentityKey();
     this.name = name;
     this.avatarFile = avatarFile;
@@ -51,12 +56,17 @@ public class SignalProfile {
     this.capabilities = new Capabilities(encryptedProfile.getCapabilities());
     this.about = about;
     this.emoji = aboutEmoji;
+    if (paymentAddress != null) {
+      this.paymentAddress = new PaymentAddress(paymentAddress);
+    } else {
+      this.paymentAddress = null;
+    }
   }
 
   public SignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
                        @JsonProperty("unidentifiedAccess") final String unidentifiedAccess,
                        @JsonProperty("unrestrictedUnidentifiedAccess") final boolean unrestrictedUnidentifiedAccess, @JsonProperty("capabilities") final Capabilities capabilities,
-                       @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji) {
+                       @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji, @JsonProperty("paymentAddress") final PaymentAddress paymentAddress) {
     this.identityKey = identityKey;
     this.name = name;
     this.avatarFile = null;
@@ -65,6 +75,7 @@ public class SignalProfile {
     this.capabilities = capabilities;
     this.about = about;
     this.emoji = emoji;
+    this.paymentAddress = paymentAddress;
   }
 
   public String getIdentityKey() { return identityKey; }
@@ -82,6 +93,14 @@ public class SignalProfile {
   public boolean isUnrestrictedUnidentifiedAccess() { return unrestrictedUnidentifiedAccess; }
 
   public Capabilities getCapabilities() { return capabilities; }
+
+  @JsonIgnore
+  public SignalServiceProtos.PaymentAddress getPaymentAddress() throws IOException {
+    if (paymentAddress == null) {
+      return null;
+    }
+    return paymentAddress.get();
+  }
 
   @Override
   public String toString() {

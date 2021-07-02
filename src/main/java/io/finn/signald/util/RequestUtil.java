@@ -67,7 +67,8 @@ public class RequestUtil {
       RemoteDeleteRequest.class,                                                                                         // v1        remote_delete
       AddServerRequest.class,                                                                                            // v1        add_server
       GetServersRequest.class,                                                                                           // v1        get_servers
-      RemoveServerRequest.class                                                                                          // v1        remove_server
+      RemoveServerRequest.class,                                                                                         // v1        remove_server
+      SendPaymentRequest.class                                                                                           // v1        send_payment
   );
 
   public static String getVersion(Class<?> t) {

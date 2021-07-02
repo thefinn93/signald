@@ -1716,7 +1716,17 @@ public class Manager {
     } catch (IOException e) {
       unidentifiedAccess = null;
     }
-    return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess);
+
+    SignalServiceProtos.PaymentAddress paymentAddress = null;
+    byte[] encryptedPaymentsAddress = encryptedProfile.getPaymentAddress();
+    if (encryptedPaymentsAddress != null) {
+      try {
+        byte[] decrypted = profileCipher.decryptWithLength(encryptedPaymentsAddress);
+        paymentAddress = SignalServiceProtos.PaymentAddress.parseFrom(decrypted);
+      } catch (InvalidCiphertextException e) {
+      }
+    }
+    return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess, paymentAddress);
   }
 
   private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {

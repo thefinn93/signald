@@ -23,10 +23,16 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
 import java.io.File;
+import java.io.IOException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.util.Base64;
 
 @Doc("Information about a Signal user")
 public class Profile {
+  private static final Logger logger = LogManager.getLogger();
   @Doc("The user's name from local contact names if available, or if not in contact list their Signal profile name") public String name;
   @Doc("The user's Signal profile name") @JsonProperty("profile_name") public String profileName;
   @Doc("path to avatar on local disk") public String avatar;
@@ -37,6 +43,12 @@ public class Profile {
   @JsonProperty("expiration_time") public int expirationTime;
   public String about;
   public String emoji;
+
+  @Doc("*base64-encoded* mobilecoin address. Note that this is not the traditional MobileCoin address encoding. Clients "
+       + "are responsible for converting between MobileCoin's custom base58 on the user-facing side and base64 encoding "
+       + "on the signald side. If unset, null or an empty string, will empty the profile payment address")
+  @JsonProperty("mobilecoin_address")
+  public String mobileCoinAddress;
 
   public Profile(ContactStore.ContactInfo contact) {
     if (contact != null) {
@@ -56,6 +68,15 @@ public class Profile {
       capabilities = new Capabilities(profile.getCapabilities());
       about = profile.getAbout();
       emoji = profile.getEmoji();
+
+      try {
+        SignalServiceProtos.PaymentAddress paymentAddress = profile.getPaymentAddress();
+        if (paymentAddress != null) {
+          mobileCoinAddress = Base64.encodeBytes(paymentAddress.getMobileCoinAddress().getAddress().toByteArray());
+        }
+      } catch (IOException e) {
+        logger.warn("error decrypting payment profile address: " + e.getMessage());
+      }
     }
 
     if (address == null) {
