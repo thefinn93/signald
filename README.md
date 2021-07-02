@@ -51,16 +51,17 @@ the package is called `netcat-openbsd`. Connect to the signald control socket wi
 Type JSON requests on a single line and hit enter to send them.
 
 ## Socket protocol.
-Each message sent to the socket must be valid JSON and have a `type` field and `version` field. All messages may
-optionally include an `id` field. When signald follows up on a previous request, it will include an `id` field with the
-same string provided in the request. Most requests (but not all) require an `account` (or `username`) field, which is the
-phone number to use for the action, as multiple accounts (multiple numbers) can be registered to a single signald instance.
-The phone number must be in [E.164](https://en.wikipedia.org/wiki/E.164) format starting with a `+` character.
+Each message sent to the socket must be valid JSON and have a `type` field and `version` field. messages may optionally
+include an `id` field which will be sent back in the response ([more info](https://signald.org/articles/request-ids/)).
+Most requests (but not all) require an `account` or `username` field, which is the phone number to use for the action as
+multiple accounts (multiple numbers) can be registered to a single signald instance. The phone number must be in
+[E.164](https://en.wikipedia.org/wiki/E.164) format starting with a `+` character.
 
-What is represented below are legacy (`v0`) requests. New versions are being introduced, sometimes with
-added functionality. See [Protocol Versioning](https://signald.org/articles/protocol-versioning/) for more
-information. The v1 protocol is fully documented on [signald.org](https://signald.org/), which is automatically re-generated
-when signald is updated.
+Below are mostly legacy (`v0`) requests. New versions have been introduced, sometimes with added functionality. See
+[Protocol Versioning](https://signald.org/articles/protocol-versioning/) for more information. The new protocol is fully
+documented on [signald.org](https://signald.org/), which is automatically re-generated when signald is updated.
+
+**all v0 requests are deprecated and will be removed at the end of 2021**
 
 ### `send`
 Sends a signal message to another user or a group. Possible values are:
@@ -68,11 +69,11 @@ Sends a signal message to another user or a group. Possible values are:
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `username` | string | yes | The signal number you are sending *from*. |
-| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | no | The address you are sending to. Required if not sending to a group |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v0/JsonAddress/) | no | The address you are sending to. Required if not sending to a group |
 | `recipientGroupId` | string | no | The base64 encoded group ID to send to. Required if sending to a group |
 | `messageBody` | string | no | The text of the message. |
 | `attachments` | list of [`JsonAttachment`](https://signald.org/protocol/structures/v0/JsonAttachment/) | no | A list of attachments |
-| `quote` | [`JsonQuote`](https://signald.org/protocol/structures/v1/JsonQuote/) | no | The message to quote |
+| `quote` | [`JsonQuote`](https://signald.org/protocol/structures/v0/JsonQuote/) | no | The message to quote |
 | `timestamp` | int | no | The timestamp (in milliseconds) for the message, which also acts as the message identifier. Defaults to the current time. |
 
 ### `register`
@@ -103,7 +104,7 @@ Send a typing started message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the typing message. |
-| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to send typing message to. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v0/JsonAddress/) | yes | The full number to send typing message to. |
 | `recipientGroupId` | string | no | The base64 encoded group ID. |
 
 
@@ -114,7 +115,7 @@ Send a typing stopped message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the typing message. |
-| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number to send typing message to. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v0/JsonAddress/) | yes | The full number to send typing message to. |
 | `recipientGroupId` | string | no | The base64 encoded group ID. |
 
 
@@ -125,7 +126,7 @@ Mark a received message as "read" by sending a receipt message.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `username` | `string` | yes | The local account to use to send the read receipt. |
-| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes | The full number that sent the original message. |
+| `recipientAddress` | [`JsonAddress`](https://signald.org/protocol/structures/v0/JsonAddress/) | yes | The full number that sent the original message. |
 | `timestamps` | `list of numbers` | yes | The timestamps of the messages to mark as read. |
 | `when` | `number` | no | The timestamp of when the message was read. If omitted, defaults to the current time. |
 
@@ -187,7 +188,8 @@ in the bottom right and scan the QR code.
 
 ### `get_user`
 
-Checks whether a contact is currently registered with the server. Returns the contact's registration state.
+Checks if a phone number is currently registered with the server. Returns the number's registration state. The server
+heavily rate limits this endpoint, do not call it frequently.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
