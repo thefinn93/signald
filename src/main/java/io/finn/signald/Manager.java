@@ -57,6 +57,7 @@ import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -113,6 +114,7 @@ public class Manager {
   private static String dataPath;
   private static String attachmentsPath;
   private static String avatarsPath;
+  private static String stickersPath;
 
   private AccountData accountData;
 
@@ -236,6 +238,7 @@ public class Manager {
     dataPath = path + "/data";
     attachmentsPath = path + "/attachments";
     avatarsPath = path + "/avatars";
+    stickersPath = path + "/stickers";
   }
 
   public String getE164() { return accountData.username; }
@@ -995,6 +998,14 @@ public class Manager {
         jobs.add(j);
       }
     }
+
+    if (message.getSticker().isPresent()) {
+      DownloadStickerJob job = new DownloadStickerJob(this, message.getSticker().get());
+      if (job.needsDownload()) {
+        jobs.add(job);
+      }
+    }
+
     return jobs;
   }
 
@@ -1369,6 +1380,12 @@ public class Manager {
 
   public File getAttachmentFile(String attachmentId) { return new File(attachmentsPath, attachmentId); }
 
+  public static File getStickerFile(SignalServiceDataMessage.Sticker sticker) {
+    String packID = Hex.toStringCondensed(sticker.getPackId());
+    String stickerID = String.valueOf(sticker.getStickerId());
+    return new File(stickersPath + "/" + packID, stickerID);
+  }
+
   private File retrieveAttachment(SignalServiceAttachmentPointer pointer) throws IOException, InvalidMessageException, MissingConfigurationException {
     createPrivateDirectories(attachmentsPath);
     return retrieveAttachment(pointer, getAttachmentFile(pointer.getRemoteId().toString()), true);
@@ -1391,7 +1408,7 @@ public class Manager {
     return outputFile;
   }
 
-  private File retrieveAttachment(SignalServiceAttachmentPointer pointer, File outputFile, boolean storePreview)
+  public File retrieveAttachment(SignalServiceAttachmentPointer pointer, File outputFile, boolean storePreview)
       throws IOException, InvalidMessageException, MissingConfigurationException {
     if (storePreview && pointer.getPreview().isPresent()) {
       File previewFile = new File(outputFile + ".preview");

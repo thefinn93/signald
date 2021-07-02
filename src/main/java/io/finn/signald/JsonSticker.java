@@ -18,9 +18,6 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import java.io.IOException;
-import java.sql.SQLException;
 import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -30,11 +27,12 @@ public class JsonSticker {
   public String packKey;
   public int stickerID;
   public JsonAttachment attachment;
+  public String image;
 
-  public JsonSticker(SignalServiceDataMessage.Sticker sticker, String username) throws IOException, NoSuchAccountException, SQLException {
+  public JsonSticker(SignalServiceDataMessage.Sticker sticker) {
     packID = Hex.toStringCondensed(sticker.getPackId());
     packKey = Hex.toStringCondensed(sticker.getPackKey());
     stickerID = sticker.getStickerId();
-    attachment = new JsonAttachment(sticker.getAttachment(), username);
+    image = Manager.getStickerFile(sticker).getAbsolutePath();
   }
 }

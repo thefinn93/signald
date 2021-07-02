@@ -133,11 +133,7 @@ public class JsonDataMessage {
     }
 
     if (dataMessage.getSticker().isPresent()) {
-      try {
-        sticker = new JsonSticker(dataMessage.getSticker().get(), username);
-      } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
-        throw new NoSuchAccount(e);
-      }
+      sticker = new JsonSticker(dataMessage.getSticker().get());
     }
 
     viewOnce = dataMessage.isViewOnce();

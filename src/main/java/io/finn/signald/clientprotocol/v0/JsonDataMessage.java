@@ -117,7 +117,7 @@ public class JsonDataMessage {
     }
 
     if (dataMessage.getSticker().isPresent()) {
-      sticker = new JsonSticker(dataMessage.getSticker().get(), username);
+      sticker = new JsonSticker(dataMessage.getSticker().get());
     }
 
     viewOnce = dataMessage.isViewOnce();
