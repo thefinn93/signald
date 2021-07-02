@@ -51,6 +51,7 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
 
@@ -168,7 +169,7 @@ public class Group {
 
   private void fetchAvatar(Manager m) throws IOException {
     File avatarFile = m.getGroupAvatarFile(getGroupID());
-    if (avatarFile.exists() && lastAvatarFetch == revision) {
+    if (lastAvatarFetch == revision) {
       // group avatar has already been downloaded for this revision of the group
       return;
     }
@@ -181,6 +182,8 @@ public class Group {
       byte[] decryptedData = groupOperations.decryptAvatar(encryptedData);
       OutputStream outputStream = new FileOutputStream(avatarFile);
       outputStream.write(decryptedData);
+      lastAvatarFetch = revision;
+    } catch (NonSuccessfulResponseCodeException e) {
       lastAvatarFetch = revision;
     } finally {
       try {
