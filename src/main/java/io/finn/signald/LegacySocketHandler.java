@@ -46,7 +46,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -472,7 +474,7 @@ public class LegacySocketHandler {
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
       Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.leaveGroup(request.recipientGroupId);
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
-      accountData.groupsV2.update(output.second());
+      accountData.groupsV2.remove(output.second());
       accountData.save();
     } else {
       byte[] groupId = Base64.decode(request.recipientGroupId);

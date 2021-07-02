@@ -81,7 +81,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
     }
 
     m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
-    accountData.groupsV2.update(output.second());
+    accountData.groupsV2.remove(output.second());
     accountData.save();
     return new GroupInfo(output.second().getJsonGroupV2Info(m));
   }

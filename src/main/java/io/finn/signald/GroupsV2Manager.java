@@ -46,11 +46,7 @@ import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.Member;
-import org.signal.storageservice.protos.groups.local.DecryptedGroup;
-import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
-import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
-import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
-import org.signal.storageservice.protos.groups.local.DecryptedTimer;
+import org.signal.storageservice.protos.groups.local.*;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
@@ -398,6 +394,7 @@ public class GroupsV2Manager {
         if (group != null) {
           storage.remove(group);
         }
+        group = null;
       }
     }
     return group;
