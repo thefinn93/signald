@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.util.RequestUtil;
 
 @Doc("Wraps all incoming messages after a v1 subscribe request is issued")
@@ -35,7 +36,7 @@ public class ClientMessageWrapper {
   }
 
   public static ClientMessageWrapper Exception(Throwable exception) {
-    ClientMessageWrapper wrapper = new ClientMessageWrapper(exception);
+    ClientMessageWrapper wrapper = new ClientMessageWrapper(new ExceptionWrapper(exception));
     wrapper.error = true;
     return wrapper;
   }

@@ -17,7 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoKnownUUID extends Exception {
+public class NoKnownUUID extends ExceptionWrapper {
   String e164;
   public NoKnownUUID(String e164) {
     super("No known UUID for that Signal account");

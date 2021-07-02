@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class InvalidInviteURI extends Exception {
+public class InvalidInviteURI extends ExceptionWrapper {
   public InvalidInviteURI() { super("failed to parse invite URL"); }
 }

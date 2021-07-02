@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountHasNoKeys extends Exception {
+public class AccountHasNoKeys extends ExceptionWrapper {
   public AccountHasNoKeys() { super("requested account has no keys generated"); }
 }

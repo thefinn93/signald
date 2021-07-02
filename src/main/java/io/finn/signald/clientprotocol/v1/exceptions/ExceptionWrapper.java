@@ -28,6 +28,8 @@ public class ExceptionWrapper extends Exception {
 
   public ExceptionWrapper() {}
 
+  public ExceptionWrapper(String message) { super(message); }
+
   public ExceptionWrapper(String message, Throwable cause) { super(message, cause); }
 
   public ExceptionWrapper(Throwable cause) { super(cause); }

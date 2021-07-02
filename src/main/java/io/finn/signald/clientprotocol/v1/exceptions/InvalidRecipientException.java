@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class InvalidRecipientException extends Exception {
+public class InvalidRecipientException extends ExceptionWrapper {
   public InvalidRecipientException() { super("request must specify either recipientGroupId or recipientAddress"); }
 }

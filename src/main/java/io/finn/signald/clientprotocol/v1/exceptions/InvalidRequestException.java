@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class InvalidRequestException extends Exception {
+public class InvalidRequestException extends ExceptionWrapper {
   public InvalidRequestException(String message) { super(message); }
 }

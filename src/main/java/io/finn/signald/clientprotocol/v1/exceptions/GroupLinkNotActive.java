@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class GroupLinkNotActive extends Exception {
+public class GroupLinkNotActive extends ExceptionWrapper {
   public GroupLinkNotActive() { super("group link not active"); }
 }

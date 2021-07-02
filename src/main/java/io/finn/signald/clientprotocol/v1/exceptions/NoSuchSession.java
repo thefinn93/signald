@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoSuchSession extends Exception {
+public class NoSuchSession extends ExceptionWrapper {
   public NoSuchSession() { super("no such session"); }
 }

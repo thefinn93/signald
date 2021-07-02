@@ -17,7 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoSuchAccount extends Exception {
+public class NoSuchAccount extends ExceptionWrapper {
   public String account;
   public NoSuchAccount(io.finn.signald.exceptions.NoSuchAccountException e) {
     super(e.getMessage());

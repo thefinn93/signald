@@ -17,7 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountLocked extends Exception {
+public class AccountLocked extends ExceptionWrapper {
   public final String more = "see https://gitlab.com/signald/signald/-/issues/47";
   public AccountLocked() { super("account is locked with a PIN"); }
 }

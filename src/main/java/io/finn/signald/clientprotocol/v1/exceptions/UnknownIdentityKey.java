@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class UnknownIdentityKey extends Exception {
+public class UnknownIdentityKey extends ExceptionWrapper {
   public UnknownIdentityKey() { super("no matching identity key in database"); }
 }

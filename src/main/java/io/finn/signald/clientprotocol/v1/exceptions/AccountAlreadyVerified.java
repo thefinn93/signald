@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountAlreadyVerified extends Exception {
+public class AccountAlreadyVerified extends ExceptionWrapper {
   public AccountAlreadyVerified() { super("account has already been verified"); }
 }
