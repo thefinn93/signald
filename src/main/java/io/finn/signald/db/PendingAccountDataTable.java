@@ -32,7 +32,7 @@ public class PendingAccountDataTable {
   private static final String KEY = "key";
   private static final String VALUE = "value";
 
-  public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID }
+  public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, SERVER_UUID }
 
   public static byte[] getBytes(String username, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
@@ -44,6 +44,20 @@ public class PendingAccountDataTable {
       return null;
     }
     byte[] result = rows.getBytes(VALUE);
+    rows.close();
+    return result;
+  }
+
+  public static String getString(String username, Key key) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
+    statement.setString(1, key.name());
+    statement.setString(2, username);
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      return null;
+    }
+    String result = rows.getString(VALUE);
     rows.close();
     return result;
   }
@@ -68,6 +82,15 @@ public class PendingAccountDataTable {
     statement.setString(1, username);
     statement.setString(2, key.name());
     statement.setBytes(3, value);
+    statement.executeUpdate();
+  }
+
+  public static void set(String username, Key key, String value) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" +
+                                                                      USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
+    statement.setString(1, username);
+    statement.setString(2, key.name());
+    statement.setString(3, value);
     statement.executeUpdate();
   }
 

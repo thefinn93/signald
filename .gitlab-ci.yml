@@ -10,6 +10,12 @@ variables:
   zkgroup_ver: "0.7.0"
   DOCKER_TLS_CERTDIR: "/certs"
 
+.testserver: &testserver
+  variables:
+    SIGNAL_CA: AAAAAgAAABSdqZ0bYZjYEKqWbhu75wrXJh13PAAABo8BAAVteWtleQAAAXfXkMrnAAAAAAAFWC41MDkAAARpMIIEZTCCA02gAwIBAgIQQAF1BIMUpMghjISpDBbN3zANBgkqhkiG9w0BAQsFADA/MSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMTDkRTVCBSb290IENBIFgzMB4XDTIwMTAwNzE5MjE0MFoXDTIxMDkyOTE5MjE0MFowMjELMAkGA1UEBhMCVVMxFjAUBgNVBAoTDUxldCdzIEVuY3J5cHQxCzAJBgNVBAMTAlIzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuwIVKMz2oJTTDxLsjVWSw/iC8ZmmekKIp10mqrUrucVMsa+Oa/l1yKPXD0eUFFU1V4yeqKI5GfWCPEKpTm71O8Mu243AsFzzWTjn7c9p8FoLG77AlCQlh/o3cbMT5xys4Zvv2+Q7RVJFlqnBU840yFLuta7tj95gcOKlVKu2bQ6XpUA0ayvTvGbrZjR8+muLj1cpmfgwF126cm/7gcWt0oZYPRfH5wm78Sv3htzB2nFd1EbjzK0lwYi8YGd1ZrPxGPeiXOZT/zqItkel/xMY6pgJdz+dU/nPAeX1pnAXFK9jpP+Zs5Od3FOnBv5IhR2haa4ldbsTzFID9e1RoYvbFQIDAQABo4IBaDCCAWQwEgYDVR0TAQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAYYwSwYIKwYBBQUHAQEEPzA9MDsGCCsGAQUFBzAChi9odHRwOi8vYXBwcy5pZGVudHJ1c3QuY29tL3Jvb3RzL2RzdHJvb3RjYXgzLnA3YzAfBgNVHSMEGDAWgBTEp7Gkeyxx+tvhS5B1/8QVYIWJEDBUBgNVHSAETTBLMAgGBmeBDAECATA/BgsrBgEEAYLfEwEBATAwMC4GCCsGAQUFBwIBFiJodHRwOi8vY3BzLnJvb3QteDEubGV0c2VuY3J5cHQub3JnMDwGA1UdHwQ1MDMwMaAvoC2GK2h0dHA6Ly9jcmwuaWRlbnRydXN0LmNvbS9EU1RST09UQ0FYM0NSTC5jcmwwHQYDVR0OBBYEFBQusxe3WFbLrlAJQOYfr52LFMLGMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjANBgkqhkiG9w0BAQsFAAOCAQEA2UzgyfWEiDcx27sT4rP8i2tiEmxYt0l+PAK3qB8oYevO4C5z70kHejWEHx2taPDY/laBL21/WKZuNTYQHHPD5b1tXgHXbnL7KqC401dk5VvCadTQsvd8S8MXjohyc9z9/G2948kLjmE6Flh9dDYrVYA9x2O+hEPGOaEOa1eePynBgPayvUfLqjBstzLhWVQLGAkXXmNs+5ZnPBxzDJOLxhF2JIbeQAcH5H0tZrUlo5ZYyOqA7s9pO5b85o3AM/OJ+CktFBQtfvBhcJVd9wvlwPsk+uyOy2HI7mNxKKgsBTt375teA2TwUdHkhVNcsAKX1H7GNNLOEADksd86wuoXvgBtfFvkJtev/HkVWt0+vF+oTiEI9Q==
+    SIGNAL_URL: https://signal-server.signald.org
+    DEFAULT_SERVER_UUID: f70feaec-95b0-4519-b458-1ab0dec83777
+
 services:
   - docker:20.10.0-dind
 
@@ -163,6 +169,7 @@ build docker aarch64:
       allow_failure: true
 
 unit tests x86:
+  <<: *testserver
   image: openjdk:11-jdk
   stage: test
   needs: []
@@ -170,12 +177,11 @@ unit tests x86:
     - cp tools/log4j2.xml src/main/resources/log4j2.xml
   script:
     - ./gradlew test --info
-  variables:
-    SIGNAL_URL: https://signal-server.signald.org
   rules:
     - when: on_success
 
 integration tests x86:
+  <<: *testserver
   image: openjdk:11-jdk
   stage: test
   needs: []
@@ -183,8 +189,6 @@ integration tests x86:
     - cp tools/log4j2.xml src/main/resources/log4j2.xml
   script:
     - ./gradlew integrationTest --info
-  variables:
-    SIGNAL_URL: https://signal-server.signald.org
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
@@ -193,6 +197,7 @@ integration tests x86:
     - when: on_success
 
 unit tests aarch64-unknown-linux-gnu:
+  <<: *testserver
   image: debian
   stage: test
   tags: [arm-builder]
@@ -201,8 +206,6 @@ unit tests aarch64-unknown-linux-gnu:
     - apt update && apt install -y make openjdk-11-jdk-headless
   script:
     - ./gradlew test
-  variables:
-    SIGNAL_URL: https://signal-server.signald.org
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -210,6 +213,7 @@ unit tests aarch64-unknown-linux-gnu:
       allow_failure: true
 
 integration tests aarch64-unknown-linux-gnu:
+  <<: *testserver
   image: debian
   stage: test
   tags: [arm-builder]
@@ -218,8 +222,6 @@ integration tests aarch64-unknown-linux-gnu:
     - apt update && apt install -y make openjdk-11-jdk-headless
   script:
     - ./gradlew integrationTest --info
-  variables:
-    SIGNAL_URL: https://signal-server.signald.org
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
@@ -231,6 +233,7 @@ integration tests aarch64-unknown-linux-gnu:
       allow_failure: true
 
 integration tests x86_64-apple-darwin:
+  <<: *testserver
   image: debian
   stage: test
   tags: [darwin-builder]
@@ -242,8 +245,6 @@ integration tests x86_64-apple-darwin:
     - ./gradlew integrationTest --info
   after_script:
     - rm -rf ~/.config/signald
-  variables:
-    SIGNAL_URL: https://signal-server.signald.org
   artifacts:
     reports:
       junit: build/test-results/integrationTest/TEST-*.xml
@@ -255,6 +256,7 @@ integration tests x86_64-apple-darwin:
       allow_failure: true
 
 unit tests x86_64-apple-darwin:
+  <<: *testserver
   image: debian
   stage: test
   tags: [darwin-builder]
@@ -266,8 +268,6 @@ unit tests x86_64-apple-darwin:
     - ./gradlew test
   after_script:
     - rm -rf ~/.config/signald
-  variables:
-    SIGNAL_URL: https://signal-server.signald.org
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success

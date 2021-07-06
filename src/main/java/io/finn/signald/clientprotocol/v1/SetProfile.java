@@ -24,11 +24,14 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("set_profile")
 public class SetProfile implements RequestType<Empty> {
@@ -43,7 +46,7 @@ public class SetProfile implements RequestType<Empty> {
   public String emoji;
 
   @Override
-  public Empty run(Request request) throws IOException, NoSuchAccount, InvalidInputException, SQLException {
+  public Empty run(Request request) throws IOException, NoSuchAccount, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     File avatar = avatarFile == null ? null : new File(avatarFile);
     Utils.getManager(account).setProfile(name, avatar, about, emoji);
     return new Empty();

@@ -24,14 +24,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidRecipientException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -44,8 +43,8 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
   public Long timestamp;
 
   @Override
-  public SendResponse run(Request request)
-      throws SQLException, IOException, NoSuchAccount, UnknownGroupException, InvalidRecipientException, GroupNotFoundException, NotAGroupMemberException {
+  public SendResponse run(Request request) throws SQLException, IOException, NoSuchAccount, UnknownGroupException, InvalidRecipientException, GroupNotFoundException,
+                                                  NotAGroupMemberException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
     if (timestamp == null) {

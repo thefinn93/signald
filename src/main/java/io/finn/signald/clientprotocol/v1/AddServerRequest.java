@@ -17,30 +17,32 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.exceptions.InvalidProxyException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
+import io.finn.signald.db.ServersTable;
 import java.io.IOException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
+import java.util.UUID;
 
-@Doc("get all known identity keys")
-@ProtocolType("get_all_identities")
-public class GetAllIdentities implements RequestType<AllIdentityKeyList> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+@Doc("add a new server to connect to. Returns the new server's UUID.")
+@ProtocolType("add_server")
+public class AddServerRequest implements RequestType<String> {
+  @Required public Server server;
 
   @Override
-  public AllIdentityKeyList run(Request request)
-      throws SQLException, IOException, NoSuchAccountException, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(account);
-    return new AllIdentityKeyList(m.getOwnAddress(), m.getIdentity(), m.getIdentities());
+  public String run(Request request) throws IOException, SQLException, InvalidProxyException {
+    if (server.uuid == null) {
+      server.uuid = UUID.randomUUID();
+    }
+    try {
+      ServersTable.create(server.getServer());
+    } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+      throw new InvalidProxyException(e);
+    }
+    return server.uuid.toString();
   }
 }

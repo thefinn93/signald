@@ -27,7 +27,9 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -35,6 +37,7 @@ import java.net.Socket;
 import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
@@ -45,11 +48,15 @@ public class SubscribeRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to subscribe to incoming message for") @Required public String account;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount {
+  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     try {
       MessageReceiver.subscribe(account, new IncomingMessageEncoder(request.getSocket(), account));
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccount(e);
+    } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+      throw new InvalidProxyException(e);
+    } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
+      throw new ServerNotFoundException(e);
     }
     return new Empty();
   }
@@ -75,7 +82,7 @@ public class SubscribeRequest implements RequestType<Empty> {
       try {
         IncomingMessage message = new IncomingMessage(envelope, content, account);
         broadcast(new ClientMessageWrapper(message));
-      } catch (SQLException | NoSuchAccount e) {
+      } catch (SQLException | NoSuchAccount | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
         logger.warn("Exception while broadcasting incoming message: " + e.toString());
       }
     }

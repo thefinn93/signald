@@ -23,13 +23,16 @@ import io.finn.signald.JsonTypingMessage;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -55,7 +58,8 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, SQLException, NoSuchAccountException {
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username)
+      throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.username = username;
 
     if (envelope.hasServerGuid()) {

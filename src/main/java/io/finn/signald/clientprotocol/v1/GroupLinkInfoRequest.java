@@ -24,11 +24,14 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.GroupLinkNotActive;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 
 @ProtocolType("group_link_info")
@@ -39,10 +42,11 @@ public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
   @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("the signald.group link") @Required public String uri;
 
   @Override
-  public JsonGroupJoinInfo run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidInputException, VerificationFailedException, GroupLinkNotActive {
+  public JsonGroupJoinInfo run(Request request)
+      throws SQLException, IOException, NoSuchAccount, InvalidInputException, VerificationFailedException, GroupLinkNotActive, ServerNotFoundException, InvalidProxyException {
     try {
       return Utils.getManager(account).getGroupsV2Manager().getGroupJoinInfo(uri);
-    } catch (GroupLinkNotActiveException e) {
+    } catch (GroupLinkNotActiveException | InvalidKeyException e) {
       throw new GroupLinkNotActive();
     }
   }

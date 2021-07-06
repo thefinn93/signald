@@ -19,7 +19,10 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
 import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.db.ServersTable;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
@@ -34,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -46,28 +50,30 @@ import org.whispersystems.util.Base64;
 
 public class ProvisioningManager {
   private final static ConcurrentHashMap<String, ProvisioningManager> provisioningManagers = new ConcurrentHashMap<>();
-  private final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
 
   private final SignalServiceAccountManager accountManager;
   private final IdentityKeyPair identityKey;
   private final int registrationId;
   private final String password;
+  private final UUID server;
 
-  public static LinkingURI create() throws TimeoutException, IOException, URISyntaxException {
+  public static LinkingURI create(UUID server) throws TimeoutException, IOException, URISyntaxException, SQLException, ServerNotFoundException, InvalidProxyException {
     UUID sessionID = UUID.randomUUID();
-    ProvisioningManager pm = new ProvisioningManager();
+    ProvisioningManager pm = new ProvisioningManager(server);
     provisioningManagers.put(sessionID.toString(), pm);
     return new LinkingURI(sessionID.toString(), pm);
   }
 
   public static ProvisioningManager get(String sessionID) { return provisioningManagers.get(sessionID); }
 
-  public ProvisioningManager() {
+  public ProvisioningManager(UUID server) throws IOException, SQLException, ServerNotFoundException, InvalidProxyException {
+    this.server = server;
     identityKey = KeyUtil.generateIdentityKeyPair();
     registrationId = KeyHelper.generateRegistrationId(false);
     password = Util.getSecret(18);
     final SleepTimer timer = new UptimeSleepTimer();
     DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    SignalServiceConfiguration serviceConfiguration = ServersTable.getServer(server).getSignalServiceConfiguration();
     accountManager =
         new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration), true, timer);
   }
@@ -78,13 +84,14 @@ public class ProvisioningManager {
     return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public String finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException {
+  public String finishDeviceLink(String deviceName, boolean overwrite)
+      throws IOException, TimeoutException, UserAlreadyExists, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     String signalingKey = Util.getSecret(52);
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
     if (overwrite) {
       try {
         Manager.get(ret.getNumber()).deleteAccount(false);
-      } catch (NoSuchAccountException ignored) {
+      } catch (NoSuchAccountException | InvalidKeyException | ServerNotFoundException | InvalidProxyException ignored) {
       }
     }
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, ret.getIdentity().getPrivateKey());
@@ -95,7 +102,7 @@ public class ProvisioningManager {
       throw new UserAlreadyExists(username, Manager.getFileName(username));
     }
 
-    Manager m = new Manager(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey, deviceId));
+    Manager m = new Manager(AccountData.createLinkedAccount(ret, password, registrationId, signalingKey, deviceId, server));
     AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
 
     m.refreshPreKeys();

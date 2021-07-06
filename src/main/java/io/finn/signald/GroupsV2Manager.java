@@ -62,6 +62,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.ConflictException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
+import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
 import org.whispersystems.signalservice.internal.util.Util;
 import org.whispersystems.util.Base64;
@@ -72,14 +73,18 @@ public class GroupsV2Manager {
   private final GroupsV2Storage storage;
   private final ProfileCredentialStore profileCredentialStore;
   private final UUID self;
-  private final static GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration);
+  private final GroupsV2Operations groupsV2Operations;
+  private final SignalServiceConfiguration serviceConfiguration;
   private final static Logger logger = LogManager.getLogger();
 
-  public GroupsV2Manager(GroupsV2Api groupsV2Api, GroupsV2Storage storage, ProfileCredentialStore profileCredentialStore, UUID self) {
+  public GroupsV2Manager(GroupsV2Api groupsV2Api, GroupsV2Storage storage, ProfileCredentialStore profileCredentialStore, UUID self,
+                         SignalServiceConfiguration serviceConfiguration) {
     this.groupsV2Api = groupsV2Api;
     this.storage = storage;
     this.profileCredentialStore = profileCredentialStore;
     this.self = self;
+    this.groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
+    this.serviceConfiguration = serviceConfiguration;
   }
 
   public boolean handleIncomingDataMessage(SignalServiceDataMessage message) throws IOException, VerificationFailedException {
@@ -109,7 +114,7 @@ public class GroupsV2Manager {
   public Pair<SignalServiceDataMessage.Builder, Group> updateTitle(String groupID, String title) throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createModifyGroupTitle(title);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -161,7 +166,7 @@ public class GroupsV2Manager {
       throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     Set<GroupCandidate> candidates = new HashSet<>();
     for (ProfileAndCredentialEntry profileAndCredentialEntry : members) {
       Optional<ProfileKeyCredential> profileKeyCredential = Optional.absent();
@@ -194,7 +199,7 @@ public class GroupsV2Manager {
   public Pair<SignalServiceDataMessage.Builder, Group> removeMembers(String groupID, Set<UUID> members) throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createRemoveMembersChange(members);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -213,7 +218,7 @@ public class GroupsV2Manager {
       throws UnknownGroupException, IOException, VerificationFailedException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createChangeMemberRole(uuid, role);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -232,7 +237,7 @@ public class GroupsV2Manager {
       throws UnknownGroupException, IOException, VerificationFailedException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createChangeJoinByLinkRights(access);
     if (access == UNSATISFIABLE && group.group.getInviteLinkPassword().isEmpty()) {
       change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
@@ -254,7 +259,7 @@ public class GroupsV2Manager {
       throws UnknownGroupException, IOException, VerificationFailedException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createChangeMembershipRights(access);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -273,7 +278,7 @@ public class GroupsV2Manager {
       throws UnknownGroupException, IOException, VerificationFailedException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createChangeAttributesRights(access);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -291,7 +296,7 @@ public class GroupsV2Manager {
   public Pair<SignalServiceDataMessage.Builder, Group> resetGroupLinkPassword(String groupID) throws UnknownGroupException, IOException, VerificationFailedException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createModifyGroupLinkPasswordChange(GroupLinkPassword.createNew().serialize());
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -309,7 +314,7 @@ public class GroupsV2Manager {
   public Pair<SignalServiceDataMessage.Builder, Group> updateGroupTimer(String groupID, int timer) throws UnknownGroupException, IOException, VerificationFailedException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     GroupChange.Actions.Builder change = groupOperations.createModifyGroupTimerChange(timer);
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);

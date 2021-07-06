@@ -23,9 +23,7 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.UnknownIdentityKey;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.exceptions.InvalidAddressException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -60,7 +58,7 @@ public class TrustRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidRequestException, FingerprintVersionMismatchException, FingerprintParsingException,
-                                           UnknownIdentityKey, InvalidAddressException, InvalidKeyException {
+                                           UnknownIdentityKey, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());

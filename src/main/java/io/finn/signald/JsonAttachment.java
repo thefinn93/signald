@@ -19,10 +19,13 @@ package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
@@ -49,7 +52,8 @@ public class JsonAttachment {
 
   JsonAttachment(String storedFilename) { this.filename = storedFilename; }
 
-  public JsonAttachment(SignalServiceAttachment attachment, String username) throws IOException, NoSuchAccountException, SQLException {
+  public JsonAttachment(SignalServiceAttachment attachment, String username)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.contentType = attachment.getContentType();
     final SignalServiceAttachmentPointer pointer = attachment.asPointer();
     if (attachment.isPointer()) {

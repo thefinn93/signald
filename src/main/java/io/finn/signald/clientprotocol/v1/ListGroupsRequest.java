@@ -22,11 +22,14 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("list_groups")
 public class ListGroupsRequest implements RequestType<GroupList> {
@@ -34,7 +37,7 @@ public class ListGroupsRequest implements RequestType<GroupList> {
   @Required public String account;
 
   @Override
-  public GroupList run(Request request) throws IOException, NoSuchAccount, SQLException {
+  public GroupList run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     GroupList groups = new GroupList();
     Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();

@@ -25,12 +25,15 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 @ProtocolType("get_group")
@@ -44,7 +47,8 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException {
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
+                                                     InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Group group;

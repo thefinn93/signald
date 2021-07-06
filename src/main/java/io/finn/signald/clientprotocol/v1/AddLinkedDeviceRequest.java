@@ -25,7 +25,9 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -41,7 +43,8 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LINKING_URI) @Doc("the tsdevice:/ uri provided (typically in qr code form) by the new device") @Required public String uri;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, URISyntaxException, InvalidInputException, InvalidKeyException {
+  public Empty run(Request request)
+      throws SQLException, IOException, NoSuchAccount, URISyntaxException, InvalidInputException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     m.addDeviceLink(new URI(uri));
     return new Empty();

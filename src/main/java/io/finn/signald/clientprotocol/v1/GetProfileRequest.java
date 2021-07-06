@@ -24,8 +24,10 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ProfileUnavailable;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
@@ -34,6 +36,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("Get all information available about a user")
@@ -49,7 +52,8 @@ public class GetProfileRequest implements RequestType<Profile> {
   public boolean async;
 
   @Override
-  public Profile run(Request request) throws IOException, SQLException, NoSuchAccount, ProfileUnavailable, InterruptedException, ExecutionException, TimeoutException {
+  public Profile run(Request request) throws IOException, SQLException, NoSuchAccount, ProfileUnavailable, InterruptedException, ExecutionException, TimeoutException,
+                                             InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     SignalServiceAddress address = m.getResolver().resolve(requestedAddress.getSignalServiceAddress());
     ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(address);

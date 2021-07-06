@@ -23,9 +23,12 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc(
@@ -37,7 +40,7 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public JsonAddress run(Request request) throws IOException, NoSuchAccount, SQLException {
+  public JsonAddress run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     SignalServiceAddress resolved;
     resolved = Utils.getManager(account).getResolver().resolve(partial.getSignalServiceAddress());
     return new JsonAddress(resolved);

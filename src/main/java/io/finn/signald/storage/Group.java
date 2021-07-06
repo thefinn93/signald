@@ -174,7 +174,7 @@ public class Group {
       return;
     }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
 
     File tmpFile = Util.createTempFile();
     try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, Manager.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {

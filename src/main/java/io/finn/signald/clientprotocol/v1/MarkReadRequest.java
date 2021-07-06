@@ -25,11 +25,14 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -49,7 +52,8 @@ public class MarkReadRequest implements RequestType<Empty> {
   public Long when;
 
   @Override
-  public Empty run(Request request) throws IOException, UntrustedIdentityException, SQLException, NoSuchAccount {
+  public Empty run(Request request)
+      throws IOException, UntrustedIdentityException, SQLException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     if (when == null) {
       when = System.currentTimeMillis();
     }

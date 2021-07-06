@@ -25,7 +25,9 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -49,8 +52,8 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("The group to leave") @Required public String groupID;
 
   @Override
-  public GroupInfo run(Request request)
-      throws IOException, NoSuchAccount, NotAGroupMemberException, GroupNotFoundException, VerificationFailedException, SQLException, UnknownGroupException {
+  public GroupInfo run(Request request) throws IOException, NoSuchAccount, NotAGroupMemberException, GroupNotFoundException, VerificationFailedException, SQLException,
+                                               UnknownGroupException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
 
     if (groupID.length() == 24) { // legacy (v1) group

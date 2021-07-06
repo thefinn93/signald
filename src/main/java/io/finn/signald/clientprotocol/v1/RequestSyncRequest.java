@@ -25,9 +25,12 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 
 @Doc("Request other devices on the account send us their group list, syncable config and contact list.")
@@ -40,7 +43,8 @@ public class RequestSyncRequest implements RequestType<Empty> {
   @Doc("request block list sync (default true)") public boolean blocked = true;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, UntrustedIdentityException {
+  public Empty run(Request request)
+      throws SQLException, IOException, NoSuchAccount, UntrustedIdentityException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     if (groups) {
       m.requestSyncGroups();

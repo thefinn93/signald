@@ -17,15 +17,21 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.*;
+import io.finn.signald.JsonCallMessage;
+import io.finn.signald.JsonReceiptMessage;
+import io.finn.signald.JsonTypingMessage;
+import io.finn.signald.Manager;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -50,7 +56,8 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username) throws IOException, NoSuchAccount, SQLException {
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username)
+      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.username = username;
 
     if (envelope.hasServerGuid()) {

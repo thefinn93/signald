@@ -17,6 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -24,12 +25,20 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.AccountAlreadyVerified;
+import io.finn.signald.clientprotocol.v1.exceptions.AccountHasNoKeys;
+import io.finn.signald.clientprotocol.v1.exceptions.AccountLocked;
+import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
+import io.finn.signald.db.PendingAccountDataTable;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.internal.push.LockedException;
 
 @ProtocolType("verify")
@@ -43,8 +52,13 @@ public class VerifyRequest implements RequestType<Account> {
 
   @Override
   public Account run(Request request)
-      throws SQLException, IOException, NoSuchAccount, InvalidInputException, AccountHasNoKeys, AccountAlreadyVerified, ExceptionWrapper, AccountLocked {
-    Manager m = Manager.getPending(account);
+      throws SQLException, IOException, InvalidInputException, ExceptionWrapper, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+
+    String server = PendingAccountDataTable.getString(account, PendingAccountDataTable.Key.SERVER_UUID);
+    if (server == null) {
+      server = BuildConfig.DEFAULT_SERVER_UUID;
+    }
+    Manager m = Manager.getPending(account, UUID.fromString(server));
     if (!m.hasPendingKeys()) {
       throw new AccountHasNoKeys();
     } else if (m.isRegistered()) {

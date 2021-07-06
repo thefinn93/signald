@@ -20,9 +20,12 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -45,7 +48,8 @@ public class IncomingMessage {
   @JsonProperty("typing_message") public TypingMessage typingMessage;
   @JsonProperty("server_guid") public String serverGuid;
 
-  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, String a) throws SQLException, IOException, NoSuchAccount {
+  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, String a)
+      throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     account = a;
 
     if (envelope.hasServerGuid()) {

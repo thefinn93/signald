@@ -38,10 +38,13 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @ProtocolType("protocol")
 public class ProtocolRequest implements RequestType<JsonNode> {
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
+  private static final Logger logger = LogManager.getLogger();
 
   // the version of the protocol documentation format
   public static final String docVersion = "v1";
@@ -73,6 +76,8 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       ObjectNode action = JsonNodeFactory.instance.objectNode();
       action.put("request", r.getSimpleName());
       uncheckedTypes.add(r);
+
+      logger.debug("Scanning " + r.getSimpleName());
 
       Class<?> responseType = (Class<?>)((ParameterizedType)r.getGenericInterfaces()[0]).getActualTypeArguments()[0];
       if (responseType != Empty.class) {

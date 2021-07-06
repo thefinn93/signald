@@ -26,9 +26,7 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidInviteURI;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -44,6 +42,7 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
@@ -62,7 +61,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   public JsonGroupJoinInfo run(Request request)
       throws GroupInviteLinkUrl.InvalidGroupLinkException, GroupInviteLinkUrl.UnknownGroupLinkVersionException, IOException, NoSuchAccount, InterruptedException,
              ExecutionException, TimeoutException, GroupLinkNotActiveException, VerificationFailedException, InvalidGroupStateException, UnknownGroupException, SQLException,
-             InvalidInviteURI, OwnProfileKeyDoesNotExist {
+             InvalidInviteURI, OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     GroupInviteLinkUrl groupInviteLinkUrl = GroupInviteLinkUrl.fromUri(uri);
     if (groupInviteLinkUrl == null) {
       throw new InvalidInviteURI();
@@ -76,7 +75,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new OwnProfileKeyDoesNotExist();
     }
 
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     DecryptedGroupJoinInfo groupJoinInfo = groupsV2Manager.getGroupJoinInfo(groupSecretParams, groupInviteLinkUrl.getPassword().serialize());
 

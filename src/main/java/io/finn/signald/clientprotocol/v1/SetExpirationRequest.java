@@ -23,7 +23,9 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
@@ -32,6 +34,7 @@ import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -46,8 +49,8 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
   @ExampleValue("604800") @Required public int expiration;
 
   @Override
-  public SendResponse run(Request request)
-      throws SQLException, IOException, NoSuchAccount, UnknownGroupException, VerificationFailedException, NotAGroupMemberException, GroupNotFoundException {
+  public SendResponse run(Request request) throws SQLException, IOException, NoSuchAccount, UnknownGroupException, VerificationFailedException, NotAGroupMemberException,
+                                                  GroupNotFoundException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     List<SendMessageResult> results;
 

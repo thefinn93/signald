@@ -24,7 +24,9 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import java.io.IOException;
@@ -41,7 +43,8 @@ public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
   @Doc("address to get keys for") @Required public JsonAddress address;
 
   @Override
-  public IdentityKeyList run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidAddressException, InvalidKeyException {
+  public IdentityKeyList run(Request request)
+      throws SQLException, IOException, NoSuchAccount, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(address.getSignalServiceAddress());
     SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());

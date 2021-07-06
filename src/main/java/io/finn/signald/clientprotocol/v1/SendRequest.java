@@ -24,7 +24,9 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import java.io.File;
@@ -40,6 +42,7 @@ import org.asamk.signal.AttachmentInvalidException;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
@@ -58,8 +61,9 @@ public class SendRequest implements RequestType<SendResponse> {
   public List<JsonMention> mentions;
 
   @Override
-  public SendResponse run(Request request) throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException,
-                                                  NoSuchAccount, InvalidInputException, UnknownGroupException, SQLException {
+  public SendResponse run(Request request)
+      throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccount, InvalidInputException,
+             UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager manager = Utils.getManager(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

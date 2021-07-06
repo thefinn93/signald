@@ -19,12 +19,15 @@ package io.finn.signald.clientprotocol.v0;
 
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.GroupInfo;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
@@ -37,7 +40,8 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, String username) throws IOException, NoSuchAccountException, SQLException {
+  JsonGroupInfo(SignalServiceGroup groupInfo, String username)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager manager = Manager.get(username);
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {

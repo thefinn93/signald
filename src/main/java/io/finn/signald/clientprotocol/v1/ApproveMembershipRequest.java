@@ -24,7 +24,9 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -40,6 +42,7 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -57,7 +60,8 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, VerificationFailedException, UnknownGroupException, SQLException {
+  public JsonGroupV2Info run(Request request)
+      throws IOException, NoSuchAccount, VerificationFailedException, UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();
     Group group;
@@ -71,7 +75,7 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
     recipients.addAll(members.stream().map(JsonAddress::getSignalServiceAddress).collect(Collectors.toSet()));
 
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(Manager.serviceConfiguration).forGroup(groupSecretParams);
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
 
     Set<UUID> membersToApprove = members.stream().map(JsonAddress::getUUID).collect(Collectors.toSet());
     GroupChange.Actions.Builder change = groupOperations.createApproveGroupJoinRequest(membersToApprove);

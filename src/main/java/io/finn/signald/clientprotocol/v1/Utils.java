@@ -18,17 +18,24 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 public class Utils {
-  static Manager getManager(String account) throws NoSuchAccount, IOException, SQLException {
+  static Manager getManager(String account) throws NoSuchAccount, IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m;
     try {
       m = Manager.get(account);
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccount(e);
+    } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+      throw new InvalidProxyException(e);
+    } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
+      throw new ServerNotFoundException(e);
     }
     return m;
   }

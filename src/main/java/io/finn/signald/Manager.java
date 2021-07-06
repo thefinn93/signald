@@ -22,10 +22,7 @@ import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
-import io.finn.signald.exceptions.InvalidAddressException;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
 import io.finn.signald.storage.*;
 import io.finn.signald.util.*;
@@ -45,7 +42,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import okhttp3.Interceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
@@ -82,13 +78,12 @@ import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-import org.whispersystems.signalservice.internal.configuration.*;
+import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
@@ -97,8 +92,8 @@ import org.whispersystems.util.Base64;
 
 public class Manager {
   private final Logger logger;
-  private final static TrustStore TRUST_STORE = new WhisperTrustStore();
-  public final static SignalServiceConfiguration serviceConfiguration = Manager.generateSignalServiceConfiguration();
+  private final SignalServiceConfiguration serviceConfiguration;
+  private final ECPublicKey unidentifiedSenderTrustRoot;
   private final static String USER_AGENT = BuildConfig.USER_AGENT;
   private static final AccountAttributes.Capabilities SERVICE_CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false);
   private final static int ACCOUNT_REFRESH_VERSION = 3;
@@ -124,28 +119,7 @@ public class Manager {
 
   private final UptimeSleepTimer sleepTimer = new UptimeSleepTimer();
 
-  public static SignalServiceConfiguration generateSignalServiceConfiguration() {
-    final Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", USER_AGENT).build());
-
-    Map<Integer, SignalCdnUrl[]> signalCdnUrlMap = new HashMap<>();
-    signalCdnUrlMap.put(0, new SignalCdnUrl[] {new SignalCdnUrl(BuildConfig.SIGNAL_CDN_URL, TRUST_STORE)});
-    // unclear why there is no CDN 1
-    signalCdnUrlMap.put(2, new SignalCdnUrl[] {new SignalCdnUrl(BuildConfig.SIGNAL_CDN2_URL, TRUST_STORE)});
-
-    try {
-      return new SignalServiceConfiguration(new SignalServiceUrl[] {new SignalServiceUrl(BuildConfig.SIGNAL_URL, TRUST_STORE)}, signalCdnUrlMap,
-                                            new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(BuildConfig.SIGNAL_CONTACT_DISCOVERY_URL, TRUST_STORE)},
-                                            new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(BuildConfig.SIGNAL_KEY_BACKUP_URL, TRUST_STORE)},
-                                            new SignalStorageUrl[] {new SignalStorageUrl(BuildConfig.SIGNAL_STORAGE_URL, TRUST_STORE)},
-                                            Collections.singletonList(userAgentInterceptor), Optional.absent(), Optional.absent(),
-                                            Base64.decode(BuildConfig.SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS_HEX));
-    } catch (IOException e) {
-      LogManager.getLogger("manager").catching(e);
-      throw new AssertionError(e);
-    }
-  }
-
-  public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException {
+  public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Logger logger = LogManager.getLogger("manager");
     AccountData accountData;
     Manager m;
@@ -162,7 +136,8 @@ public class Manager {
       accountData.setUUID(m.getAccountManager().getOwnUuid());
       accountData.save();
     }
-    m.groupsV2Manager = new GroupsV2Manager(m.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID());
+    m.groupsV2Manager =
+        new GroupsV2Manager(m.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountData.getUUID(), m.serviceConfiguration);
     RefreshPreKeysJob.runIfNeeded(m.getUUID());
     m.refreshAccountIfNeeded();
     try {
@@ -174,7 +149,7 @@ public class Manager {
     return m;
   }
 
-  public static Manager get(String e164) throws IOException, NoSuchAccountException, SQLException {
+  public static Manager get(String e164) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     AddressResolver resolver = new AddressUtil();
     SignalServiceAddress address = resolver.resolve(e164);
     if (!address.getUuid().isPresent()) {
@@ -183,12 +158,12 @@ public class Manager {
     return Manager.get(address.getUuid().get());
   }
 
-  public static Manager getPending(String e164) {
+  public static Manager getPending(String e164, UUID server) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Logger logger = LogManager.getLogger("new-account-manager");
     if (pendingManagers.containsKey(e164)) {
       return pendingManagers.get(e164);
     }
-    Manager m = new Manager(e164);
+    Manager m = new Manager(e164, server);
     pendingManagers.put(e164, m);
     m.accountData.setPending();
     logger.info("Created a manager for " + Util.redact(e164));
@@ -207,7 +182,7 @@ public class Manager {
       if (!account.isDirectory()) {
         try {
           allManagers.add(Manager.get(account.getName()));
-        } catch (IOException | NoSuchAccountException | SQLException e) {
+        } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
           logger.warn("Failed to load account from " + account.getAbsolutePath(), e);
         }
       }
@@ -216,9 +191,12 @@ public class Manager {
   }
 
   // creates a Manager for an account that has not completed registration
-  Manager(String e164) {
+  Manager(String e164, UUID serverUUID) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     logger = LogManager.getLogger("manager-" + Util.redact(e164));
     logger.info("Creating new manager for " + Util.redact(e164));
+    ServersTable.Server server = ServersTable.getServer(serverUUID);
+    serviceConfiguration = server.getSignalServiceConfiguration();
+    unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
     try {
       accountData = AccountData.load(new File(Manager.getFileName(e164)));
     } catch (IOException e) {
@@ -226,11 +204,14 @@ public class Manager {
     }
   }
 
-  Manager(AccountData a) {
+  Manager(AccountData a) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     logger = LogManager.getLogger("manager-" + Util.redact(a.username));
     accountData = a;
+    ServersTable.Server server = AccountsTable.getServer(accountData.getUUID());
+    serviceConfiguration = server.getSignalServiceConfiguration();
+    unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
     synchronized (managers) { managers.put(a.username, this); }
-    groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), a.groupsV2, accountData.profileCredentialStore, a.getUUID());
+    groupsV2Manager = new GroupsV2Manager(getAccountManager().getGroupsV2Api(), a.groupsV2, accountData.profileCredentialStore, a.getUUID(), serviceConfiguration);
     logger.info("Created a manager for " + Util.redact(accountData.username));
   }
 
@@ -378,7 +359,8 @@ public class Manager {
     VerifyAccountResponse response = getAccountManager().verifyAccountWithCode(verificationCode, accountData.signalingKey, registrationID, true, null, null,
                                                                                accountData.getSelfUnidentifiedAccessKey(), false, SERVICE_CAPABILITIES, true);
     accountData.setUUID(UUID.fromString(response.getUuid()));
-    AccountsTable.add(accountData.address.number, accountData.address.getUUID(), getFileName());
+    String server = PendingAccountDataTable.getString(accountData.username, PendingAccountDataTable.Key.SERVER_UUID);
+    AccountsTable.add(accountData.address.number, accountData.address.getUUID(), getFileName(), server == null ? null : UUID.fromString(server));
     accountData.save();
 
     // Once the UUID is set, load accountData fresh
@@ -822,21 +804,12 @@ public class Manager {
     }
   }
 
-  private static CertificateValidator getCertificateValidator() {
-    try {
-      ECPublicKey unidentifiedSenderTrustRoot = Curve.decodePoint(Base64.decode(BuildConfig.UNIDENTIFIED_SENDER_TRUST_ROOT), 0);
-      return new CertificateValidator(unidentifiedSenderTrustRoot);
-    } catch (InvalidKeyException | IOException e) {
-      throw new AssertionError(e);
-    }
-  }
-
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope)
       throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
              SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException {
-    SignalServiceCipher cipher =
-        new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), getCertificateValidator());
+    CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
+    SignalServiceCipher cipher = new SignalServiceCipher(accountData.address.getSignalServiceAddress(), accountData.axolotlStore, new SessionLock(getUUID()), certificateValidator);
     try {
       return cipher.decrypt(envelope);
     } catch (ProtocolUntrustedIdentityException e) {
@@ -1646,15 +1619,13 @@ public class Manager {
 
     return new SignalServiceMessageSender(serviceConfiguration, accountData.getCredentialsProvider(), accountData.axolotlStore, new SessionLock(getUUID()),
                                           BuildConfig.SIGNAL_AGENT, true, Optional.fromNullable(messagePipe), Optional.fromNullable(unidentifiedMessagePipe), Optional.absent(),
-                                          getClientZkOperations().getProfileOperations(), null, 0, true);
+                                          ClientZkOperations.create(serviceConfiguration).getProfileOperations(), null, 0, true);
   }
 
   public SignalServiceMessageReceiver getMessageReceiver() {
     return new SignalServiceMessageReceiver(serviceConfiguration, accountData.getCredentialsProvider(), USER_AGENT, null, sleepTimer,
-                                            getClientZkOperations().getProfileOperations(), true);
+                                            ClientZkOperations.create(serviceConfiguration).getProfileOperations(), true);
   }
-
-  public static ClientZkOperations getClientZkOperations() { return ClientZkOperations.create(generateSignalServiceConfiguration()); }
 
   public RecipientsTable getResolver() { return accountData.getResolver(); }
 
@@ -1788,4 +1759,6 @@ public class Manager {
       return Optional.absent();
     }
   }
+
+  public SignalServiceConfiguration getServiceConfiguration() { return serviceConfiguration; }
 }

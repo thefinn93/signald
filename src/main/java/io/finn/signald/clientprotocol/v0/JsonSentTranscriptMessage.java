@@ -19,11 +19,14 @@ package io.finn.signald.clientprotocol.v0;
 
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -36,7 +39,8 @@ public class JsonSentTranscriptMessage {
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, String username) throws IOException, NoSuchAccountException, SQLException {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, String username)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }

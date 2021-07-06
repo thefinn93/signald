@@ -64,7 +64,10 @@ public class RequestUtil {
       GetAllIdentities.class,                                                                                            // v1        get_all_identities
       SubscribeRequest.class,                                                                                            // v1        subscribe
       UnsubscribeRequest.class,                                                                                          // v1        unsubscribe
-      RemoteDeleteRequest.class                                                                                          // v1        remote_delete
+      RemoteDeleteRequest.class,                                                                                         // v1        remote_delete
+      AddServerRequest.class,                                                                                            // v1        add_server
+      GetServersRequest.class,                                                                                           // v1        get_servers
+      RemoveServerRequest.class                                                                                          // v1        remove_server
   );
 
   public static String getVersion(Class<?> t) {

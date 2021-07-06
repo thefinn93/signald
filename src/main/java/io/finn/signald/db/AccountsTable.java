@@ -17,8 +17,11 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.AddressUtil;
 import java.io.File;
@@ -36,6 +39,7 @@ public class AccountsTable {
   private static final String UUID = "uuid";
   private static final String E164 = "e164";
   private static final String FILENAME = "filename";
+  private static final String SERVER = "server";
 
   public static File getFile(java.util.UUID uuid) throws SQLException, NoSuchAccountException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + FILENAME + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
@@ -63,13 +67,15 @@ public class AccountsTable {
     return new File(filename);
   }
 
-  public static void add(String e164, java.util.UUID uuid, String filename) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR IGNORE INTO " + TABLE_NAME + " (" + UUID + "," + E164 + "," + FILENAME + ") VALUES (?, ?, ?)");
+  public static void add(String e164, java.util.UUID uuid, String filename, java.util.UUID server) throws SQLException {
+    PreparedStatement statement =
+        Database.getConn().prepareStatement("INSERT OR IGNORE INTO " + TABLE_NAME + " (" + UUID + "," + E164 + "," + FILENAME + "," + SERVER + ") VALUES (?, ?, ?, ?)");
     statement.setString(1, uuid.toString());
     if (e164 != null) {
       statement.setString(2, e164);
     }
     statement.setString(3, filename);
+    statement.setString(4, server == null ? null : server.toString());
     statement.executeUpdate();
     AddressUtil.addKnownAddress(new SignalServiceAddress(uuid, e164));
   }
@@ -77,7 +83,7 @@ public class AccountsTable {
   public static void importFromJSON(File f) throws IOException, SQLException {
     AccountData accountData = AccountData.load(f);
     logger.info("migrating account if needed: " + accountData.address.toRedactedString());
-    add(accountData.username, accountData.getUUID(), f.getAbsolutePath());
+    add(accountData.username, accountData.getUUID(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean needsSave = false;
     try {
       if (accountData.legacyProtocolStore != null) {
@@ -115,6 +121,30 @@ public class AccountsTable {
     PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + UUID + " = ? WHERE " + E164 + " = ?");
     statement.setString(1, address.uuid);
     statement.setString(2, address.number);
+    statement.executeUpdate();
+  }
+
+  public static ServersTable.Server getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + SERVER + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
+    statement.setString(1, uuid.toString());
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      throw new AssertionError("account not found");
+    }
+    String serverUUID = rows.getString(SERVER);
+    rows.close();
+    if (serverUUID == null) {
+      serverUUID = BuildConfig.DEFAULT_SERVER_UUID;
+      setServer(uuid, serverUUID);
+    }
+    return ServersTable.getServer(java.util.UUID.fromString(serverUUID));
+  }
+
+  private static void setServer(java.util.UUID account, String server) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + SERVER + " = ? WHERE " + UUID + " = ?");
+    statement.setString(1, server);
+    statement.setString(2, account.toString());
     statement.executeUpdate();
   }
 }

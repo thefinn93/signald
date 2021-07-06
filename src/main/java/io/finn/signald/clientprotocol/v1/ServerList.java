@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.clientprotocol.v1;
 
-import java.io.InputStream;
-import org.whispersystems.signalservice.api.push.TrustStore;
+import io.finn.signald.db.ServersTable;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class WhisperTrustStore implements TrustStore {
-  @Override
-  public InputStream getKeyStoreInputStream() {
-    return WhisperTrustStore.class.getResourceAsStream("whisper.store");
-  }
+public class ServerList {
+  public List<Server> servers;
 
-  @Override
-  public String getKeyStorePassword() {
-    return "whisper";
-  }
+  public ServerList(List<ServersTable.Server> servers) { this.servers = servers.stream().map(Server::new).collect(Collectors.toList()); }
 }

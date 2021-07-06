@@ -25,11 +25,7 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoKnownUUID;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
-import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
@@ -40,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.signal.storageservice.protos.groups.Member;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
@@ -62,9 +59,9 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the message expiration timer") public int timer;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws IOException, NoSuchAccount, InvalidRequestException, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
-             InterruptedException, ExecutionException, TimeoutException, NoKnownUUID, OwnProfileKeyDoesNotExist {
+  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidRequestException, InvalidGroupStateException, VerificationFailedException,
+                                                     UnknownGroupException, SQLException, InterruptedException, ExecutionException, TimeoutException, NoKnownUUID,
+                                                     OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     AddressResolver resolver = m.getResolver();
     List<SignalServiceAddress> resolvedMembers = new ArrayList<>();

@@ -20,11 +20,14 @@ package io.finn.signald.clientprotocol.v0;
 import io.finn.signald.JsonAttachment;
 import io.finn.signald.JsonStickerPackOperationMessage;
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 @Deprecated(1641027661)
@@ -43,7 +46,8 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username) throws IOException, NoSuchAccountException, SQLException {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
     }

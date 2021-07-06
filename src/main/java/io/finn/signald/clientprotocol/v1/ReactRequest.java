@@ -23,7 +23,9 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import java.io.IOException;
@@ -32,6 +34,7 @@ import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.InvalidInputException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -45,8 +48,8 @@ public class ReactRequest implements RequestType<SendResponse> {
   public long timestamp;
 
   @Override
-  public SendResponse run(Request request)
-      throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException, UnknownGroupException, SQLException, NoSuchAccount {
+  public SendResponse run(Request request) throws IOException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, InvalidInputException,
+                                                  UnknownGroupException, SQLException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(username);
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();

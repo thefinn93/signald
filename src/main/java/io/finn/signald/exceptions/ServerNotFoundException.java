@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Finn Herzfeld
+ * Copyright (C) 2021 Finn Herzfeld
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald;
+package io.finn.signald.exceptions;
 
-import java.io.InputStream;
-import org.whispersystems.signalservice.api.push.TrustStore;
+import java.util.UUID;
 
-public class WhisperTrustStore implements TrustStore {
-  @Override
-  public InputStream getKeyStoreInputStream() {
-    return WhisperTrustStore.class.getResourceAsStream("whisper.store");
+public class ServerNotFoundException extends Exception {
+  private UUID server;
+  public ServerNotFoundException(UUID server) {
+    super("server not found: " + (server == null ? "null" : server.toString()));
+    this.server = server;
   }
 
-  @Override
-  public String getKeyStorePassword() {
-    return "whisper";
-  }
+  public UUID getServer() { return server; }
 }

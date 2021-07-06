@@ -18,7 +18,9 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.MessageEncoder;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.net.Socket;
 import java.sql.SQLException;
@@ -30,6 +32,7 @@ import org.signal.libsignal.metadata.InvalidMetadataMessageException;
 import org.signal.libsignal.metadata.ProtocolException;
 import org.signal.libsignal.metadata.SelfSendException;
 import org.whispersystems.libsignal.DuplicateMessageException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
@@ -43,13 +46,14 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
   private static final Logger logger = LogManager.getLogger();
   private static final HashMap<String, MessageReceiver> receivers = new HashMap<>();
 
-  public MessageReceiver(String username) throws SQLException, IOException, NoSuchAccountException {
+  public MessageReceiver(String username) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.username = username;
     this.m = Manager.get(username);
     this.sockets = new SocketManager();
   }
 
-  public static synchronized void subscribe(String username, MessageEncoder receiver) throws SQLException, IOException, NoSuchAccountException {
+  public static synchronized void subscribe(String username, MessageEncoder receiver)
+      throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     if (!receivers.containsKey(username)) {
       MessageReceiver r = new MessageReceiver(username);
       new Thread(r).start();
@@ -72,7 +76,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       logger.info("Last client for " + Util.redact(username) + " unsubscribed, shutting down message pipe");
       try {
         Manager.get(username).shutdownMessagePipe();
-      } catch (IOException | NoSuchAccountException | SQLException e) {
+      } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
         logger.catching(e);
       }
       receivers.remove(username);

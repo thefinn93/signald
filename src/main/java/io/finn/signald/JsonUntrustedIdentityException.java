@@ -18,12 +18,15 @@
 package io.finn.signald;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.SafetyNumberHelper;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -56,7 +59,7 @@ class JsonUntrustedIdentityException {
         this.safety_number =
             SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
       }
-    } catch (IOException | NoSuchAccountException | SQLException e) {
+    } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
       e.printStackTrace();
     }
   }

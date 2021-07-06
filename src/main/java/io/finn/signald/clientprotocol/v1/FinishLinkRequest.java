@@ -23,8 +23,10 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchSession;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
@@ -46,13 +48,20 @@ public class FinishLinkRequest implements RequestType<Account> {
   private boolean overwrite = false;
 
   @Override
-  public Account run(Request request)
-      throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccount, SQLException, NoSuchSession {
+  public Account run(Request request) throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccount, SQLException,
+                                             NoSuchSession, ServerNotFoundException, InvalidProxyException {
     ProvisioningManager pm = ProvisioningManager.get(sessionID);
     if (pm == null) {
       throw new NoSuchSession();
     }
-    String accountID = pm.finishDeviceLink(deviceName, overwrite);
+    String accountID = null;
+    try {
+      accountID = pm.finishDeviceLink(deviceName, overwrite);
+    } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
+      throw new ServerNotFoundException(e);
+    } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+      throw new InvalidProxyException(e);
+    }
     return new Account(Utils.getManager(accountID));
   }
 }

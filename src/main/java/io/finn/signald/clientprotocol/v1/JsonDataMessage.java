@@ -23,11 +23,14 @@ import io.finn.signald.JsonPreview;
 import io.finn.signald.JsonSticker;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
@@ -79,7 +82,9 @@ public class JsonDataMessage {
 
   @Doc("details about the MobileCoin payment attached to the message, if present") public Payment payment;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccount, SQLException {
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccount, SQLException, InvalidKeyException,
+                                                                                       io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException,
+                                                                                       io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {
@@ -89,6 +94,10 @@ public class JsonDataMessage {
           attachments.add(new JsonAttachment(attachment, username));
         } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
           throw new NoSuchAccount(e);
+        } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+          throw new InvalidProxyException(e);
+        } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
+          throw new ServerNotFoundException(e);
         }
       }
     }
@@ -128,6 +137,10 @@ public class JsonDataMessage {
           previews.add(new JsonPreview(p, username));
         } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
           throw new NoSuchAccount(e);
+        } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+          throw new InvalidProxyException(e);
+        } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
+          throw new ServerNotFoundException(e);
         }
       }
     }

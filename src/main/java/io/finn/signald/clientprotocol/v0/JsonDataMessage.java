@@ -23,11 +23,14 @@ import io.finn.signald.JsonSticker;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
@@ -71,7 +74,8 @@ public class JsonDataMessage {
 
   @Doc("list of mentions in the message") public List<JsonMention> mentions;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccountException, SQLException {
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {
