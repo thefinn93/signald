@@ -20,8 +20,8 @@ package io.finn.signald.clientprotocol.v1;
 import java.util.Map;
 
 public class ServerCDN {
-  int number;
-  String url;
+  public int number;
+  public String url;
 
   public ServerCDN(Map.Entry<Integer, String> entry) {
     number = entry.getKey();
