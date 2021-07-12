@@ -1,9 +1,19 @@
-signald (0.14.1) UNRELEASED; urgency=medium
+signald (0.14.0) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.14.0
+  * Sealed sender support has been added
+  * Server is configurable at runtime
+  * aarch64 debian repo support has been added
+  * systemd Type=notify now supported and used
+  * Will attempt to update these change logs going forward
+
+ -- Finn <finn@janky.solutions>  Sun, 11 Jul 2021 21:25:50 -0700
+
+signald (0.13.1) unstable; urgency=medium
 
   * Many, many changes since last update. Will try to keep this more updated in the future.
-  * Entire legacy socket protocol is depreacted.
 
- -- Finn <finn@janky.solutions>  Sun, 11 Jul 2021 21:10:08 -0700
+ -- Finn <finn@janky.solutions>  Sun, 11 Jul 2021 21:25:50 -0700
 
 signald (0.2.0) unstable; urgency=medium
 
