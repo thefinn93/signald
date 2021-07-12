@@ -34,5 +34,7 @@ public class JsonSticker {
     packKey = Hex.toStringCondensed(sticker.getPackKey());
     stickerID = sticker.getStickerId();
     image = Manager.getStickerFile(sticker).getAbsolutePath();
+    attachment = new JsonAttachment(sticker.getAttachment());
+    attachment.storedFilename = image;
   }
 }

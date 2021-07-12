@@ -52,8 +52,7 @@ public class JsonAttachment {
 
   JsonAttachment(String storedFilename) { this.filename = storedFilename; }
 
-  public JsonAttachment(SignalServiceAttachment attachment, String username)
-      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public JsonAttachment(SignalServiceAttachment attachment) {
     this.contentType = attachment.getContentType();
     final SignalServiceAttachmentPointer pointer = attachment.asPointer();
     if (attachment.isPointer()) {
@@ -89,7 +88,13 @@ public class JsonAttachment {
       if (pointer.getFileName().isPresent()) {
         this.customFilename = pointer.getFileName().get();
       }
+    }
+  }
 
+  public JsonAttachment(SignalServiceAttachment attachment, String username)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    this(attachment);
+    if (attachment.isPointer()) {
       File file = Manager.get(username).getAttachmentFile(id);
       if (file.exists()) {
         this.storedFilename = file.toString();
