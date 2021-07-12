@@ -1,5 +1,12 @@
+signald (0.14.1) UNRELEASED; urgency=medium
+
+  * Many, many changes since last update. Will try to keep this more updated in the future.
+  * Entire legacy socket protocol is depreacted.
+
+ -- Finn <finn@janky.solutions>  Sun, 11 Jul 2021 21:10:08 -0700
+
 signald (0.2.0) unstable; urgency=medium
 
   * Initial Release.
 
- -- Finn Herzfeld <signald@janky.solutions>  Fri, 14 Sep 2018 16:07:43 -0700
+ -- Finn <finn@janky.solutions>  Fri, 14 Sep 2018 16:07:43 -0700

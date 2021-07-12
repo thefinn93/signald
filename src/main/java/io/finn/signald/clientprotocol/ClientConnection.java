@@ -133,7 +133,7 @@ public class ClientConnection implements Runnable {
 
         if (version.equals("v0")) {
           request = mapper.convertValue(rawRequest, JsonRequest.class);
-          logger.debug("All v0 requests are deprecated and will be removed in late 2021. Client authors, "
+          logger.debug("All v0 requests are deprecated and will be removed at the end of 2021. Client authors, "
                        + "see https://signald.org/articles/protocol-versioning/#deprecation. This message will become a "
                        + "warning in signald 0.15");
           legacySocketHandler.handleRequest(request);
