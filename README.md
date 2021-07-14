@@ -21,6 +21,7 @@ Most of this information presented here, as well as a lot more, is also availabl
 * [alertmanager-webhook-signald](https://github.com/dgl/alertmanager-webhook-signald) -  Alertmanager webhook server for Signald
 * [spectrum2_signald](https://gitlab.com/nicocool84/spectrum2_signald/) - An XMPP gateway to signald based on [spectrum](https://spectrum.im/)
 * [slidge](https://gitlab.com/nicocool84/slidge/) - An XMPP gateway to signald using the SliXMPP library.
+* [signald-smtp-bridge](https://github.com/lawrencegripper/signald-smtp-bridge) - An SMTP server which receives emails and sends them via signald
 
 ## Contributing/Questions/Feedback/Bugs
 
