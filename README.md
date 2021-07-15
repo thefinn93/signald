@@ -65,6 +65,9 @@ documented on [signald.org](https://signald.org/), which is automatically re-gen
 **all v0 requests are deprecated and will be removed at the end of 2021**
 
 ### `send`
+
+*v0 deprecated, use [v1 send](https://signald.org/protocol/actions/v1/send/)*
+
 Sends a signal message to another user or a group. Possible values are:
 
 | Field | Type | Required? | Description |
@@ -79,6 +82,8 @@ Sends a signal message to another user or a group. Possible values are:
 
 ### `register`
 
+*v0 deprecated, use [v1 register](https://signald.org/protocol/actions/v1/register/)*
+
 Begins the process of registering a new number on signal for use with signald. Possible values are:
 
 | Field | Type | Required? | Description |
@@ -90,6 +95,8 @@ Begins the process of registering a new number on signal for use with signald. P
 
 ### `verify`
 
+*v0 deprecated, use [v1 verify](https://signald.org/protocol/actions/v1/register/)*
+
 Completes the registration process, by providing a verification code sent after the `register` command. Possible values are:
 
 | Field | Type | Required? | Description |
@@ -99,6 +106,8 @@ Completes the registration process, by providing a verification code sent after 
 
 
 ### `typing_started`
+
+*v0 deprecated, use [v1 typing](https://signald.org/protocol/actions/v1/typing/)*
 
 Send a typing started message.
 
@@ -111,6 +120,8 @@ Send a typing started message.
 
 ### `typing_stopped`
 
+*v0 deprecated, use [v1 typing](https://signald.org/protocol/actions/v1/typing/)*
+
 Send a typing stopped message.
 
 | Field | Type | Required | Description |
@@ -121,6 +132,8 @@ Send a typing stopped message.
 
 
 ### `mark_read`
+
+*v0 deprecated, use [v1 mark_read](https://signald.org/protocol/actions/v1/mark_read/)*
 
 Mark a received message as "read" by sending a receipt message.
 
@@ -133,6 +146,8 @@ Mark a received message as "read" by sending a receipt message.
 
 ### `add_device`
 
+*v0 deprecated, use [v1 add_device](https://signald.org/protocol/actions/v1/add_device/)*
+
 Adds another device to a signal account that signald controls the primary device on. Possible values are:
 
 | Field | Type | Required? | Description |
@@ -143,10 +158,14 @@ Adds another device to a signal account that signald controls the primary device
 
 ### `list_accounts`
 
+*v0 deprecated, use [v1 list_accounts](https://signald.org/protocol/actions/v1/list_accounts/)*
+
 Returns a list of all currently known accounts in signald, including ones that have not completed registration. No other fields are used.
 
 
 ### `list_groups`
+
+*v0 deprecated, use [v1 list_groups](https://signald.org/protocol/actions/v1/list_groups/)*
 
 Returns a list of all groups the specified user is in.
 
@@ -155,6 +174,8 @@ Returns a list of all groups the specified user is in.
 | `username` | string | yes | The account to list the groups of |
 
 ### `update_group`
+
+*v0 deprecated, use [v1 update_group](https://signald.org/protocol/actions/v1/update_group/)*
 
 modifies a group. Only specify fields that should be updated. For v2 groups, only one type of update is permitted per call (may not add members and change name in a single request, for example)
 
@@ -170,6 +191,8 @@ for v2 group features like removing members, see [`v1.update_group`](https://sig
 
 ### `leave_group`
 
+*v0 deprecated, use [v1 leave_group](https://signald.org/protocol/actions/v1/leave_group/)*
+
 Leaves a group
 
 | Field | Type | Required | Description |
@@ -178,6 +201,8 @@ Leaves a group
 | `recipientGroupId` | string | yes | the base64 encoded group ID |
 
 ### `link`
+
+*v0 deprecated, use [v1 generate_linking_uri](https://signald.org/protocol/actions/v1/generate_linking_uri/)*
 
 Adds a new account to signald by linking to another signal device that has already registered. Provides a URI that should be used to
 link. To link with the Signal app, encode the URI as a QR code, open the Signal app, go to settings -> Linked Devices, tap the + button
@@ -188,6 +213,8 @@ in the bottom right and scan the QR code.
 | `deviceName` | string | no | The device name to show in the "Linked Devices" section in the Signal app. Defaults to "signald" |
 
 ### `get_user`
+
+*v0 deprecated*
 
 Checks if a phone number is currently registered with the server. Returns the number's registration state. The server
 heavily rate limits this endpoint, do not call it frequently.
@@ -200,6 +227,8 @@ heavily rate limits this endpoint, do not call it frequently.
 
 ### `get_identities`
 
+*v0 deprecated, use [v1 get_identities](https://signald.org/protocol/actions/v1/get_identities/)*
+
 Returns all known identities/keys, optionally just for a specific number.
 
 | Field | Type | Required | Description |
@@ -209,6 +238,8 @@ Returns all known identities/keys, optionally just for a specific number.
 
 
 ### `trust`
+
+*v0 deprecated, use [v1 trust](https://signald.org/protocol/actions/v1/trust/)*
 
 Trust's a safety number or fingerprint.
 
@@ -227,9 +258,13 @@ If `trustLevel` is not specified, defaults to `TRUSTED_VERIFIED`. Possible value
 
 ### `version`
 
+*v0 deprecated, use [v1 version](https://signald.org/protocol/actions/v1/version/)*
+
 Returns the version of signald in use
 
 ### `subscribe`
+
+*v0 deprecated, use [v1 subscribe](https://signald.org/protocol/actions/v1/subscribe/)*
 
 Causes inbound messages to the specified account to be sent to the socket. If no clients are subscribed to a given account, signald
 will not listen for messages from the Signal server and the server will store them until a signald begins receiving again.
@@ -240,6 +275,8 @@ will not listen for messages from the Signal server and the server will store th
 
 ### `unsubscribe`
 
+*v0 deprecated, use [v1 unsubscribe](https://signald.org/protocol/actions/v1/unsubscribe/)*
+
 Unsubscribes from messages to the specified account. See `subscribe` for more details.
 
 | Field | Type | Required | Description |
@@ -247,6 +284,8 @@ Unsubscribes from messages to the specified account. See `subscribe` for more de
 | `username` | `string` | yes | The user to unsubscribe to messages for. |
 
 ### `sync_contacts`
+
+*v0 deprecated, use [v1 request_sync](https://signald.org/protocol/actions/v1/request_sync/)*
 
 Sends a contact sync request to the other devices on this account.
 
@@ -258,6 +297,8 @@ Sends a contact sync request to the other devices on this account.
 
 ### `sync_groups`
 
+*v0 deprecated, use [v1 request_sync](https://signald.org/protocol/actions/v1/request_sync/)*
+
 Sends a group sync request to the other devices on this account.
 
 **NOTE**: Sync responses are received like all other messages, and won't come in until that account is subscribed.
@@ -267,6 +308,8 @@ Sends a group sync request to the other devices on this account.
 | `username` | `string` | yes | The account to sync contacts for. |
 
 ### `sync_configuration`
+
+*v0 deprecated, use [v1 request_sync](https://signald.org/protocol/actions/v1/request_sync/)*
 
 Sends a configuration sync request to the other devices on this account.
 
@@ -278,6 +321,8 @@ Sends a configuration sync request to the other devices on this account.
 
 ### `list_contacts`
 
+*v0 deprecated, use [v1 list_contacts](https://signald.org/protocol/actions/v1/list_contacts/)*
+
 Lists all of the contacts in the contact store for the specified user.
 
 | Field | Type | Required | Description |
@@ -286,6 +331,8 @@ Lists all of the contacts in the contact store for the specified user.
 
 
 ### `update_contact`
+
+*v0 deprecated, use [v1 update_contact](https://signald.org/protocol/actions/v1/update_contact/)*
 
 Create or update a contact in our contact store.
 
@@ -305,6 +352,8 @@ Create or update a contact in our contact store.
 
 ### `set_expiration`
 
+*v0 deprecated, use [v1 set_expiration](https://signald.org/protocol/actions/v1/set_expiration/)*
+
 Sets or changes the expiration time for messages in a group or PM.
 
 As one might expect, `recipientAddress` and `recipientGroupId` are mutually exclusive and one of them is required.
@@ -319,6 +368,8 @@ As one might expect, `recipientAddress` and `recipientGroupId` are mutually excl
 
 ### `get_profile`
 
+*v0 deprecated, use [v1 get_profile](https://signald.org/protocol/actions/v1/get_profile/)*
+
 Gets a user's profile. At this time only the name is available. Must have the user's profileKey already, otherwise you'll get a `profile_not_available`.
 
 | Field             | Type     | Required | Description |
@@ -329,7 +380,7 @@ Gets a user's profile. At this time only the name is available. Must have the us
 
 ### `set_profile`
 
-note: [`set_profile` v1](https://signald.org/protocol/actions/v1/set_profile/) supports setting avatar.
+*v0 deprecated, use [v1 set_profile](https://signald.org/protocol/actions/v1/set_profile/)*
 
 Sets the user's profile. At this time only the name is available.
 
@@ -339,6 +390,8 @@ Sets the user's profile. At this time only the name is available.
 | `name`     | `string` | yes      | The number of the user who's profile is being checked. |
 
 ### `react`
+
+*v0 deprecated, use [v1 react](https://signald.org/protocol/actions/v1/react/)*
 
 React to a message. For details see the [`JsonReaction`](https://signald.org/protocol/structures/v1/JsonReaction/) wiki page.
 
@@ -351,6 +404,8 @@ React to a message. For details see the [`JsonReaction`](https://signald.org/pro
 
 ### `group_link_info`
 
+*v0 deprecated, use [v1 group_link_info](https://signald.org/protocol/actions/v1/group_link_info/)*
+
 Get information about a v2 group from a signal.group link
 
 | Field      | Type     | Required | Description |
@@ -358,59 +413,9 @@ Get information about a v2 group from a signal.group link
 | `username` | `string` | yes      | The account to use. |
 | `uri`      | `string` | yes      | The signal.group link |
 
-
-### `get_linked_devices`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/get_linked_devices/)
-
-list all linked devices on a Signal account
-
-| Field      | Type     | Required | Description |
-|------------|----------|----------|-------------|
-| `account`  | `string` | yes      | The account to use. |
-
-### `remove_linked_device`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/remove_linked_device/)
-
-Remove a linked device from the Signal account. Unavailable on non-primary devices (device ID != 1)
-
-| Field      | Type     | Required | Description |
-|------------|----------|----------|-------------|
-| `account`  | `string` | yes      | The account to use. |
-| `deviceId` | `long`   | yes      | the ID of the device to unlink |
-
 ### `protocol`
 
 returns a JSON document that describes the next generation of the signald protocol. For more information, see [signald.org](https://signald.org)
-
-### `resolve_address`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/resolve_address/)
-
-Takes a [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) with missing fields and populates any available fields.
-
-| Field      | Type     | Required | Description |
-|------------|----------|----------|-------------|
-| `account`  | `string` | yes      | The account to use. |
-| `partial` | [`JsonAddress`](https://signald.org/protocol/structures/v1/JsonAddress/) | yes      | incomplete address to be populated |
-
-### `accept_invitation`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/accept_invitation/)
-
-### `approve_membership`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/approve_membership/)
-
-### `join_group`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/join_group/)
-
-### `create_group`
-
-[see on signald.org](https://signald.org/protocol/actions/v1/create_group/)
-
 
 ## License
 This software is licensed under the GPLv3. It is based on [signal-cli](https://github.com/Asamk/signal-cli).
