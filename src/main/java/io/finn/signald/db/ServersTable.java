@@ -74,7 +74,7 @@ public class ServersTable {
   public static Server getServer(UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " +
                                                                       KEY_BACKUP_URL + ", " + STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," +
-                                                                      PROXY + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
+                                                                      PROXY + "," + CA + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
     statement.setString(1, uuid.toString());
     ResultSet rows = statement.executeQuery();
 
@@ -101,9 +101,10 @@ public class ServersTable {
     byte[] zkGroupPublicParams = rows.getBytes(ZK_GROUP_PUBLIC_PARAMS);
     byte[] unidentifiedSenderRoot = rows.getBytes(UNIDENTIFIED_SENDER_ROOT);
     String proxyString = rows.getString(PROXY);
+    byte[] ca = rows.getBytes(CA);
     rows.close();
 
-    return new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, null);
+    return new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca);
   }
 
   public static List<Server> allServers() throws SQLException {
@@ -111,7 +112,7 @@ public class ServersTable {
 
     PreparedStatement statement =
         Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " + KEY_BACKUP_URL + ", " +
-                                            STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + " FROM " + TABLE_NAME);
+                                            STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + " FROM " + TABLE_NAME);
     ResultSet rows = statement.executeQuery();
     while (rows.next()) {
       UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
@@ -123,9 +124,10 @@ public class ServersTable {
       byte[] zkGroupPublicParams = rows.getBytes(ZK_GROUP_PUBLIC_PARAMS);
       byte[] unidentifiedSenderRoot = rows.getBytes(UNIDENTIFIED_SENDER_ROOT);
       String proxyString = rows.getString(PROXY);
+      byte[] ca = rows.getBytes(CA);
 
       try {
-        Server server = new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, null);
+        Server server = new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca);
         servers.add(server);
       } catch (IOException | InvalidProxyException e) {
         logger.warn("failed to load signal server " + serverUUID.toString() + " from database: " + e.getMessage());
