@@ -102,7 +102,7 @@ build deb x86:
       allow_failure: true
 
 build deb aarch64:
-  image: registry.gitlab.com/signald/infrastructure/signald-builder-arm
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-arm64-v8:010941fc
   stage: build
   needs: []
   tags: [arm-builder]
@@ -110,6 +110,29 @@ build deb aarch64:
     - export VERSION="$(./version.sh)"
     - echo "Building signald version $VERSION"
     - "sed -i 's/^Architecture:.*/Architecture: arm64/g' debian/control"
+  script:
+    - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
+    - dpkg-buildpackage -b
+    - mv ../signald_* .
+  artifacts:
+    paths:
+      - "signald_*"
+    expire_in: 30 days
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+build deb armhf:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-arm-v7:010941fc
+  stage: build
+  needs: []
+  tags: [arm-builder]
+  before_script:
+    - export VERSION="$(./version.sh)"
+    - echo "Building signald version $VERSION"
+    - "sed -i 's/^Architecture:.*/Architecture: armhf/g' debian/control"
   script:
     - gbp dch --ignore-branch --debian-tag="%(version)s" --git-author --new-version="${VERSION}"
     - dpkg-buildpackage -b
@@ -278,7 +301,7 @@ publish debian packages:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
   stage: publish
   tags: [deb-signer]
-  needs: ["build deb x86", "build deb aarch64"]
+  needs: ["build deb x86", "build deb aarch64", "build deb armhf"]
   script:
     - tools/aptly-publish.sh
   variables:
