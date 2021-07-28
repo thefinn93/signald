@@ -25,6 +25,8 @@ import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
+import io.prometheus.client.exporter.HTTPServer;
+import io.prometheus.client.hotspot.DefaultExports;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +79,10 @@ public class Main implements Runnable {
 
   @Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit") private boolean dumpProtocol = false;
 
+  @Option(names = {"-m", "--metrics"}, description = "record and expose metrics in prometheus format") private boolean metrics = false;
+
+  @Option(names = {"--metrics-http-port"}, description = "metrics http listener port. Default is 9595") private int metricsHttpPort = 9595;
+
   private static final Logger logger = LogManager.getLogger();
 
   public void run() {
@@ -95,6 +101,26 @@ public class Main implements Runnable {
       }
       System.exit(1);
     }
+
+    String enableMetrics = System.getenv("SIGNALD_ENABLE_METRICS");
+    if (enableMetrics != null) {
+      metrics = Boolean.parseBoolean(enableMetrics);
+    }
+
+    if (metrics) {
+      String port = System.getenv("SIGNALD_METRICS_PORT");
+      if (port != null) {
+        metricsHttpPort = Integer.parseInt(port);
+      }
+      try {
+        DefaultExports.initialize();
+        logger.debug("starting metrics server on port " + metricsHttpPort);
+        new HTTPServer(metricsHttpPort);
+      } catch (IOException e) {
+        logger.error("error starting metrics server:", e);
+      }
+    }
+
     try {
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
@@ -227,7 +253,7 @@ public class Main implements Runnable {
     for (;;) {
       try {
         return r.get();
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ignored) {
       }
     }
   }

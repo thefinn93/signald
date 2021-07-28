@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
+import io.prometheus.client.Counter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -81,6 +83,9 @@ public class AccountData {
 
   private static String dataPath;
   private static final Logger logger = LogManager.getLogger();
+
+  static final Counter savesCount =
+      Counter.build().name(BuildConfig.NAME + "_saves_total").help("Total number of times the JSON file was written to the disk").labelNames("account_uuid").register();
 
   AccountData() {}
 
@@ -207,8 +212,9 @@ public class AccountData {
     }
     validate();
 
-    ObjectWriter writer = JSONUtil.GetWriter();
+    savesCount.labels(address.uuid == null ? "null" : address.uuid).inc();
 
+    ObjectWriter writer = JSONUtil.GetWriter();
     File dataPathFile = new File(dataPath);
     if (!dataPathFile.exists()) {
       dataPathFile.mkdirs();

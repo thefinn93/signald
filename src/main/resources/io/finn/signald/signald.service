@@ -10,6 +10,7 @@ RuntimeDirectoryMode=0770
 User=signald
 Group=signald
 ExecStart=/usr/bin/signald -d /var/lib/signald
+EnvironmentFile=-/etc/defaults/signald
 Restart=on-failure
 UMask=0007
 # JVM always exits with 143 in reaction to SIGTERM signal

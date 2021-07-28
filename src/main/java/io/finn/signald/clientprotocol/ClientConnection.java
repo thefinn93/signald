@@ -24,6 +24,9 @@ import io.finn.signald.*;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.util.JSONUtil;
+import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
+import io.prometheus.client.Summary;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -41,6 +44,15 @@ public class ClientConnection implements Runnable {
   private final PrintWriter writer;
   private final Socket socket;
   private final LegacySocketHandler legacySocketHandler;
+  static final Gauge clientsConnected = Gauge.build().name(BuildConfig.NAME + "_clients_connected").help("Client connection count.").register();
+  static final Summary requestProcessingTime = Summary.build()
+                                                   .quantile(0.5, 0.05)
+                                                   .quantile(0.9, 0.01)
+                                                   .name(BuildConfig.NAME + "_request_processing_time")
+                                                   .help("Time (in seconds) to process requests.")
+                                                   .labelNames("request_type", "request_version")
+                                                   .register();
+  static final Counter requestCount = Counter.build().name(BuildConfig.NAME + "_requests_total").help("Total requests processed").labelNames("request_type", "version").register();
 
   public ClientConnection(Socket s) throws IOException {
     reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -52,7 +64,9 @@ public class ClientConnection implements Runnable {
   @Override
   public void run() {
     logger.info("Client connected");
+
     try {
+      clientsConnected.inc();
       JsonMessageWrapper message = new JsonMessageWrapper("version", new JsonVersionMessage(), (String)null);
       send(message);
 
@@ -75,6 +89,7 @@ public class ClientConnection implements Runnable {
         logger.catching(e);
       }
       logger.info("Client disconnected");
+      clientsConnected.dec();
     }
   }
 
@@ -119,26 +134,32 @@ public class ClientConnection implements Runnable {
           id = " (request ID: " + rawRequest.get("id").asText() + ") ";
         }
         String version = "v0";
+        String type = rawRequest.get("type").asText();
         if (rawRequest.has("version")) {
           version = rawRequest.get("version").asText();
         } else if (rawRequest.has("type") && Request.defaultVersions.containsKey(rawRequest.get("type").asText())) {
-          String type = rawRequest.get("type").asText();
           version = Request.defaultVersions.get(type);
         }
 
-        if (!rawRequest.has("version")) {
-          logger.info("signald received a request" + id + "with no version. This will stop working in a future version of signald. "
-                      + "Please update your client. Client authors, see https://signald.org/articles/protocol-versioning/");
-        }
+        Summary.Timer timer = requestProcessingTime.labels(type, version).startTimer();
+        try {
+          if (!rawRequest.has("version")) {
+            logger.info("signald received a request" + id + "with no version. This will stop working in a future version of signald. "
+                        + "Please update your client. Client authors, see https://signald.org/articles/protocol-versioning/");
+          }
 
-        if (version.equals("v0")) {
-          request = mapper.convertValue(rawRequest, JsonRequest.class);
-          logger.debug("All v0 requests are deprecated and will be removed at the end of 2021. Client authors, "
-                       + "see https://signald.org/articles/protocol-versioning/#deprecation. This message will become a "
-                       + "warning in signald 0.15");
-          legacySocketHandler.handleRequest(request);
-        } else {
-          new Request(rawRequest, socket);
+          if (version.equals("v0")) {
+            request = mapper.convertValue(rawRequest, JsonRequest.class);
+            logger.debug("All v0 requests are deprecated and will be removed at the end of 2021. Client authors, "
+                         + "see https://signald.org/articles/protocol-versioning/#deprecation. This message will become a "
+                         + "warning in signald 0.15");
+            legacySocketHandler.handleRequest(request);
+          } else {
+            new Request(rawRequest, socket);
+          }
+        } finally {
+          timer.observeDuration();
+          requestCount.labels(type, version).inc();
         }
       } catch (Throwable e) {
         handleError(e, request);

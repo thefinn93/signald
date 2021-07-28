@@ -21,6 +21,8 @@ import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.prometheus.client.Counter;
+import io.prometheus.client.Gauge;
 import java.io.IOException;
 import java.net.Socket;
 import java.sql.SQLException;
@@ -43,12 +45,17 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
   private final Manager m;
   private int backoff = 0;
   private final SocketManager sockets;
+  private final String uuid;
   private static final Logger logger = LogManager.getLogger();
   private static final HashMap<String, MessageReceiver> receivers = new HashMap<>();
+  static final Gauge subscribedAccounts =
+      Gauge.build().name(BuildConfig.NAME + "_subscribed_accounts").help("number of accounts subscribed to messages from the Signal server").register();
+  static final Counter receivedMessages = Counter.build().name(BuildConfig.NAME + "_received_messages").help("number of messages received").labelNames("account_uuid").register();
 
   public MessageReceiver(String username) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.username = username;
     this.m = Manager.get(username);
+    this.uuid = m.getUUID().toString();
     this.sockets = new SocketManager();
   }
 
@@ -102,6 +109,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
         try {
+          subscribedAccounts.inc();
           if (notifyOnConnect) {
             this.sockets.broadcastListenStarted();
           } else {
@@ -120,6 +128,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         } catch (AssertionError e) {
           this.sockets.broadcastListenStopped(e);
           logger.catching(e);
+        } finally {
+          subscribedAccounts.dec();
         }
         if (m.getAccountData().isDeleted()) {
           return; // exit the receive thread
@@ -166,6 +176,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     } else {
       this.sockets.broadcastIncomingMessage(envelope, content);
     }
+    receivedMessages.labels(uuid).inc();
   }
 
   static class SocketManager {

@@ -120,6 +120,9 @@ dependencies {
     implementation 'org.xerial:sqlite-jdbc:3.34.0'
     implementation 'org.flywaydb:flyway-core:7.5.3'
     implementation 'com.google.protobuf:protobuf-javalite:3.10.0'
+    implementation 'io.prometheus:simpleclient:0.11.0'
+    implementation 'io.prometheus:simpleclient_hotspot:0.11.0'
+    implementation 'io.prometheus:simpleclient_httpserver:0.11.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }
