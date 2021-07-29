@@ -27,15 +27,16 @@ import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class ClientConnection implements Runnable {
   private static final Logger logger = LogManager.getLogger();
@@ -44,7 +45,8 @@ public class ClientConnection implements Runnable {
   private final PrintWriter writer;
   private final Socket socket;
   private final LegacySocketHandler legacySocketHandler;
-  static final Gauge clientsConnected = Gauge.build().name(BuildConfig.NAME + "_clients_connected").help("Client connection count.").register();
+  static final Gauge clientsConnected = Gauge.build().name(BuildConfig.NAME + "_current_clients_connected").help("current client connections").register();
+  static final Counter clientsConnectedTotal = Counter.build().name(BuildConfig.NAME + "_clients_connected_total").help("total client connections").register();
   static final Summary requestProcessingTime = Summary.build()
                                                    .quantile(0.5, 0.05)
                                                    .quantile(0.9, 0.01)
@@ -66,6 +68,7 @@ public class ClientConnection implements Runnable {
     logger.info("Client connected");
 
     try {
+      clientsConnectedTotal.inc();
       clientsConnected.inc();
       JsonMessageWrapper message = new JsonMessageWrapper("version", new JsonVersionMessage(), (String)null);
       send(message);
