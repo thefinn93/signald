@@ -88,6 +88,7 @@ public class Main implements Runnable {
   public void run() {
     if (verbose) {
       Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
+      LogSetup.setup();
     }
 
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);

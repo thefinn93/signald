@@ -17,7 +17,6 @@
 
 package io.finn.signald.clientprotocol;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.*;
@@ -32,7 +31,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.SocketException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
@@ -40,8 +38,6 @@ import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserExce
 public class ClientConnection implements Runnable {
   private static final Logger logger = LogManager.getLogger();
   private final ObjectMapper mapper = JSONUtil.GetMapper();
-  private final BufferedReader reader;
-  private final PrintWriter writer;
   private final Socket socket;
   private final LegacySocketHandler legacySocketHandler;
   static final Gauge clientsConnected = Gauge.build().name(BuildConfig.NAME + "_current_clients_connected").help("current client connections").register();
@@ -56,8 +52,6 @@ public class ClientConnection implements Runnable {
   static final Counter requestCount = Counter.build().name(BuildConfig.NAME + "_requests_total").help("Total requests processed").labelNames("request_type", "version").register();
 
   public ClientConnection(Socket s) throws IOException {
-    reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
-    writer = new PrintWriter(s.getOutputStream(), true);
     socket = s;
     legacySocketHandler = new LegacySocketHandler(socket);
   }
@@ -66,36 +60,34 @@ public class ClientConnection implements Runnable {
   public void run() {
     logger.info("Client connected");
 
-    try {
-      clientsConnectedTotal.inc();
-      clientsConnected.inc();
-      JsonMessageWrapper message = new JsonMessageWrapper("version", new JsonVersionMessage(), (String)null);
-      send(message);
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+      try (PrintWriter w = new PrintWriter(socket.getOutputStream(), true)) {
+        try {
+          clientsConnectedTotal.inc();
+          clientsConnected.inc();
+          JsonMessageWrapper message = new JsonMessageWrapper("version", new JsonVersionMessage(), (String)null);
+          send(w, message);
 
-      String line;
-      while ((line = reader.readLine()) != null) {
-        if (line.trim().length() > 0) {
-          new Thread(new RequestRunner(line)).start();
+          String line;
+          while ((line = reader.readLine()) != null) {
+            if (line.trim().length() > 0) {
+              new Thread(new RequestRunner(line, w)).start();
+            }
+          }
+        } catch (IOException e) {
+          handleError(w, e, null);
         }
       }
-    } catch (SocketException e) {
-      logger.debug("socket exception while reading from client. Likely just means the client disconnected before we expected: " + e.getMessage());
     } catch (IOException e) {
-      handleError(e, null);
+      logger.debug("client socket exception: " + e.getMessage());
     } finally {
       MessageReceiver.unsubscribeAll(socket);
-      try {
-        reader.close();
-        writer.close();
-      } catch (IOException e) {
-        logger.catching(e);
-      }
       logger.info("Client disconnected");
       clientsConnected.dec();
     }
   }
 
-  private void handleError(Throwable error, JsonRequest request) {
+  private void handleError(PrintWriter w, Throwable error, JsonRequest request) {
     if (error instanceof NoSuchAccount) {
       logger.warn("unable to process request for non-existent account");
     } else if (error instanceof UnregisteredUserException) {
@@ -109,21 +101,25 @@ public class ClientConnection implements Runnable {
     }
     try {
       JsonMessageWrapper message = new JsonMessageWrapper("unexpected_error", new JsonStatusMessage(0, error.getMessage(), request), requestID);
-      send(message);
-    } catch (JsonProcessingException e) {
+      send(w, message);
+    } catch (IOException e) {
       logger.catching(e);
     }
   }
 
-  public void send(JsonMessageWrapper message) throws JsonProcessingException {
+  public void send(PrintWriter w, JsonMessageWrapper message) throws IOException {
     String m = mapper.writeValueAsString(message);
-    synchronized (writer) { writer.println(m); }
+    synchronized (socket) { w.println(m); }
   }
 
   private class RequestRunner implements Runnable {
     private final String line;
+    private final PrintWriter writer;
 
-    RequestRunner(String l) { line = l; }
+    RequestRunner(String l, PrintWriter w) {
+      line = l;
+      writer = w;
+    }
 
     @Override
     public void run() {
@@ -167,7 +163,7 @@ public class ClientConnection implements Runnable {
           requestCount.labels(type, version).inc();
         }
       } catch (Throwable e) {
-        handleError(e, request);
+        handleError(writer, e, request);
       }
     }
   }
