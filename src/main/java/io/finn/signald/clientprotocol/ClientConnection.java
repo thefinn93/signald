@@ -27,16 +27,15 @@ import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class ClientConnection implements Runnable {
   private static final Logger logger = LogManager.getLogger();
