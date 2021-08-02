@@ -940,8 +940,11 @@ public class Manager {
       }
     } else {
       ContactStore.ContactInfo c = accountData.contactStore.getContact(isSync ? destination : source);
-      c.messageExpirationTime = message.getExpiresInSeconds();
-      accountData.contactStore.updateContact(c);
+      if (c.messageExpirationTime != message.getExpiresInSeconds()) {
+        c.messageExpirationTime = message.getExpiresInSeconds();
+        accountData.contactStore.updateContact(c);
+        accountData.save();
+      }
     }
 
     if (message.isEndSession()) {
