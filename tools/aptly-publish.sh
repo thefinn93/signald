@@ -21,6 +21,12 @@
 aptly repo create signald
 aptly mirror create -ignore-signatures backfill-mirror https://updates.signald.org "${DISTRIBUTION}" main
 aptly mirror update -ignore-signatures backfill-mirror
-aptly repo import backfill-mirror signald signald signaldctl
+
+for version in $(aptly package show signald | grep Version | awk '{print $2}' | grep -v "git"); do
+  aptly repo import backfill-mirror signald "signald (= $version)"
+done
+
+aptly repo import backfill-mirror signald signaldctl 'signald (>= 0.14.0)'
+
 aptly repo add signald signald_*.deb
 aptly publish repo -config=.aptly.conf -batch -gpg-key="${SIGNING_KEY}" -distribution="${DISTRIBUTION}" "signald" "s3:updates.signald.org:"
