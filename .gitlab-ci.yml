@@ -164,7 +164,7 @@ docker:
   variables:
     PLATFORM: "linux/amd64,linux/arm64/v8,linux/arm/v7"
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald"' && $CI_COMMIT_REF_PROTECTED == "true"'
+    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
     - when: manual
       allow_failure: true
