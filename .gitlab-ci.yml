@@ -169,6 +169,33 @@ build-docker x86:
     - when: manual
       allow_failure: true
 
+docker:
+  image: jdrouet/docker-with-buildx:stable
+  stage: build
+  tags: [docker-builder]
+  before_script: # per recommendations from https://github.com/docker/buildx/issues/495#issuecomment-754200673
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    - docker buildx create --name cibuilder --driver docker-container --use
+    - docker buildx inspect --bootstrap
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - export platform_sanatized=$(echo ${PLATFORM:6} | sed 's#/#-#g')
+  script:
+    - docker buildx build --platform "${PLATFORM}" -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA:0:8}" -t "${CI_REGISTRY_IMAGE}:${platform_sanatized}-${CI_COMMIT_SHA:0:8}" -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" -t "${CI_REGISTRY_IMAGE}:${platform_sanatized}-${CI_COMMIT_REF_SLUG}" --push .
+    - if [[ "${CI_COMMIT_REF_PROTECTED}" == "true" ]]; then docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}; fi
+    - if [[ "${CI_COMMIT_REF_PROTECTED}" == "true" ]]; then docker buildx build --platform "${PLATFORM}" -t "${CI_REGISTRY_IMAGE}:latest" -t "${CI_REGISTRY_IMAGE}:${platform_sanatized}-latest" --push . ; fi
+    - if [[ "${CI_COMMIT_REF_PROTECTED}" == "true" ]]; then docker buildx build --platform "${PLATFORM}" -t "${DOCKER_HUB_USERNAME}/signald:latest" -t "${DOCKER_HUB_USERNAME}/signald:${platform_sanatized}-latest" -t "signald/signald:latest" -t "signald/signald:${platform_sanatized}-latest" --push .; fi
+  parallel:
+    matrix:
+      - PLATFORM:
+          - linux/amd64
+          - linux/arm64/v8
+          - linux/arm/v7
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "signald"' # && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 build docker aarch64:
   stage: build
   tags: [arm-docker-builder]
