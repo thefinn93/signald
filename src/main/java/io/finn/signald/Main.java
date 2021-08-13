@@ -143,7 +143,7 @@ public class Main implements Runnable {
         logger.warn("db migration warning: " + w);
       }
       for (MigrateOutput o : migrateResult.migrations) {
-        String message = "applied migration " + o.version + "/" + migrateResult.migrations.size() + ": " + o.description + " [" + o.executionTime + " ms]";
+        String message = "applied migration " + o.version + "/" + migrateResult.targetSchemaVersion + ": " + o.description + " [" + o.executionTime + " ms]";
         logger.info(message);
         sdnotify("STATUS=" + message);
       }
