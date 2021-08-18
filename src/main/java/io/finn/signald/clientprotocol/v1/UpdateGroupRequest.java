@@ -41,7 +41,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("update_group")
-@Doc("modify a group. Note that only one modification action may be preformed at once")
+@Doc("modify a group. Note that only one modification action may be performed at once")
 public class UpdateGroupRequest implements RequestType<GroupInfo> {
   private static final Logger logger = LogManager.getLogger();
 
@@ -50,6 +50,11 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("the ID of the group to update") @Required public String groupID;
 
   @ExampleValue(ExampleValue.GROUP_TITLE) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String title;
+
+  @ExampleValue(ExampleValue.GROUP_DESCRIPTION)
+  @ExactlyOneOfRequired(GROUP_MODIFICATION)
+  @Doc("A new group description. Set to empty string to remove an existing description.")
+  public String description;
 
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @ExactlyOneOfRequired(GROUP_MODIFICATION) public String avatar;
 
@@ -88,6 +93,8 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
       if (title != null) {
         output = m.getGroupsV2Manager().updateTitle(groupID, title);
+      } else if (description != null) {
+        output = m.getGroupsV2Manager().updateDescription(groupID, description);
       } else if (avatar != null) {
         output = m.getGroupsV2Manager().updateAvatar(groupID, avatar);
       } else if (addMembers != null && addMembers.size() > 0) {

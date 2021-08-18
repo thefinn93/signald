@@ -35,6 +35,7 @@ public @interface ExampleValue {
   String MESSAGE_ID = "1615576442475";
   String LOCAL_EXTERNAL_JPG = "\"/tmp/image.jpg\"";
   String GROUP_TITLE = "\"Parkdale Run Club\"";
+  String GROUP_DESCRIPTION = "\"A club for running in Parkdale\"";
   String MESSAGE_BODY = "\"hello\"";
   String QUOTED_MESSAGE_BODY = "\"hey ￼ what's up?\"";
   String LOCAL_UUID = "\"0cc10e61-d64c-4dbc-b51c-334f7dd45a4a\"";

@@ -129,6 +129,25 @@ public class GroupsV2Manager {
     return new Pair<>(updateMessage, group);
   }
 
+  public Pair<SignalServiceDataMessage.Builder, Group> updateDescription(String groupID, String description)
+      throws IOException, VerificationFailedException, UnknownGroupException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = GroupChange.Actions.newBuilder().setModifyDescription(groupOperations.createModifyGroupDescription(description));
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
+  }
+
   public Pair<SignalServiceDataMessage.Builder, Group> updateAvatar(String groupID, String avatar) throws IOException, VerificationFailedException, UnknownGroupException {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
@@ -425,7 +444,6 @@ public class GroupsV2Manager {
     AuthCredentialResponse authCredential = storage.getAuthCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredential);
     GroupChange signedGroupChange = groupsV2Api.patchGroup(changeActions, authString, Optional.absent());
-
     return new Pair<>(decryptedGroupState, signedGroupChange);
   }
 
