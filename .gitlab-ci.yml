@@ -368,7 +368,7 @@ signald.org-branch:
   before_script:
     - echo 'deb http://deb.debian.org/debian buster-backports main' > /etc/apt/sources.list.d/backports.list
     - apt-get update && apt-get install -t buster-backports -y hugo golang-go
-    - apt-get install -y jq locales python3 python3-requests python3-pip openjdk-11-jdk-headless curl
+    - apt-get install -y jq locales python3 python3-requests python3-pip openjdk-11-jdk-headless curl git
     - apt install -y --allow-downgrades libcurl3-gnutls/stable  # wtf is this shit? https://superuser.com/questions/1642858/git-on-debian-10-backports-throws-fatal-unable-to-access-https-github-com-us
     - pip3 install anybadge
     - sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
