@@ -39,6 +39,8 @@ There are several libraries to make it easier to interact with signald from your
   * [Semaphore](https://github.com/lwesterhof/semaphore) - a simple (rule-based) bot library for Signal Private Messenger in Python
 * Go:
   * [signald-go](https://gitlab.com/signald/signald-go) - a signald library in go
+* Kotlin:
+  * [kotlin-signald](https://github.com/inthewaves/kotlin-signald) - a Kotlin Multiplatform (JVM and Linux x64) signald library
 
 ### Write a library
 When started, signald will create a unix socket at `/var/run/signald/signald.sock` (can be overridden on the command line).
