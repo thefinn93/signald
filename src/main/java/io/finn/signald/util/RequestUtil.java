@@ -68,7 +68,8 @@ public class RequestUtil {
       AddServerRequest.class,                                                                                            // v1        add_server
       GetServersRequest.class,                                                                                           // v1        get_servers
       RemoveServerRequest.class,                                                                                         // v1        remove_server
-      SendPaymentRequest.class                                                                                           // v1        send_payment
+      SendPaymentRequest.class,                                                                                          // v1        send_payment
+      RemoteConfigRequest.class                                                                                          // v1        get_remote_config
   );
 
   public static String getVersion(Class<?> t) {
