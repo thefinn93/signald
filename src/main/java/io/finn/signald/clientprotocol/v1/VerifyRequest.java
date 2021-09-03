@@ -19,18 +19,17 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
+import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.AccountAlreadyVerified;
-import io.finn.signald.clientprotocol.v1.exceptions.AccountHasNoKeys;
-import io.finn.signald.clientprotocol.v1.exceptions.AccountLocked;
-import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.db.PendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -58,19 +57,21 @@ public class VerifyRequest implements RequestType<Account> {
     if (server == null) {
       server = BuildConfig.DEFAULT_SERVER_UUID;
     }
-    Manager m = Manager.getPending(account, UUID.fromString(server));
-    if (!m.hasPendingKeys()) {
+    RegistrationManager rm = RegistrationManager.get(account, UUID.fromString(server));
+    if (!rm.hasPendingKeys()) {
       throw new AccountHasNoKeys();
-    } else if (m.isRegistered()) {
+    } else if (rm.isRegistered()) {
       throw new AccountAlreadyVerified();
     } else {
       try {
-        m.verifyAccount(code);
+        Manager m = rm.verifyAccount(code);
+        return new Account(m.getUUID());
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
         throw new AccountLocked();
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccount(e);
       }
     }
-    return new Account(m);
   }
 }

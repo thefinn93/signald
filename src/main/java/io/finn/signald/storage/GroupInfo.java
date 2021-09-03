@@ -3,6 +3,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Recipient;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -89,7 +90,7 @@ public class GroupInfo {
     active = g.isActive();
   }
 
-  public void removeMember(SignalServiceAddress source) { this.members.remove(new JsonAddress(source)); }
+  public void removeMember(Recipient source) { this.members.remove(new JsonAddress(source.getAddress())); }
 
   public String toString() { return name + " (" + groupId + ")"; }
 }

@@ -28,6 +28,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.LinkedList;
@@ -38,7 +39,6 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @ProtocolType("mark_read")
 public class MarkReadRequest implements RequestType<Empty> {
@@ -59,15 +59,15 @@ public class MarkReadRequest implements RequestType<Empty> {
     }
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, when);
     Manager m = Utils.getManager(account);
-    SignalServiceAddress toAddress = m.getResolver().resolve(to.getSignalServiceAddress());
+    Recipient recipient = m.getRecipientsTable().get(to);
     SignalServiceMessageSender sender = m.getMessageSender();
-    sender.sendReceipt(toAddress, m.getAccessPairFor(toAddress), message);
+    sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
 
     List<ReadMessage> readMessages = new LinkedList<>();
     for (Long ts : timestamps) {
-      readMessages.add(new ReadMessage(toAddress, ts));
+      readMessages.add(new ReadMessage(recipient.getAddress(), ts));
     }
-    sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnAddress()));
+    sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnRecipient()));
     return new Empty();
   }
 }

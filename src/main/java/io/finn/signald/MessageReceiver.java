@@ -41,7 +41,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
 public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
-  final String username;
+  final UUID account;
   private final Manager m;
   private int backoff = 0;
   private final SocketManager sockets;
@@ -52,41 +52,45 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       Gauge.build().name(BuildConfig.NAME + "_subscribed_accounts").help("number of accounts subscribed to messages from the Signal server").register();
   static final Counter receivedMessages = Counter.build().name(BuildConfig.NAME + "_received_messages").help("number of messages received").labelNames("account_uuid").register();
 
-  public MessageReceiver(String username) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    this.username = username;
-    this.m = Manager.get(username);
+  public MessageReceiver(UUID account) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    this.account = account;
+    this.m = Manager.get(account);
     this.uuid = m.getUUID().toString();
     this.sockets = new SocketManager();
   }
 
-  public static synchronized void subscribe(String username, MessageEncoder receiver)
+  public static synchronized void subscribe(UUID account, MessageEncoder receiver)
       throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    if (!receivers.containsKey(username)) {
-      MessageReceiver r = new MessageReceiver(username);
-      new Thread(r).start();
-      receivers.put(username, r);
+    synchronized (receivers) {
+      if (!receivers.containsKey(account.toString())) {
+        MessageReceiver r = new MessageReceiver(account);
+        new Thread(r).start();
+        receivers.put(account.toString(), r);
+      }
     }
-    receivers.get(username).sockets.add(receiver);
-    logger.debug("message receiver for " + Util.redact(username) + " got new subscriber. subscriber count: " + receivers.get(username).sockets.size());
+    receivers.get(account.toString()).sockets.add(receiver);
+    logger.debug("message receiver for " + Util.redact(account) + " got new subscriber. subscriber count: " + receivers.get(account.toString()).sockets.size());
   }
 
-  public static synchronized boolean unsubscribe(String username, Socket s) {
-    if (!receivers.containsKey(username)) {
-      return false;
+  public static synchronized boolean unsubscribe(UUID account, Socket s) {
+    synchronized (receivers) {
+      if (!receivers.containsKey(account.toString())) {
+        return false;
+      }
     }
 
-    boolean removed = receivers.get(username).remove(s);
+    boolean removed = receivers.get(account.toString()).remove(s);
     if (removed) {
-      logger.debug("message receiver for " + Util.redact(username) + " lost a subscriber. subscriber count: " + receivers.get(username).sockets.size());
+      logger.debug("message receiver for " + Util.redact(account) + " lost a subscriber. subscriber count: " + receivers.get(account.toString()).sockets.size());
     }
-    if (removed && receivers.get(username).sockets.size() == 0) {
-      logger.info("Last client for " + Util.redact(username) + " unsubscribed, shutting down message pipe");
+    if (removed && receivers.get(account.toString()).sockets.size() == 0) {
+      logger.info("Last client for " + Util.redact(account) + " unsubscribed, shutting down message pipe");
       try {
-        Manager.get(username).shutdownMessagePipe();
-      } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
+        SignalDependencies.get(account).getWebSocket().disconnect();
+      } catch (IOException | SQLException | ServerNotFoundException | InvalidProxyException e) {
         logger.catching(e);
       }
-      receivers.remove(username);
+      receivers.remove(account.toString());
     }
     return removed;
   }
@@ -95,15 +99,15 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
   public static void unsubscribeAll(Socket s) {
     for (String r : receivers.keySet()) {
-      unsubscribe(r, s);
+      unsubscribe(UUID.fromString(r), s);
     }
   }
 
   public void run() {
     boolean notifyOnConnect = true;
-    logger.debug("starting message receiver for " + Util.redact(username));
+    logger.debug("starting message receiver for " + Util.redact(account));
     try {
-      Thread.currentThread().setName(Util.redact(username) + "-receiver");
+      Thread.currentThread().setName(Util.redact(account) + "-receiver");
       while (sockets.size() > 0) {
         double timeout = 3600;
         boolean returnOnTimeout = true;
@@ -115,7 +119,6 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           } else {
             notifyOnConnect = true;
           }
-          logger.debug("connecting to socket");
           m.receiveMessages((long)(timeout * 1000), TimeUnit.MILLISECONDS, returnOnTimeout, ignoreAttachments, this);
         } catch (IOException e) {
           if (sockets.size() == 0) {
@@ -146,9 +149,9 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           TimeUnit.SECONDS.sleep(backoff);
         }
       }
-      logger.debug("shutting down message receiver for " + Util.redact(username));
+      logger.debug("shutting down message receiver for " + Util.redact(account));
     } catch (Exception e) {
-      logger.error("shutting down message receiver for " + Util.redact(username), e);
+      logger.error("shutting down message receiver for " + Util.redact(account), e);
       sockets.broadcastListenStopped(e);
     }
   }

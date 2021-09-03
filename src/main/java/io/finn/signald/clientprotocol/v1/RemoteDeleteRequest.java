@@ -23,9 +23,18 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSendPermission;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSendPermissionException;
 import io.finn.signald.exceptions.UnknownGroupException;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -46,18 +55,22 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
   @Required public long timestamp;
 
   @Override
-  public SendResponse run(Request request) throws Throwable {
+  public SendResponse run(Request request) throws InvalidKeyException, IOException, InvalidProxyException, SQLException, NoSuchAccount, ServerNotFoundException,
+                                                  InvalidRecipientException, UnknownGroupException, NoSendPermission {
     Manager m = Utils.getManager(account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withRemoteDelete(new SignalServiceDataMessage.RemoteDelete(timestamp));
     List<SendMessageResult> results;
+    Recipient recipient = m.getRecipientsTable().get(address);
     try {
-      results = m.send(messageBuilder, address, group);
+      results = m.send(messageBuilder, recipient, group);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+    } catch (UnknownGroupException e) {
       throw new UnknownGroupException();
+    } catch (NoSendPermissionException e) {
+      throw new NoSendPermission();
     }
     return new SendResponse(results, timestamp);
   }

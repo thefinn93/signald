@@ -16,8 +16,10 @@
  */
 
 package io.finn.signald;
+
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -28,7 +30,6 @@ import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Deprecated(1641027661)
 class JsonUntrustedIdentityException {
@@ -38,11 +39,11 @@ class JsonUntrustedIdentityException {
   public String safety_number;
   public JsonRequest request;
 
-  JsonUntrustedIdentityException(IdentityKey key, SignalServiceAddress address, Manager m, JsonRequest request) {
-    this.local_address = new JsonAddress(m.getOwnAddress());
-    this.remote_address = new JsonAddress(address);
+  JsonUntrustedIdentityException(IdentityKey key, Recipient recipient, Manager m, JsonRequest request) {
+    this.local_address = new JsonAddress(m.getOwnRecipient());
+    this.remote_address = new JsonAddress(recipient);
     this.fingerprint = Hex.toStringCondensed(key.getPublicKey().serialize());
-    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), key);
+    this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnRecipient(), m.getIdentity(), recipient, key);
     this.request = request;
   }
 
@@ -54,10 +55,10 @@ class JsonUntrustedIdentityException {
     }
     try {
       Manager m = Manager.get(username);
-      this.local_address = new JsonAddress(m.getOwnAddress());
+      this.local_address = new JsonAddress(m.getOwnRecipient());
       if (exception.getUntrustedIdentity() != null) {
-        this.safety_number =
-            SafetyNumberHelper.computeSafetyNumber(m.getOwnAddress(), m.getIdentity(), this.remote_address.getSignalServiceAddress(), exception.getUntrustedIdentity());
+        Recipient recipient = m.getRecipientsTable().get(this.remote_address);
+        this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnRecipient(), m.getIdentity(), recipient, exception.getUntrustedIdentity());
       }
     } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
       e.printStackTrace();

@@ -20,7 +20,6 @@ package io.finn.signald.clientprotocol.v0;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
 import io.finn.signald.annotations.Deprecated;
-import io.finn.signald.storage.AddressResolver;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -80,12 +79,8 @@ public class JsonAddress {
       }
     }
 
-    if (address.getUuid().isPresent()) {
-      uuid = address.getUuid().get().toString();
-    }
-
-    if (address.getRelay().isPresent()) {
-      relay = address.getRelay().get();
+    if (address.getUuid() != null) {
+      uuid = address.getUuid().toString();
     }
   }
 
@@ -160,17 +155,12 @@ public class JsonAddress {
   public boolean matches(SignalServiceAddress other) { return getSignalServiceAddress().matches(other); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getUuid().isPresent()) {
-      uuid = a.getUuid().get().toString();
+    if (uuid == null && a.getUuid() != null) {
+      uuid = a.getUuid().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {
       number = a.getNumber().get();
     }
-  }
-
-  public JsonAddress resolve(AddressResolver resolver) {
-    update(resolver.resolve(getSignalServiceAddress()));
-    return this;
   }
 }

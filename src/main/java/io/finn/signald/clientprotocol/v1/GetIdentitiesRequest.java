@@ -28,12 +28,12 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidAddressException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @Doc("Get information about a known keys for a particular address")
 @ProtocolType("get_identities")
@@ -46,8 +46,8 @@ public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
   public IdentityKeyList run(Request request)
       throws SQLException, IOException, NoSuchAccount, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
-    List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(address.getSignalServiceAddress());
-    SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
-    return new IdentityKeyList(m.getOwnAddress(), m.getIdentity(), addr, identities);
+    Recipient recipient = m.getRecipientsTable().get(address);
+    List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(recipient);
+    return new IdentityKeyList(m.getOwnRecipient(), m.getIdentity(), recipient, identities);
   }
 }

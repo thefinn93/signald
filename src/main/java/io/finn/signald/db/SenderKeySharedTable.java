@@ -27,6 +27,7 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.signalservice.api.SignalServiceDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public class SenderKeySharedTable {
@@ -97,5 +98,31 @@ public class SenderKeySharedTable {
     } catch (SQLException e) {
       logger.catching(e);
     }
+  }
+
+  public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> collection) {}
+
+  public boolean isMultiDevice() {
+    Boolean multidevice = null;
+    try {
+      multidevice = AccountDataTable.getBoolean(accountId, AccountDataTable.Key.MULTI_DEVICE);
+    } catch (SQLException e) {
+      logger.catching(e);
+    }
+    if (multidevice == null) {
+      logger.warn("unknown multidevice state for account");
+      return false;
+    }
+    return multidevice;
+  }
+
+  public void setMultiDevice(boolean multidevice) throws SQLException { AccountDataTable.set(accountId, AccountDataTable.Key.MULTI_DEVICE, multidevice); }
+
+  public SignalServiceDataStore.Transaction beginTransaction() {
+    return ()
+               -> {
+                   // No-op transaction should be safe, as it's only a performance improvement
+                   // this is what signal-cli does, we should investigate eventually
+               };
   }
 }

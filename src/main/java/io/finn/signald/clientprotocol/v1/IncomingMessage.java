@@ -18,13 +18,16 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
@@ -48,19 +51,22 @@ public class IncomingMessage {
   @JsonProperty("typing_message") public TypingMessage typingMessage;
   @JsonProperty("server_guid") public String serverGuid;
 
-  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, String a)
+  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, UUID accountUUID)
       throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    account = a;
+    try {
+      account = AccountsTable.getE164(accountUUID);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccount(e);
+    }
 
     if (envelope.hasServerGuid()) {
       serverGuid = envelope.getServerGuid();
     }
 
-    Manager m = Utils.getManager(account);
-    if (envelope.hasSource()) {
-      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+    if (!envelope.isUnidentifiedSender()) {
+      source = new JsonAddress(new RecipientsTable(accountUUID).get(envelope.getSourceAddress()));
     } else if (content != null) {
-      source = new JsonAddress(m.getResolver().resolve(content.getSender()));
+      source = new JsonAddress(new RecipientsTable(accountUUID).get(content.getSender()));
     }
 
     if (envelope.hasSourceDevice()) {
@@ -76,11 +82,11 @@ public class IncomingMessage {
 
     if (content != null) {
       if (content.getDataMessage().isPresent()) {
-        this.dataMessage = new JsonDataMessage(content.getDataMessage().get(), account);
+        this.dataMessage = new JsonDataMessage(content.getDataMessage().get(), accountUUID);
       }
 
       if (content.getSyncMessage().isPresent()) {
-        this.syncMessage = new JsonSyncMessage(content.getSyncMessage().get(), account);
+        this.syncMessage = new JsonSyncMessage(content.getSyncMessage().get(), accountUUID);
       }
 
       if (content.getCallMessage().isPresent()) {

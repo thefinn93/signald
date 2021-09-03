@@ -20,6 +20,7 @@ package io.finn.signald.jobs;
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
 import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ContactStore;
@@ -47,13 +48,14 @@ public class SendContactsSyncJob implements Job {
   public void run() throws IOException, UntrustedIdentityException, SQLException, InvalidKeyException, InvalidAddressException {
     File contactsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
+    RecipientsTable recipientsTable = m.getRecipientsTable();
 
     try {
       try (OutputStream fos = new FileOutputStream(contactsFile)) {
         DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
         for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
           VerifiedMessage verifiedMessage = null;
-          List<IdentityKeysTable.IdentityKeyRow> identities = accountData.axolotlStore.getIdentities(record.address.getSignalServiceAddress());
+          List<IdentityKeysTable.IdentityKeyRow> identities = accountData.axolotlStore.getIdentities(recipientsTable.get(record.address));
           if (identities.size() == 0) {
             continue;
           }
@@ -74,7 +76,7 @@ public class SendContactsSyncJob implements Job {
           ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.address.getSignalServiceAddress());
           ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
           out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
-                                      m.createContactAvatarAttachment(record.address.getSignalServiceAddress()), Optional.fromNullable(record.color),
+                                      m.createContactAvatarAttachment(recipientsTable.get(record.address)), Optional.fromNullable(record.color),
                                       Optional.fromNullable(verifiedMessage), Optional.fromNullable(profileKey), false, expirationTimer, Optional.absent(), false));
         }
       }

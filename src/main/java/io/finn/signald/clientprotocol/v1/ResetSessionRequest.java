@@ -25,6 +25,8 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.NoSendPermissionException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -44,20 +46,23 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws SQLException, IOException, NoSuchAccount, UnknownGroupException, InvalidRecipientException, GroupNotFoundException,
-                                                  NotAGroupMemberException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+                                                  NotAGroupMemberException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSendPermission {
     Manager m = Utils.getManager(account);
+    Recipient recipient = m.getRecipientsTable().get(address);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
     if (timestamp == null) {
       timestamp = System.currentTimeMillis();
     }
     messageBuilder.withTimestamp(timestamp);
-    List<SendMessageResult> results = null;
+    List<SendMessageResult> results;
     try {
-      results = m.send(messageBuilder, address, null);
+      results = m.send(messageBuilder, recipient, null);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientException();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupException();
+    } catch (NoSendPermissionException e) {
+      throw new NoSendPermission();
     }
     return new SendResponse(results, timestamp);
   }

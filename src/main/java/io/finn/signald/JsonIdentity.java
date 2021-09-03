@@ -21,10 +21,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
+import java.io.IOException;
+import java.sql.SQLException;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @Deprecated(1641027661)
@@ -36,7 +38,7 @@ class JsonIdentity {
   public String qr_code_data;
   public JsonAddress address;
 
-  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m) {
+  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m) throws IOException, SQLException {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
@@ -46,15 +48,15 @@ class JsonIdentity {
     }
   }
 
-  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m, SignalServiceAddress address) {
+  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m, Recipient recipient) throws IOException, SQLException {
     this(identity, m);
-    this.address = new JsonAddress(address);
+    this.address = new JsonAddress(recipient.getAddress());
     generateSafetyNumber(identity, m);
   }
 
-  private void generateSafetyNumber(IdentityKeysTable.IdentityKeyRow identity, Manager m) {
+  private void generateSafetyNumber(IdentityKeysTable.IdentityKeyRow identity, Manager m) throws IOException, SQLException {
     if (address != null) {
-      Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnAddress(), m.getIdentity(), address.getSignalServiceAddress(), identity.getKey());
+      Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnRecipient(), m.getIdentity(), m.getRecipientsTable().get(address), identity.getKey());
       if (fingerprint == null) {
         safety_number = "INVALID ID";
       } else {

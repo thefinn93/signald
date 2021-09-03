@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Util;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.storage.AddressResolver;
+import io.finn.signald.db.Recipient;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -82,14 +82,11 @@ public class JsonAddress {
       }
     }
 
-    if (address.getUuid().isPresent()) {
-      uuid = address.getUuid().get().toString();
-    }
-
-    if (address.getRelay().isPresent()) {
-      relay = address.getRelay().get();
+    if (address.getUuid() != null) {
+      uuid = address.getUuid().toString();
     }
   }
+  public JsonAddress(Recipient recipient) { this(recipient.getAddress()); }
 
   public JsonAddress(String identifier) {
     if (identifier.startsWith("+")) {
@@ -157,22 +154,17 @@ public class JsonAddress {
     return getSignalServiceAddress().hashCode();
   }
 
-  public boolean matches(JsonAddress other) { return matches(other.getSignalServiceAddress()); }
+  public boolean matches(JsonAddress other) { return (uuid != null && other.uuid.equals(uuid) || (number != null && other.number.equals(number))); }
 
-  public boolean matches(SignalServiceAddress other) { return getSignalServiceAddress().matches(other); }
+  public boolean matches(SignalServiceAddress other) { return matches(new JsonAddress(other)); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getUuid().isPresent()) {
-      uuid = a.getUuid().get().toString();
+    if (uuid == null && a.getUuid() != null) {
+      uuid = a.getUuid().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {
       number = a.getNumber().get();
     }
-  }
-
-  public JsonAddress resolve(AddressResolver resolver) {
-    update(resolver.resolve(getSignalServiceAddress()));
-    return this;
   }
 }

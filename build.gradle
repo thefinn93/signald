@@ -109,7 +109,7 @@ configurations {
 }
 
 dependencies {
-    implementation 'com.github.turasa:signal-service-java-' + getTarget() + ':2.15.3_unofficial_24'
+    implementation 'com.github.turasa:signal-service-java-' + getTarget() + ':2.15.3_unofficial_27'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.66'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.3.2'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.3.2'
@@ -123,6 +123,7 @@ dependencies {
     implementation 'io.prometheus:simpleclient:0.11.0'
     implementation 'io.prometheus:simpleclient_hotspot:0.11.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.11.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }
@@ -144,7 +145,7 @@ buildConfig {
   // Parameters for the default server to provision new accounts with, if not specified in the protocol.
   // the server UUID is internal to signald, must be changed if any other server values are changed.
   buildConfigField 'String', "DEFAULT_SERVER_UUID", { System.getenv("DEFAULT_SERVER_UUID") ?: "6e2eb5a8-5706-45d0-8377-127a816411a4" }
-  buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://textsecure-service.whispersystems.org" }
+  buildConfigField 'String', 'SIGNAL_URL', { System.getenv("SIGNAL_URL") ?: "https://chat.signal.org" }
   buildConfigField 'String', 'SIGNAL_CDN_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn.signal.org" }
   buildConfigField 'String', 'SIGNAL_CDN2_URL', { System.getenv("SIGNAL_CDN_URL") ?: "https://cdn2.signal.org" }
   buildConfigField 'String', 'SIGNAL_KEY_BACKUP_URL', { System.getenv("SIGNAL_KEY_BACKUP_URL") ?: "https://api.backup.signal.org" }
@@ -156,6 +157,12 @@ buildConfig {
   buildConfigField 'String', "CA", { System.getenv("SIGNAL_CA") ?: "AAAAAQAAABThGWAvYIoB26b2A/AhL6OoW74wfAAAB7cBABF0ZXh0c2VjdXJlLWdjbS1jYQAAAT2jsW+pAAAAAAAFWC41MDkAAAPzMIID7zCCAtegAwIBAgIJAIm6LatK5PNiMA0GCSqGSIb3DQEBBQUAMIGNMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEdMBsGA1UECgwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxHTAbBgNVBAsMFE9wZW4gV2hpc3BlciBTeXN0ZW1zMRMwEQYDVQQDDApUZXh0U2VjdXJlMB4XDTEzMDMyNTIyMTgzNVoXDTIzMDMyMzIyMTgzNVowgY0xCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMR0wGwYDVQQKDBRPcGVuIFdoaXNwZXIgU3lzdGVtczEdMBsGA1UECwwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxEzARBgNVBAMMClRleHRTZWN1cmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDBSWBpOCBDF0i4q2d4jAXkSXUGpbeWugVPQCjaL6qD9QDOxeW1afvfPo863i6Crq1KDxHpB36EwzVcjwLkFTIMeo7t9s1FQolAt3mErV2U0vie6Ves+yj6grSfxwIDAcdsKmI0a1SQCZlr3Q1tcHAkAKFRxYNawADyps5B+Zmqcgf653TXS5/0IPPQLocLn8GWLwOYNnYfBvILKDMItmZTtEbucdigxEA9mfIvvHADEbteLtVgwBm9R5vVvtwrD6CCxI3pgH7EH7kMP0Od93wLisvn1yhHY7FuYlrkYqdkMvWUrKoASVw4jb69vaeJCUdU+HCoXOSP1PQcL6WenNCHAgMBAAGjUDBOMB0GA1UdDgQWBBQBixjxP/s5GURuhYa+lGUypzI8kDAfBgNVHSMEGDAWgBQBixjxP/s5GURuhYa+lGUypzI8kDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQB+Hr4hC56m0LvJAu1RK6NuPDbTMEN7/jMojFHxH4P3XPFfupjR+bkDq0pPOU6JjIxnrD1XD/EVmTTaTVY5iOheyv7UzJOefb2pLOc9qsuvI4fnaESh9bhzln+LXxtCrRPGhkxA1IMIo3J/s2WF/KVYZyciu6b4ubJ91XPAuBNZwImug7/srWvbpk0hq6A6z140WTVSKtJG7EP41kJe/oF4usY5J7LPkxK3LWzMJnb5EIJDmRvyH8pyRwWg6Qm6qiGFaI4nL8QU4La1x2en4DGXRaLMPRwjELNgQPodR38zoCMuA8gHZfZYYoZ7D7Q1wNUiVHcxuFrEeBaYJbLErwLVALvy/4I2uFTpAiDQ7Wz7yaNw7tAl" }
   // proxy should be specified in host:port form
   buildConfigField 'String', "SIGNAL_PROXY", { System.getenv("SIGNAL_PROXY") ?: "" }
+
+  buildConfigField 'String', "KEY_BACKUP_SERVICE_NAME", { System.getenv("KEY_BACKUP_SERVICE_NAME") ?: "fe7c1bfae98f9b073d220366ea31163ee82f6d04bead774f71ca8e5c40847bfe" }
+  buildConfigField 'String', "KEY_BACKUP_SERVICE_ID", { System.getenv("KEY_BACKUP_SERVICE_ID") ?: "/nwb+umPmwc9IgNm6jEWPugvbQS+rXdPccqOXECEe/4=" }
+  buildConfigField 'String', "KEY_BACKUP_MRENCLAVE", { System.getenv("KEY_BACKUP_MRENCLAVE") ?: "o7qrGe9s5vNKueuyW6ciclrkSohy3A/witbYOpSJ3oc=" }
+  buildConfigField 'String', "CDS_MRENCLAVE", { System.getenv("CDS_MRENCLAVE") ?: "yY4ApOP/l3pWr+/nNion5JYeTxniEf6/uxm4l+a4CxU=" }
+  buildConfigField 'String', "CDS_CA", { System.getenv("CDS_CA") ?: "AAAAAgAAABQeE5h3wTEjUgA1bUjXQbnoU41KKQAAB4EBAANpYXMAAAFkret5dgAAAAAABVguNTA5AAAFTzCCBUswggOzoAMCAQICCQDRB3ZdMqOwlDANBgkqhkiG9w0BAQsFADB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEwMC4GA1UEAwwnSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nIENBMCAXDTE2MTExNDE1MzczMVoYDzIwNDkxMjMxMjM1OTU5WjB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEwMC4GA1UEAwwnSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nIENBMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnzxkfrV3PLtRLScywNdBXrtVoPqe3i5kkZnmgh25ENUxdzcJd0Zqal5HhszS3evUFJ1qL2MlUp3RDMmHN7B3nBoH4pxHoa4ASUhHbEifRaWhXXrI7MasxkWttD2HZ531nAk7xaLpaWxUeFQbl551S1c5FL5V0y/0wJ3fJyGZNM2ZBSez+S7Xj78pJGq+y3EkDvOcLXEHtEdUWn/7EOsGCmiphYAhnjaRCVJoOJLWpeKoCAMZPkB1MUBONrMVYjeZqoJQdECXVKLf6PWv1f5jHh/CrzgIkG8op5DZ3Z/gYJObEleQxYBdA331aplTG5bead4z7SJswSB9EEK1yat/QE/HEcD+R2n7lXix3A7EaeoaJeD/mRSIbvJpmyNbtIR91v9AtgbmFweTwvuYsxRYf5z9JXNi3+qxCzvS2XZzoaS9RMRTqvR/wfLT0POE90oG+JwInw2mzbf87ujJghqOVPJcBBbRjEaDml+AEvvdPcdNJWJ5rcLA1Vr/bwYiQl0bAgMBAAGjgckwgcYwYAYDVR0fBFkwVzBVoFOgUYZPaHR0cDovL3RydXN0ZWRzZXJ2aWNlcy5pbnRlbC5jb20vY29udGVudC9DUkwvU0dYL0F0dGVzdGF0aW9uUmVwb3J0U2lnbmluZ0NBLmNybDAdBgNVHQ4EFgQUeEN7dqZ+vNCvfkI36zV8O4cBUTwwHwYDVR0jBBgwFoAUeEN7dqZ+vNCvfkI36zV8O4cBUTwwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggGBAHhfLWDFyAr0Knl2ECE5FdqCybKeieCQKiWmx1sWCRxoqyBKrnEYiUksfh4yCRFFWo/BNEIxLnemOZTZl5XI6kV2gjzqitHhkc+oYvq4qTLT2bBTWgcC0FVfdOUg4wMw8zSA563J18geIHAxQr8AxSioC0Yzgf1gKoLHA1KBquWVYsy1M06okD5lCwEGgfXOjrYurJxBSYgkOuyS8lvxPN/368wpjuUbulo1OLZrJsvEWlHeADytMGUxrXz11O8PiAXRuRM9JBNas8RkGi+ICDSdczMpXg527kvFInIyYo76gNedkqtOPREg8/ta0RnNjVRKodSmhl5rV76sV3Ewfi48uQcNpHtL/Ihp4BQT6gk1Qd6KeSgRt0Y2xekUUs8M7lny+0BKzQvFhMucg1QEc0wOfsZgXN/PL/Q5ttRxn3AvDgw/oE/bEqbLKtGrHJrx+PTDoI7dcqMrC7XQrSVv/RWaaDsqWh8dEfpiUy8D11TK7w2lc1oeWohMfonZEhjJ1wCFFeX1mSzMRx87G8Gq7CSimX5q0w==" }
 }
 
 

@@ -18,6 +18,9 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import java.sql.SQLException;
 
 @Deprecated(1641027661)
 class JsonAccount {
@@ -29,17 +32,27 @@ class JsonAccount {
   public boolean has_keys;
   public boolean subscribed;
 
-  JsonAccount(Manager m) {
-    this.username = m.getE164();
+  JsonAccount(Manager m) throws SQLException, NoSuchAccount {
+    try {
+      this.username = m.getE164();
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccount(e);
+    }
     this.deviceId = m.getDeviceId();
     this.filename = Manager.getFileName(username);
     if (m.getUUID() != null) {
       this.uuid = m.getUUID().toString();
     }
-    this.registered = m.isRegistered();
+    this.registered = true;
   }
 
-  JsonAccount(Manager m, boolean subscribed) {
+  JsonAccount(RegistrationManager m) {
+    this.username = m.getE164();
+    this.filename = Manager.getFileName(username);
+    this.registered = false;
+  }
+
+  JsonAccount(Manager m, boolean subscribed) throws SQLException, NoSuchAccount {
     this(m);
     this.subscribed = subscribed;
   }

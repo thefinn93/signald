@@ -25,15 +25,16 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSendPermission;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSendPermissionException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -50,9 +51,11 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
   public Long when;
 
   @Override
-  public SendResponse run(Request request)
-      throws IOException, SQLException, NoSuchAccount, InvalidRecipientException, UnknownGroupException, InvalidProxyException, InvalidKeyException, ServerNotFoundException {
+  public SendResponse run(Request request) throws IOException, SQLException, NoSuchAccount, InvalidRecipientException, UnknownGroupException, InvalidProxyException,
+                                                  InvalidKeyException, ServerNotFoundException, NoSendPermission {
     Manager m = Utils.getManager(account);
+
+    Recipient recipient = m.getRecipientsTable().get(address);
 
     if (when == null) {
       when = System.currentTimeMillis();
@@ -64,11 +67,13 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
 
     List<SendMessageResult> results;
     try {
-      results = m.send(messageBuilder, address, null);
+      results = m.send(messageBuilder, recipient, null);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException | GroupNotFoundException | NotAGroupMemberException e) {
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupException();
+    } catch (NoSendPermissionException e) {
+      throw new NoSendPermission();
     }
     return new SendResponse(results, when);
   }

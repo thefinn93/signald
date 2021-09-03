@@ -30,11 +30,14 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -49,8 +52,15 @@ public class SubscribeRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    UUID accountUUID;
     try {
-      MessageReceiver.subscribe(account, new IncomingMessageEncoder(request.getSocket(), account));
+      accountUUID = AccountsTable.getUUID(account);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccount(e);
+    }
+
+    try {
+      MessageReceiver.subscribe(accountUUID, new IncomingMessageEncoder(request.getSocket(), accountUUID));
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccount(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -65,9 +75,9 @@ public class SubscribeRequest implements RequestType<Empty> {
     private static final Logger logger = LogManager.getLogger();
     private final ObjectMapper mapper = JSONUtil.GetMapper();
     Socket socket;
-    String account;
+    UUID account;
 
-    IncomingMessageEncoder(Socket s, String a) {
+    IncomingMessageEncoder(Socket s, UUID a) {
       socket = s;
       account = a;
     }

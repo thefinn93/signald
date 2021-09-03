@@ -21,12 +21,28 @@ import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.AccountsTable;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 public class Utils {
-  static Manager getManager(String account) throws NoSuchAccount, IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  static Manager getManager(String identifier) throws NoSuchAccount, IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    if (identifier.startsWith("+")) {
+      UUID accountID = null;
+      try {
+        accountID = AccountsTable.getUUID(identifier);
+      } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
+        throw new NoSuchAccount(e);
+      }
+      return getManager(accountID);
+    } else {
+      return getManager(UUID.fromString(identifier));
+    }
+  }
+
+  static Manager getManager(UUID account) throws NoSuchAccount, IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m;
     try {
       m = Manager.get(account);

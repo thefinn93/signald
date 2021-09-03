@@ -69,7 +69,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupInviteLinkUrl.getGroupMasterKey());
 
     Manager m = Utils.getManager(account);
-    ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
+    ProfileKeyCredential profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
 
     if (profileKeyCredential == null) {
       throw new OwnProfileKeyDoesNotExist();

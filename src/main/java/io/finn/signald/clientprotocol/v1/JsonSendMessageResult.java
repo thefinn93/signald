@@ -23,14 +23,16 @@ import org.whispersystems.signalservice.api.messages.SendMessageResult;
 
 public class JsonSendMessageResult {
   public JsonAddress address;
-  public SendMessageResult.Success success;
+  public SendSuccess success;
   @ExampleValue("false") public boolean networkFailure;
   @ExampleValue("false") public boolean unregisteredFailure;
   public String identityFailure;
 
   public JsonSendMessageResult(SendMessageResult result) {
     address = new JsonAddress(result.getAddress());
-    success = result.getSuccess();
+    if (result.getSuccess() != null) {
+      success = new SendSuccess(result.getSuccess());
+    }
     networkFailure = result.isNetworkFailure();
     unregisteredFailure = result.isUnregisteredFailure();
     if (result.getIdentityFailure() != null) {

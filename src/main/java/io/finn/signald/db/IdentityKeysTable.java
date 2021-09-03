@@ -17,7 +17,7 @@
 
 package io.finn.signald.db;
 
-import io.finn.signald.util.AddressUtil;
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -87,17 +87,24 @@ public class IdentityKeysTable implements IdentityKeyStore {
 
   @Override
   public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
-    return saveIdentity(address.getName(), identityKey, null);
+    try {
+      return saveIdentity(address.getName(), identityKey, null);
+    } catch (IOException | SQLException e) {
+      e.printStackTrace();
+    }
+    return false;
   }
 
-  public boolean saveIdentity(String address, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(AddressUtil.fromIdentifier(address), identityKey, trustLevel); }
-  public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(address, identityKey, trustLevel, new Date()); }
-  public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
+  public boolean saveIdentity(String address, IdentityKey identityKey, TrustLevel trustLevel) throws IOException, SQLException {
+    Recipient recipient = new RecipientsTable(uuid).get(address);
+    return saveIdentity(recipient, identityKey, trustLevel);
+  }
+  public boolean saveIdentity(Recipient recipient, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(recipient, identityKey, trustLevel, new Date()); }
+  public boolean saveIdentity(Recipient recipient, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
     if (identityKey == null) {
       return false;
     }
     try {
-      Integer recipientID = new RecipientsTable(uuid).get(address).first();
       String query;
       if (trustLevel != null) {
         query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + "," + TRUST_LEVEL + "," + ADDED +
@@ -108,7 +115,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
       }
       PreparedStatement statement = Database.getConn().prepareStatement(query);
       statement.setString(1, uuid.toString());
-      statement.setInt(2, recipientID);
+      statement.setInt(2, recipient.getId());
       statement.setBytes(3, identityKey.serialize());
       statement.setString(4, trustLevel.name());
       statement.setLong(5, added.getTime());
@@ -123,7 +130,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
   @Override
   public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
     try {
-      Integer recipientID = new RecipientsTable(uuid).get(address.getName()).first();
+      int recipientID = new RecipientsTable(uuid).get(address.getName()).getId();
       PreparedStatement statement =
           Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
       statement.setString(1, uuid.toString());
@@ -149,7 +156,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
       }
       rows.close();
       saveIdentity(address.getName(), identityKey, TrustLevel.UNTRUSTED);
-    } catch (SQLException e) {
+    } catch (SQLException | IOException e) {
       logger.catching(e);
     }
     return false;
@@ -158,7 +165,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
   @Override
   public IdentityKey getIdentity(SignalProtocolAddress address) {
     try {
-      Integer recipientID = new RecipientsTable(uuid).get(address.getName()).first();
+      int recipientID = new RecipientsTable(uuid).get(address.getName()).getId();
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT +
                                                                         " = ? ORDER BY " + ADDED + " DESC LIMIT 1");
       statement.setString(1, uuid.toString());
@@ -171,20 +178,19 @@ public class IdentityKeysTable implements IdentityKeyStore {
       IdentityKey result = new IdentityKey(rows.getBytes(IDENTITY_KEY), 0);
       rows.close();
       return result;
-    } catch (SQLException | InvalidKeyException e) {
+    } catch (SQLException | InvalidKeyException | IOException e) {
       logger.catching(e);
       return null;
     }
   }
 
-  public List<IdentityKeyRow> getIdentities(SignalServiceAddress a) throws SQLException, InvalidKeyException {
-    Integer recipient = new RecipientsTable(uuid).get(a).first();
+  public List<IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException {
     PreparedStatement statement = Database.getConn().prepareStatement(
         "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
         TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " + RecipientsTable.TABLE_NAME +
         "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
     statement.setString(1, uuid.toString());
-    statement.setInt(2, recipient);
+    statement.setInt(2, recipient.getId());
     ResultSet row = statement.executeQuery();
     List<IdentityKeyRow> results = new ArrayList<>();
     while (row.next()) {
@@ -213,10 +219,10 @@ public class IdentityKeysTable implements IdentityKeyStore {
     List<IdentityKeyRow> results = new ArrayList<>();
     while (row.next()) {
       String uuidstr = row.getString(RecipientsTable.UUID);
-      UUID uuid = null;
-      if (uuidstr != null) {
-        uuid = UUID.fromString(uuidstr);
+      if (uuidstr == null) {
+        continue; // no UUID no
       }
+      UUID uuid = UUID.fromString(uuidstr);
       SignalServiceAddress address = new SignalServiceAddress(uuid, row.getString(RecipientsTable.E164));
       IdentityKey identityKey = new IdentityKey(row.getBytes(IDENTITY_KEY), 0);
       TrustLevel trustLevel = TrustLevel.valueOf(row.getString(TRUST_LEVEL));

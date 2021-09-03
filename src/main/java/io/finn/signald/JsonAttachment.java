@@ -25,6 +25,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
@@ -91,11 +92,11 @@ public class JsonAttachment {
     }
   }
 
-  public JsonAttachment(SignalServiceAttachment attachment, String username)
+  public JsonAttachment(SignalServiceAttachment attachment, UUID accountUUID)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this(attachment);
     if (attachment.isPointer()) {
-      File file = Manager.get(username).getAttachmentFile(id);
+      File file = Manager.get(accountUUID).getAttachmentFile(id);
       if (file.exists()) {
         this.storedFilename = file.toString();
       }

@@ -26,7 +26,8 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
-import io.finn.signald.storage.AddressResolver;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -40,7 +41,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @ProtocolType("create_group")
 public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
@@ -63,17 +63,17 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
                                                      UnknownGroupException, SQLException, InterruptedException, ExecutionException, TimeoutException, NoKnownUUID,
                                                      OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
-    AddressResolver resolver = m.getResolver();
-    List<SignalServiceAddress> resolvedMembers = new ArrayList<>();
+    RecipientsTable recipientsTable = m.getRecipientsTable();
+    List<Recipient> recipients = new ArrayList<>();
     if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getUUID()) == null) {
       throw new OwnProfileKeyDoesNotExist();
     }
     for (JsonAddress member : members) {
-      SignalServiceAddress address = resolver.resolve(member.getSignalServiceAddress());
-      m.getRecipientProfileKeyCredential(address);
-      resolvedMembers.add(address);
-      if (!address.getUuid().isPresent()) {
-        throw new NoKnownUUID(address.getNumber().orNull());
+      Recipient recipient = recipientsTable.get(member.getSignalServiceAddress());
+      m.getRecipientProfileKeyCredential(recipient);
+      recipients.add(recipient);
+      if (recipient.getUUID() == null) {
+        throw new NoKnownUUID(recipient.getAddress().getNumber().orNull());
       }
     }
 
@@ -91,7 +91,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       }
     }
 
-    Group group = m.getGroupsV2Manager().createGroup(title, avatar, resolvedMembers, role, timer);
+    Group group = m.getGroupsV2Manager().createGroup(title, avatar, recipients, role, timer);
     m.getAccountData().save();
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.revision).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);

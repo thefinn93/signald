@@ -24,10 +24,12 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.SessionsTable;
-import io.finn.signald.util.AddressUtil;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -39,93 +41,13 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 public class SessionStore {
   private static final Logger logger = LogManager.getLogger();
 
-  private AddressResolver resolver;
   private static ObjectMapper mapper = JSONUtil.GetMapper();
 
   public List<SessionInfo> sessions = new ArrayList<>();
 
   public SessionStore() {}
 
-  public SessionStore(AddressResolver r) { resolver = r; }
-
-  public void setResolver(final AddressResolver resolver) { this.resolver = resolver; }
-
-  private SignalServiceAddress resolveSignalServiceAddress(String identifier) {
-    if (resolver != null) {
-      return resolver.resolve(identifier);
-    } else {
-      return AddressUtil.fromIdentifier(identifier);
-    }
-  }
-
-  public synchronized SessionRecord loadSession(SignalProtocolAddress address) {
-    SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
-    for (SessionInfo info : sessions) {
-      if (info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId()) {
-        try {
-          return new SessionRecord(info.record);
-        } catch (IOException e) {
-          final SessionRecord sessionRecord = new SessionRecord();
-          info.record = sessionRecord.serialize();
-          return sessionRecord;
-        }
-      }
-    }
-
-    return new SessionRecord();
-  }
-
   public synchronized List<SessionInfo> getSessions() { return sessions; }
-
-  public synchronized List<Integer> getSubDeviceSessions(String name) {
-    SignalServiceAddress serviceAddress = resolveSignalServiceAddress(name);
-
-    List<Integer> deviceIds = new LinkedList<>();
-    for (SessionInfo info : sessions) {
-      if (info.address.matches(serviceAddress) && info.deviceId != 1) {
-        deviceIds.add(info.deviceId);
-      }
-    }
-
-    return deviceIds;
-  }
-
-  public synchronized void storeSession(SignalProtocolAddress address, SessionRecord record) {
-    SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
-    for (SessionInfo info : sessions) {
-      if (info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId()) {
-        if (!info.address.getUuid().isPresent() || !info.address.getNumber().isPresent()) {
-          info.address = serviceAddress;
-        }
-        info.record = record.serialize();
-        return;
-      }
-    }
-
-    sessions.add(new SessionInfo(serviceAddress, address.getDeviceId(), record.serialize()));
-  }
-
-  public synchronized boolean containsSession(SignalProtocolAddress address) {
-    SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
-    for (SessionInfo info : sessions) {
-      if (info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  public synchronized void deleteSession(SignalProtocolAddress address) {
-    SignalServiceAddress serviceAddress = resolveSignalServiceAddress(address.getName());
-    sessions.removeIf(info -> info.address.matches(serviceAddress) && info.deviceId == address.getDeviceId());
-  }
-
-  public synchronized void deleteAllSessions(String name) {
-    SignalServiceAddress serviceAddress = resolveSignalServiceAddress(name);
-    deleteAllSessions(serviceAddress);
-  }
-
-  public synchronized void deleteAllSessions(SignalServiceAddress serviceAddress) { sessions.removeIf(info -> info.address.matches(serviceAddress)); }
 
   public void migrateToDB(UUID u) {
     SessionsTable table = new SessionsTable(u);

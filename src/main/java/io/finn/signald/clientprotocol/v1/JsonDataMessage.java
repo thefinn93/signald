@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -82,16 +83,16 @@ public class JsonDataMessage {
 
   @Doc("details about the MobileCoin payment attached to the message, if present") public Payment payment;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, String username) throws IOException, NoSuchAccount, SQLException, InvalidKeyException,
-                                                                                       io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException,
-                                                                                       io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException {
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, UUID accountUUID) throws IOException, NoSuchAccount, SQLException, InvalidKeyException,
+                                                                                        io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException,
+                                                                                        io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {
       attachments = new ArrayList<>(dataMessage.getAttachments().get().size());
       for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
         try {
-          attachments.add(new JsonAttachment(attachment, username));
+          attachments.add(new JsonAttachment(attachment, accountUUID));
         } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
           throw new NoSuchAccount(e);
         } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -109,7 +110,7 @@ public class JsonDataMessage {
     if (dataMessage.getGroupContext().isPresent()) {
       SignalServiceGroupContext groupContext = dataMessage.getGroupContext().get();
       if (groupContext.getGroupV1().isPresent()) {
-        group = new JsonGroupInfo(groupContext.getGroupV1().get(), username);
+        group = new JsonGroupInfo(groupContext.getGroupV1().get(), accountUUID);
       }
       if (groupContext.getGroupV2().isPresent()) {
         groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanitized();
@@ -134,7 +135,7 @@ public class JsonDataMessage {
       previews = new ArrayList<>();
       for (SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
         try {
-          previews.add(new JsonPreview(p, username));
+          previews.add(new JsonPreview(p, accountUUID));
         } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
           throw new NoSuchAccount(e);
         } catch (io.finn.signald.exceptions.InvalidProxyException e) {

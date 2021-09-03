@@ -67,8 +67,12 @@ func checkDiff() (response checkOutput, err error) {
 					}
 				} else {
 					if field.Type != currentField.Type {
-						response.failures = append(response.failures, version+"."+typeName+" field "+fieldName+" changed types")
+						msg := version + "." + typeName + " field " + fieldName + " changed types"
+						fmt.Println(aurora.Red(msg))
 						stringDiff(currentField.Type, field.Type)
+						if currentField.Version != "v0" {
+							response.failures = append(response.failures, msg)
+						}
 					}
 					if field.List != currentField.List {
 						response.failures = append(response.failures, version+"."+typeName+" field "+fieldName+" changed list state")
@@ -119,16 +123,17 @@ func checkDiff() (response checkOutput, err error) {
 					response.failures = append(response.failures, "removed type: "+version+"."+typeName)
 				}
 
-			}
-			for fieldName := range t.Fields {
-				_, ok = oldType.Fields[fieldName]
-				if !ok {
-					if version == "v0" {
-						response.warnings = append(response.warnings, "field in "+version+"."+typeName+" removed: "+fieldName)
-					} else {
-						response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+			} else {
+				for fieldName := range t.Fields {
+					_, ok = oldType.Fields[fieldName]
+					if !ok {
+						if version == "v0" {
+							response.warnings = append(response.warnings, "field in "+version+"."+typeName+" removed: "+fieldName)
+						} else {
+							response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+						}
+						continue
 					}
-					continue
 				}
 			}
 		}

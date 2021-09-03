@@ -62,7 +62,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
              OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     AccountData accountData = m.getAccountData();
-    Group group = null;
+    Group group;
     try {
       group = accountData.groupsV2.get(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
@@ -70,7 +70,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
     }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
-    ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnAddress()).getProfileKeyCredential();
+    ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
 
     if (ownProfileKeyCredential == null) {
       throw new OwnProfileKeyDoesNotExist();

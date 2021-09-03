@@ -33,7 +33,17 @@ public class AccountDataTable {
   private static final String KEY = "key";
   private static final String VALUE = "value";
 
-  public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, LAST_PRE_KEY_REFRESH, DEVICE_NAME, SENDER_CERTIFICATE, SENDER_CERTIFICATE_REFRESH_TIME }
+  public enum Key {
+    OWN_IDENTITY_KEY_PAIR,
+    LOCAL_REGISTRATION_ID,
+    LAST_PRE_KEY_REFRESH,
+    DEVICE_NAME,
+    SENDER_CERTIFICATE,
+    SENDER_CERTIFICATE_REFRESH_TIME,
+    MULTI_DEVICE,
+    DEVICE_ID,
+    PASSWORD
+  }
 
   public static byte[] getBytes(UUID uuid, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
@@ -91,6 +101,20 @@ public class AccountDataTable {
     return result;
   }
 
+  public static Boolean getBoolean(UUID uuid, Key key) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
+    statement.setString(1, key.name());
+    statement.setString(2, uuid.toString());
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      return null;
+    }
+    Boolean result = rows.getBoolean(VALUE);
+    rows.close();
+    return result;
+  }
+
   public static void set(UUID uuid, Key key, byte[] value) throws SQLException {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
@@ -128,6 +152,16 @@ public class AccountDataTable {
     statement.setString(1, uuid.toString());
     statement.setString(2, key.name());
     statement.setString(3, value);
+    statement.executeUpdate();
+  }
+
+  public static void set(UUID uuid, Key key, boolean value) throws SQLException {
+    PreparedStatement statement =
+        Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
+                                            KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
+    statement.setString(1, uuid.toString());
+    statement.setString(2, key.name());
+    statement.setBoolean(3, value);
     statement.executeUpdate();
   }
 

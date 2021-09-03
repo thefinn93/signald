@@ -22,6 +22,7 @@ import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.Database;
+import io.finn.signald.db.ServersTable;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
@@ -83,6 +84,9 @@ public class Main implements Runnable {
 
   @Option(names = {"--metrics-http-port"}, description = "metrics http listener port. Default is 9595") private int metricsHttpPort = 9595;
 
+  @Option(names = {"--log-http-requests"}, description = "log all requests send to the server. this is used for debugging but generally should not be used otherwise.")
+  private boolean logHttpRequests = false;
+
   private static final Logger logger = LogManager.getLogger();
 
   public void run() {
@@ -101,6 +105,15 @@ public class Main implements Runnable {
         logger.catching(e);
       }
       System.exit(1);
+    }
+
+    String enableHttpLogging = System.getenv("SIGNALD_HTTP_LOGGING");
+    if (enableHttpLogging != null) {
+      logHttpRequests = Boolean.parseBoolean(enableHttpLogging);
+    }
+
+    if (logHttpRequests) {
+      ServersTable.setLogHttpRequests(logHttpRequests);
     }
 
     String enableMetrics = System.getenv("SIGNALD_ENABLE_METRICS");

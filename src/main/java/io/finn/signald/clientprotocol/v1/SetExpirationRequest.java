@@ -27,6 +27,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
 import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -70,7 +71,8 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
         results = m.setExpiration(groupId, expiration);
       }
     } else {
-      results = m.setExpiration(address.getSignalServiceAddress(), expiration);
+      Recipient recipient = m.getRecipientsTable().get(address);
+      results = m.setExpiration(recipient, expiration);
     }
 
     return new SendResponse(results, 0);

@@ -17,7 +17,7 @@
 
 package io.finn.signald.db;
 
-import io.finn.signald.exceptions.InvalidAddressException;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -29,11 +29,10 @@ import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
-import org.whispersystems.signalservice.api.SignalServiceProtocolStore;
+import org.whispersystems.signalservice.api.SignalServiceDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-public class DatabaseProtocolStore implements SignalServiceProtocolStore {
+public class DatabaseProtocolStore implements SignalServiceDataStore {
   private final PreKeysTable preKeys;
   private final SessionsTable sessions;
   private final SignedPreKeysTable signedPrekeys;
@@ -75,9 +74,9 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
     return identityKeys.saveIdentity(address, identityKey);
   }
 
-  public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) { return identityKeys.saveIdentity(identifier, key, level); }
+  public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) throws IOException, SQLException { return identityKeys.saveIdentity(identifier, key, level); }
 
-  public boolean saveIdentity(SignalServiceAddress identifier, IdentityKey key, TrustLevel level) { return identityKeys.saveIdentity(identifier, key, level); }
+  public boolean saveIdentity(Recipient recipient, IdentityKey key, TrustLevel level) { return identityKeys.saveIdentity(recipient, key, level); }
 
   @Override
   public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
@@ -89,9 +88,7 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
     return identityKeys.getIdentity(address);
   }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(SignalServiceAddress address) throws SQLException, InvalidKeyException, InvalidAddressException {
-    return identityKeys.getIdentities(address);
-  }
+  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException { return identityKeys.getIdentities(recipient); }
 
   public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return identityKeys.getIdentities(); }
 
@@ -150,7 +147,7 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
     sessions.deleteAllSessions(name);
   }
 
-  public void deleteAllSessions(SignalServiceAddress address) { sessions.deleteAllSessions(address); }
+  public void deleteAllSessions(Recipient recipient) { sessions.deleteAllSessions(recipient); }
 
   @Override
   public SignedPreKeyRecord loadSignedPreKey(int signedPreKeyId) throws InvalidKeyIdException {
@@ -185,6 +182,11 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   }
 
   @Override
+  public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
+    return sessions.getAllAddressesWithActiveSessions(list);
+  }
+
+  @Override
   public void storeSenderKey(SignalProtocolAddress signalProtocolAddress, UUID distributionId, SenderKeyRecord senderKeyRecord) {
     senderKeys.storeSenderKey(signalProtocolAddress, distributionId, senderKeyRecord);
   }
@@ -205,7 +207,17 @@ public class DatabaseProtocolStore implements SignalServiceProtocolStore {
   }
 
   @Override
-  public void clearSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
-    senderKeyShared.clearSenderKeySharedWith(distributionId, addresses);
+  public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> collection) {
+    senderKeyShared.clearSenderKeySharedWith(collection);
+  }
+
+  @Override
+  public boolean isMultiDevice() {
+    return false;
+  }
+
+  @Override
+  public Transaction beginTransaction() {
+    return null;
   }
 }

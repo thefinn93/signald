@@ -103,7 +103,12 @@ public class ProfileAndCredentialEntry {
 
       SignalServiceAddress address = null;
       if (node.has("address")) {
-        address = mapper.treeToValue(node.get("address"), JsonAddress.class).getSignalServiceAddress();
+        JsonAddress jsonAddress = mapper.treeToValue(node.get("address"), JsonAddress.class);
+        if (jsonAddress.uuid != null) {
+          address = jsonAddress.getSignalServiceAddress();
+        } else {
+          logger.debug("dropping known profile due to lack of known UUID: " + jsonAddress.toRedactedString());
+        }
       }
 
       ProfileKey profileKey = null;
@@ -146,6 +151,8 @@ public class ProfileAndCredentialEntry {
       ObjectNode node = JsonNodeFactory.instance.objectNode();
       if (value.serviceAddress != null) {
         node.set("address", mapper.valueToTree(new JsonAddress(value.serviceAddress)));
+      } else {
+        return; // don't store profiles without an address
       }
 
       if (value.profileKey != null) {

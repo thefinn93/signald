@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 
@@ -44,16 +45,16 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, String username)
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, UUID accountUUID)
       throws IOException, NoSuchAccount, SQLException, InvalidKeyException, InvalidProxyException, ServerNotFoundException {
     if (syncMessage.getSent().isPresent()) {
-      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), username);
+      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), accountUUID);
     }
 
     if (syncMessage.getContacts().isPresent()) {
       ContactsMessage c = syncMessage.getContacts().get();
       try {
-        contacts = new JsonAttachment(c.getContactsStream(), username);
+        contacts = new JsonAttachment(c.getContactsStream(), accountUUID);
       } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
         throw new NoSuchAccount(e);
       } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -66,7 +67,7 @@ public class JsonSyncMessage {
 
     if (syncMessage.getGroups().isPresent()) {
       try {
-        groups = new JsonAttachment(syncMessage.getGroups().get(), username);
+        groups = new JsonAttachment(syncMessage.getGroups().get(), accountUUID);
       } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
         throw new NoSuchAccount(e);
       } catch (io.finn.signald.exceptions.InvalidProxyException e) {

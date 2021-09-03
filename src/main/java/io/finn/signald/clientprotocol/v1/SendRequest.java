@@ -25,9 +25,12 @@ import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSendPermission;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSendPermissionException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -63,10 +66,15 @@ public class SendRequest implements RequestType<SendResponse> {
   @Override
   public SendResponse run(Request request)
       throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccount, InvalidInputException,
-             UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+             UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSendPermission {
     Manager manager = Utils.getManager(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+
+    Recipient recipient = null;
+    if (recipientAddress != null) {
+      recipient = manager.getRecipientsTable().get(recipientAddress);
+    }
 
     if (messageBody != null) {
       messageBuilder = messageBuilder.withBody(messageBody);
@@ -112,13 +120,15 @@ public class SendRequest implements RequestType<SendResponse> {
       messageBuilder.withMentions(mentions.stream().map(JsonMention::asMention).collect(Collectors.toList()));
     }
 
-    List<SendMessageResult> results = null;
+    List<SendMessageResult> results;
     try {
-      results = manager.send(messageBuilder, recipientAddress, recipientGroupId);
+      results = manager.send(messageBuilder, recipient, recipientGroupId);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientException();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupException();
+    } catch (NoSendPermissionException e) {
+      throw new NoSendPermission();
     }
     return new SendResponse(results, timestamp);
   }

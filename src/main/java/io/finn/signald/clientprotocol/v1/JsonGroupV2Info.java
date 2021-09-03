@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,6 +57,8 @@ public class JsonGroupV2Info {
 
   @Doc("detailed member list") public List<GroupMember> memberDetail;
   @Doc("detailed pending member list") public List<GroupMember> pendingMemberDetail;
+  @Doc("indicates if the group is an announcements group. Only admins are allowed to send messages to announcements groups. Options are UNKNOWN, ENABLED or DISABLED")
+  public String announcements;
 
   public JsonGroupV2Info() {}
 
@@ -90,6 +91,7 @@ public class JsonGroupV2Info {
 
       memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
       pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+      announcements = decryptedGroup.getIsAnnouncementGroup().name();
     }
   }
 
@@ -101,6 +103,7 @@ public class JsonGroupV2Info {
     description = other.description;
     timer = other.timer;
     inviteLink = other.inviteLink;
+    announcements = other.announcements;
 
     if (other.members != null) {
       members = new ArrayList<>();
@@ -127,18 +130,6 @@ public class JsonGroupV2Info {
       }
     } else {
       requestingMembers = null;
-    }
-  }
-
-  public void resolveMembers(AddressResolver resolver) {
-    if (members != null) {
-      members = members.stream().map(e -> e.resolve(resolver)).collect(Collectors.toList());
-    }
-    if (pendingMembers != null) {
-      pendingMembers = pendingMembers.stream().map(e -> e.resolve(resolver)).collect(Collectors.toList());
-    }
-    if (requestingMembers != null) {
-      requestingMembers = requestingMembers.stream().map(e -> e.resolve(resolver)).collect(Collectors.toList());
     }
   }
 

@@ -27,6 +27,8 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -47,7 +49,6 @@ import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("approve_membership")
@@ -71,8 +72,11 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
       throw new UnknownGroupException();
     }
 
-    List<SignalServiceAddress> recipients = group.getMembers();
-    recipients.addAll(members.stream().map(JsonAddress::getSignalServiceAddress).collect(Collectors.toSet()));
+    RecipientsTable recipientsTable = m.getRecipientsTable();
+    List<Recipient> recipients = recipientsTable.get(group.getMembers());
+    for (JsonAddress member : members) {
+      recipients.add(recipientsTable.get(member));
+    }
 
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);

@@ -19,11 +19,11 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.util.AddressUtil;
 import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 public class ContactStore {
@@ -40,15 +40,13 @@ public class ContactStore {
     return contact;
   }
 
-  public ContactInfo getContact(String identifier) { return getContact(AddressUtil.fromIdentifier(identifier)); }
-
-  public ContactInfo getContact(SignalServiceAddress address) {
+  public ContactInfo getContact(Recipient recipient) {
     for (ContactInfo c : contacts) {
-      if (c.matches(address)) {
+      if (c.matches(recipient)) {
         return c;
       }
     }
-    return new ContactInfo(address);
+    return new ContactInfo(recipient);
   }
 
   public List<ContactInfo> getContacts() { return contacts; }
@@ -70,7 +68,7 @@ public class ContactStore {
 
     public ContactInfo() {}
 
-    public ContactInfo(SignalServiceAddress a) { address = new JsonAddress(a); }
+    public ContactInfo(Recipient recipient) { address = new JsonAddress(recipient.getAddress()); }
 
     public void setNumber(@JsonProperty String number) {
       if (address == null) {
@@ -106,7 +104,7 @@ public class ContactStore {
       }
     }
 
-    public boolean matches(SignalServiceAddress other) { return address.matches(other); }
+    public boolean matches(Recipient other) { return address.matches(other.getAddress()); }
 
     public void update(DeviceContact c) {
       address = new JsonAddress(c.getAddress());

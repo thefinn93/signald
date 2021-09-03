@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.storage.AddressResolver;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @Deprecated(1641027661)
@@ -48,6 +47,4 @@ public class JsonReaction {
   public SignalServiceDataMessage.Reaction getReaction() {
     return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
   }
-
-  public void resolve(AddressResolver resolver) { targetAuthor.resolve(resolver); }
 }

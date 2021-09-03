@@ -17,7 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
@@ -27,6 +26,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -40,9 +40,8 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, String username)
+  JsonGroupInfo(SignalServiceGroup groupInfo, UUID accountUUID)
       throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager manager = Utils.getManager(username);
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
       this.members = new ArrayList<>();
@@ -53,7 +52,7 @@ public class JsonGroupInfo {
     if (groupInfo.getName().isPresent()) {
       this.name = groupInfo.getName().get();
     } else {
-      GroupInfo group = manager.getGroup(groupInfo.getGroupId());
+      GroupInfo group = Utils.getManager(accountUUID).getGroup(groupInfo.getGroupId());
       if (group != null) {
         this.name = group.name;
       }

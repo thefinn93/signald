@@ -24,7 +24,7 @@ import io.finn.signald.clientprotocol.RequestType;
 @ProtocolType("version")
 public class VersionRequest implements RequestType<JsonVersionMessage> {
   @Override
-  public JsonVersionMessage run(Request request) throws Throwable {
+  public JsonVersionMessage run(Request request) {
     return new JsonVersionMessage();
   }
 }
