@@ -1,5 +1,6 @@
 # signald - An (unofficial) Signal Daemon
 
+## Docker image is modified by Deanosim to run openjdk/jre using openj9 instead of hotspot.
 
 signald is a daemon that facilitates communication over Signal.  It is unofficial, unapproved, and [not nearly as secure as the real Signal clients](https://gitlab.com/signald/signald/-/issues/101).
 
