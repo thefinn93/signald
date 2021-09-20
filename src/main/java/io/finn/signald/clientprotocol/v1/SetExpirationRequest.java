@@ -23,10 +23,8 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
@@ -35,7 +33,6 @@ import java.util.List;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -50,9 +47,8 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
   @ExampleValue("604800") @Required public int expiration;
 
   @Override
-  public SendResponse run(Request request) throws SQLException, IOException, NoSuchAccount, UnknownGroupException, VerificationFailedException, NotAGroupMemberException,
-                                                  GroupNotFoundException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError {
+    Manager m = Common.getManager(account);
     List<SendMessageResult> results;
 
     if (group != null) {
@@ -62,17 +58,36 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
           output = m.getGroupsV2Manager().updateGroupTimer(group, expiration);
           results = m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2());
         } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-          throw new UnknownGroupException();
+          throw new UnknownGroupError();
+        } catch (SQLException | IOException e) {
+          throw new InternalError("error sending group message", e);
+        } catch (VerificationFailedException e) {
+          throw new GroupVerificationError(e);
         }
         m.getAccountData().groupsV2.update(output.second());
-        m.getAccountData().save();
+        Common.saveAccount(m.getAccountData());
       } else {
-        byte[] groupId = Base64.decode(group);
-        results = m.setExpiration(groupId, expiration);
+        byte[] groupId = new byte[0];
+        try {
+          groupId = Base64.decode(group);
+        } catch (IOException e) {
+          throw new UnknownGroupError();
+        }
+        try {
+          results = m.setExpiration(groupId, expiration);
+        } catch (IOException | SQLException e) {
+          throw new InternalError("error setting expiration", e);
+        } catch (GroupNotFoundException | NotAGroupMemberException e) {
+          throw new UnknownGroupError();
+        }
       }
     } else {
-      Recipient recipient = m.getRecipientsTable().get(address);
-      results = m.setExpiration(recipient, expiration);
+      Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+      try {
+        results = m.setExpiration(recipient, expiration);
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error setting expiration", e);
+      }
     }
 
     return new SendResponse(results, 0);

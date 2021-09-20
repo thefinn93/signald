@@ -24,10 +24,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ProfileUnavailable;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
@@ -37,7 +35,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 @Doc("Get all information available about a user")
 @ProtocolType("get_profile")
@@ -52,15 +49,14 @@ public class GetProfileRequest implements RequestType<Profile> {
   public boolean async;
 
   @Override
-  public Profile run(Request request) throws IOException, SQLException, NoSuchAccount, ProfileUnavailable, InterruptedException, ExecutionException, TimeoutException,
-                                             InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
-    Recipient recipient = m.getRecipientsTable().get(requestedAddress);
+  public Profile run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError {
+    Manager m = Common.getManager(account);
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), requestedAddress);
     ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);
     ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
     if (profileEntry == null) {
       if (contact == null) {
-        throw new ProfileUnavailable();
+        throw new ProfileUnavailableError();
       } else {
         Profile p = new Profile(contact);
         p.populateAvatar(m);
@@ -72,7 +68,11 @@ public class GetProfileRequest implements RequestType<Profile> {
     if (async) {
       BackgroundJobRunnerThread.queue(action);
     } else {
-      action.run();
+      try {
+        action.run();
+      } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
+        throw new InternalError("error refreshing profile", e);
+      }
     }
 
     Profile profile = new Profile(profileEntry.getProfile(), recipient, contact);

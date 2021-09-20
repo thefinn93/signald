@@ -17,6 +17,10 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoSendPermission extends ExceptionWrapper {
-  public NoSendPermission() { super("only admins are allowed to send to this group"); }
+public class NoKnownUUIDError extends ExceptionWrapper {
+  String e164;
+  public NoKnownUUIDError(String e164) {
+    super("No known UUID for that Signal account");
+    this.e164 = e164;
+  }
 }

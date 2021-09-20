@@ -27,16 +27,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.util.AttachmentUtil;
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -62,10 +59,10 @@ public class SetProfile implements RequestType<Empty> {
   public String mobilecoinAddress;
 
   @Override
-  public Empty run(Request request) throws IOException, NoSuchAccount, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error {
     File avatar = avatarFile == null ? null : new File(avatarFile);
 
-    Manager m = Utils.getManager(account);
+    Manager m = Common.getManager(account);
 
     if (name == null) {
       name = "";
@@ -82,7 +79,12 @@ public class SetProfile implements RequestType<Empty> {
     Optional<SignalServiceProtos.PaymentAddress> paymentAddress = Optional.absent();
 
     if (mobilecoinAddress != null && !mobilecoinAddress.equals("")) {
-      byte[] decodedAddress = Base64.decode(mobilecoinAddress);
+      byte[] decodedAddress = new byte[0];
+      try {
+        decodedAddress = Base64.decode(mobilecoinAddress);
+      } catch (IOException e) {
+        throw new InvalidBase64Error();
+      }
       IdentityKeyPair identityKeyPair = m.getAccountData().axolotlStore.getIdentityKeyPair();
       SignalServiceProtos.PaymentAddress signedAddress = signPaymentsAddress(decodedAddress, identityKeyPair);
 
@@ -94,6 +96,10 @@ public class SetProfile implements RequestType<Empty> {
 
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
       m.getAccountManager().setVersionedProfile(m.getUUID(), m.getAccountData().getProfileKey(), name, about, emoji, paymentAddress, streamDetails);
+    } catch (IOException e) {
+      throw new InternalError("error reading avatar file", e);
+    } catch (InvalidInputException e) {
+      throw new InternalError("error getting own profile key", e);
     }
 
     return new Empty();

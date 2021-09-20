@@ -15,16 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.finn.signald.clientprotocol.v1;
+package io.finn.signald.clientprotocol.v1.exceptions;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
-
-public class RequestProcessingError extends ExceptionWrapper {
-  public RequestProcessingError(Throwable throwable) { super(throwable.getMessage(), throwable); }
-
-  @JsonIgnore
-  public String getType() {
-    return this.getCause().getClass().getSimpleName();
-  }
+public class GroupLinkNotActiveError extends ExceptionWrapper {
+  public GroupLinkNotActiveError() { super("group link not active"); }
 }

@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountHasNoKeys extends ExceptionWrapper {
-  public AccountHasNoKeys() { super("requested account has no keys generated"); }
+public class UnknownIdentityKeyError extends ExceptionWrapper {
+  public UnknownIdentityKeyError() { super("no matching identity key in database"); }
 }

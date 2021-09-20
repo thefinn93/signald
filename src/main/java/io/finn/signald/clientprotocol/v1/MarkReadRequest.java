@@ -25,15 +25,12 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -52,22 +49,33 @@ public class MarkReadRequest implements RequestType<Empty> {
   public Long when;
 
   @Override
-  public Empty run(Request request)
-      throws IOException, UntrustedIdentityException, SQLException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError {
     if (when == null) {
       when = System.currentTimeMillis();
     }
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, when);
-    Manager m = Utils.getManager(account);
-    Recipient recipient = m.getRecipientsTable().get(to);
+    Manager m = Common.getManager(account);
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), to);
     SignalServiceMessageSender sender = m.getMessageSender();
-    sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
+    try {
+      sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
+    } catch (IOException e) {
+      throw new InternalError("error sending receipt", e);
+    } catch (UntrustedIdentityException e) {
+      throw new UntrustedIdentityError(m.getUUID(), e);
+    }
 
     List<ReadMessage> readMessages = new LinkedList<>();
     for (Long ts : timestamps) {
       readMessages.add(new ReadMessage(recipient.getAddress(), ts));
     }
-    sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnRecipient()));
+    try {
+      sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnRecipient()));
+    } catch (IOException e) {
+      throw new InternalError("error sending sync message", e);
+    } catch (UntrustedIdentityException e) {
+      throw new UntrustedIdentityError(m.getUUID(), e);
+    }
     return new Empty();
   }
 }

@@ -24,18 +24,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSendPermission;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.exceptions.InvalidRecipientException;
 import io.finn.signald.exceptions.NoSendPermissionException;
-import io.finn.signald.exceptions.UnknownGroupException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -51,11 +46,11 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
   public Long when;
 
   @Override
-  public SendResponse run(Request request) throws IOException, SQLException, NoSuchAccount, InvalidRecipientException, UnknownGroupException, InvalidProxyException,
-                                                  InvalidKeyException, ServerNotFoundException, NoSendPermission {
-    Manager m = Utils.getManager(account);
+  public SendResponse run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError, UnknownGroupError, NoSendPermissionError {
+    Manager m = Common.getManager(account);
 
-    Recipient recipient = m.getRecipientsTable().get(address);
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
 
     if (when == null) {
       when = System.currentTimeMillis();
@@ -69,11 +64,13 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
     try {
       results = m.send(messageBuilder, recipient, null);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientException();
+      throw new InvalidRecipientError();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
     } catch (NoSendPermissionException e) {
-      throw new NoSendPermission();
+      throw new NoSendPermissionError();
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error sending message", e);
     }
     return new SendResponse(results, when);
   }

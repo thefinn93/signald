@@ -20,7 +20,8 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -41,13 +42,17 @@ public class Account {
 
   @Doc("indicates the account has not completed registration") public Boolean pending;
 
-  public Account(UUID accountUUID) throws SQLException, NoSuchAccount {
+  public Account(UUID accountUUID) throws NoSuchAccountError, InternalError {
     try {
-      accountID = AccountsTable.getE164(accountUUID);
-    } catch (NoSuchAccountException e) {
-      throw new NoSuchAccount(e);
+      try {
+        accountID = AccountsTable.getE164(accountUUID);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      }
+      deviceID = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID);
+    } catch (SQLException e) {
+      throw new InternalError("error resolving account e164", e);
     }
-    deviceID = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID);
     address = new JsonAddress(accountID, accountUUID);
   }
 

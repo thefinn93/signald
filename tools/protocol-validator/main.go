@@ -24,7 +24,7 @@ type check func() checkOutputs
 
 type fieldCheck func(string, string, string, DataType) checkOutputs
 
-var checks = []check{checkRequestResponseTypesExist, checkMissingCriticalFields}
+var checks = []check{checkRequestResponseTypesExist, checkMissingCriticalFields, checkErrorsExist}
 
 var fieldChecks = []fieldCheck{checkTypeFieldCasing, checkCrossVersionReferences}
 

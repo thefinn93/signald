@@ -17,8 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class CaptchaRequired extends ExceptionWrapper {
-  public final String more = "https://signald.org/articles/captcha/";
-
-  public CaptchaRequired() { super("a captcha token is required to register"); }
+public class NoSendPermissionError extends ExceptionWrapper {
+  public NoSendPermissionError() { super("only admins are allowed to send to this group"); }
 }

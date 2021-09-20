@@ -17,6 +17,11 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class GroupLinkNotActive extends ExceptionWrapper {
-  public GroupLinkNotActive() { super("group link not active"); }
+public class ServerNotFoundError extends ExceptionWrapper {
+  public String uuid;
+
+  public ServerNotFoundError(io.finn.signald.exceptions.ServerNotFoundException e) {
+    super(e.getMessage());
+    uuid = e.getServer() == null ? null : e.getServer().toString();
+  }
 }

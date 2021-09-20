@@ -28,7 +28,7 @@ import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.clientprotocol.v0.JsonAddress;
 import io.finn.signald.clientprotocol.v0.JsonMessageEnvelope;
 import io.finn.signald.clientprotocol.v0.JsonSendMessageResult;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
@@ -65,6 +65,7 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
@@ -317,7 +318,7 @@ public class LegacySocketHandler {
     }
   }
 
-  private void listAccounts(JsonRequest request) throws IOException, SQLException, NoSuchAccount {
+  private void listAccounts(JsonRequest request) throws IOException, SQLException, NoSuchAccountError {
     JsonAccountList accounts = new JsonAccountList();
     this.reply("account_list", accounts, request.id);
   }
@@ -340,7 +341,7 @@ public class LegacySocketHandler {
   }
 
   private void verify(JsonRequest request)
-      throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException, NoSuchAccount {
+      throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException, NoSuchAccountError {
     RegistrationManager rm = RegistrationManager.get(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     if (!rm.hasPendingKeys()) {
       logger.warn("User has no keys, first call register.");
@@ -499,7 +500,7 @@ public class LegacySocketHandler {
   }
 
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, URISyntaxException, NoSuchAccountException, InvalidInputException, SQLException,
-                                                ServerNotFoundException, InvalidProxyException, NoSuchAccount {
+                                                ServerNotFoundException, InvalidProxyException, NoSuchAccountError, UntrustedIdentityException {
     ProvisioningManager pm = new ProvisioningManager(UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify
     if (request.deviceName != null) {
@@ -582,20 +583,22 @@ public class LegacySocketHandler {
     }
   }
 
-  private void syncContacts(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void syncContacts(JsonRequest request)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     Manager m = Manager.get(request.username);
     m.requestSyncContacts();
     this.reply("sync_requested", null, request.id);
   }
 
-  private void syncGroups(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void syncGroups(JsonRequest request)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     Manager m = Manager.get(request.username);
     m.requestSyncGroups();
     this.reply("sync_requested", null, request.id);
   }
 
   private void syncConfiguration(JsonRequest request)
-      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     Manager m = Manager.get(request.username);
     m.requestSyncConfiguration();
     this.reply("sync_requested", null, request.id);

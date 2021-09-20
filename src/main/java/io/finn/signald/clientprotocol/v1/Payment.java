@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidBase64Error;
 import java.io.IOException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.util.Base64;
@@ -39,7 +40,11 @@ public class Payment {
   }
 
   @JsonIgnore
-  public SignalServiceDataMessage.PaymentNotification getPaymentNotification() throws IOException {
-    return new SignalServiceDataMessage.PaymentNotification(Base64.decode(receipt), note);
+  public SignalServiceDataMessage.PaymentNotification getPaymentNotification() throws InvalidBase64Error {
+    try {
+      return new SignalServiceDataMessage.PaymentNotification(Base64.decode(receipt), note);
+    } catch (IOException e) {
+      throw new InvalidBase64Error();
+    }
   }
 }

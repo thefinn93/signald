@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class ProfileUnavailable extends ExceptionWrapper {
-  public ProfileUnavailable() { super("profile unavailable"); }
+public class InvalidRequestError extends ExceptionWrapper {
+  public InvalidRequestError(String message) { super(message); }
 }

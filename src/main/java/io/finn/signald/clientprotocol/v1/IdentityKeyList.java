@@ -22,8 +22,6 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
@@ -37,8 +35,7 @@ public class IdentityKeyList {
   public final JsonAddress address;
   public final List<IdentityKey> identities = new ArrayList<>();
 
-  public IdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, Recipient recipient, List<IdentityKeysTable.IdentityKeyRow> identities)
-      throws IOException, SQLException {
+  public IdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, Recipient recipient, List<IdentityKeysTable.IdentityKeyRow> identities) {
     this.self = self;
     this.ownKey = ownKey;
     this.address = new JsonAddress(recipient);
@@ -51,7 +48,7 @@ public class IdentityKeyList {
     }
   }
 
-  public void addKey(IdentityKeysTable.IdentityKeyRow identity) throws IOException, SQLException {
+  public void addKey(IdentityKeysTable.IdentityKeyRow identity) {
     Fingerprint safetyNumber = SafetyNumberHelper.computeFingerprint(self, ownKey, recipient, identity.getKey());
     if (safetyNumber == null) {
       return;

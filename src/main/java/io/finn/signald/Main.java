@@ -101,10 +101,10 @@ public class Main implements Runnable {
       try {
         System.out.println(JSONUtil.GetMapper().writeValueAsString(ProtocolRequest.GetProtocolDocumentation()));
         System.exit(0);
-      } catch (JsonProcessingException e) {
+      } catch (JsonProcessingException | NoSuchMethodException e) {
         logger.catching(e);
+        System.exit(1);
       }
-      System.exit(1);
     }
 
     String enableHttpLogging = System.getenv("SIGNALD_HTTP_LOGGING");

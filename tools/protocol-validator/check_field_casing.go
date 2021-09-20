@@ -12,6 +12,12 @@ var (
 			"SendSuccess": {
 				"needsSync": true, // v1 SendSuccess was added in !77 to replace a libsignal type that inadvertently made it into the protocol.
 			},
+			"JsonAttachment": {
+				"voiceNote":      true,
+				"storedFilename": true,
+				"customFilename": true,
+				"contentType":    true,
+			},
 		},
 	}
 )

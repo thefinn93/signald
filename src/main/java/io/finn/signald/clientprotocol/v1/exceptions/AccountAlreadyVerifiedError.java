@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class OwnProfileKeyDoesNotExist extends ExceptionWrapper {
-  public OwnProfileKeyDoesNotExist() { super("cannot find own profile key"); }
+public class AccountAlreadyVerifiedError extends ExceptionWrapper {
+  public AccountAlreadyVerifiedError() { super("account has already been verified"); }
 }

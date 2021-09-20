@@ -25,16 +25,16 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 
 @ProtocolType("get_linked_devices")
@@ -44,16 +44,18 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public LinkedDevices run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public LinkedDevices run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+    Manager m = Common.getManager(account);
     ECPrivateKey profileKey = m.getAccountData().axolotlStore.getIdentityKeyPair().getPrivateKey();
     List<DeviceInfo> devices;
     try {
       devices = new LinkedDeviceManager(m.getUUID()).getLinkedDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
-      throw new InvalidProxyException(e);
+      throw new InvalidProxyError(e);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
-      throw new ServerNotFoundException(e);
+      throw new ServerNotFoundError(e);
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error getting linked devices", e);
     }
     return new LinkedDevices(devices);
   }

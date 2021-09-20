@@ -23,12 +23,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import java.io.IOException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
+import java.util.UUID;
 
 @Doc("Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience "
      + "function for client authors, mostly because signald doesn't resolve all the partials it returns.")
@@ -39,7 +40,15 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public JsonAddress run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    return new JsonAddress(Utils.getManager(account).getRecipientsTable().get(partial));
+  public JsonAddress run(Request request) throws InternalError, NoSuchAccountError {
+    UUID accountUUID;
+    try {
+      accountUUID = AccountsTable.getUUID(account);
+    } catch (SQLException e) {
+      throw new InternalError("error getting account UUID", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    }
+    return new JsonAddress(Common.getRecipient(new RecipientsTable(accountUUID), partial));
   }
 }

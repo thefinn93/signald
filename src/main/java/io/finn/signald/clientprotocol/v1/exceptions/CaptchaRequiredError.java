@@ -17,10 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoKnownUUID extends ExceptionWrapper {
-  String e164;
-  public NoKnownUUID(String e164) {
-    super("No known UUID for that Signal account");
-    this.e164 = e164;
-  }
+public class CaptchaRequiredError extends ExceptionWrapper {
+  public final String more = "https://signald.org/articles/captcha/";
+
+  public CaptchaRequiredError() { super("a captcha token is required to register"); }
 }

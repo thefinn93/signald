@@ -17,15 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class NoSuchAccount extends ExceptionWrapper {
-  public String account;
-  public NoSuchAccount(io.finn.signald.exceptions.NoSuchAccountException e) {
-    super(e.getMessage());
-    account = e.account;
-  }
-
-  public NoSuchAccount(String account) {
-    super("account not found");
-    this.account = account;
-  }
+public class NoSuchSessionError extends ExceptionWrapper {
+  public NoSuchSessionError() { super("no such session"); }
 }

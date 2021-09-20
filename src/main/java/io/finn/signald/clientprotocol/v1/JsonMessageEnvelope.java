@@ -22,19 +22,18 @@ import io.finn.signald.JsonReceiptMessage;
 import io.finn.signald.JsonTypingMessage;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.UUID;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -60,22 +59,24 @@ public class JsonMessageEnvelope {
   public JsonTypingMessage typing;
 
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, UUID accountUUID)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
     try {
       this.username = AccountsTable.getE164(accountUUID);
     } catch (NoSuchAccountException e) {
-      throw new NoSuchAccount(e);
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new InternalError("error looking up username for envelope", e);
     }
 
     if (envelope.hasServerGuid()) {
       uuid = envelope.getServerGuid();
     }
 
-    Manager m = Utils.getManager(accountUUID);
+    Manager m = Common.getManager(accountUUID);
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()));
+      source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), envelope.getSourceAddress()));
     } else if (c != null) {
-      source = new JsonAddress(m.getRecipientsTable().get(c.getSender()));
+      source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), (c.getSender())));
     }
 
     if (envelope.hasSourceDevice()) {

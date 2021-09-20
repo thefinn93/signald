@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class InvalidRequestException extends ExceptionWrapper {
-  public InvalidRequestException(String message) { super(message); }
+public class InvalidProxyError extends ExceptionWrapper {
+  public InvalidProxyError(io.finn.signald.exceptions.InvalidProxyException e) { super(e.getMessage()); }
 }

@@ -24,11 +24,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.OwnProfileKeyDoesNotExist;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
@@ -42,7 +39,6 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -57,29 +53,37 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws IOException, NoSuchAccount, VerificationFailedException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException,
-             OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public JsonGroupV2Info run(Request request) throws NoSuchAccountError, OwnProfileKeyDoesNotExistError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError {
+    Manager m = Common.getManager(account);
     AccountData accountData = m.getAccountData();
     Group group;
     try {
       group = accountData.groupsV2.get(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
     }
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
-    ProfileKeyCredential ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
+    ProfileKeyCredential ownProfileKeyCredential;
+    try {
+      ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
+    } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
+      throw new InternalError("error getting own profile key credential", e);
+    }
 
     if (ownProfileKeyCredential == null) {
-      throw new OwnProfileKeyDoesNotExist();
+      throw new OwnProfileKeyDoesNotExistError();
     }
 
     GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownProfileKeyCredential);
     change.setSourceUuid(UuidUtil.toByteString(m.getUUID()));
 
-    Pair<DecryptedGroup, GroupChange> groupChangePair = m.getGroupsV2Manager().commitChange(group, change);
+    Pair<DecryptedGroup, GroupChange> groupChangePair;
+    try {
+      groupChangePair = m.getGroupsV2Manager().commitChange(group, change);
+    } catch (IOException | VerificationFailedException e) {
+      throw new InternalError("error committing group change", e);
+    }
     group.group = groupChangePair.first();
     group.revision += 1;
 
@@ -92,11 +96,13 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
     try {
       m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2());
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error sending group message", e);
     }
 
     accountData.groupsV2.update(group);
-    accountData.save();
+    Common.saveAccount(accountData);
     return group.getJsonGroupV2Info(m);
   }
 }

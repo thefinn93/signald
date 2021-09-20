@@ -23,13 +23,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.storage.ContactStore;
 import java.io.IOException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("update_contact")
 @Doc("update information about a local contact")
@@ -41,14 +41,18 @@ public class UpdateContactRequest implements RequestType<Profile> {
   @JsonProperty("inbox_position") public Integer inboxPosition;
 
   @Override
-  public Profile run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     ContactStore.ContactInfo c = new ContactStore.ContactInfo();
     c.address = address;
     c.name = name;
     c.color = color;
     c.inboxPosition = inboxPosition;
     ContactStore.ContactInfo contactInfo;
-    contactInfo = Utils.getManager(account).updateContact(c);
+    try {
+      contactInfo = Common.getManager(account).updateContact(c);
+    } catch (IOException | SQLException e) {
+      throw new InternalError("error updating contact", e);
+    }
     return new Profile(contactInfo);
   }
 }

@@ -17,17 +17,14 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.JsonAttachment;
 import io.finn.signald.JsonStickerPackOperationMessage;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import java.io.IOException;
-import java.sql.SQLException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 
 public class JsonSyncMessage {
@@ -45,36 +42,19 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, UUID accountUUID)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, InvalidProxyException, ServerNotFoundException {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, UUID accountUUID) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), accountUUID);
     }
 
     if (syncMessage.getContacts().isPresent()) {
       ContactsMessage c = syncMessage.getContacts().get();
-      try {
-        contacts = new JsonAttachment(c.getContactsStream(), accountUUID);
-      } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
-        throw new NoSuchAccount(e);
-      } catch (io.finn.signald.exceptions.InvalidProxyException e) {
-        throw new InvalidProxyException(e);
-      } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
-        throw new ServerNotFoundException(e);
-      }
+      contacts = new JsonAttachment(c.getContactsStream(), accountUUID);
       contactsComplete = c.isComplete();
     }
 
     if (syncMessage.getGroups().isPresent()) {
-      try {
-        groups = new JsonAttachment(syncMessage.getGroups().get(), accountUUID);
-      } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
-        throw new NoSuchAccount(e);
-      } catch (io.finn.signald.exceptions.InvalidProxyException e) {
-        throw new InvalidProxyException(e);
-      } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
-        throw new ServerNotFoundException(e);
-      }
+      groups = new JsonAttachment(syncMessage.getGroups().get(), accountUUID);
     }
 
     if (syncMessage.getBlockedList().isPresent()) {

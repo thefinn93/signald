@@ -20,12 +20,12 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -91,8 +91,8 @@ public class Profile {
     }
   }
 
-  public void populateAvatar(Manager m) throws IOException, SQLException {
-    Recipient recipient = m.getRecipientsTable().get(address);
+  public void populateAvatar(Manager m) throws InternalError {
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
     File f = m.getProfileAvatarFile(recipient);
     if (f == null || !f.exists()) {
       return;

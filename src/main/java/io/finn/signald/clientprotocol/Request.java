@@ -17,8 +17,8 @@
 
 package io.finn.signald.clientprotocol;
 
+import static io.finn.signald.util.RequestUtil.REQUEST_TYPES;
 import static io.finn.signald.util.RequestUtil.getVersion;
-import static io.finn.signald.util.RequestUtil.requestTypes;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -34,6 +34,7 @@ import io.finn.signald.annotations.*;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.*;
 import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
+import io.finn.signald.clientprotocol.v1.exceptions.RequestProcessingError;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import java.io.IOException;
@@ -62,7 +63,7 @@ public class Request {
 
   public static Map<String, Map<String, Class<? extends RequestType>>> getRequests() {
     Map<String, Map<String, Class<? extends RequestType>>> requests = new HashMap<>();
-    for (Class<? extends RequestType> t : requestTypes) {
+    for (Class<? extends RequestType> t : REQUEST_TYPES) {
       ProtocolType annotation = t.getDeclaredAnnotation(ProtocolType.class);
       if (!requests.containsKey(annotation.value())) {
         requests.put(annotation.value(), new HashMap<>());

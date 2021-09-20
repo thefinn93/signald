@@ -235,9 +235,13 @@ unit tests x86:
   before_script:
     - cp tools/log4j2.xml src/main/resources/log4j2.xml
   script:
-    - ./gradlew test --info
+    - ./gradlew test
   rules:
     - when: on_success
+  artifacts:
+    when: always
+    reports:
+      junit: build/test-results/test/**/TEST-*.xml
 
 unit tests aarch64-unknown-linux-gnu:
   <<: *testserver

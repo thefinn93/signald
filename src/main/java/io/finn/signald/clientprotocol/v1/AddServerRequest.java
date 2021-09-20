@@ -22,7 +22,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.db.ServersTable;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -34,14 +35,16 @@ public class AddServerRequest implements RequestType<String> {
   @Required public Server server;
 
   @Override
-  public String run(Request request) throws IOException, SQLException, InvalidProxyException {
+  public String run(Request request) throws InvalidProxyError, InternalError {
     if (server.uuid == null) {
       server.uuid = UUID.randomUUID();
     }
     try {
       ServersTable.create(server.getServer());
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
-      throw new InvalidProxyException(e);
+      throw new InvalidProxyError(e);
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error resolving account e164", e);
     }
     return server.uuid.toString();
   }

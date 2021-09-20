@@ -17,7 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountLocked extends ExceptionWrapper {
-  public final String more = "see https://gitlab.com/signald/signald/-/issues/47";
-  public AccountLocked() { super("account is locked with a PIN"); }
+public class OwnProfileKeyDoesNotExistError extends ExceptionWrapper {
+  public OwnProfileKeyDoesNotExistError() { super("cannot find own profile key"); }
 }

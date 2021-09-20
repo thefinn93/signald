@@ -19,23 +19,19 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.annotations.Required;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("add_device")
+@ErrorDoc(error = InvalidRequestError.class, doc = "caused by syntax errors with the provided linking URI")
 @Doc("Link a new device to a local Signal account")
 public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
@@ -43,10 +39,15 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LINKING_URI) @Doc("the tsdevice:/ uri provided (typically in qr code form) by the new device") @Required public String uri;
 
   @Override
-  public Empty run(Request request)
-      throws SQLException, IOException, NoSuchAccount, URISyntaxException, InvalidInputException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
-    m.addDeviceLink(new URI(uri));
+  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InvalidRequestError, InternalError {
+    Manager m = Common.getManager(account);
+    try {
+      m.addDeviceLink(new URI(uri));
+    } catch (IOException | InvalidKeyException e) {
+      throw new InternalError("error adding device", e);
+    } catch (InvalidInputException | URISyntaxException e) {
+      throw new InvalidRequestError(e.getMessage());
+    }
     return new Empty();
   }
 }

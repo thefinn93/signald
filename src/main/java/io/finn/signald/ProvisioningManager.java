@@ -41,6 +41,7 @@ import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.SleepTimer;
@@ -85,8 +86,8 @@ public class ProvisioningManager {
     return new URI("tsdevice:/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public UUID finishDeviceLink(String deviceName, boolean overwrite)
-      throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public UUID finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException,
+                                                                            InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
     if (overwrite) {
       try {

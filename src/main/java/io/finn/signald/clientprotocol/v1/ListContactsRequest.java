@@ -23,9 +23,10 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
@@ -38,7 +39,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("list_contacts")
 public class ListContactsRequest implements RequestType<ProfileList> {
@@ -50,8 +50,8 @@ public class ListContactsRequest implements RequestType<ProfileList> {
   public boolean async;
 
   @Override
-  public ProfileList run(Request request) throws InvalidKeyException, IOException, InvalidProxyException, SQLException, NoSuchAccount, ServerNotFoundException {
-    Manager m = Utils.getManager(account);
+  public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+    Manager m = Common.getManager(account);
     RecipientsTable recipientsTable = m.getRecipientsTable();
     ProfileList list = new ProfileList();
     for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
@@ -69,10 +69,12 @@ public class ListContactsRequest implements RequestType<ProfileList> {
           action.run();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
           logger.warn("error refreshing profile:", e);
+        } catch (SQLException | IOException e) {
+          throw new InternalError("error refreshing preofile", e);
         }
       }
 
-      Recipient recipient = recipientsTable.get(c.address);
+      Recipient recipient = Common.getRecipient(recipientsTable, c.address);
       Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
       profile.populateAvatar(m);
       list.profiles.add(profile);

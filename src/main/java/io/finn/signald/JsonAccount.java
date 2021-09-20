@@ -18,7 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 
@@ -32,11 +32,11 @@ class JsonAccount {
   public boolean has_keys;
   public boolean subscribed;
 
-  JsonAccount(Manager m) throws SQLException, NoSuchAccount {
+  JsonAccount(Manager m) throws SQLException, NoSuchAccountError {
     try {
       this.username = m.getE164();
     } catch (NoSuchAccountException e) {
-      throw new NoSuchAccount(e);
+      throw new NoSuchAccountError(e);
     }
     this.deviceId = m.getDeviceId();
     this.filename = Manager.getFileName(username);
@@ -52,7 +52,7 @@ class JsonAccount {
     this.registered = false;
   }
 
-  JsonAccount(Manager m, boolean subscribed) throws SQLException, NoSuchAccount {
+  JsonAccount(Manager m, boolean subscribed) throws SQLException, NoSuchAccountError {
     this(m);
     this.subscribed = subscribed;
   }

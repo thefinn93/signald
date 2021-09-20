@@ -26,13 +26,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.AccountDataTable;
 import java.io.IOException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("set_device_name")
 @Doc("set this device's name. This will show up on the mobile device on the same account under ")
@@ -41,10 +41,18 @@ public class SetDeviceNameRequest implements RequestType<Empty> {
 
   @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
-    AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
-    m.refreshAccount();
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+    Manager m = Common.getManager(account);
+    try {
+      AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
+    } catch (SQLException e) {
+      throw new InternalError("error setting device name locally", e);
+    }
+    try {
+      m.refreshAccount();
+    } catch (IOException | SQLException e) {
+      throw new InternalError("error saving new device name", e);
+    }
     return new Empty();
   }
 }

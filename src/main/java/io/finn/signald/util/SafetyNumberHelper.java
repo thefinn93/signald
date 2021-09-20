@@ -27,7 +27,7 @@ public class SafetyNumberHelper {
   // It seems like the official Signal apps don't use v2 safety numbers yet, so this is disabled for now.
   public static boolean UseV2SafetyNumbers = false;
 
-  // computeSafetyNumber derived from signal-cli (computeSafetyNumber in src/main/java/org/asamk/signal/manager/Utils.java)
+  // computeSafetyNumber derived from signal-cli (computeSafetyNumber in src/main/java/org/asamk/signal/manager/Common.java)
   public static Fingerprint computeFingerprint(Recipient self, IdentityKey ownIdentityKey, Recipient recipient, IdentityKey theirIdentityKey) {
     int version;
     byte[] ownId;

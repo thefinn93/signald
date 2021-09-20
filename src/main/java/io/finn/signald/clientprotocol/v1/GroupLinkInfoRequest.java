@@ -23,15 +23,11 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.GroupLinkNotActive;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
-import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 
 @ProtocolType("group_link_info")
@@ -43,11 +39,17 @@ public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
 
   @Override
   public JsonGroupJoinInfo run(Request request)
-      throws SQLException, IOException, NoSuchAccount, InvalidInputException, VerificationFailedException, GroupLinkNotActive, ServerNotFoundException, InvalidProxyException {
+      throws GroupLinkNotActiveError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, GroupVerificationError {
     try {
-      return Utils.getManager(account).getGroupsV2Manager().getGroupJoinInfo(uri);
-    } catch (GroupLinkNotActiveException | InvalidKeyException e) {
-      throw new GroupLinkNotActive();
+      return Common.getManager(account).getGroupsV2Manager().getGroupJoinInfo(uri);
+    } catch (GroupLinkNotActiveException e) {
+      throw new GroupLinkNotActiveError();
+    } catch (InvalidInputException e) {
+      throw new InvalidRequestError("invalid group URI");
+    } catch (IOException e) {
+      throw new InternalError("error getting group join info", e);
+    } catch (VerificationFailedException e) {
+      throw new GroupVerificationError(e);
     }
   }
 }

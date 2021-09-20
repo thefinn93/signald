@@ -23,6 +23,8 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
@@ -38,7 +40,15 @@ public class GenerateLinkingURIRequest implements RequestType<LinkingURI> {
   public String server = BuildConfig.DEFAULT_SERVER_UUID;
 
   @Override
-  public LinkingURI run(Request request) throws IOException, TimeoutException, URISyntaxException, SQLException, ServerNotFoundException, InvalidProxyException {
-    return ProvisioningManager.create(UUID.fromString(server));
+  public LinkingURI run(Request request) throws ServerNotFoundError, InvalidProxyError {
+    try {
+      return ProvisioningManager.create(UUID.fromString(server));
+    } catch (TimeoutException | IOException | URISyntaxException | SQLException e) {
+      throw new InternalError("error generating linking URI", e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
+    }
   }
 }

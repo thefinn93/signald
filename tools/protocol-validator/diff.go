@@ -28,9 +28,18 @@ func checkDiff() (response checkOutputs, err error) {
 			fmt.Println(aurora.Bold(aurora.Green("New action version: " + version)))
 		}
 		for name := range actions {
-			if _, ok := current.Actions[version][name]; !ok {
+			c, ok := current.Actions[version][name]
+			if !ok {
 				// new action
 				fmt.Println(aurora.Bold(aurora.Green("new action: " + version + "." + name)))
+			}
+
+			// new error
+			for _, e := range protocol.Actions[version][name].Errors {
+				if !(*c).HasError(e.Name) {
+					// new error
+					fmt.Println(aurora.Green("action " + version + "." + name + " has new error case: " + e.Name))
+				}
 			}
 		}
 	}
@@ -94,13 +103,18 @@ func checkDiff() (response checkOutputs, err error) {
 	// check for removals
 	for version, actions := range current.Actions {
 		if _, ok := protocol.Actions[version]; !ok {
-			// new version
 			fmt.Println(aurora.Bold(aurora.Red("removed action version: " + version)))
 		}
 		for name := range actions {
-			if _, ok := protocol.Actions[version][name]; !ok {
-				// new action
+			a, ok := protocol.Actions[version][name]
+			if !ok {
 				fmt.Println(aurora.Bold(aurora.Red("removed action: " + version + "." + name)))
+			}
+
+			for _, e := range a.Errors {
+				if !a.HasError(e.Name) {
+					fmt.Println(aurora.Red("action " + version + "." + name + " now longer has error case: " + e.Name))
+				}
 			}
 		}
 	}

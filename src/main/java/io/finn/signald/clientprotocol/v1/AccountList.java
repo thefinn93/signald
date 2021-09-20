@@ -17,7 +17,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.db.AccountsTable;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -26,10 +27,14 @@ import java.util.UUID;
 
 public class AccountList {
   public final List<Account> accounts;
-  public AccountList() throws SQLException, NoSuchAccount {
+  public AccountList() throws NoSuchAccountError, InternalError {
     accounts = new ArrayList<>();
-    for (UUID uuid : AccountsTable.getAll()) {
-      accounts.add(new Account(uuid));
+    try {
+      for (UUID uuid : AccountsTable.getAll()) {
+        accounts.add(new Account(uuid));
+      }
+    } catch (SQLException e) {
+      throw new InternalError("error resolving account e164", e);
     }
   }
 }

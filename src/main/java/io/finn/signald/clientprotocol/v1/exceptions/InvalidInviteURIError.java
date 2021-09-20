@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class AccountAlreadyVerified extends ExceptionWrapper {
-  public AccountAlreadyVerified() { super("account has already been verified"); }
+public class InvalidInviteURIError extends ExceptionWrapper {
+  public InvalidInviteURIError() { super("failed to parse invite URL"); }
 }

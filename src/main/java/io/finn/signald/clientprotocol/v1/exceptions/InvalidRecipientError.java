@@ -17,6 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class InvalidProxyException extends ExceptionWrapper {
-  public InvalidProxyException(io.finn.signald.exceptions.InvalidProxyException e) { super(e.getMessage()); }
+public class InvalidRecipientError extends ExceptionWrapper {
+  public InvalidRecipientError() { super("request must specify either recipientGroupId or recipientAddress"); }
 }

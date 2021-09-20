@@ -24,12 +24,12 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.IOException;
-import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
+import java.util.UUID;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 
 @Doc("Remove a linked device from the Signal account. Only allowed when the local device id is 1")
@@ -40,9 +40,14 @@ public class RemoveLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue("3") @Doc("the ID of the device to unlink") @Required public long deviceId;
 
   @Override
-  public Empty run(Request request) throws InvalidKeyException, IOException, InvalidProxyException, SQLException, NoSuchAccount, ServerNotFoundException {
-    SignalServiceAccountManager accountManager = Utils.getManager(account).getAccountManager();
-    accountManager.removeDevice(deviceId);
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+    UUID accountUUID = Common.getAccount(account);
+    SignalServiceAccountManager accountManager = Common.getDependencies(accountUUID).getAccountManager();
+    try {
+      accountManager.removeDevice(deviceId);
+    } catch (IOException e) {
+      throw new InternalError("error removing device", e);
+    }
     return new Empty();
   }
 }

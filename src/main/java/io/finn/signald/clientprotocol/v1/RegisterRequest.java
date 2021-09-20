@@ -19,20 +19,16 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.BuildConfig;
 import io.finn.signald.RegistrationManager;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.annotations.Required;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequired;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequiredError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 
@@ -49,21 +45,24 @@ public class RegisterRequest implements RequestType<Account> {
   public String server = BuildConfig.DEFAULT_SERVER_UUID;
 
   @Override
-  public Account run(Request request)
-      throws SQLException, IOException, InvalidInputException, CaptchaRequired, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Account run(Request request) throws CaptchaRequiredError, ServerNotFoundError, InvalidProxyError {
     RegistrationManager m;
     try {
       m = RegistrationManager.get(account, UUID.fromString(server));
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
-      throw new InvalidProxyException(e);
+      throw new InvalidProxyError(e);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
-      throw new ServerNotFoundException(e);
+      throw new ServerNotFoundError(e);
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error getting registration manager", e);
     }
 
     try {
       m.register(voice, Optional.fromNullable(captcha), UUID.fromString(server));
     } catch (CaptchaRequiredException e) {
-      throw new CaptchaRequired();
+      throw new CaptchaRequiredError();
+    } catch (InvalidInputException | IOException | SQLException e) {
+      throw new InternalError("error registering with server", e);
     }
     return new Account(m);
   }

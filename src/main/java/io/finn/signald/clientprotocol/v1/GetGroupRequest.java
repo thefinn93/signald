@@ -25,20 +25,16 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
-import java.sql.SQLException;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 @ProtocolType("get_group")
 @Doc("Query the server for the latest state of a known group. If no account in signald is a member of the group "
-     + "(anymore), an error with error_type: 'UnknownGroupException' is returned.")
+     + "(anymore), an error with error_type: 'UnknownGroupError' is returned.")
 public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
@@ -47,15 +43,21 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidGroupStateException, VerificationFailedException, UnknownGroupException, SQLException,
-                                                     InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public JsonGroupV2Info run(Request request)
+      throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError, InvalidGroupStateError {
+    Manager m = Common.getManager(account);
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Group group;
     try {
       group = groupsV2Manager.getGroup(groupID, revision);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
+    } catch (InvalidGroupStateException e) {
+      throw new InvalidGroupStateError(e);
+    } catch (IOException e) {
+      throw new InternalError("error getting group", e);
+    } catch (VerificationFailedException e) {
+      throw new GroupVerificationError(e);
     }
     return group.getJsonGroupV2Info(m);
   }

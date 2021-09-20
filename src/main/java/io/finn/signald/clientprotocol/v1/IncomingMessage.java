@@ -19,16 +19,15 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -52,11 +51,13 @@ public class IncomingMessage {
   @JsonProperty("server_guid") public String serverGuid;
 
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, UUID accountUUID)
-      throws SQLException, IOException, NoSuchAccount, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
     try {
       account = AccountsTable.getE164(accountUUID);
     } catch (NoSuchAccountException e) {
-      throw new NoSuchAccount(e);
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new InternalError("error getting local account for incoming message", e);
     }
 
     if (envelope.hasServerGuid()) {
@@ -64,9 +65,9 @@ public class IncomingMessage {
     }
 
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(new RecipientsTable(accountUUID).get(envelope.getSourceAddress()));
+      source = new JsonAddress(Common.getRecipient(new RecipientsTable(accountUUID), envelope.getSourceAddress()));
     } else if (content != null) {
-      source = new JsonAddress(new RecipientsTable(accountUUID).get(content.getSender()));
+      source = new JsonAddress(Common.getRecipient(new RecipientsTable(accountUUID), content.getSender()));
     }
 
     if (envelope.hasSourceDevice()) {

@@ -33,14 +33,14 @@ mainClassName = 'io.finn.signald.Main'
 compileJava.options.encoding = 'UTF-8'
 
 // crappy rust target detection
-String getTarget() {
+static String getTarget() {
     String target = System.getenv("SIGNALD_TARGET") // Allow overriding the architecture
     if(target != null) {
         System.out.println("skipping target detection, using " + target)
         return target
     }
 
-    String first = null;
+    String first = null
     String second = null
     String third = null
 
@@ -124,8 +124,9 @@ dependencies {
     implementation 'io.prometheus:simpleclient_hotspot:0.11.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.11.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.9.1'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.8.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.0'
 }
 
 
@@ -178,6 +179,9 @@ jar {
 
 test {
     useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
 }
 
 // Find any 3rd party libraries which have released new versions

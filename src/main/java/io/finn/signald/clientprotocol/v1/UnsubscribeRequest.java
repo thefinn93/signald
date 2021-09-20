@@ -25,10 +25,10 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -38,13 +38,16 @@ public class UnsubscribeRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to unsubscribe from") @Required public String account;
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount {
+  public Empty run(Request request) throws NoSuchAccountError, InternalError {
     UUID accountUUID;
     try {
       accountUUID = AccountsTable.getUUID(account);
     } catch (NoSuchAccountException e) {
-      throw new NoSuchAccount(e);
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new InternalError("error getting account UUID", e);
     }
+
     MessageReceiver.unsubscribe(accountUUID, request.getSocket());
     return new Empty();
   }

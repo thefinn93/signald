@@ -17,11 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class ServerNotFoundException extends ExceptionWrapper {
-  public String uuid;
-
-  public ServerNotFoundException(io.finn.signald.exceptions.ServerNotFoundException e) {
-    super(e.getMessage());
-    uuid = e.getServer() == null ? null : e.getServer().toString();
-  }
+public class ProfileUnavailableError extends ExceptionWrapper {
+  public ProfileUnavailableError() { super("profile unavailable"); }
 }

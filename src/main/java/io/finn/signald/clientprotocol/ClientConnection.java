@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.*;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
@@ -88,7 +88,7 @@ public class ClientConnection implements Runnable {
   }
 
   private void handleError(PrintWriter w, Throwable error, JsonRequest request) {
-    if (error instanceof NoSuchAccount) {
+    if (error instanceof NoSuchAccountError) {
       logger.warn("unable to process request for non-existent account");
     } else if (error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");

@@ -509,34 +509,22 @@ public class Manager {
     return sendUpdateGroupMessage(groupId, name, members, avatar);
   }
 
-  public void requestSyncGroups() throws IOException, SQLException {
+  public void requestSyncGroups() throws IOException, SQLException, UntrustedIdentityException {
     SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.GROUPS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
-    try {
-      sendSyncMessage(message);
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      logger.catching(e);
-    }
+    sendSyncMessage(message);
   }
 
-  public void requestSyncContacts() throws IOException, SQLException {
+  public void requestSyncContacts() throws IOException, SQLException, UntrustedIdentityException {
     SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONTACTS).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
-    try {
-      sendSyncMessage(message);
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      logger.catching(e);
-    }
+    sendSyncMessage(message);
   }
 
-  public void requestSyncConfiguration() throws IOException, SQLException {
+  public void requestSyncConfiguration() throws IOException, SQLException, UntrustedIdentityException {
     SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
-    try {
-      sendSyncMessage(message);
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      logger.catching(e);
-    }
+    sendSyncMessage(message);
   }
 
   public void requestSyncBlocked() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException, SQLException {
