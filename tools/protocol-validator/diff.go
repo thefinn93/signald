@@ -9,7 +9,7 @@ import (
 	aurora "github.com/logrusorgru/aurora/v3"
 )
 
-func checkDiff() (response checkOutput, err error) {
+func checkDiff() (response checkOutputs, err error) {
 	resp, err := http.Get("https://signald.org/protocol.json")
 	if err != nil {
 		return
@@ -71,11 +71,11 @@ func checkDiff() (response checkOutput, err error) {
 						fmt.Println(aurora.Red(msg))
 						stringDiff(currentField.Type, field.Type)
 						if currentField.Version != "v0" {
-							response.failures = append(response.failures, msg)
+							response.failures = append(response.failures, checkOutput{id: "FieldChangedTypes", String: msg})
 						}
 					}
 					if field.List != currentField.List {
-						response.failures = append(response.failures, version+"."+typeName+" field "+fieldName+" changed list state")
+						response.failures = append(response.failures, checkOutput{id: "FieldChangedListValue", String: version + "." + typeName + " field " + fieldName + " changed list state"})
 						stringDiff(strconv.FormatBool(currentField.List), strconv.FormatBool(field.List))
 					}
 					if field.Doc != currentField.Doc {
@@ -109,18 +109,18 @@ func checkDiff() (response checkOutput, err error) {
 		v, ok := protocol.Types[version]
 		if !ok {
 			if version == "v0" {
-				response.warnings = append(response.warnings, "Version "+version+". removed")
+				response.warnings = append(response.warnings, checkOutput{id: "VersionRemoved", String: "Version " + version + ". removed"})
 			} else {
-				response.failures = append(response.failures, "Version "+version+". removed")
+				response.failures = append(response.failures, checkOutput{id: "VersionRemoved", String: "Version " + version + ". removed"})
 			}
 		}
 		for typeName, t := range types {
 			oldType, ok := v[typeName]
 			if !ok {
 				if version == "v0" {
-					response.warnings = append(response.warnings, "removed type: "+version+"."+typeName)
+					response.warnings = append(response.warnings, checkOutput{id: "RemovedType", String: "removed type: " + version + "." + typeName})
 				} else {
-					response.failures = append(response.failures, "removed type: "+version+"."+typeName)
+					response.failures = append(response.failures, checkOutput{id: "RemovedType", String: "removed type: " + version + "." + typeName})
 				}
 
 			} else {
@@ -128,9 +128,9 @@ func checkDiff() (response checkOutput, err error) {
 					_, ok = oldType.Fields[fieldName]
 					if !ok {
 						if version == "v0" {
-							response.warnings = append(response.warnings, "field in "+version+"."+typeName+" removed: "+fieldName)
+							response.warnings = append(response.warnings, checkOutput{id: "FieldRemoved", String: "field in " + version + "." + typeName + " removed: " + fieldName})
 						} else {
-							response.failures = append(response.failures, "field in "+version+"."+typeName+" removed: "+fieldName)
+							response.failures = append(response.failures, checkOutput{id: "FieldRemoved", String: "field in " + version + "." + typeName + " removed: " + fieldName})
 						}
 						continue
 					}

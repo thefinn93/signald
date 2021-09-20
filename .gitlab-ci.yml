@@ -300,6 +300,8 @@ validate protocol:
     paths:
       - protocol.json
     expire_in: 1 year
+    reports:
+      metrics: metrics.txt
   rules:
     - when: on_success
 
