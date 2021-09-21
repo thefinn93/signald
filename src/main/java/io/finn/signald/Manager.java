@@ -1029,6 +1029,8 @@ public class Manager {
     }
 
     if (content.getSyncMessage().isPresent()) {
+      AccountDataTable.set(accountUUID, AccountDataTable.Key.MULTI_DEVICE, true);
+
       SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
 
       if (syncMessage.getSent().isPresent()) {

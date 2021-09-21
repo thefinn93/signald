@@ -17,6 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.LinkedDeviceManager;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -46,7 +47,14 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   public LinkedDevices run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Utils.getManager(account);
     ECPrivateKey profileKey = m.getAccountData().axolotlStore.getIdentityKeyPair().getPrivateKey();
-    List<DeviceInfo> devices = m.getAccountManager().getDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
+    List<DeviceInfo> devices;
+    try {
+      devices = new LinkedDeviceManager(m.getUUID()).getLinkedDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
+    } catch (io.finn.signald.exceptions.InvalidProxyException e) {
+      throw new InvalidProxyException(e);
+    } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
+      throw new ServerNotFoundException(e);
+    }
     return new LinkedDevices(devices);
   }
 }

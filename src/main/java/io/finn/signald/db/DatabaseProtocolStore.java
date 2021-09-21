@@ -213,7 +213,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
 
   @Override
   public boolean isMultiDevice() {
-    return false;
+    return senderKeyShared.isMultiDevice();
   }
 
   @Override
