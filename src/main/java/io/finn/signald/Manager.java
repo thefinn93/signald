@@ -1031,7 +1031,8 @@ public class Manager {
         jobs.addAll(handleSignalServiceDataMessage(message, true, source, sendMessageRecipient, ignoreAttachments));
       }
 
-      if (syncMessage.getRequest().isPresent()) {
+      boolean isPrimaryDevice = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID) == SignalServiceAddress.DEFAULT_DEVICE_ID;
+      if (syncMessage.getRequest().isPresent() && isPrimaryDevice) {
         RequestMessage rm = syncMessage.getRequest().get();
         if (rm.isContactsRequest()) {
           jobs.add(new SendContactsSyncJob(this));
@@ -1041,15 +1042,11 @@ public class Manager {
         }
       }
 
-      if (syncMessage.getGroups().isPresent()) {
-        logger.warn("Received a group v1 sync message, that can't be handled anymore, ignoring.");
-      }
-
-      if (syncMessage.getBlockedList().isPresent()) {
+      if (syncMessage.getBlockedList().isPresent() && isPrimaryDevice) {
         // TODO store list of blocked numbers
       }
 
-      if (syncMessage.getContacts().isPresent()) {
+      if (syncMessage.getContacts().isPresent() && isPrimaryDevice) {
         File tmpFile = null;
         try {
           tmpFile = Util.createTempFile();
