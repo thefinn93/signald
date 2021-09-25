@@ -33,6 +33,8 @@ public class JsonPreview {
   public JsonPreview(SignalServiceDataMessage.Preview preview, UUID accountUUID) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
     url = preview.getUrl();
     title = preview.getTitle();
+    description = preview.getDescription();
+    date = preview.getDate();
     if (preview.getImage().isPresent()) {
       attachment = new JsonAttachment(preview.getImage().get(), accountUUID);
     }

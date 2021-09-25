@@ -49,10 +49,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Request {
-  public static final Map<String, Map<String, Class<? extends RequestType>>> requests = getRequests();
+  public static final Map<String, Map<String, Class<? extends RequestType<?>>>> requests = getRequests();
   public static final Map<String, String> defaultVersions = getDefaultVersions();
 
-  private RequestType requestType;
+  private RequestType<?> requestType;
   private final String type;
   private String version;
   private String id;
@@ -61,14 +61,14 @@ public class Request {
 
   private final ObjectMapper mapper = JSONUtil.GetMapper();
 
-  public static Map<String, Map<String, Class<? extends RequestType>>> getRequests() {
-    Map<String, Map<String, Class<? extends RequestType>>> requests = new HashMap<>();
-    for (Class<? extends RequestType> t : REQUEST_TYPES) {
+  public static Map<String, Map<String, Class<? extends RequestType<?>>>> getRequests() {
+    Map<String, Map<String, Class<? extends RequestType<?>>>> requests = new HashMap<>();
+    for (Class<? extends RequestType<?>> t : REQUEST_TYPES) {
       ProtocolType annotation = t.getDeclaredAnnotation(ProtocolType.class);
       if (!requests.containsKey(annotation.value())) {
         requests.put(annotation.value(), new HashMap<>());
       }
-      Map<String, Class<? extends RequestType>> versions = requests.get(annotation.value());
+      Map<String, Class<? extends RequestType<?>>> versions = requests.get(annotation.value());
       versions.put(RequestUtil.getVersion(t), t);
       requests.put(annotation.value(), versions);
       requests.get(annotation.value()).put(getVersion(t), t);
@@ -140,7 +140,7 @@ public class Request {
       return;
     }
 
-    Class<? extends RequestType> requestClass = requests.get(type).get(version);
+    Class<? extends RequestType<?>> requestClass = requests.get(type).get(version);
 
     if (requestClass.getAnnotation(Deprecated.class) != null) {
       logger.warn(type + " " + version + " is deprecated and will be removed in a future version of signald. please update your client");
