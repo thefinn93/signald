@@ -7,6 +7,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
@@ -18,13 +19,14 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.util.Base64;
 
+@Doc("represents a file attached to a message. When seding, only `filename` is required.")
 public class JsonAttachment {
   public String contentType;
   public String id;
   public int size;
-  public String storedFilename;
-  public String filename;
-  public String customFilename;
+  @Doc("when receiving, the path that file has been downloaded to") public String storedFilename;
+  @Doc("when sending, the path to the local file to upload") public String filename;
+  @Doc("the original name of the file") public String customFilename;
   public String caption;
   public int width;
   public int height;

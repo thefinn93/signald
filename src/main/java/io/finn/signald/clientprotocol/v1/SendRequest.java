@@ -52,6 +52,7 @@ public class SendRequest implements RequestType<SendResponse> {
   public JsonQuote quote;
   public Long timestamp;
   public List<JsonMention> mentions;
+  public List<JsonPreview> previews;
 
   @Override
   public SendResponse run(Request request)
@@ -111,6 +112,14 @@ public class SendRequest implements RequestType<SendResponse> {
 
     if (mentions != null && mentions.size() > 0) {
       messageBuilder.withMentions(mentions.stream().map(JsonMention::asMention).collect(Collectors.toList()));
+    }
+
+    if (previews != null) {
+      List<SignalServiceDataMessage.Preview> signalPreviews = new ArrayList<>();
+      for (JsonPreview preview : previews) {
+        signalPreviews.add(preview.asSignalPreview());
+      }
+      messageBuilder.withPreviews(signalPreviews);
     }
 
     List<SendMessageResult> results;
