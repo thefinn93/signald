@@ -59,6 +59,7 @@ import picocli.CommandLine.Option;
 
 @Command(name = BuildConfig.NAME, mixinStandardHelpOptions = true, version = BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {
+  private static String SYSTEM_SOCKET_PATH = "/var/run/signald/signald.sock";
 
   public static void main(String[] args) {
     int exitCode = new CommandLine(new Main()).execute(args);
@@ -67,11 +68,13 @@ public class Main implements Runnable {
 
   @Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting.") private boolean verbose = false;
 
-  @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = "/var/run/signald/signald.sock";
+  @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = null;
 
   @Option(names = {"-u", "--user-socket"},
           description = "put the socket in the user runtime directory ($XDG_RUNTIME_DIR). Currently disabled by default. Will be enabled by default in 0.15.0")
   private boolean user_socket = false;
+
+  @Option(names = {"--system-socket"}, description = "run in system-wide mode, putting the socket file at /var/run/signald/signald.sock") private boolean system_socket = false;
 
   @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
 
@@ -182,17 +185,20 @@ public class Main implements Runnable {
 
       new Thread(new BackgroundJobRunnerThread()).start();
 
-      String userDir = System.getenv("XDG_RUNTIME_DIR");
-
-      if (user_socket) {
-        if (userDir != null) {
-          Path userSocketDir = Paths.get(userDir, "signald");
-          Files.createDirectories(userSocketDir);
-          socket_path = Paths.get(userSocketDir.toString(), "signald.sock").toString();
-        }
-      } else if (socket_path.equals("/var/run/signald/signald.sock")) {
-        if (userDir != null) {
-          logger.info("the default socket path is changing in an upcoming release. See https://signald.org/articles/socket-protocol/#socket-file-location");
+      if (socket_path == null) {
+        // will be null if the environment variable is unset, in which case we will fall back to system mode
+        String userDir = System.getenv("XDG_RUNTIME_DIR");
+        if (userDir == null || system_socket) {
+          socket_path = SYSTEM_SOCKET_PATH;
+        } else {
+          if (user_socket) {
+            Path userSocketDir = Paths.get(userDir, "signald");
+            Files.createDirectories(userSocketDir);
+            socket_path = Paths.get(userSocketDir.toString(), "signald.sock").toString();
+          } else {
+            logger.warn("the default socket path is changing in an upcoming release. See https://signald.org/articles/socket-protocol/#socket-file-location");
+            socket_path = SYSTEM_SOCKET_PATH;
+          }
         }
       }
 
