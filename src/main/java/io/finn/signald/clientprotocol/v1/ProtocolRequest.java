@@ -33,6 +33,7 @@ import io.finn.signald.annotations.*;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
@@ -171,6 +172,10 @@ public class ProtocolRequest implements RequestType<JsonNode> {
     if (type.getAnnotation(Deprecated.class) != null) {
       output.put("deprecated", true);
       output.put("removal_date", type.getAnnotation(Deprecated.class).value());
+    }
+
+    if (type.getPackageName() == ExceptionWrapper.class.getPackageName()) {
+      output.put("error", true);
     }
 
     return output;

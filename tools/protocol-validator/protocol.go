@@ -18,6 +18,7 @@ type Type struct {
 	Request    bool `json:"-"`
 	Doc        string
 	Deprecated bool
+	Error      bool
 }
 
 type DataType struct {

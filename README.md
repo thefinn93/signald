@@ -61,7 +61,7 @@ multiple accounts (multiple numbers) can be registered to a single signald insta
 [E.164](https://en.wikipedia.org/wiki/E.164) format starting with a `+` character.
 
 Below are mostly legacy (`v0`) requests. New versions have been introduced, sometimes with added functionality. See
-[Protocol Versioning](https://signald.org/articles/protocol-versioning/) for more information. The new protocol is fully
+[Protocol Versioning](https://signald.org/articles/protocol/versioning/) for more information. The new protocol is fully
 documented on [signald.org](https://signald.org/), which is automatically re-generated when signald is updated.
 
 **all v0 requests are deprecated and will be removed at the end of 2021**

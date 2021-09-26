@@ -196,7 +196,7 @@ public class Main implements Runnable {
             Files.createDirectories(userSocketDir);
             socket_path = Paths.get(userSocketDir.toString(), "signald.sock").toString();
           } else {
-            logger.warn("the default socket path is changing in an upcoming release. See https://signald.org/articles/socket-protocol/#socket-file-location");
+            logger.warn("the default socket path is changing in an upcoming release. See https://signald.org/articles/protocol/#socket-file-location");
             socket_path = SYSTEM_SOCKET_PATH;
           }
         }
