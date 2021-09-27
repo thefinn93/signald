@@ -17,6 +17,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
@@ -129,9 +130,9 @@ public class Common {
     }
   }
 
-  public static UUID getAccount(String identifier) throws NoSuchAccountError, InternalError {
+  public static io.finn.signald.Account getAccount(String identifier) throws NoSuchAccountError, InternalError {
     try {
-      return AccountsTable.getUUID(identifier);
+      return new Account(AccountsTable.getUUID(identifier));
     } catch (SQLException e) {
       throw new InternalError("error looking up local account", e);
     } catch (NoSuchAccountException e) {
@@ -139,7 +140,7 @@ public class Common {
     }
   }
 
-  public static SignalDependencies getDependencies(UUID accountUUID) throws InvalidProxyError, ServerNotFoundError, InternalError {
+  public static SignalDependencies getDependencies(UUID accountUUID) throws InvalidProxyError, ServerNotFoundError, InternalError, NoSuchAccountError {
     try {
       return SignalDependencies.get(accountUUID);
     } catch (SQLException | IOException e) {
@@ -148,6 +149,8 @@ public class Common {
       throw new ServerNotFoundError(e);
     } catch (InvalidProxyException e) {
       throw new InvalidProxyError(e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
     }
   }
 }

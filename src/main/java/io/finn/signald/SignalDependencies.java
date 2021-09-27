@@ -21,6 +21,7 @@ import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.DatabaseProtocolStore;
 import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
@@ -46,8 +47,9 @@ public class SignalDependencies {
   private final static Map<String, SignalDependencies> instances = new HashMap<>();
 
   private final ServersTable.Server server;
-  private final SignalServiceDataStore dataStore;
+  private final DatabaseProtocolStore dataStore;
   private final DynamicCredentialsProvider credentialsProvider;
+
   private final SessionLock sessionLock;
   private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -66,21 +68,22 @@ public class SignalDependencies {
   private SignalServiceAccountManager accountManager;
   private final Object accountManagerLock = new Object();
 
-  public static SignalDependencies get(UUID account) throws SQLException, ServerNotFoundException, InvalidProxyException, IOException {
+  public static SignalDependencies get(UUID accountUUID) throws SQLException, ServerNotFoundException, InvalidProxyException, IOException, NoSuchAccountException {
     synchronized (instances) {
-      SignalDependencies d = instances.get(account.toString());
+      SignalDependencies d = instances.get(accountUUID.toString());
       if (d == null) {
-        ServersTable.Server server = AccountsTable.getServer(account);
+        ServersTable.Server server = AccountsTable.getServer(accountUUID);
+        Account account = new Account(accountUUID);
         d = new SignalDependencies(account, server);
-        instances.put(account.toString(), d);
+        instances.put(accountUUID.toString(), d);
       }
       return d;
     }
   }
 
-  private SignalDependencies(UUID account, ServersTable.Server server) throws SQLException {
-    dataStore = new DatabaseProtocolStore(account);
-    credentialsProvider = AccountsTable.getCredentialsProvider(account);
+  private SignalDependencies(Account account, ServersTable.Server server) throws SQLException, NoSuchAccountException {
+    dataStore = account.getProtocolStore();
+    credentialsProvider = account.getCredentialsProvider();
     this.server = server;
     sessionLock = new SessionLock(account);
   }

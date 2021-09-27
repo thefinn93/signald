@@ -30,7 +30,6 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
-import io.finn.signald.db.AccountDataTable;
 import java.io.IOException;
 import java.sql.SQLException;
 
@@ -44,14 +43,14 @@ public class SetDeviceNameRequest implements RequestType<Empty> {
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
     Manager m = Common.getManager(account);
     try {
-      AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
-    } catch (SQLException e) {
-      throw new InternalError("error setting device name locally", e);
-    }
-    try {
       m.refreshAccount();
     } catch (IOException | SQLException e) {
       throw new InternalError("error saving new device name", e);
+    }
+    try {
+      m.getAccount().setDeviceName(deviceName);
+    } catch (SQLException e) {
+      throw new InternalError("error storing new device name locally", e);
     }
     return new Empty();
   }

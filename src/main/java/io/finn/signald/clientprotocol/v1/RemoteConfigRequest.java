@@ -47,6 +47,8 @@ public class RemoteConfigRequest implements RequestType<RemoteConfigList> {
       throw new InvalidProxyError(e);
     } catch (ServerNotFoundException e) {
       throw new ServerNotFoundError(e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
     }
 
     final List<RemoteConfig> remoteConfigAsList = new ArrayList<>(remoteConfig.size());

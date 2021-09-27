@@ -112,21 +112,22 @@ public class RegistrationManager {
     VerifyAccountResponse result = r.getResult().get();
     UUID accountUUID = UUID.fromString(result.getUuid());
     accountData.setUUID(accountUUID);
+    Account account = new Account(accountUUID);
 
     String server = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.SERVER_UUID);
     AccountsTable.add(e164, accountUUID, getFileName(), server == null ? null : UUID.fromString(server));
 
     String password = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.PASSWORD);
-    AccountDataTable.set(accountUUID, AccountDataTable.Key.PASSWORD, password);
+    account.setPassword(password);
 
     byte[] identityKeyPair = PendingAccountDataTable.getBytes(e164, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
-    AccountDataTable.set(accountUUID, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair);
+    account.setIdentityKeyPair(new IdentityKeyPair(identityKeyPair));
 
     Recipient self = new RecipientsTable(accountUUID).get(accountUUID);
     new IdentityKeysTable(accountUUID).saveIdentity(self, new IdentityKeyPair(identityKeyPair).getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
-    AccountDataTable.set(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationID);
-    AccountDataTable.set(accountUUID, AccountDataTable.Key.DEVICE_ID, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    account.setLocalRegistrationId(registrationID);
+    account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
 
     PendingAccountDataTable.clear(e164);
     accountData.registered = true;

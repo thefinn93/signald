@@ -87,7 +87,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       logger.info("Last client for " + Util.redact(account) + " unsubscribed, shutting down message pipe");
       try {
         SignalDependencies.get(account).getWebSocket().disconnect();
-      } catch (IOException | SQLException | ServerNotFoundException | InvalidProxyException e) {
+      } catch (IOException | SQLException | ServerNotFoundException | InvalidProxyException | NoSuchAccountException e) {
         logger.catching(e);
       }
       receivers.remove(account.toString());

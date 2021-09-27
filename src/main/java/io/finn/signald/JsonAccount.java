@@ -32,16 +32,16 @@ class JsonAccount {
   public boolean has_keys;
   public boolean subscribed;
 
-  JsonAccount(Manager m) throws SQLException, NoSuchAccountError {
+  JsonAccount(Account account) throws SQLException, NoSuchAccountError {
     try {
-      this.username = m.getE164();
+      this.username = account.getE164();
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     }
-    this.deviceId = m.getDeviceId();
+    this.deviceId = account.getDeviceId();
     this.filename = Manager.getFileName(username);
-    if (m.getUUID() != null) {
-      this.uuid = m.getUUID().toString();
+    if (account.getUUID() != null) {
+      this.uuid = account.getUUID().toString();
     }
     this.registered = true;
   }
@@ -52,8 +52,8 @@ class JsonAccount {
     this.registered = false;
   }
 
-  JsonAccount(Manager m, boolean subscribed) throws SQLException, NoSuchAccountError {
-    this(m);
+  JsonAccount(Account a, boolean subscribed) throws SQLException, NoSuchAccountError {
+    this(a);
     this.subscribed = subscribed;
   }
 }

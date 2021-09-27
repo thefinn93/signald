@@ -18,7 +18,6 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
-import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -87,7 +86,8 @@ public class ProvisioningManager {
   }
 
   public UUID finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException,
-                                                                            InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
+                                                                            InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException,
+                                                                            NoSuchAccountException {
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
     if (overwrite) {
       try {
@@ -103,7 +103,7 @@ public class ProvisioningManager {
     }
 
     Manager m = new Manager(ret.getUuid(), AccountData.createLinkedAccount(ret, password, registrationId, deviceId, server));
-    AccountDataTable.set(m.getUUID(), AccountDataTable.Key.DEVICE_NAME, deviceName);
+    m.getAccount().setDeviceName(deviceName);
 
     m.refreshPreKeys();
     m.requestSyncGroups();

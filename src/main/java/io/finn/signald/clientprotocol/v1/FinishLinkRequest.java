@@ -25,6 +25,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UserAlreadyExistsException;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -61,7 +62,7 @@ public class FinishLinkRequest implements RequestType<Account> {
       throw new ServerNotFoundError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyError(e);
-    } catch (IOException | SQLException | TimeoutException | InvalidInputException | InvalidKeyException | UntrustedIdentityException e) {
+    } catch (IOException | SQLException | TimeoutException | InvalidInputException | InvalidKeyException | UntrustedIdentityException | NoSuchAccountException e) {
       throw new InternalError("error finishing linking", e);
     } catch (UserAlreadyExistsException e) {
       throw new UserAlreadyExistsError(e);

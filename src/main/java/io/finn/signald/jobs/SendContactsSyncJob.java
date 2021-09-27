@@ -17,8 +17,10 @@
 
 package io.finn.signald.jobs;
 
+import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
+import io.finn.signald.db.DatabaseProtocolStore;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidAddressException;
@@ -48,14 +50,16 @@ public class SendContactsSyncJob implements Job {
   public void run() throws IOException, UntrustedIdentityException, SQLException, InvalidKeyException, InvalidAddressException {
     File contactsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
-    RecipientsTable recipientsTable = m.getRecipientsTable();
+    Account account = m.getAccount();
+    RecipientsTable recipientsTable = account.getRecipients();
+    DatabaseProtocolStore protocolStore = account.getProtocolStore();
 
     try {
       try (OutputStream fos = new FileOutputStream(contactsFile)) {
         DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
         for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
           VerifiedMessage verifiedMessage = null;
-          List<IdentityKeysTable.IdentityKeyRow> identities = accountData.axolotlStore.getIdentities(recipientsTable.get(record.address));
+          List<IdentityKeysTable.IdentityKeyRow> identities = protocolStore.getIdentities(recipientsTable.get(record.address));
           if (identities.size() == 0) {
             continue;
           }

@@ -17,6 +17,7 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -105,9 +106,9 @@ public class AccountsTable {
         needsSave = true;
       }
 
-      if (accountData.backgroundActionsLastRun != null) {
-        accountData.backgroundActionsLastRun.migrateToDB(accountUUID);
-        accountData.backgroundActionsLastRun = null;
+      if (accountData.legacyBackgroundActionsLastRun != null) {
+        accountData.legacyBackgroundActionsLastRun.migrateToDB(accountUUID);
+        accountData.legacyBackgroundActionsLastRun = null;
         needsSave = true;
       }
 
@@ -184,9 +185,9 @@ public class AccountsTable {
     statement.executeUpdate();
   }
 
-  public static DynamicCredentialsProvider getCredentialsProvider(java.util.UUID account) throws SQLException {
+  public static DynamicCredentialsProvider getCredentialsProvider(java.util.UUID accountUUID) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
-    statement.setString(1, account.toString());
+    statement.setString(1, accountUUID.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
@@ -195,10 +196,9 @@ public class AccountsTable {
     String e164 = rows.getString(E164);
     rows.close();
 
-    String password = AccountDataTable.getString(account, AccountDataTable.Key.PASSWORD);
-    int deviceId = AccountDataTable.getInt(account, AccountDataTable.Key.DEVICE_ID);
+    Account account = new Account(accountUUID);
 
-    return new DynamicCredentialsProvider(account, e164, password, deviceId);
+    return new DynamicCredentialsProvider(accountUUID, e164, account.getPassword(), account.getDeviceId());
   }
 
   public static boolean exists(java.util.UUID uuid) throws SQLException {

@@ -17,6 +17,7 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.Account;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -29,7 +30,6 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.signalservice.api.SignalServiceDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class SenderKeySharedTable {
   private static final Logger logger = LogManager.getLogger();
@@ -103,29 +103,7 @@ public class SenderKeySharedTable {
 
   public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> collection) {}
 
-  public boolean isMultiDevice() {
-    Boolean multidevice;
-    try {
-      multidevice = AccountDataTable.getBoolean(accountUUID, AccountDataTable.Key.MULTI_DEVICE);
-    } catch (SQLException e) {
-      logger.catching(e);
-      return false;
-    }
-    if (multidevice == null) {
-      try {
-        int deviceId = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID);
-        multidevice = deviceId != SignalServiceAddress.DEFAULT_DEVICE_ID;
-        AccountDataTable.set(accountUUID, AccountDataTable.Key.MULTI_DEVICE, multidevice);
-      } catch (SQLException e) {
-        logger.catching(e);
-        return false;
-      }
-      logger.warn("unknown multidevice state for account, inferring from device ID (multidevice: " + multidevice + ")");
-    }
-    return multidevice;
-  }
-
-  public void setMultiDevice(boolean multidevice) throws SQLException { AccountDataTable.set(accountUUID, AccountDataTable.Key.MULTI_DEVICE, multidevice); }
+  public boolean isMultiDevice() { return new Account(accountUUID).getMultiDevice(); }
 
   public SignalServiceDataStore.Transaction beginTransaction() {
     return ()

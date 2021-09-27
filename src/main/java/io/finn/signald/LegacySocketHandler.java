@@ -353,7 +353,7 @@ public class LegacySocketHandler {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
         Manager m = rm.verifyAccount(request.code);
-        this.reply("verification_succeeded", new JsonAccount(m), request.id);
+        this.reply("verification_succeeded", new JsonAccount(m.getAccount()), request.id);
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
         this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/signald/signald/-/issues/47", request.id);
@@ -512,7 +512,7 @@ public class LegacySocketHandler {
       this.reply("linking_uri", new JsonLinkingURI(uri), request.id);
       UUID account = pm.finishDeviceLink(deviceName, false);
       Manager m = Manager.get(account);
-      this.reply("linking_successful", new JsonAccount(m), request.id);
+      this.reply("linking_successful", new JsonAccount(m.getAccount()), request.id);
     } catch (TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch (UserAlreadyExistsException e) {
@@ -696,7 +696,7 @@ public class LegacySocketHandler {
     this.reply("send_results", results, request.id);
   }
 
-  class LegacyMessageEncoder implements MessageEncoder {
+  static class LegacyMessageEncoder implements MessageEncoder {
     private final ObjectMapper mapper = JSONUtil.GetMapper();
     private final Socket socket;
     private final String accountE164;

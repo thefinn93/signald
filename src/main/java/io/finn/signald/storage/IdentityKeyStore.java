@@ -20,8 +20,8 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.AddressUtil;
@@ -104,9 +104,10 @@ public class IdentityKeyStore {
 
   public void migrateToDB(UUID u) throws SQLException, IOException {
     IdentityKeysTable table = new IdentityKeysTable(u);
+    Account account = new Account(u);
     logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
     Iterator<Identity> iterator = trustedKeys.iterator();
-    RecipientsTable recipientsTable = new RecipientsTable(u);
+    RecipientsTable recipientsTable = account.getRecipients();
     while (iterator.hasNext()) {
       Identity entry = iterator.next();
       if (entry.identityKey == null) {
@@ -117,12 +118,12 @@ public class IdentityKeyStore {
     }
 
     if (identityKeyPair != null) {
-      AccountDataTable.set(u, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+      account.setIdentityKeyPair(identityKeyPair);
       identityKeyPair = null;
     }
 
     if (registrationId > 0) {
-      AccountDataTable.set(u, AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationId);
+      account.setLocalRegistrationId(registrationId);
       registrationId = 0;
     }
   }

@@ -20,6 +20,7 @@ package io.finn.signald.db;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.security.KeyStoreException;
@@ -204,7 +205,7 @@ public class RecipientsTable {
       uuidMap = getRegisteredUsers(numbers);
     } catch (NumberFormatException e) {
       throw new UnregisteredUserException(number, e);
-    } catch (InvalidProxyException | ServerNotFoundException e) {
+    } catch (InvalidProxyException | ServerNotFoundException | NoSuchAccountException e) {
       logger.error("error resolving UUIDs: ", e);
       throw new IOException(e);
     }
@@ -215,7 +216,7 @@ public class RecipientsTable {
     return discoveredUUID;
   }
 
-  private Map<String, UUID> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException {
+  private Map<String, UUID> getRegisteredUsers(final Set<String> numbers) throws IOException, InvalidProxyException, SQLException, ServerNotFoundException, NoSuchAccountException {
     final Map<String, UUID> registeredUsers;
     ServersTable.Server server = AccountsTable.getServer(uuid);
     SignalServiceAccountManager accountManager = SignalDependencies.get(uuid).getAccountManager();

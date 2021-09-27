@@ -19,6 +19,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.protobuf.ByteString;
+import io.finn.signald.Account;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
@@ -79,13 +80,14 @@ public class SetProfile implements RequestType<Empty> {
     Optional<SignalServiceProtos.PaymentAddress> paymentAddress = Optional.absent();
 
     if (mobilecoinAddress != null && !mobilecoinAddress.equals("")) {
-      byte[] decodedAddress = new byte[0];
+      byte[] decodedAddress;
       try {
         decodedAddress = Base64.decode(mobilecoinAddress);
       } catch (IOException e) {
         throw new InvalidBase64Error();
       }
-      IdentityKeyPair identityKeyPair = m.getAccountData().axolotlStore.getIdentityKeyPair();
+      Account a = Common.getAccount(account);
+      IdentityKeyPair identityKeyPair = a.getProtocolStore().getIdentityKeyPair();
       SignalServiceProtos.PaymentAddress signedAddress = signPaymentsAddress(decodedAddress, identityKeyPair);
 
       SignalServiceProtos.PaymentAddress.Builder paymentAddressBuilder = SignalServiceProtos.PaymentAddress.newBuilder();

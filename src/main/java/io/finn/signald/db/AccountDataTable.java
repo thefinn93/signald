@@ -43,7 +43,9 @@ public class AccountDataTable {
     MULTI_DEVICE,
     DEVICE_ID,
     PASSWORD,
-    LAST_ACCOUNT_REFRESH
+    LAST_ACCOUNT_REFRESH,
+    PRE_KEY_ID_OFFSET,
+    NEXT_SIGNED_PRE_KEY_ID
   }
 
   public static byte[] getBytes(UUID uuid, Key key) throws SQLException {

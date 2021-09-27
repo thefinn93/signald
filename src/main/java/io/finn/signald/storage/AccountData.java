@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -57,27 +58,22 @@ public class AccountData {
   public JsonAddress address;
   @JsonProperty("deviceId") Integer legacyDeviceId;
   @JsonProperty("signalingKey") String legacySignalingKey;
-  public int preKeyIdOffset;
-  public int nextSignedPreKeyId;
-
-  @JsonProperty public String profileKey;
+  @JsonProperty("preKeyIdOffset") public int legacyPreKeyIdOffset;
+  @JsonProperty("nextSignedPreKeyId") public int legacyNextSignedPreKeyId;
+  @JsonProperty("backgroundActionsLastRun") public BackgroundActionsLastRun legacyBackgroundActionsLastRun = new BackgroundActionsLastRun();
+  @JsonProperty("lastAccountRefresh") public int legacyLastAccountRefresh;
+  @JsonProperty public String legacyProfileKey;
+  @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
+  @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
 
   public boolean registered;
-
-  @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
-  @JsonIgnore public DatabaseProtocolStore axolotlStore;
   public GroupStore groupStore;
   public GroupsV2Storage groupsV2;
   public ContactStore contactStore;
-  @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
-  public BackgroundActionsLastRun backgroundActionsLastRun = new BackgroundActionsLastRun();
-
-  public int legacyLastAccountRefresh;
   public int version;
 
   @JsonIgnore private boolean deleted = false;
-
   @JsonIgnore private Recipient self;
 
   static final int VERSION_IMPORT_CONTACT_PROFILES = 1;
@@ -94,8 +90,6 @@ public class AccountData {
   public AccountData(String pendingIdentifier) {
     legacyUsername = pendingIdentifier;
     address = new JsonAddress(pendingIdentifier);
-    axolotlStore = new DatabaseProtocolStore(pendingIdentifier);
-    setPending();
   }
 
   public static AccountData load(File storageFile) throws IOException, SQLException {
@@ -113,15 +107,6 @@ public class AccountData {
   private void initialize() throws IOException, SQLException {
     if (address != null && address.uuid != null) {
       self = new RecipientsTable(address.getUUID()).get(address.getUUID());
-      if (axolotlStore == null) {
-        axolotlStore = new DatabaseProtocolStore(address.getUUID());
-      }
-    }
-  }
-
-  public void setPending() {
-    if (axolotlStore == null) {
-      axolotlStore = new DatabaseProtocolStore(legacyUsername);
     }
   }
 
@@ -140,12 +125,15 @@ public class AccountData {
 
     a.registered = true;
     a.init();
-    AccountsTable.add(a.address.number, a.address.getUUID(), Manager.getFileName(a.legacyUsername), server);
-    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.DEVICE_ID, deviceId);
-    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.PASSWORD, password);
-    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registration.getIdentity().serialize());
-    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationId);
     a.save();
+
+    AccountsTable.add(registration.getNumber(), registration.getUuid(), Manager.getFileName(registration.getNumber()), server);
+    Account account = new Account(registration.getUuid());
+    account.setDeviceId(deviceId);
+    account.setPassword(password);
+    account.setIdentityKeyPair(registration.getIdentity());
+    account.setLocalRegistrationId(registrationId);
+
     return a;
   }
 
@@ -192,9 +180,9 @@ public class AccountData {
         }
       }
 
-      if (profileKey != null) {
+      if (legacyProfileKey != null) {
         try {
-          ProfileKey p = new ProfileKey(Base64.decode(profileKey));
+          ProfileKey p = new ProfileKey(Base64.decode(legacyProfileKey));
           profileCredentialStore.storeProfileKey(self, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating own profile key", e);
@@ -397,24 +385,39 @@ public class AccountData {
 
   public boolean migrateToDB(UUID accountUUID) throws SQLException {
     boolean needsSave = false;
+    Account account = new Account(accountUUID);
+
     if (legacyPassword != null) {
-      AccountDataTable.set(accountUUID, AccountDataTable.Key.PASSWORD, legacyPassword);
+      account.setPassword(legacyPassword);
       legacyPassword = null;
       needsSave = true;
       logger.debug("migrated account password to database");
     }
+
     if (legacyDeviceId != null) {
-      AccountDataTable.set(accountUUID, AccountDataTable.Key.DEVICE_ID, legacyDeviceId);
+      account.setDeviceId(legacyDeviceId);
       legacyDeviceId = null;
       needsSave = true;
       logger.debug("migrated local device id to database");
-    } else if (AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID) < 0) {
-      AccountDataTable.set(accountUUID, AccountDataTable.Key.DEVICE_ID, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    } else if (account.getDeviceId() < 0) {
+      account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
     }
 
     if (legacyLastAccountRefresh > 0) {
-      AccountDataTable.set(accountUUID, AccountDataTable.Key.LAST_ACCOUNT_REFRESH, legacyLastAccountRefresh);
-      legacyLastAccountRefresh = 0;
+      account.setLastAccountRefresh(legacyLastAccountRefresh);
+      legacyLastAccountRefresh = -1;
+      needsSave = true;
+    }
+
+    if (legacyNextSignedPreKeyId > -1) {
+      account.setNextSignedPreKeyId(legacyNextSignedPreKeyId);
+      legacyNextSignedPreKeyId = -1;
+      needsSave = true;
+    }
+
+    if (legacyPreKeyIdOffset > 0) {
+      account.setPreKeyIdOffset(legacyPreKeyIdOffset);
+      legacyPreKeyIdOffset = -1;
       needsSave = true;
     }
     return needsSave;
