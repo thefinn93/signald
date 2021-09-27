@@ -73,7 +73,7 @@ public class AccountData {
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
   public BackgroundActionsLastRun backgroundActionsLastRun = new BackgroundActionsLastRun();
 
-  public int lastAccountRefresh;
+  public int legacyLastAccountRefresh;
   public int version;
 
   @JsonIgnore private boolean deleted = false;
@@ -410,6 +410,12 @@ public class AccountData {
       logger.debug("migrated local device id to database");
     } else if (AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID) < 0) {
       AccountDataTable.set(accountUUID, AccountDataTable.Key.DEVICE_ID, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    }
+
+    if (legacyLastAccountRefresh > 0) {
+      AccountDataTable.set(accountUUID, AccountDataTable.Key.LAST_ACCOUNT_REFRESH, legacyLastAccountRefresh);
+      legacyLastAccountRefresh = 0;
+      needsSave = true;
     }
     return needsSave;
   }

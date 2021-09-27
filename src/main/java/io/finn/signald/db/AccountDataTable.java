@@ -42,7 +42,8 @@ public class AccountDataTable {
     SENDER_CERTIFICATE_REFRESH_TIME,
     MULTI_DEVICE,
     DEVICE_ID,
-    PASSWORD
+    PASSWORD,
+    LAST_ACCOUNT_REFRESH
   }
 
   public static byte[] getBytes(UUID uuid, Key key) throws SQLException {

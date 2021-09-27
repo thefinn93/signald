@@ -93,7 +93,7 @@ public class Manager {
   private final Logger logger;
   private final SignalServiceConfiguration serviceConfiguration;
   private final ECPublicKey unidentifiedSenderTrustRoot;
-  private final static int ACCOUNT_REFRESH_VERSION = 3;
+  private final static int ACCOUNT_REFRESH_VERSION = 4;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
 
@@ -1427,16 +1427,13 @@ public class Manager {
     int localRegistrationId = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.LOCAL_REGISTRATION_ID);
     dependencies.getAccountManager().setAccountAttributes(deviceName, null, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true,
                                                           ServiceConfig.CAPABILITIES, true);
-    if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
-      accountData.lastAccountRefresh = ACCOUNT_REFRESH_VERSION;
-      accountData.save();
-    }
+    AccountDataTable.set(accountUUID, AccountDataTable.Key.LAST_ACCOUNT_REFRESH, ACCOUNT_REFRESH_VERSION);
   }
 
   public GroupsV2Manager getGroupsV2Manager() { return groupsV2Manager; }
 
   private void refreshAccountIfNeeded() throws IOException, SQLException {
-    if (accountData.lastAccountRefresh < ACCOUNT_REFRESH_VERSION) {
+    if (AccountDataTable.getInt(accountUUID, AccountDataTable.Key.LAST_ACCOUNT_REFRESH) < ACCOUNT_REFRESH_VERSION) {
       refreshAccount();
     }
   }
