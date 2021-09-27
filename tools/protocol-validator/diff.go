@@ -36,7 +36,7 @@ func checkDiff() (response checkOutputs, err error) {
 
 			// new error
 			for _, e := range protocol.Actions[version][name].Errors {
-				if !(*c).HasError(e.Name) {
+				if c == nil || !(*c).HasError(e.Name) {
 					// new error
 					fmt.Println(aurora.Green("action " + version + "." + name + " has new error case: " + e.Name))
 				}

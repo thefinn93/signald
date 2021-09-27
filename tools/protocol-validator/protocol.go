@@ -40,8 +40,8 @@ type Action struct {
 }
 
 type Error struct {
-    Name        string
-    Doc string
+	Name string
+	Doc  string
 }
 
 func (a Action) HasError(e string) bool {

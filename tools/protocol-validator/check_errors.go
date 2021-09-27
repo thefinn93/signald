@@ -14,7 +14,7 @@ func checkErrorsExist() (response checkOutputs) {
 				}
 
 				if !errorType.Error {
-				    response.failures = append(response.failures, checkOutput{id: "NonErrorInErrorList", String: fmt.Sprintf("%s.%s throw error %s, but %s is not an error. Make sure your exception extends ExceptionWrapper", version, t, e.Name, e.Name)})
+					response.failures = append(response.failures, checkOutput{id: "NonErrorInErrorList", String: fmt.Sprintf("%s.%s throw error %s, but %s is not an error. Make sure your exception extends ExceptionWrapper", version, t, e.Name, e.Name)})
 				}
 			}
 		}
