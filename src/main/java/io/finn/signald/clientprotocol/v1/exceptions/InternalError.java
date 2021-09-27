@@ -17,7 +17,7 @@ public class InternalError extends ExceptionWrapper {
   private static final Logger logger = LogManager.getLogger();
   public final List<String> exceptions;
 
-  public InternalError(String message, Exception exception) {
+  public InternalError(String message, Throwable exception) {
     super(exception);
     exceptions = new ArrayList<>();
     Throwable cause = exception;

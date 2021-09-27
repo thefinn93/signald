@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.util.RequestUtil;
 
 @Doc("Wraps all incoming messages after a v1 subscribe request is issued")
