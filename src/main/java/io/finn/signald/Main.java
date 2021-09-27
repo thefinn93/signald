@@ -100,6 +100,10 @@ public class Main implements Runnable {
 
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
+    if (getJavaVersion() < 9) {
+      logger.warn("Support for this version of Java may be going away. Please update your java version. For more information see https://gitlab.com/signald/signald/-/issues/219");
+    }
+
     if (dumpProtocol) {
       try {
         System.out.println(JSONUtil.GetMapper().writeValueAsString(ProtocolRequest.GetProtocolDocumentation()));
@@ -276,5 +280,18 @@ public class Main implements Runnable {
       } catch (InterruptedException ignored) {
       }
     }
+  }
+
+  private static int getJavaVersion() {
+    String version = System.getProperty("java.version");
+    if (version.startsWith("1.")) {
+      version = version.substring(2, 3);
+    } else {
+      int dot = version.indexOf(".");
+      if (dot != -1) {
+        version = version.substring(0, dot);
+      }
+    }
+    return Integer.parseInt(version);
   }
 }

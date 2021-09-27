@@ -45,33 +45,22 @@ clang-format:
   rules:
     - when: on_success
 
-build java8 x86_64-unknown-linux-gnu:
+build:
   extends: .build
-  variables:
-    JAVA_VERSION: 8
+  parallel:
+    matrix:
+      - JAVA_VERSION: [8, 9, 10, 11, 12, 13, 14, 15]
 
 build java11 x86_64-unknown-linux-gnu:
   extends: .build
   variables:
     JAVA_VERSION: 11
 
-build java8 armv7-unknown-linux-gnueabihf:
-  extends: .build
-  variables:
-    JAVA_VERSION: 8
-    SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
-
 build java11 armv7-unknown-linux-gnueabihf:
   extends: .build
   variables:
     JAVA_VERSION: 11
     SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
-
-build java8 aarch64-unknown-linux-gnu:
-  extends: .build
-  variables:
-    JAVA_VERSION: 8
-    SIGNALD_TARGET: aarch64-unknown-linux-gnu
 
 build java11 aarch64-unknown-linux-gnu:
   extends: .build
