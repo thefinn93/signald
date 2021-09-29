@@ -113,11 +113,23 @@ public class Account {
     AccountDataTable.set(accountUUID, AccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME, System.currentTimeMillis());
   }
 
-  public int getPreKeyIdOffset() throws SQLException { return AccountDataTable.getInt(accountUUID, AccountDataTable.Key.PRE_KEY_ID_OFFSET); }
+  public int getPreKeyIdOffset() throws SQLException {
+    int offset = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.PRE_KEY_ID_OFFSET);
+    if (offset == -1) {
+      return 0;
+    }
+    return offset;
+  }
 
   public void setPreKeyIdOffset(int preKeyIdOffset) throws SQLException { AccountDataTable.set(accountUUID, AccountDataTable.Key.PRE_KEY_ID_OFFSET, preKeyIdOffset); }
 
-  public int getNextSignedPreKeyId() throws SQLException { return AccountDataTable.getInt(accountUUID, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID); }
+  public int getNextSignedPreKeyId() throws SQLException {
+    int id = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID);
+    if (id == -1) {
+      return 0;
+    }
+    return id;
+  }
 
   public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
     AccountDataTable.set(accountUUID, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
