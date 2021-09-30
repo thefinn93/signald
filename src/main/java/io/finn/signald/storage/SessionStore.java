@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.SessionsTable;
 import io.finn.signald.util.JSONUtil;
@@ -29,7 +30,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -49,8 +49,8 @@ public class SessionStore {
 
   public synchronized List<SessionInfo> getSessions() { return sessions; }
 
-  public void migrateToDB(UUID u) {
-    SessionsTable table = new SessionsTable(u);
+  public void migrateToDB(Account account) {
+    SessionsTable table = new SessionsTable(account.getUUID());
     logger.info("migrating " + sessions.size() + " sessions to the database");
     Iterator<SessionInfo> iterator = sessions.iterator();
     while (iterator.hasNext()) {

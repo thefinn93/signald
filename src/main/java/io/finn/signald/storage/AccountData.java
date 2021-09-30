@@ -37,14 +37,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -60,15 +60,15 @@ public class AccountData {
   @JsonProperty("signalingKey") String legacySignalingKey;
   @JsonProperty("preKeyIdOffset") public int legacyPreKeyIdOffset;
   @JsonProperty("nextSignedPreKeyId") public int legacyNextSignedPreKeyId;
-  @JsonProperty("backgroundActionsLastRun") public BackgroundActionsLastRun legacyBackgroundActionsLastRun = new BackgroundActionsLastRun();
+  @JsonProperty("backgroundActionsLastRun") public LegacyBackgroundActionsLastRun legacyBackgroundActionsLastRun = new LegacyBackgroundActionsLastRun();
   @JsonProperty("lastAccountRefresh") public int legacyLastAccountRefresh;
   @JsonProperty public String legacyProfileKey;
   @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
   @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
+  @JsonProperty("groupsV2") public LegacyGroupsV2Storage legacyGroupsV2;
 
   public boolean registered;
   public GroupStore groupStore;
-  public GroupsV2Storage groupsV2;
   public ContactStore contactStore;
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
   public int version;
@@ -154,15 +154,19 @@ public class AccountData {
         }
       }
     }
-    if (groupsV2 == null) {
-      groupsV2 = new GroupsV2Storage();
+    if (legacyGroupsV2 == null) {
+      legacyGroupsV2 = new LegacyGroupsV2Storage();
     }
     if (contactStore == null) {
       contactStore = new ContactStore();
     }
 
     for (GroupInfo g : groupStore.getGroups()) {
-      getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
+      try {
+        getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
+      } catch (InvalidInputException e) {
+        logger.error("error migrating v1 group to v2", e);
+      }
     }
 
     if (version < VERSION_IMPORT_CONTACT_PROFILES) {
@@ -240,8 +244,8 @@ public class AccountData {
       groupStore = new GroupStore();
     }
 
-    if (groupsV2 == null) {
-      groupsV2 = new GroupsV2Storage();
+    if (legacyGroupsV2 == null) {
+      legacyGroupsV2 = new LegacyGroupsV2Storage();
     }
 
     if (contactStore == null) {
@@ -277,16 +281,15 @@ public class AccountData {
   public boolean isDeleted() { return deleted; }
 
   public void delete() throws SQLException, IOException {
-    if (getUUID() != null) {
-      PreKeysTable.deleteAccount(getUUID());
-      SessionsTable.deleteAccount(getUUID());
-      SignedPreKeysTable.deleteAccount(getUUID());
-      IdentityKeysTable.deleteAccount(getUUID());
-      RecipientsTable.deleteAccount(getUUID());
-      AccountDataTable.deleteAccount(getUUID());
-      AccountsTable.deleteAccount(getUUID());
-    }
-
+    PreKeysTable.deleteAccount(getUUID());
+    SessionsTable.deleteAccount(getUUID());
+    SignedPreKeysTable.deleteAccount(getUUID());
+    IdentityKeysTable.deleteAccount(getUUID());
+    RecipientsTable.deleteAccount(getUUID());
+    GroupsTable.deleteAccount(getUUID());
+    GroupCredentialsTable.deleteAccount(getUUID());
+    AccountDataTable.deleteAccount(getUUID());
+    AccountsTable.deleteAccount(getUUID());
     MessageQueueTable.deleteAccount(legacyUsername);
     try {
       Files.delete(new File(dataPath + "/" + legacyUsername).toPath());
@@ -321,14 +324,15 @@ public class AccountData {
     return address.getUUID();
   }
 
-  public String getMigratedGroupId(String groupV1Id) throws IOException {
-    String groupV2Id = Base64.encodeBytes(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
-    List<Group> v2Groups = groupsV2.groups.stream().filter(g -> g.getID().equals(groupV2Id)).collect(Collectors.toList());
-    if (v2Groups.size() > 0) {
+  public GroupIdentifier getMigratedGroupId(String groupV1Id) throws IOException, InvalidInputException, SQLException {
+    GroupIdentifier groupV2Id = new GroupIdentifier(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
+    GroupsTable groupsTable = new GroupsTable(getUUID());
+    Optional<GroupsTable.Group> groupOptional = groupsTable.get(groupV2Id);
+    if (groupOptional.isPresent()) {
       groupStore.deleteGroup(groupV1Id);
-      return v2Groups.get(0).getID();
+      return groupOptional.get().getId();
     }
-    return groupV1Id;
+    return groupV2Id;
   }
 
   @JsonIgnore
@@ -383,9 +387,8 @@ public class AccountData {
 
   public String getLegacyUsername() { return legacyUsername; }
 
-  public boolean migrateToDB(UUID accountUUID) throws SQLException {
+  public boolean migrateToDB(Account account) throws SQLException {
     boolean needsSave = false;
-    Account account = new Account(accountUUID);
 
     if (legacyPassword != null) {
       account.setPassword(legacyPassword);

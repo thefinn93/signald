@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.db.GroupsTable;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,6 +68,8 @@ public class JsonGroupV2Info {
     masterKey = o.masterKey;
     update(o);
   }
+
+  public JsonGroupV2Info(GroupsTable.Group g) { this(g.getSignalServiceGroupV2(), g.getDecryptedGroup()); }
 
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
     masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());

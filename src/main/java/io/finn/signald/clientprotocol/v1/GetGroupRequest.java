@@ -17,8 +17,6 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.GroupsV2Manager;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -27,10 +25,6 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.storage.Group;
-import java.io.IOException;
-import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 @ProtocolType("get_group")
 @Doc("Query the server for the latest state of a known group. If no account in signald is a member of the group "
@@ -44,21 +38,7 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request)
-      throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError, InvalidGroupStateError {
-    Manager m = Common.getManager(account);
-    GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
-    Group group;
-    try {
-      group = groupsV2Manager.getGroup(groupID, revision);
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupError();
-    } catch (InvalidGroupStateException e) {
-      throw new InvalidGroupStateError(e);
-    } catch (IOException e) {
-      throw new InternalError("error getting group", e);
-    } catch (VerificationFailedException e) {
-      throw new GroupVerificationError(e);
-    }
-    return group.getJsonGroupV2Info(m);
+      throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError, InvalidGroupStateError, InvalidRequestError {
+    return Common.getGroup(Common.getAccount(account), groupID).getJsonGroupV2Info();
   }
 }

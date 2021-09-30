@@ -91,7 +91,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
     try {
       return saveIdentity(address.getName(), identityKey, null);
     } catch (IOException | SQLException e) {
-      e.printStackTrace();
+      logger.error("error saving new identity to identity keys table", e);
     }
     return false;
   }

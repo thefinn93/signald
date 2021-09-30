@@ -369,15 +369,16 @@ public class ServersTable {
         ResultSet rows = statement.executeQuery();
         if (!rows.next()) {
           rows.close();
-          throw new Exception("unknown server: " + uuid.toString());
+          logger.warn("this should never happen: no results for server when getting keystore");
+          return null;
         }
 
         byte[] ca = rows.getBytes(field);
         return new ByteArrayInputStream(ca);
-      } catch (Exception e) {
-        e.printStackTrace();
+      } catch (SQLException e) {
+        logger.error("error getting server for keystore", e);
+        return null;
       }
-      return null;
     }
 
     @Override

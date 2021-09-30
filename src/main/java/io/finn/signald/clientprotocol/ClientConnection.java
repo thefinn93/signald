@@ -95,7 +95,7 @@ public class ClientConnection implements Runnable {
     } else if (error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
     } else {
-      logger.catching(error);
+      logger.error("error while handling client connection", error);
     }
     String requestID = "";
     if (request != null) {

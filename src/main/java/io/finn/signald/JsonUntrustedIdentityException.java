@@ -26,6 +26,8 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.SafetyNumberHelper;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asamk.signal.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -33,6 +35,7 @@ import org.whispersystems.libsignal.UntrustedIdentityException;
 
 @Deprecated(1641027661)
 class JsonUntrustedIdentityException {
+  private static final Logger logger = LogManager.getLogger();
   public JsonAddress local_address;
   public JsonAddress remote_address;
   public String fingerprint;
@@ -61,7 +64,7 @@ class JsonUntrustedIdentityException {
         this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnRecipient(), m.getIdentity(), recipient, exception.getUntrustedIdentity());
       }
     } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
-      e.printStackTrace();
+      logger.error("error preparing untrusted identity exception", e);
     }
   }
 }

@@ -27,7 +27,10 @@ import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
@@ -102,9 +105,8 @@ public class IdentityKeyStore {
 
   public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
 
-  public void migrateToDB(UUID u) throws SQLException, IOException {
-    IdentityKeysTable table = new IdentityKeysTable(u);
-    Account account = new Account(u);
+  public void migrateToDB(Account account) throws SQLException, IOException {
+    IdentityKeysTable table = new IdentityKeysTable(account.getUUID());
     logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
     Iterator<Identity> iterator = trustedKeys.iterator();
     RecipientsTable recipientsTable = account.getRecipients();

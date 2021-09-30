@@ -47,8 +47,8 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
   @Required public long timestamp;
 
   @Override
-  public SendResponse run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, NoSendPermissionError, UnknownGroupError, RateLimitError {
+  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, NoSendPermissionError,
+                                                  UnknownGroupError, InvalidRequestError, RateLimitError {
     Manager m = Common.getManager(account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

@@ -93,26 +93,30 @@ public class AccountsTable {
     logger.info("migrating account if needed: " + accountData.address.toRedactedString());
     add(accountData.getLegacyUsername(), accountData.getUUID(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean needsSave = false;
-    java.util.UUID accountUUID = accountData.getUUID();
+    Account account = new Account(accountData.getUUID());
     try {
       if (accountData.legacyProtocolStore != null) {
-        accountData.legacyProtocolStore.migrateToDB(accountUUID);
+        accountData.legacyProtocolStore.migrateToDB(account);
         accountData.legacyProtocolStore = null;
         needsSave = true;
       }
       if (accountData.legacyRecipientStore != null) {
-        accountData.legacyRecipientStore.migrateToDB(accountUUID);
+        accountData.legacyRecipientStore.migrateToDB(account);
         accountData.legacyRecipientStore = null;
         needsSave = true;
       }
 
       if (accountData.legacyBackgroundActionsLastRun != null) {
-        accountData.legacyBackgroundActionsLastRun.migrateToDB(accountUUID);
+        accountData.legacyBackgroundActionsLastRun.migrateToDB(account);
         accountData.legacyBackgroundActionsLastRun = null;
         needsSave = true;
       }
 
-      needsSave = accountData.migrateToDB(accountUUID) || needsSave;
+      if (accountData.legacyGroupsV2 != null) {
+        needsSave = accountData.legacyGroupsV2.migrateToDB(account) || needsSave;
+      }
+
+      needsSave = accountData.migrateToDB(account) || needsSave;
     } finally {
       if (needsSave) {
         accountData.save();

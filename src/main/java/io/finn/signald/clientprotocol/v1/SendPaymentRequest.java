@@ -27,9 +27,6 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.exceptions.NoSendPermissionException;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -46,8 +43,8 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
   public Long when;
 
   @Override
-  public SendResponse run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError, UnknownGroupError, NoSendPermissionError {
+  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError,
+                                                  UnknownGroupError, NoSendPermissionError, InvalidRequestError, RateLimitError {
     Manager m = Common.getManager(account);
 
     Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
@@ -60,18 +57,7 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
     messageBuilder.withPayment(new SignalServiceDataMessage.Payment(payment.getPaymentNotification()));
     messageBuilder.withTimestamp(when);
 
-    List<SendMessageResult> results;
-    try {
-      results = m.send(messageBuilder, recipient, null);
-    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientError();
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupError();
-    } catch (NoSendPermissionException e) {
-      throw new NoSendPermissionError();
-    } catch (SQLException | IOException e) {
-      throw new InternalError("error sending message", e);
-    }
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null);
     return new SendResponse(results, when);
   }
 }

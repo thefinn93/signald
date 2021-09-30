@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.Account;
 import io.finn.signald.db.SignedPreKeysTable;
 import java.io.IOException;
 import java.util.*;
@@ -79,8 +80,8 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
     store.remove(signedPreKeyId);
   }
 
-  public void migrateToDB(UUID u) {
-    SignedPreKeysTable signedPreKeysTable = new SignedPreKeysTable(u);
+  public void migrateToDB(Account account) {
+    SignedPreKeysTable signedPreKeysTable = new SignedPreKeysTable(account.getUUID());
     logger.info("migrating " + store.size() + " signed pre-keys to the database");
     Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
     while (iterator.hasNext()) {

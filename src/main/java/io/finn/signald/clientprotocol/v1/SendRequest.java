@@ -56,7 +56,7 @@ public class SendRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError,
-                                                  UnknownGroupError, InvalidRecipientError, RateLimitError {
+                                                  InvalidRequestError, UnknownGroupError, RateLimitError, InvalidRecipientError {
     Manager manager = Common.getManager(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

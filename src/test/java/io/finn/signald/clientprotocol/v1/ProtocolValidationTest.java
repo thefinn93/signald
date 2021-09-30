@@ -14,6 +14,7 @@ import java.lang.reflect.ParameterizedType;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,10 +30,11 @@ public class ProtocolValidationTest {
   }
 
   @ParameterizedTest
+  @DisplayName("errors must end with the string Error")
   @MethodSource("allRequestTypes")
   void TestErrors(Class<? extends RequestType<?>> r) throws NoSuchMethodException {
     for (Class<?> exception : r.getMethod("run", Request.class).getExceptionTypes()) {
-      Assertions.assertTrue(exception.getSimpleName().endsWith("Error"));
+      Assertions.assertTrue(exception.getSimpleName().endsWith("Error"), exception.getName() + " thrown by " + r.getSimpleName() + " does not end in string \"Error\"");
     }
   }
 

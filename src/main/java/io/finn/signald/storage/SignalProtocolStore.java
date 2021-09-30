@@ -19,6 +19,7 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Account;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.PreKeysTable;
 import io.finn.signald.db.SessionsTable;
@@ -55,10 +56,10 @@ public class SignalProtocolStore {
     }
   }
 
-  public void migrateToDB(UUID u) throws SQLException, IOException {
-    legacyPreKeys.migrateToDB(u);
-    legacySessionStore.migrateToDB(u);
-    legacySignedPreKeyStore.migrateToDB(u);
-    legacyIdentityKeyStore.migrateToDB(u);
+  public void migrateToDB(Account account) throws SQLException, IOException {
+    legacyPreKeys.migrateToDB(account);
+    legacySessionStore.migrateToDB(account);
+    legacySignedPreKeyStore.migrateToDB(account);
+    legacyIdentityKeyStore.migrateToDB(account);
   }
 }

@@ -19,62 +19,57 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
+import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
-import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.util.Pair;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("set_expiration")
 @Doc("Set the message expiration timer for a thread. Expiration must be specified in seconds, set to 0 to disable timer")
 public class SetExpirationRequest implements RequestType<SendResponse> {
+  private static final Logger logger = LogManager.getLogger();
+
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
   @ExactlyOneOfRequired(RECIPIENT) public JsonAddress address;
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String group;
   @ExampleValue("604800") @Required public int expiration;
 
   @Override
-  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError {
-    Manager m = Common.getManager(account);
+  public SendResponse run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError {
     List<SendMessageResult> results;
 
     if (group != null) {
       if (group.length() == 44) {
-        Pair<SignalServiceDataMessage.Builder, Group> output = null;
-        try {
-          output = m.getGroupsV2Manager().updateGroupTimer(group, expiration);
-          results = m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2());
-        } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-          throw new UnknownGroupError();
-        } catch (SQLException | IOException e) {
-          throw new InternalError("error sending group message", e);
-        } catch (VerificationFailedException e) {
-          throw new GroupVerificationError(e);
-        }
-        m.getAccountData().groupsV2.update(output.second());
-        Common.saveAccount(m.getAccountData());
+        Account a = Common.getAccount(account);
+        GroupsTable.Group storedGroup = Common.getGroup(a, group);
+        GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, storedGroup);
+        results = Common.updateGroup(a, storedGroup, groupOperations.createModifyGroupTimerChange(expiration));
       } else {
-        byte[] groupId = new byte[0];
+        logger.warn("v1 group support is being removed https://gitlab.com/signald/signald/-/issues/224");
+        byte[] groupId;
         try {
           groupId = Base64.decode(group);
         } catch (IOException e) {
           throw new UnknownGroupError();
         }
         try {
-          results = m.setExpiration(groupId, expiration);
+          results = Common.getManager(account).setExpiration(groupId, expiration);
         } catch (IOException | SQLException e) {
           throw new InternalError("error setting expiration", e);
         } catch (GroupNotFoundException | NotAGroupMemberException e) {
@@ -82,6 +77,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
         }
       }
     } else {
+      Manager m = Common.getManager(account);
       Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
       try {
         results = m.setExpiration(recipient, expiration);

@@ -8,6 +8,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
+import io.finn.signald.Account;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
@@ -15,8 +16,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -45,6 +46,7 @@ public class TypingRequest implements RequestType<Empty> {
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, InvalidGroupError,
                                            UntrustedIdentityError, UnknownGroupError, InvalidRequestError {
     Manager m = Common.getManager(account);
+    Account a = Common.getAccount(account);
 
     byte[] groupId = null;
     if (group != null) {
@@ -81,16 +83,14 @@ public class TypingRequest implements RequestType<Empty> {
         throw new InternalError("error sending typing message", e);
       }
     } else {
-      Group g;
+      GroupsTable.Group g = Common.getGroup(a.getGroupsTable(), group);
+      List<Recipient> recipients;
       try {
-        g = m.getAccountData().groupsV2.get(group);
-      } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-        throw new UnknownGroupError();
+        recipients = g.getMembers();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error getting group members", e);
       }
-      if (g == null) {
-        throw new UnknownGroupError();
-      }
-      List<Recipient> recipients = Common.getRecipient(m.getRecipientsTable(), g.getMembers());
+
       List<SignalServiceAddress> recipientAddresses = recipients.stream().map(Recipient::getAddress).collect(Collectors.toList());
       try {
         messageSender.sendTyping(recipientAddresses, m.getAccessPairFor(recipients), message, null);

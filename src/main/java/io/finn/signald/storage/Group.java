@@ -30,7 +30,6 @@ import io.finn.signald.Manager;
 import io.finn.signald.ServiceConfig;
 import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.db.Recipient;
 import io.finn.signald.util.GroupsUtil;
 import java.io.*;
 import java.nio.file.Files;
@@ -41,7 +40,6 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.GroupChange;
-import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.local.*;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
@@ -193,19 +191,12 @@ public class Group {
     }
   }
 
-  public boolean isAdmin(Recipient recipient) {
-    for (DecryptedMember member : group.getMembersList()) {
-      if (recipient.getUUID().equals(UuidUtil.fromByteStringOrUnknown(member.getUuid()))) {
-        return member.getRole() == Member.Role.ADMINISTRATOR;
-      }
-    }
-    return false;
-  }
-
   @JsonIgnore
   public byte[] getGroupID() {
     return GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize();
   }
+
+  public int getLastAvatarFetch() { return lastAvatarFetch; }
 
   public static class GroupDeserializer extends JsonDeserializer<Group> {
     @Override
@@ -278,7 +269,7 @@ public class Group {
         }
         return new Group(masterKey, revision, group, distributionId, lastAvatarFetch);
       } catch (InvalidInputException e) {
-        e.printStackTrace();
+        logger.error("error deserializing group from legacy storage", e);
         throw new IOException(e.getMessage());
       }
     }

@@ -19,34 +19,39 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATION;
 
+import io.finn.signald.Account;
+import io.finn.signald.GroupLinkPassword;
+import io.finn.signald.Groups;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
-import io.finn.signald.exceptions.UnknownGroupException;
-import io.finn.signald.storage.AccountData;
-import io.finn.signald.storage.Group;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
-import io.finn.signald.util.GroupsUtil;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.storageservice.protos.groups.AccessControl;
+import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
+import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.signal.zkgroup.profiles.ProfileKeyCredential;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("update_group")
@@ -84,11 +89,12 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   @Override
   public GroupInfo run(Request request)
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError {
+    Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
-    AccountData accountData = m.getAccountData();
-    RecipientsTable recipientsTable = m.getRecipientsTable();
+    RecipientsTable recipientsTable = a.getRecipients();
 
     if (groupID.length() == 24) { // v1 group
+      logger.warn("v1 group support is being removed https://gitlab.com/signald/signald/-/issues/224");
       List<Recipient> addMembersSignalServiceAddress = null;
       if (addMembers != null) {
         addMembersSignalServiceAddress = new ArrayList<>();
@@ -103,7 +109,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       } catch (IOException e) {
         throw new UnknownGroupError();
       }
-      io.finn.signald.storage.GroupInfo g = null;
+      io.finn.signald.storage.GroupInfo g;
       try {
         g = m.sendUpdateGroupMessage(rawGroupID, title, addMembersSignalServiceAddress, avatar);
       } catch (IOException | SQLException e) {
@@ -113,46 +119,54 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       }
       return new GroupInfo(g);
     } else {
-      Group group;
+      Groups groups = Common.getGroups(a);
+      GroupsTable.Group group = Common.getGroup(a, groupID);
+
+      List<Recipient> recipients;
       try {
-        group = accountData.groupsV2.get(groupID);
-      } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-        throw new UnknownGroupError();
-      }
-      if (group == null) {
-        throw new UnknownGroupError();
+        recipients = group.getMembers();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error looking up recipients", e);
       }
 
-      List<Recipient> recipients = Common.getRecipient(recipientsTable, group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList()));
-      Pair<SignalServiceDataMessage.Builder, Group> output;
-
+      GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
+      GroupChange.Actions.Builder change;
       try {
         if (title != null) {
-          output = m.getGroupsV2Manager().updateTitle(groupID, title);
+          change = groupOperations.createModifyGroupTitle(title);
         } else if (description != null) {
-          output = m.getGroupsV2Manager().updateDescription(groupID, description);
+          change = groupOperations.createModifyGroupDescription(description);
         } else if (avatar != null) {
-          output = m.getGroupsV2Manager().updateAvatar(groupID, avatar);
+          byte[] avatarBytes = Files.readAllBytes(new File(avatar).toPath());
+          String cdnKey;
+          try {
+            cdnKey = groups.uploadNewAvatar(group.getSecretParams(), avatarBytes);
+          } catch (VerificationFailedException e) {
+            throw new InternalError("error uploading avatar", e);
+          }
+          change = GroupChange.Actions.newBuilder().setModifyAvatar(GroupChange.Actions.ModifyAvatarAction.newBuilder().setAvatar(cdnKey));
         } else if (addMembers != null && addMembers.size() > 0) {
-          List<ProfileAndCredentialEntry> members = new ArrayList<>();
+          Set<GroupCandidate> candidates = new HashSet<>();
           for (JsonAddress member : addMembers) {
             Recipient recipient = recipientsTable.get(member);
             ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(recipient);
             if (profileAndCredentialEntry == null) {
-              logger.warn("Unable to add group member with no profile");
+              logger.warn("failed to add group member with no profile");
               continue;
             }
-            members.add(profileAndCredentialEntry);
             recipients.add(recipientsTable.get(profileAndCredentialEntry.getServiceAddress()));
+            Optional<ProfileKeyCredential> profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
+            UUID uuid = profileAndCredentialEntry.getServiceAddress().getUuid();
+            candidates.add(new GroupCandidate(uuid, profileKeyCredential));
           }
-          output = m.getGroupsV2Manager().addMembers(groupID, members);
+          change = groupOperations.createModifyGroupMembershipChange(candidates, a.getUUID());
         } else if (removeMembers != null && removeMembers.size() > 0) {
           Set<UUID> members = new HashSet<>();
           for (JsonAddress member : removeMembers) {
             Recipient recipient = recipientsTable.get(member);
             members.add(recipient.getUUID());
           }
-          output = m.getGroupsV2Manager().removeMembers(groupID, members);
+          change = groupOperations.createRemoveMembersChange(members);
         } else if (updateRole != null) {
           UUID uuid = UUID.fromString(updateRole.uuid);
           Member.Role role;
@@ -166,29 +180,31 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
           default:
             throw new InvalidRequestError("unknown role requested");
           }
-          output = m.getGroupsV2Manager().changeRole(groupID, uuid, role);
+          change = groupOperations.createChangeMemberRole(uuid, role);
         } else if (updateAccessControl != null) {
+          AccessControl.AccessRequired access;
           if (updateAccessControl.attributes != null) {
             if (updateAccessControl.members != null || updateAccessControl.link != null) {
               throw new InvalidRequestError("only one access control may be updated at once");
             }
-            output = m.getGroupsV2Manager().updateAccessControlAttributes(groupID, getAccessRequired(updateAccessControl.attributes));
+            access = getAccessRequired(updateAccessControl.attributes);
           } else if (updateAccessControl.members != null) {
             if (updateAccessControl.link != null) {
               throw new InvalidRequestError("only one access control may be updated at once");
             }
-            output = m.getGroupsV2Manager().updateAccessControlMembership(groupID, getAccessRequired(updateAccessControl.members));
+            access = getAccessRequired(updateAccessControl.members);
           } else if (updateAccessControl.link != null) {
-            output = m.getGroupsV2Manager().updateAccessControlJoinByLink(groupID, getAccessRequired(updateAccessControl.link));
+            access = getAccessRequired(updateAccessControl.link);
           } else {
             throw new InvalidRequestError("no known access control requested");
           }
+          change = groupOperations.createChangeMembershipRights(access);
         } else if (resetLink) {
-          output = m.getGroupsV2Manager().resetGroupLinkPassword(groupID);
+          change = groupOperations.createModifyGroupLinkPasswordChange(GroupLinkPassword.createNew().serialize());
         } else if (updateTimer > -1) {
-          output = m.getGroupsV2Manager().updateGroupTimer(groupID, updateTimer);
+          change = groupOperations.createModifyGroupTimerChange(updateTimer);
         } else if (announcements != null) {
-          boolean announcementMode = false;
+          boolean announcementMode;
           switch (announcements) {
           case "ENABLED":
             announcementMode = true;
@@ -199,24 +215,16 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
           default:
             throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
           }
-          output = m.getGroupsV2Manager().setGroupAnnouncementMode(groupID, announcementMode);
+          change = groupOperations.createAnnouncementGroupChange(announcementMode);
         } else {
           throw new InvalidRequestError("no change requested");
         }
-        m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
-        accountData.groupsV2.update(output.second());
-      } catch (VerificationFailedException e) {
-        throw new GroupVerificationError(e);
-      } catch (TimeoutException e) {
-        e.printStackTrace();
-      } catch (UnknownGroupException e) {
-        throw new UnknownGroupError();
-      } catch (IOException | SQLException | ExecutionException | InterruptedException e) {
+
+        Common.updateGroup(a, group, change);
+      } catch (IOException | SQLException | ExecutionException | InterruptedException | InvalidInputException | TimeoutException e) {
         throw new InternalError("error updating group", e);
       }
-
-      Common.saveAccount(accountData);
-      return new GroupInfo(group.getJsonGroupV2Info(m));
+      return new GroupInfo(group.getJsonGroupV2Info());
     }
   }
 

@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.util.RequestUtil;
 
-@Doc("Wraps all incoming messages after a v1 subscribe request is issued")
+@Doc("Wraps all incoming messages sent to the client after a v1 subscribe request is issued")
 public class ClientMessageWrapper {
   @Doc("the type of object to expect in the `data` field") public String type;
   @Doc("the version of the object in the `data` field") public String version;

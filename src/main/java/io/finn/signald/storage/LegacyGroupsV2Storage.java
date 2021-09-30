@@ -17,6 +17,7 @@
 
 package io.finn.signald.storage;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -25,72 +26,55 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import io.finn.signald.exceptions.UnknownGroupException;
-import io.finn.signald.util.GroupsUtil;
+import io.finn.signald.Account;
+import io.finn.signald.db.GroupCredentialsTable;
+import io.finn.signald.db.GroupsTable;
 import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
-import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.util.Base64;
 
-public class GroupsV2Storage {
-  public Map<Integer, JsonAuthCredential> credentials;
-  public List<Group> groups;
+public class LegacyGroupsV2Storage {
+  private static final Logger logger = LogManager.getLogger();
+  @JsonProperty private Map<Integer, JsonAuthCredential> credentials;
+  @JsonProperty private List<Group> groups;
 
-  public GroupsV2Storage() {
+  public LegacyGroupsV2Storage() {
     credentials = new HashMap<>();
     groups = new ArrayList<>();
   }
 
-  public AuthCredentialResponse getAuthCredential(GroupsV2Api groupsV2Api, int today) throws IOException {
-    if (!credentials.containsKey(today)) {
-      credentials = groupsV2Api.getCredentials(today).entrySet().stream().map(JsonAuthCredential::fromMap).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-    return credentials.get(today).credential;
-  }
+  public boolean migrateToDB(Account account) throws SQLException {
+    boolean needsSave = false;
 
-  public Group get(Group group) throws UnknownGroupException {
-    String id = Base64.encodeBytes(group.getGroupID());
-    return get(id);
-  }
-
-  public Group get(SignalServiceGroupV2 group) throws UnknownGroupException {
-    String id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
-    return get(id);
-  }
-
-  public Group get(String id) throws UnknownGroupException {
-    for (Group g : groups) {
-      if (g.getID().equals(id)) {
-        return g;
+    if (credentials != null) {
+      GroupCredentialsTable credentialsTable = new GroupCredentialsTable(account.getUUID());
+      HashMap<Integer, AuthCredentialResponse> credentialResponseHashMap = new HashMap<>();
+      for (Map.Entry<Integer, JsonAuthCredential> entry : credentials.entrySet()) {
+        credentialResponseHashMap.put(entry.getKey(), entry.getValue().credential);
       }
+      credentialsTable.setCredentials(credentialResponseHashMap);
+      credentials = null;
+      needsSave = true;
     }
-    throw new UnknownGroupException();
-  }
 
-  public void update(Group group) {
-    String id = group.getID();
-    for (Group g : groups) {
-      if (!g.getID().equals(id)) {
-        continue;
+    if (groups != null) {
+      GroupsTable groupsTable = account.getGroupsTable();
+      for (Group g : groups) {
+        groupsTable.upsert(g.getMasterKey(), g.revision, g.getGroup(), g.getDistributionId(), g.getLastAvatarFetch());
       }
-      g.update(group);
-      return;
+      groups = null;
+      needsSave = true;
     }
-    groups.add(group);
-  }
 
-  public void remove(Group group) {
-    Group g;
-    try {
-      g = get(group);
-    } catch (UnknownGroupException e) {
-      return;
-    }
-    groups.remove(g);
+    return needsSave;
   }
 
   @JsonSerialize(using = JsonAuthCredential.JsonAuthCredentialSerializer.class)
@@ -98,10 +82,6 @@ public class GroupsV2Storage {
   static class JsonAuthCredential {
     AuthCredentialResponse credential;
     JsonAuthCredential(AuthCredentialResponse c) { credential = c; }
-
-    public static Map.Entry<Integer, JsonAuthCredential> fromMap(Map.Entry<Integer, AuthCredentialResponse> e) {
-      return new AbstractMap.SimpleEntry<>(e.getKey(), new JsonAuthCredential(e.getValue()));
-    }
 
     public static class JsonAuthCredentialSerializer extends JsonSerializer<JsonAuthCredential> {
       @Override
@@ -117,7 +97,7 @@ public class GroupsV2Storage {
         try {
           c = new AuthCredentialResponse(Base64.decode(jsonParser.readValueAs(String.class)));
         } catch (InvalidInputException e) {
-          e.printStackTrace();
+          logger.error("error parsing auth credential stored in legacy storage");
           throw new IOException("failed to deserialize group auth credentials");
         }
         return new JsonAuthCredential(c);

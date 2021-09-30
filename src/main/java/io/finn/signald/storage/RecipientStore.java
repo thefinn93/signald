@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.JSONUtil;
@@ -30,7 +31,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -43,8 +43,8 @@ public class RecipientStore {
 
   public RecipientStore() {}
 
-  public void migrateToDB(UUID u) throws SQLException {
-    RecipientsTable table = new RecipientsTable(u);
+  public void migrateToDB(Account account) throws SQLException {
+    RecipientsTable table = account.getRecipients();
     logger.info("migrating " + addresses.size() + " recipients to the database");
 
     Iterator<JsonAddress> iterator = addresses.iterator();

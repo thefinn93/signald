@@ -6,10 +6,7 @@
 
 package io.finn.signald;
 
-import io.finn.signald.db.AccountDataTable;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.DatabaseProtocolStore;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -20,6 +17,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
 public class Account {
@@ -32,6 +30,10 @@ public class Account {
 
   public UUID getUUID() { return accountUUID; }
 
+  public SignalServiceConfiguration getServiceConfiguration() throws SQLException, ServerNotFoundException, InvalidProxyException, IOException {
+    return AccountsTable.getServer(accountUUID).getSignalServiceConfiguration();
+  }
+
   public RecipientsTable getRecipients() { return new RecipientsTable(accountUUID); }
 
   public SignalDependencies getSignalDependencies() throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
@@ -39,6 +41,10 @@ public class Account {
   }
 
   public DatabaseProtocolStore getProtocolStore() { return new DatabaseProtocolStore(accountUUID); }
+
+  public GroupsTable getGroupsTable() { return new GroupsTable(accountUUID); }
+
+  public Groups getGroups() throws SQLException, ServerNotFoundException, NoSuchAccountException, InvalidProxyException, IOException { return new Groups(accountUUID); }
 
   public DynamicCredentialsProvider getCredentialsProvider() throws SQLException, NoSuchAccountException {
     return new DynamicCredentialsProvider(accountUUID, getE164(), getPassword(), getDeviceId());

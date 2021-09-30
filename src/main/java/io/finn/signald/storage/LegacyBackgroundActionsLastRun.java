@@ -19,13 +19,12 @@ package io.finn.signald.storage;
 
 import io.finn.signald.Account;
 import java.sql.SQLException;
-import java.util.UUID;
 
-public class BackgroundActionsLastRun {
+public class LegacyBackgroundActionsLastRun {
   public long lastPreKeyRefresh;
 
-  public void migrateToDB(UUID uuid) throws SQLException {
-    new Account(uuid).setLastPreKeyRefresh(lastPreKeyRefresh);
+  public void migrateToDB(Account account) throws SQLException {
+    account.setLastPreKeyRefresh(lastPreKeyRefresh);
     lastPreKeyRefresh = 0;
   }
 }

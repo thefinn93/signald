@@ -27,9 +27,13 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
-import io.finn.signald.storage.Group;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -37,7 +41,9 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.signal.storageservice.protos.groups.Member;
+import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
@@ -94,26 +100,27 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       }
     }
 
-    Group group = null;
+    File avatarFile = avatar == null ? null : new File(avatar);
+
+    GroupsTable.Group group;
     try {
-      group = m.getGroupsV2Manager().createGroup(title, avatar, recipients, role, timer);
-    } catch (IOException e) {
+      group = Common.getGroups(Common.getAccount(account)).createGroup(title, avatarFile, recipients, role, timer);
+    } catch (IOException | SQLException | InvalidInputException | ServerNotFoundException | NoSuchAccountException | InvalidKeyException | InvalidProxyException e) {
       throw new InternalError("error creating group", e);
     } catch (VerificationFailedException e) {
       throw new GroupVerificationError(e);
     } catch (InvalidGroupStateException e) {
       throw new InvalidGroupStateError(e);
     }
+
     Common.saveAccount(m.getAccountData());
-    SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.revision).build();
+    SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.getRevision()).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
     try {
-      m.sendGroupV2Message(message, signalServiceGroupV2);
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupError();
+      m.sendGroupV2Message(message, group);
     } catch (SQLException | IOException e) {
       throw new InternalError("error notifying new members of group", e);
     }
-    return group.getJsonGroupV2Info(m);
+    return new JsonGroupV2Info(group);
   }
 }

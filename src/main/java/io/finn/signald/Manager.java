@@ -49,9 +49,12 @@ import org.asamk.signal.TrustLevel;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
+import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
+import org.signal.zkgroup.groups.GroupIdentifier;
+import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.libsignal.IdentityKey;
@@ -70,6 +73,7 @@ import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.crypto.*;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
@@ -103,7 +107,6 @@ public class Manager {
   private final UUID accountUUID;
   private final Account account;
   private final Recipient self;
-  private GroupsV2Manager groupsV2Manager;
   private final SignalDependencies dependencies;
 
   public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
@@ -168,8 +171,6 @@ public class Manager {
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
     dependencies = SignalDependencies.get(accountUUID);
-    groupsV2Manager =
-        new GroupsV2Manager(dependencies.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, accountUUID, serviceConfiguration);
     logger.info("Created a manager for " + Util.redact(accountUUID.toString()));
     synchronized (managers) { managers.put(accountUUID.toString(), this); }
   }
@@ -216,7 +217,7 @@ public class Manager {
         String value = URLDecoder.decode(param.split("=")[1], "UTF-8");
         map.put(name, value);
       } catch (UnsupportedEncodingException e) {
-        e.printStackTrace(); // impossible
+        LogManager.getLogger().error("error preparing device link URL", e);
       }
     }
     return map;
@@ -334,21 +335,23 @@ public class Manager {
 
   public List<GroupInfo> getV1Groups() { return accountData.groupStore.getGroups(); }
 
-  public List<JsonGroupV2Info> getGroupsV2Info() {
+  public List<JsonGroupV2Info> getGroupsV2Info() throws SQLException {
     List<JsonGroupV2Info> groups = new ArrayList<>();
-    for (Group g : accountData.groupsV2.groups) {
-      groups.add(g.getJsonGroupV2Info(this));
+    for (GroupsTable.Group g : account.getGroupsTable().getAll()) {
+      groups.add(g.getJsonGroupV2Info());
     }
     return groups;
   }
 
-  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group) throws IOException, UnknownGroupException, SQLException {
-    Group g = accountData.groupsV2.get(group);
-    if (g.group.getDisappearingMessagesTimer() != null && g.group.getDisappearingMessagesTimer().getDuration() != 0) {
-      message.withExpiration(g.group.getDisappearingMessagesTimer().getDuration());
+  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, GroupsTable.Group group) throws IOException, SQLException {
+
+    DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
+
+    if (timer != null && timer.getDuration() != 0) {
+      message.withExpiration(timer.getDuration());
     }
 
-    return sendGroupV2Message(message, group, getRecipientsTable().get(g.getMembers()));
+    return sendGroupV2Message(message, group.getSignalServiceGroupV2(), group.getMembers());
   }
 
   public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group, List<Recipient> recipients)
@@ -577,8 +580,7 @@ public class Manager {
         messageBuilder.withProfileKey(profile.getProfileKey().serialize());
       }
     } catch (InterruptedException | ExecutionException | TimeoutException e) {
-      logger.warn("Failed to get own profile key");
-      e.printStackTrace();
+      logger.warn("Failed to get own profile key", e);
     }
 
     SignalServiceDataMessage message = null;
@@ -702,18 +704,20 @@ public class Manager {
 
   private void handleEndSession(Recipient address) { account.getProtocolStore().deleteAllSessions(address); }
 
-  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId)
-      throws IOException, InvalidRecipientException, UnknownGroupException, SQLException, NoSendPermissionException {
+  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, GroupIdentifier recipientGroupId)
+      throws IOException, InvalidRecipientException, UnknownGroupException, SQLException, NoSendPermissionException, InvalidInputException {
     if (recipientGroupId != null && recipient == null) {
-      Group group = accountData.groupsV2.get(recipientGroupId);
-      if (group == null) {
+      Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
+      if (!groupOptional.isPresent()) {
         throw new UnknownGroupException();
       }
-      if (group.group.getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
+      GroupsTable.Group group = groupOptional.get();
+
+      if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
         logger.warn("refusing to send to an announcement only group that we're not an admin in.");
         throw new NoSendPermissionException();
       }
-      return sendGroupV2Message(messageBuilder, group.getSignalServiceGroupV2());
+      return sendGroupV2Message(messageBuilder, group);
     } else if (recipient != null && recipientGroupId == null) {
       List<Recipient> r = new ArrayList<>();
       r.add(recipient);
@@ -732,7 +736,7 @@ public class Manager {
   }
 
   private List<Job> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, Recipient source, Recipient destination, boolean ignoreAttachments)
-      throws MissingConfigurationException, IOException, VerificationFailedException, SQLException {
+      throws MissingConfigurationException, IOException, VerificationFailedException, SQLException, InvalidInputException {
 
     List<Job> jobs = new ArrayList<>();
     if (message.getGroupContext().isPresent()) {
@@ -740,12 +744,21 @@ public class Manager {
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
 
       if (groupContext.getGroupV2().isPresent()) {
-        if (groupsV2Manager.handleIncomingDataMessage(message)) {
-          accountData.save();
+        SignalServiceGroupV2 group = message.getGroupContext().get().getGroupV2().get();
+        Optional<GroupsTable.Group> localState = account.getGroupsTable().get(group);
+
+        if (!localState.isPresent() || localState.get().getRevision() < group.getRevision()) {
+          GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+          try {
+            account.getGroups().getGroup(groupSecretParams, group.getRevision());
+          } catch (InvalidGroupStateException | InvalidProxyException | NoSuchAccountException | ServerNotFoundException e) {
+            logger.warn("error fetching state of incoming group", e);
+          }
         }
       }
 
       if (groupContext.getGroupV1().isPresent()) {
+        logger.warn("v1 group support is being removed https://gitlab.com/signald/signald/-/issues/224");
         groupInfo = groupContext.getGroupV1().get();
         GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
 
@@ -862,7 +875,8 @@ public class Manager {
     return jobs;
   }
 
-  public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments) throws IOException, MissingConfigurationException, SQLException {
+  public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments)
+      throws IOException, MissingConfigurationException, SQLException, InvalidInputException {
     final File cachePath = new File(getMessageCachePath());
     if (!cachePath.exists()) {
       return;
@@ -948,7 +962,7 @@ public class Manager {
   }
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
-      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException {
+      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
     accountData.saveIfNeeded();
 
@@ -1012,7 +1026,7 @@ public class Manager {
   }
 
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
-      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException {
+      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException {
     List<Job> jobs = new ArrayList<>();
     if (content == null) {
       return;
@@ -1185,6 +1199,8 @@ public class Manager {
       return retrieveAttachment(stream, getContactAvatarFile(recipient));
     }
   }
+
+  public File getGroupAvatarFile(GroupIdentifier group) { return getGroupAvatarFile(group.serialize()); }
 
   public File getGroupAvatarFile(byte[] groupId) { return new File(avatarsPath, "group-" + Base64.encodeBytes(groupId).replace("/", "_")); }
 
@@ -1445,8 +1461,6 @@ public class Manager {
                                                           ServiceConfig.CAPABILITIES, true);
     account.setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
   }
-
-  public GroupsV2Manager getGroupsV2Manager() { return groupsV2Manager; }
 
   private void refreshAccountIfNeeded() throws IOException, SQLException {
     if (account.getLastAccountRefresh() < ACCOUNT_REFRESH_VERSION) {

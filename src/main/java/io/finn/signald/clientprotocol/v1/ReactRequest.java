@@ -26,9 +26,6 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.exceptions.NoSendPermissionException;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -43,8 +40,8 @@ public class ReactRequest implements RequestType<SendResponse> {
   public long timestamp;
 
   @Override
-  public SendResponse run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InternalError, InvalidRecipientError, UnknownGroupError {
+  public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InternalError, InvalidRecipientError,
+                                                  UnknownGroupError, InvalidRequestError, RateLimitError {
     Manager m = Common.getManager(username);
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();
@@ -59,18 +56,7 @@ public class ReactRequest implements RequestType<SendResponse> {
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
-    List<SendMessageResult> results;
-    try {
-      results = m.send(messageBuilder, recipient, recipientGroupId);
-    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientError();
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupError();
-    } catch (NoSendPermissionException e) {
-      throw new NoSendPermissionError();
-    } catch (IOException | SQLException e) {
-      throw new InternalError("error sending message", e);
-    }
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, recipientGroupId);
     return new SendResponse(results, timestamp);
   }
 }

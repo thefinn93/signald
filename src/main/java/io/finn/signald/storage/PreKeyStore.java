@@ -22,9 +22,12 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.finn.signald.Account;
 import io.finn.signald.db.PreKeysTable;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyIdException;
@@ -50,8 +53,8 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
     }
   }
 
-  public void migrateToDB(UUID u) {
-    PreKeysTable table = new PreKeysTable(u);
+  public void migrateToDB(Account account) {
+    PreKeysTable table = new PreKeysTable(account.getUUID());
     Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
     logger.info("migrating " + store.size() + " prekeys to database");
     while (iterator.hasNext()) {
