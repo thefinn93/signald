@@ -185,14 +185,18 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
   static class SocketManager {
     private final List<MessageEncoder> listeners = Collections.synchronizedList(new ArrayList<>());
 
-    public synchronized void add(MessageEncoder b) { listeners.add(b); }
+    public synchronized void add(MessageEncoder b) {
+      synchronized (listeners) { listeners.add(b); }
+    }
 
     public synchronized boolean remove(Socket b) {
-      Iterator<MessageEncoder> i = listeners.iterator();
-      while (i.hasNext()) {
-        MessageEncoder r = i.next();
-        if (r.equals(b)) {
-          return listeners.remove(r);
+      synchronized (listeners) {
+        Iterator<MessageEncoder> i = listeners.iterator();
+        while (i.hasNext()) {
+          MessageEncoder r = i.next();
+          if (r.equals(b)) {
+            return listeners.remove(r);
+          }
         }
       }
       return false;
@@ -201,15 +205,17 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     public synchronized int size() { return listeners.size(); }
 
     private void broadcast(broadcastMessage b) {
-      for (MessageEncoder l : this.listeners) {
-        if (l.isClosed()) {
-          listeners.remove(l);
-          continue;
-        }
-        try {
-          b.broadcast(l);
-        } catch (IOException e) {
-          logger.warn("IOException while writing to client socket: " + e.getMessage());
+      synchronized (listeners) {
+        for (MessageEncoder l : this.listeners) {
+          if (l.isClosed()) {
+            listeners.remove(l);
+            continue;
+          }
+          try {
+            b.broadcast(l);
+          } catch (IOException e) {
+            logger.warn("IOException while writing to client socket: " + e.getMessage());
+          }
         }
       }
     }
