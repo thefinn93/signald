@@ -53,7 +53,10 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withRemoteDelete(new SignalServiceDataMessage.RemoteDelete(timestamp));
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+    Recipient recipient = null;
+    if (address != null) {
+      recipient = Common.getRecipient(m.getRecipientsTable(), address);
+    }
     List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, group);
     return new SendResponse(results, timestamp);
   }
