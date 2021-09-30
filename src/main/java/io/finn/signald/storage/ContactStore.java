@@ -30,28 +30,36 @@ public class ContactStore {
   public List<ContactInfo> contacts = new ArrayList<>();
 
   public ContactInfo updateContact(ContactInfo contact) {
-    for (ContactInfo c : contacts) {
-      if (c.address.matches(contact.address)) {
-        c.update(contact);
-        return c;
+    synchronized (contacts) {
+      for (ContactInfo c : contacts) {
+        if (c.address.matches(contact.address)) {
+          c.update(contact);
+          return c;
+        }
       }
+      contacts.add(contact);
     }
-    contacts.add(contact);
     return contact;
   }
 
   public ContactInfo getContact(Recipient recipient) {
-    for (ContactInfo c : contacts) {
-      if (c.matches(recipient)) {
-        return c;
+    synchronized (contacts) {
+      for (ContactInfo c : contacts) {
+        if (c.matches(recipient)) {
+          return c;
+        }
       }
     }
     return new ContactInfo(recipient);
   }
 
-  public List<ContactInfo> getContacts() { return contacts; }
+  public List<ContactInfo> getContacts() {
+    synchronized (contacts) { return contacts; }
+  }
 
-  public void clear() { contacts.clear(); }
+  public void clear() {
+    synchronized (contacts) { contacts.clear(); }
+  }
 
   public static class ContactInfo {
     @JsonProperty public String name;
