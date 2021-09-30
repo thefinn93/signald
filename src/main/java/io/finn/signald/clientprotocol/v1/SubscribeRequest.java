@@ -129,5 +129,10 @@ public class SubscribeRequest implements RequestType<Empty> {
     public boolean equals(Socket s) {
       return socket.equals(s);
     }
+
+    @Override
+    public boolean equals(MessageEncoder encoder) {
+      return encoder.equals(socket);
+    }
   }
 }

@@ -755,6 +755,11 @@ public class LegacySocketHandler {
       return socket.equals(s);
     }
 
+    @Override
+    public boolean equals(MessageEncoder encoder) {
+      return encoder.equals(socket);
+    }
+
     private boolean shouldBroadcast(SignalServiceContent content) {
       if (content == null) {
         return true;

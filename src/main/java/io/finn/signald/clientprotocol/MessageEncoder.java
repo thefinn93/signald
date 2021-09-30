@@ -29,4 +29,5 @@ public interface MessageEncoder {
   void broadcastListenStopped(Throwable exception) throws IOException;
   boolean isClosed();
   boolean equals(Socket socket);
+  boolean equals(MessageEncoder encoder);
 }

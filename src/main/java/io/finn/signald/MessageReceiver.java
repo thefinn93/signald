@@ -186,7 +186,17 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     private final List<MessageEncoder> listeners = Collections.synchronizedList(new ArrayList<>());
 
     public synchronized void add(MessageEncoder b) {
-      synchronized (listeners) { listeners.add(b); }
+      synchronized (listeners) {
+        Iterator<MessageEncoder> i = listeners.iterator();
+        while (i.hasNext()) {
+          MessageEncoder r = i.next();
+          if (r.equals(b)) {
+            logger.debug("ignoring duplicate subscribe request");
+            return;
+          }
+        }
+        listeners.add(b);
+      }
     }
 
     public synchronized boolean remove(Socket b) {
@@ -198,6 +208,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
             return listeners.remove(r);
           }
         }
+        logger.debug("ignoring unsubscribe request for account socket is not subscribed to");
       }
       return false;
     }
