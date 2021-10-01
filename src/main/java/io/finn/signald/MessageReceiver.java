@@ -60,7 +60,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     this.sockets = new SocketManager();
   }
 
-  public static synchronized void subscribe(UUID account, MessageEncoder receiver)
+  public static void subscribe(UUID account, MessageEncoder receiver)
       throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     synchronized (receivers) {
       if (!receivers.containsKey(account.toString())) {
@@ -68,16 +68,32 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         new Thread(r).start();
         receivers.put(account.toString(), r);
       }
+      receivers.get(account.toString()).sockets.add(receiver);
     }
-    receivers.get(account.toString()).sockets.add(receiver);
     logger.debug("message receiver for " + Util.redact(account) + " got new subscriber. subscriber count: " + receivers.get(account.toString()).sockets.size());
   }
 
-  public static synchronized boolean unsubscribe(UUID account, Socket s) {
+  public static boolean unsubscribe(UUID account, Socket s) {
     synchronized (receivers) {
       if (!receivers.containsKey(account.toString())) {
         return false;
       }
+      return synchronizedUnsubscribe(account, s);
+    }
+  }
+
+  public static void unsubscribeAll(Socket s) {
+    synchronized (receivers) {
+      for (String r : receivers.keySet()) {
+        synchronizedUnsubscribe(UUID.fromString(r), s);
+      }
+    }
+  }
+
+  // must be called from within a sychronized(receivers) block
+  private static boolean synchronizedUnsubscribe(UUID account, Socket s) {
+    if (!receivers.containsKey(account.toString())) {
+      return false;
     }
 
     boolean removed = receivers.get(account.toString()).remove(s);
@@ -97,12 +113,6 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
   }
 
   private boolean remove(Socket socket) { return sockets.remove(socket); }
-
-  public static void unsubscribeAll(Socket s) {
-    for (String r : receivers.keySet()) {
-      unsubscribe(UUID.fromString(r), s);
-    }
-  }
 
   public void run() {
     boolean notifyOnConnect = true;
