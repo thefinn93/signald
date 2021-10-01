@@ -67,7 +67,7 @@ public class TrustRequest implements RequestType<Empty> {
     }
 
     Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address.getSignalServiceAddress());
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
 
     boolean result;
     if (safetyNumber != null) {

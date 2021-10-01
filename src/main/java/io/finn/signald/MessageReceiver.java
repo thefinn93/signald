@@ -18,6 +18,7 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.MessageEncoder;
+import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -112,6 +113,12 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         double timeout = 3600;
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
+
+        if (!AccountsTable.exists(account)) {
+          logger.info("account no longer exists, not re-connecting");
+          break;
+        }
+
         try {
           subscribedAccounts.inc();
           if (notifyOnConnect) {
@@ -142,7 +149,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           logger.debug("reconnecting immediately");
           backoff = 1;
         } else {
-          if (backoff < 60) {
+          if (backoff < 65) {
             backoff = (int)(backoff * 1.5);
           }
           logger.warn("Disconnected from socket, reconnecting in " + backoff + " seconds");

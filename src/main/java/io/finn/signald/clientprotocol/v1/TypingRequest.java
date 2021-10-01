@@ -78,7 +78,7 @@ public class TypingRequest implements RequestType<Empty> {
     SignalServiceMessageSender messageSender = m.getMessageSender();
 
     if (address != null) {
-      Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address.getSignalServiceAddress());
+      Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
       try {
         messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
