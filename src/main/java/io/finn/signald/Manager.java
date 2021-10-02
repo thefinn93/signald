@@ -1529,10 +1529,10 @@ public class Manager {
 
   public void deleteAccount(boolean remote) throws IOException, SQLException {
     accountData.markForDeletion();
-    dependencies.shutdown();
     if (remote) {
       dependencies.getAccountManager().deleteAccount();
     }
+    SignalDependencies.delete(accountUUID);
     accountData.delete();
     synchronized (managers) { managers.remove(accountUUID.toString()); }
     logger.info("deleted all local account data");

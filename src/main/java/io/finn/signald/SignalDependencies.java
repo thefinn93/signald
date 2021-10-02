@@ -81,6 +81,19 @@ public class SignalDependencies {
     }
   }
 
+  public static void delete(UUID accountUUID) {
+    synchronized (instances) {
+      SignalDependencies dependencies = instances.remove(accountUUID.toString());
+      if (dependencies == null) {
+        return;
+      }
+
+      dependencies.executor.shutdown();
+
+      synchronized (dependencies.websocketLock) { dependencies.websocket.disconnect(); }
+    }
+  }
+
   private SignalDependencies(Account account, ServersTable.Server server) throws SQLException, NoSuchAccountException {
     dataStore = account.getProtocolStore();
     credentialsProvider = account.getCredentialsProvider();
@@ -132,8 +145,6 @@ public class SignalDependencies {
     }
     return messageSender;
   }
-
-  public void shutdown() { executor.shutdown(); }
 
   public KeyBackupService getKeyBackupService() throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
     synchronized (keyBackupServiceLock) {

@@ -90,6 +90,15 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     }
   }
 
+  public static void unsubscribeAll(UUID account) {
+    synchronized (receivers) {
+      if (!receivers.containsKey(account.toString())) {
+        return;
+      }
+      receivers.get(account.toString()).sockets.removeAll();
+    }
+  }
+
   // must be called from within a sychronized(receivers) block
   private static boolean synchronizedUnsubscribe(UUID account, Socket s) {
     if (!receivers.containsKey(account.toString())) {
@@ -228,6 +237,10 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         logger.debug("ignoring unsubscribe request for account socket is not subscribed to");
       }
       return false;
+    }
+
+    public synchronized void removeAll() {
+      synchronized (listeners) { listeners.removeAll(listeners); }
     }
 
     public synchronized int size() { return listeners.size(); }

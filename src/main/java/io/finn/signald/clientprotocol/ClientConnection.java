@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.newsclub.net.unix.AFUNIXSocket;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class ClientConnection implements Runnable {
@@ -151,9 +152,14 @@ public class ClientConnection implements Runnable {
 
           if (version.equals("v0")) {
             request = mapper.convertValue(rawRequest, JsonRequest.class);
-            logger.debug("All v0 requests are deprecated and will be removed at the end of 2021. Client authors, "
-                         + "see https://signald.org/articles/protocol-versioning/#deprecation. This message will become a "
-                         + "warning in signald 0.15");
+            String client = "";
+            if (socket instanceof AFUNIXSocket) {
+              AFUNIXSocket unixsocket = (AFUNIXSocket)socket;
+              client = unixsocket.getPeerCredentials().toString();
+            }
+            logger.warn("client " + client + " sent a v0 " + type + " request. v0 support will be removed at the end of "
+                        + "2021. Please update your signald client. Client authors, see "
+                        + "https://signald.org/articles/protocol-versioning/#deprecation");
             legacySocketHandler.handleRequest(request);
           } else {
             new Request(rawRequest, socket);

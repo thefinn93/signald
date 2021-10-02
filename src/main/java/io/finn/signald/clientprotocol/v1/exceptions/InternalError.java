@@ -25,6 +25,6 @@ public class InternalError extends ExceptionWrapper {
       exceptions.add(cause.getClass().getCanonicalName());
       cause = cause.getCause();
     }
-    logger.error(message, logger);
+    logger.error(message, exception);
   }
 }
