@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.SocketException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.newsclub.net.unix.AFUNIXSocket;
@@ -153,9 +154,14 @@ public class ClientConnection implements Runnable {
           if (version.equals("v0")) {
             request = mapper.convertValue(rawRequest, JsonRequest.class);
             String client = "";
-            if (socket instanceof AFUNIXSocket) {
-              AFUNIXSocket unixsocket = (AFUNIXSocket)socket;
-              client = unixsocket.getPeerCredentials().toString();
+            try {
+              if (socket instanceof AFUNIXSocket) {
+                AFUNIXSocket unixsocket = (AFUNIXSocket)socket;
+                client = unixsocket.getPeerCredentials().toString();
+              }
+            } catch (SocketException e) {
+              logger.debug("error checking socket credentials to write warning message", e);
+              client = "(unknown)";
             }
             logger.warn("client " + client + " sent a v0 " + type + " request. v0 support will be removed at the end of "
                         + "2021. Please update your signald client. Client authors, see "
