@@ -153,17 +153,16 @@ public class ClientConnection implements Runnable {
 
           if (version.equals("v0")) {
             request = mapper.convertValue(rawRequest, JsonRequest.class);
-            String client = "";
+            String client = "unknown client";
             try {
               if (socket instanceof AFUNIXSocket) {
                 AFUNIXSocket unixsocket = (AFUNIXSocket)socket;
-                client = unixsocket.getPeerCredentials().toString();
+                client = "client pid=" + unixsocket.getPeerCredentials().getPid();
               }
             } catch (SocketException e) {
               logger.debug("error checking socket credentials to write warning message", e);
-              client = "(unknown)";
             }
-            logger.warn("client " + client + " sent a v0 " + type + " request. v0 support will be removed at the end of "
+            logger.warn(client + " sent a v0 " + type + " request. v0 support will be removed at the end of "
                         + "2021. Please update your signald client. Client authors, see "
                         + "https://signald.org/articles/protocol-versioning/#deprecation");
             legacySocketHandler.handleRequest(request);

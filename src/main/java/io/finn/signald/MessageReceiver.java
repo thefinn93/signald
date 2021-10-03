@@ -234,7 +234,6 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
             return listeners.remove(r);
           }
         }
-        logger.debug("ignoring unsubscribe request for account socket is not subscribed to");
       }
       return false;
     }
