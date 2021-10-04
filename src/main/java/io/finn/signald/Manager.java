@@ -671,7 +671,7 @@ public class Manager {
       // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
       // without this it just hangs and breaks in difficult to detect ways.
       try {
-        var decryptFinished = sem.tryAcquire(10, TimeUnit.SECONDS);
+        boolean decryptFinished = sem.tryAcquire(10, TimeUnit.SECONDS);
         if (!decryptFinished) {
           logger.error("took over 10 seconds to decrypt, exiting");
           System.exit(101);
