@@ -39,10 +39,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -667,9 +664,28 @@ public class Manager {
       throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
              SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException,
-             SQLException {
+             SQLException, InterruptedException {
+    Semaphore sem = new Semaphore(1);
+    sem.acquire();
+    var t = new Thread(() -> {
+      // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
+      // without this it just hangs and breaks in difficult to detect ways.
+      try {
+        var decryptFinished = sem.tryAcquire(10, TimeUnit.SECONDS);
+        if (!decryptFinished) {
+          logger.error("took over 10 seconds to decrypt, exiting");
+          System.exit(101);
+        }
+        sem.release();
+      } catch (InterruptedException e) {
+        logger.error("error in decryption watchdog thread", e);
+      }
+    });
+
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
     SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getProtocolStore(), new SessionLock(account), certificateValidator);
+
+    t.start();
     try {
       return cipher.decrypt(envelope);
     } catch (ProtocolUntrustedIdentityException e) {
@@ -679,6 +695,8 @@ public class Manager {
         throw identityException;
       }
       throw e;
+    } finally {
+      sem.release();
     }
   }
 
