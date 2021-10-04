@@ -667,7 +667,7 @@ public class Manager {
              SQLException, InterruptedException {
     Semaphore sem = new Semaphore(1);
     sem.acquire();
-    var t = new Thread(() -> {
+    Thread t = new Thread(() -> {
       // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
       // without this it just hangs and breaks in difficult to detect ways.
       try {

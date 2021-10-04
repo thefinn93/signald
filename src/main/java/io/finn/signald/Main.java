@@ -102,7 +102,7 @@ public class Main implements Runnable {
 
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
-    if (getJavaVersion() < 9) {
+    if (getJavaVersion() < 11) {
       logger.warn("Support for this version of Java may be going away. Please update your java version. For more information see https://gitlab.com/signald/signald/-/issues/219");
     }
 
