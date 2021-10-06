@@ -38,6 +38,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 
 /* Common is a collection of wrapper functions that call common functions
  * and convert their exceptions to documented v1 exceptions
@@ -116,7 +117,7 @@ public class Common {
   }
 
   public static List<SendMessageResult> send(Manager manager, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId)
-      throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError {
+      throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError, RateLimitError {
     try {
       return manager.send(messageBuilder, recipient, recipientGroupId);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
@@ -125,6 +126,8 @@ public class Common {
       throw new UnknownGroupError();
     } catch (NoSendPermissionException e) {
       throw new NoSendPermissionError();
+    } catch (RateLimitException e) {
+      throw new RateLimitError(e);
     } catch (IOException | SQLException e) {
       throw new InternalError("error sending message", e);
     }
