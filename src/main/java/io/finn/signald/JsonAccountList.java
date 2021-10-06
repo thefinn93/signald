@@ -18,17 +18,21 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.db.AccountsTable;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Deprecated(1641027661)
 public class JsonAccountList {
   public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
-  JsonAccountList(ArrayList<String> subscribedAccounts) {
-    for (Manager m : Manager.getAll()) {
-      if (m != null) {
-        accounts.add(new JsonAccount(m, subscribedAccounts.contains(m.getE164())));
+  JsonAccountList() throws SQLException, NoSuchAccountError {
+    for (UUID account : AccountsTable.getAll()) {
+      if (account != null) {
+        accounts.add(new JsonAccount(new Account(account)));
       }
     }
   }

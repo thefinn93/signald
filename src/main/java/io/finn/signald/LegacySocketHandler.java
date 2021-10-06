@@ -28,7 +28,11 @@ import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.clientprotocol.v0.JsonAddress;
 import io.finn.signald.clientprotocol.v0.JsonMessageEnvelope;
 import io.finn.signald.clientprotocol.v0.JsonSendMessageResult;
-import io.finn.signald.db.PendingAccountDataTable;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
@@ -36,7 +40,6 @@ import io.finn.signald.storage.GroupInfo;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
-import io.finn.signald.util.KeyUtil;
 import java.io.*;
 import java.net.Socket;
 import java.net.URI;
@@ -52,15 +55,17 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.*;
+import org.asamk.signal.AttachmentInvalidException;
+import org.asamk.signal.GroupNotFoundException;
+import org.asamk.signal.NotAGroupMemberException;
+import org.asamk.signal.TrustLevel;
 import org.asamk.signal.util.Hex;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
@@ -78,7 +83,6 @@ public class LegacySocketHandler {
   private ObjectMapper mpr = new ObjectMapper();
   private static final Logger logger = LogManager.getLogger();
   private Socket socket;
-  private ArrayList<String> subscribedAccounts = new ArrayList<>();
 
   public LegacySocketHandler(Socket socket) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -187,9 +191,9 @@ public class LegacySocketHandler {
     }
   }
 
-  private void send(JsonRequest request) throws IOException, GroupNotFoundException, AttachmentInvalidException, NotAGroupMemberException, NoSuchAccountException,
-                                                UnknownGroupException, SQLException, io.finn.signald.exceptions.InvalidRecipientException, InvalidKeyException,
-                                                ServerNotFoundException, InvalidProxyException {
+  private void send(JsonRequest request) throws IOException, AttachmentInvalidException, NoSuchAccountException, UnknownGroupException, SQLException,
+                                                io.finn.signald.exceptions.InvalidRecipientException, InvalidKeyException, ServerNotFoundException, InvalidProxyException,
+                                                NoSendPermissionException {
     Manager manager = Manager.get(request.username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -237,7 +241,8 @@ public class LegacySocketHandler {
       messageBuilder.withTimestamp(request.timestamp);
     }
 
-    handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+    Recipient recipient = request.recipientAddress == null ? null : manager.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
+    handleSendMessage(manager.send(messageBuilder, recipient, request.recipientGroupId), request);
   }
 
   private void typing(JsonRequest request, SignalServiceTypingMessage.Action action)
@@ -259,11 +264,13 @@ public class LegacySocketHandler {
 
     SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, request.when, Optional.fromNullable(groupId));
 
-    SendMessageResult result = m.sendTypingMessage(message, request.recipientAddress.getSignalServiceAddress());
+    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
+    SendMessageResult result = m.sendTypingMessage(message, recipient);
     if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
-        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
+        Recipient r = m.getRecipientsTable().get(result.getAddress());
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), r, m, request), request.id);
       }
     }
   }
@@ -278,11 +285,13 @@ public class LegacySocketHandler {
 
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, request.timestamps, request.when);
 
-    SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
+    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
+    SendMessageResult result = m.sendReceipt(message, recipient);
     if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
-        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
+        Recipient r = m.getRecipientsTable().get(result.getAddress());
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), r, m, request), request.id);
       }
     }
   }
@@ -296,59 +305,55 @@ public class LegacySocketHandler {
     }
 
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, request.timestamps, request.when);
-
-    SendMessageResult result = m.sendReceipt(message, request.recipientAddress.getSignalServiceAddress());
+    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
+    SendMessageResult result = m.sendReceipt(message, recipient);
     if (result == null) {
       this.reply("mark_read", null, request.id);
     } else {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
-        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), result.getAddress(), m, request), request.id);
+        Recipient r = m.getRecipientsTable().get(result.getAddress());
+        this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), r, m, request), request.id);
       }
     }
   }
 
-  private void listAccounts(JsonRequest request) throws IOException {
-    JsonAccountList accounts = new JsonAccountList(subscribedAccounts);
+  private void listAccounts(JsonRequest request) throws IOException, SQLException, NoSuchAccountError {
+    JsonAccountList accounts = new JsonAccountList();
     this.reply("account_list", accounts, request.id);
   }
 
-  private void register(JsonRequest request) throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void register(JsonRequest request) throws IOException, InvalidInputException, SQLException, ServerNotFoundException, InvalidProxyException {
     logger.info("Register request: " + request);
-    Manager m = Manager.getPending(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
+    RegistrationManager m = RegistrationManager.get(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean voice = false;
     if (request.voice != null) {
       voice = request.voice;
     }
 
-    IdentityKeyPair identityKey = KeyUtil.generateIdentityKeyPair();
-    PendingAccountDataTable.set(request.username, PendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, identityKey.serialize());
-
-    int registrationId = KeyHelper.generateRegistrationId(false);
-    PendingAccountDataTable.set(request.username, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registrationId);
-
     logger.info("Registering (voice: " + voice + ")");
     try {
-      m.register(voice, Optional.fromNullable(request.captcha));
+      m.register(voice, Optional.fromNullable(request.captcha), ServersTable.DEFAULT_SERVER);
       this.reply("verification_required", new JsonAccount(m), request.id);
     } catch (CaptchaRequiredException e) {
       this.reply("captcha_required", "see https://signald.org/articles/captcha/", request.id);
     }
   }
 
-  private void verify(JsonRequest request) throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.getPending(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
-    if (!m.hasPendingKeys()) {
+  private void verify(JsonRequest request)
+      throws IOException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException, NoSuchAccountError {
+    RegistrationManager rm = RegistrationManager.get(request.username, UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
+    if (!rm.hasPendingKeys()) {
       logger.warn("User has no keys, first call register.");
       this.reply("error", "user has no keys, must register first", request.id);
-    } else if (m.isRegistered()) {
+    } else if (rm.isRegistered()) {
       logger.warn("User is already verified");
       this.reply("error", "user is already verified", request.id);
     } else {
       logger.info("Submitting verification code " + request.code + " for number " + request.username);
       try {
-        m.verifyAccount(request.code);
-        this.reply("verification_succeeded", new JsonAccount(m), request.id);
+        Manager m = rm.verifyAccount(request.code);
+        this.reply("verification_succeeded", new JsonAccount(m.getAccount()), request.id);
       } catch (LockedException e) {
         logger.warn("Failed to register phone number with PIN lock. See https://gitlab.com/signald/signald/-/issues/47");
         this.reply("error", "registering phone numbers with a PIN lock is not currently supported, see https://gitlab.com/signald/signald/-/issues/47", request.id);
@@ -395,18 +400,20 @@ public class LegacySocketHandler {
     if (request.recipientGroupId.length() == 44) { // v2 group
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
       Group group = groupsV2Manager.getGroup(request.recipientGroupId);
-      List<SignalServiceAddress> recipients =
-          group.group.getMembersList().stream().map(x -> new SignalServiceAddress(UuidUtil.fromByteString(x.getUuid()), null)).collect(Collectors.toList());
+      RecipientsTable recipientsTable = m.getRecipientsTable();
+      List<SignalServiceAddress> currentMembers =
+          group.group.getMembersList().stream().map(x -> new SignalServiceAddress(UuidUtil.fromByteString(x.getUuid()))).collect(Collectors.toList());
+      List<Recipient> recipients = recipientsTable.get(currentMembers);
       Pair<SignalServiceDataMessage.Builder, Group> output;
       if (request.groupName != null) {
         output = groupsV2Manager.updateTitle(request.recipientGroupId, request.groupName);
       } else if (request.members != null) {
         List<ProfileAndCredentialEntry> members = new ArrayList<>();
         for (String member : request.members) {
-          SignalServiceAddress signalServiceAddress = m.getResolver().resolve(new SignalServiceAddress(null, member));
-          ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(signalServiceAddress);
+          Recipient recipient = recipientsTable.get(member, null);
+          ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(recipient);
           members.add(profileAndCredentialEntry);
-          recipients.add(profileAndCredentialEntry.getServiceAddress());
+          recipients.add(recipient);
         }
         output = groupsV2Manager.addMembers(request.recipientGroupId, members);
       } else if (request.avatar != null) {
@@ -421,7 +428,6 @@ public class LegacySocketHandler {
       AccountData accountData = m.getAccountData();
       accountData.groupsV2.update(output.second());
       accountData.save();
-
     } else {
       GroupInfo group = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
       if (groupId.length != group.groupId.length) {
@@ -447,7 +453,8 @@ public class LegacySocketHandler {
         results = m.setExpiration(groupId, request.expiresInSeconds);
       }
     } else {
-      results = m.setExpiration(request.recipientAddress.getSignalServiceAddress(), request.expiresInSeconds);
+      Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
+      results = m.setExpiration(recipient, request.expiresInSeconds);
     }
 
     handleSendMessage(results, request);
@@ -470,7 +477,8 @@ public class LegacySocketHandler {
         return;
       }
 
-      List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList());
+      List<SignalServiceAddress> members = group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList());
+      List<Recipient> recipients = m.getRecipientsTable().get(members);
 
       GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
       Pair<SignalServiceDataMessage.Builder, Group> output = groupsV2Manager.leaveGroup(request.recipientGroupId);
@@ -492,7 +500,7 @@ public class LegacySocketHandler {
   }
 
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, URISyntaxException, NoSuchAccountException, InvalidInputException, SQLException,
-                                                ServerNotFoundException, InvalidProxyException {
+                                                ServerNotFoundException, InvalidProxyException, NoSuchAccountError, UntrustedIdentityException {
     ProvisioningManager pm = new ProvisioningManager(UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify
     if (request.deviceName != null) {
@@ -502,14 +510,13 @@ public class LegacySocketHandler {
       logger.info("Generating linking URI");
       URI uri = pm.getDeviceLinkUri();
       this.reply("linking_uri", new JsonLinkingURI(uri), request.id);
-      String username = pm.finishDeviceLink(deviceName, false);
-      Manager m = Manager.get(username);
-      this.reply("linking_successful", new JsonAccount(m), request.id);
+      UUID account = pm.finishDeviceLink(deviceName, false);
+      Manager m = Manager.get(account);
+      this.reply("linking_successful", new JsonAccount(m.getAccount()), request.id);
     } catch (TimeoutException e) {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
-    } catch (UserAlreadyExists e) {
-      this.reply("linking_error", new JsonStatusMessage(3, "The user " + e.getUsername() + " already exists. Delete \"" + e.getFileName() + "\" and trying again.", request),
-                 request.id);
+    } catch (UserAlreadyExistsException e) {
+      this.reply("linking_error", new JsonStatusMessage(3, e.getMessage(), request), request.id);
     }
   }
 
@@ -526,15 +533,14 @@ public class LegacySocketHandler {
   private void getIdentities(JsonRequest request)
       throws IOException, NoSuchAccountException, SQLException, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
-    SignalServiceAddress address = null;
+    Recipient recipient = null;
     if (request.recipientAddress != null) {
-      address = m.getResolver().resolve(request.recipientAddress.getSignalServiceAddress());
+      recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
     }
-    this.reply("identities", new JsonIdentityList(address, m), request.id);
+    this.reply("identities", new JsonIdentityList(recipient, m), request.id);
   }
 
-  private void trust(JsonRequest request)
-      throws IOException, NoSuchAccountException, SQLException, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void trust(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
     TrustLevel trustLevel = TrustLevel.TRUSTED_VERIFIED;
     if (request.fingerprint == null) {
@@ -550,10 +556,11 @@ public class LegacySocketHandler {
       }
     }
     String fingerprint = request.fingerprint.replaceAll(" ", "");
+    RecipientsTable recipientsTable = m.getRecipientsTable();
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
       fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
-      boolean res = m.trustIdentity(request.recipientAddress.getSignalServiceAddress(), fingerprintBytes, trustLevel);
+      boolean res = m.trustIdentity(recipientsTable.get(request.recipientAddress), fingerprintBytes, trustLevel);
       if (!res) {
         this.reply("trust_failed",
                    new JsonStatusMessage(0, "Failed to set the trust for the fingerprint of this number, make sure the number and the fingerprint are correct.", request),
@@ -562,7 +569,7 @@ public class LegacySocketHandler {
         this.reply("trusted_fingerprint", new JsonStatusMessage(0, "Successfully trusted fingerprint", request), request.id);
       }
     } else if (fingerprint.length() == 60) {
-      boolean res = m.trustIdentitySafetyNumber(request.recipientAddress.getSignalServiceAddress(), fingerprint, trustLevel);
+      boolean res = m.trustIdentitySafetyNumber(recipientsTable.get(request.recipientAddress), fingerprint, trustLevel);
       if (!res) {
         this.reply("trust_failed",
                    new JsonStatusMessage(0, "Failed to set the trust for the safety number of this number, make sure the number and the safety number are correct.", request),
@@ -576,20 +583,22 @@ public class LegacySocketHandler {
     }
   }
 
-  private void syncContacts(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void syncContacts(JsonRequest request)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     Manager m = Manager.get(request.username);
     m.requestSyncContacts();
     this.reply("sync_requested", null, request.id);
   }
 
-  private void syncGroups(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void syncGroups(JsonRequest request)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     Manager m = Manager.get(request.username);
     m.requestSyncGroups();
     this.reply("sync_requested", null, request.id);
   }
 
   private void syncConfiguration(JsonRequest request)
-      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException {
     Manager m = Manager.get(request.username);
     m.requestSyncConfiguration();
     this.reply("sync_requested", null, request.id);
@@ -617,29 +626,28 @@ public class LegacySocketHandler {
   }
 
   private void subscribe(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager.get(request.username); // throws an exception if the user doesn't exist
-    MessageReceiver.subscribe(request.username, new LegacyMessageEncoder(socket, request.username));
-    this.subscribedAccounts.add(request.username);
+    UUID account = AccountsTable.getUUID(request.username);
+    MessageReceiver.subscribe(account, new LegacyMessageEncoder(socket, request.username));
     this.reply("subscribed", null, request.id);
   }
 
-  private void unsubscribe(JsonRequest request) throws IOException {
-    MessageReceiver.unsubscribe(request.username, socket);
-    this.subscribedAccounts.remove(request.username);
-    this.reply("unsubscribed", null, request.id); // TODO: Indicate if we actually unsubscribed or were already unsubscribed, also which username it was for
+  private void unsubscribe(JsonRequest request) throws IOException, SQLException, NoSuchAccountException {
+    UUID account = AccountsTable.getUUID(request.username);
+    MessageReceiver.unsubscribe(account, socket);
+    this.reply("unsubscribed", null, request.id);
   }
 
   private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException, SQLException,
                                                       InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
-    SignalServiceAddress address = m.getResolver().resolve(request.recipientAddress.getSignalServiceAddress());
-    ProfileAndCredentialEntry profileEntry = m.getRecipientProfileKeyCredential(address);
+    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
+    ProfileAndCredentialEntry profileEntry = m.getRecipientProfileKeyCredential(recipient);
     if (profileEntry == null) {
-      this.reply("profile_not_available", new JsonAddress(address), request.id);
+      this.reply("profile_not_available", new JsonAddress(recipient.getAddress()), request.id);
       return;
     }
     m.getAccountData().saveIfNeeded();
-    SignalServiceProfile profile = m.getSignalServiceProfile(address, profileEntry.getProfileKey());
+    SignalServiceProfile profile = m.getSignalServiceProfile(recipient, profileEntry.getProfileKey());
     this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
   }
 
@@ -650,18 +658,21 @@ public class LegacySocketHandler {
     this.reply("profile_set", null, request.id);
   }
 
-  private void react(JsonRequest request) throws IOException, NoSuchAccountException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException,
-                                                 UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  private void react(JsonRequest request) throws IOException, NoSuchAccountException, InvalidRecipientException, UnknownGroupException, SQLException, InvalidKeyException,
+                                                 ServerNotFoundException, InvalidProxyException, NoSendPermissionException {
     Manager manager = Manager.get(request.username);
-
+    RecipientsTable recipientsTable = manager.getRecipientsTable();
+    Recipient recipient = null;
     if (request.recipientAddress != null) {
-      request.recipientAddress.resolve(manager.getResolver());
+      recipient = recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getUUID());
     }
-    request.reaction.resolve(manager.getResolver());
+
+    Recipient targetAuthor = recipientsTable.get(request.reaction.targetAuthor.number, request.reaction.targetAuthor.getUUID());
+    request.reaction.targetAuthor = new io.finn.signald.clientprotocol.v1.JsonAddress(targetAuthor.getAddress());
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(request.reaction.getReaction());
-    handleSendMessage(manager.send(messageBuilder, request.recipientAddress, request.recipientGroupId), request);
+    handleSendMessage(manager.send(messageBuilder, recipient, request.recipientGroupId), request);
   }
 
   private void refreshAccount(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
@@ -685,14 +696,16 @@ public class LegacySocketHandler {
     this.reply("send_results", results, request.id);
   }
 
-  class LegacyMessageEncoder implements MessageEncoder {
+  static class LegacyMessageEncoder implements MessageEncoder {
     private final ObjectMapper mapper = JSONUtil.GetMapper();
     private final Socket socket;
-    private final String account;
+    private final String accountE164;
+    private final UUID accountUUID;
 
-    LegacyMessageEncoder(Socket s, String a) {
-      socket = s;
-      account = a;
+    LegacyMessageEncoder(Socket socket, String accountE164) throws SQLException, NoSuchAccountException {
+      this.socket = socket;
+      this.accountE164 = accountE164;
+      this.accountUUID = AccountsTable.getUUID(accountE164);
     }
 
     private void broadcast(JsonMessageWrapper o) throws IOException {
@@ -705,7 +718,7 @@ public class LegacySocketHandler {
         return;
       }
       try {
-        JsonMessageEnvelope e = new JsonMessageEnvelope(envelope, content, account);
+        JsonMessageEnvelope e = new JsonMessageEnvelope(envelope, content, accountUUID);
         broadcast(new JsonMessageWrapper("message", e));
       } catch (NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
         logger.warn("Unexpected exception while broadcasting incoming message: " + e.toString());
@@ -715,7 +728,7 @@ public class LegacySocketHandler {
     @Override
     public void broadcastReceiveFailure(Throwable exception) throws IOException {
       if (exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, account);
+        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, accountE164);
         broadcast(new JsonMessageWrapper("inbound_identity_failure", message));
       } else {
         broadcast(new JsonMessageWrapper("unreadable_message", null, exception));
@@ -724,12 +737,12 @@ public class LegacySocketHandler {
 
     @Override
     public void broadcastListenStarted() throws IOException {
-      broadcast(new JsonMessageWrapper("listen_started", account, (String)null));
+      broadcast(new JsonMessageWrapper("listen_started", accountE164, (String)null));
     }
 
     @Override
     public void broadcastListenStopped(Throwable exception) throws IOException {
-      broadcast(new JsonMessageWrapper("listener_stopped", account, exception));
+      broadcast(new JsonMessageWrapper("listener_stopped", accountE164, exception));
     }
 
     @Override
@@ -740,6 +753,11 @@ public class LegacySocketHandler {
     @Override
     public boolean equals(Socket s) {
       return socket.equals(s);
+    }
+
+    @Override
+    public boolean equals(MessageEncoder encoder) {
+      return encoder.equals(socket);
     }
 
     private boolean shouldBroadcast(SignalServiceContent content) {

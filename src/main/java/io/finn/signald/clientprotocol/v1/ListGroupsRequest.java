@@ -22,14 +22,12 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
-import java.io.IOException;
-import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 @ProtocolType("list_groups")
 public class ListGroupsRequest implements RequestType<GroupList> {
@@ -37,9 +35,9 @@ public class ListGroupsRequest implements RequestType<GroupList> {
   @Required public String account;
 
   @Override
-  public GroupList run(Request request) throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public GroupList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
     GroupList groups = new GroupList();
-    Manager m = Utils.getManager(account);
+    Manager m = Common.getManager(account);
     AccountData accountData = m.getAccountData();
 
     for (Group g : accountData.groupsV2.groups) {

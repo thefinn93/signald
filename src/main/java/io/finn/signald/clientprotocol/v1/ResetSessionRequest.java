@@ -25,12 +25,9 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
-import java.io.IOException;
-import java.sql.SQLException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
 import java.util.List;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -43,22 +40,16 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
   public Long timestamp;
 
   @Override
-  public SendResponse run(Request request) throws SQLException, IOException, NoSuchAccount, UnknownGroupException, InvalidRecipientException, GroupNotFoundException,
-                                                  NotAGroupMemberException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public SendResponse run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, NoSendPermissionError, UnknownGroupError, RateLimitError {
+    Manager m = Common.getManager(account);
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
     if (timestamp == null) {
       timestamp = System.currentTimeMillis();
     }
     messageBuilder.withTimestamp(timestamp);
-    List<SendMessageResult> results = null;
-    try {
-      results = m.send(messageBuilder, address, null);
-    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
-    }
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null);
     return new SendResponse(results, timestamp);
   }
 }

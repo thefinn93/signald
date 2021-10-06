@@ -24,14 +24,14 @@ import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
-import io.finn.signald.exceptions.InvalidAddressException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("trust")
@@ -57,26 +57,44 @@ public class TrustRequest implements RequestType<Empty> {
   public String trustLevel = "TRUSTED_VERIFIED";
 
   @Override
-  public Empty run(Request request) throws SQLException, IOException, NoSuchAccount, InvalidRequestException, FingerprintVersionMismatchException, FingerprintParsingException,
-                                           UnknownIdentityKey, InvalidAddressException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  public Empty run(Request request) throws InvalidRequestError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, FingerprintVersionMismatchError,
+                                           InvalidBase64Error, UnknownIdentityKeyError, InvalidFingerprintError {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());
     } catch (IllegalArgumentException e) {
-      throw new InvalidRequestException("invalid trust_level: " + trustLevel);
+      throw new InvalidRequestError("invalid trust_level: " + trustLevel);
     }
 
-    Manager m = Utils.getManager(account);
-    SignalServiceAddress addr = m.getResolver().resolve(address.getSignalServiceAddress());
+    Manager m = Common.getManager(account);
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
 
     boolean result;
     if (safetyNumber != null) {
-      result = m.trustIdentitySafetyNumber(addr, safetyNumber, level);
+      try {
+        result = m.trustIdentitySafetyNumber(recipient, safetyNumber, level);
+      } catch (SQLException | InvalidKeyException e) {
+        throw new InternalError("error trusting safety number", e);
+      }
     } else {
-      result = m.trustIdentitySafetyNumber(addr, Base64.decode(qrCodeData), level);
+      byte[] rawQRdata;
+      try {
+        rawQRdata = Base64.decode(qrCodeData);
+      } catch (IOException e) {
+        throw new InvalidBase64Error();
+      }
+      try {
+        result = m.trustIdentitySafetyNumber(recipient, rawQRdata, level);
+      } catch (FingerprintVersionMismatchException e) {
+        throw new FingerprintVersionMismatchError(e);
+      } catch (FingerprintParsingException e) {
+        throw new InvalidFingerprintError(e);
+      } catch (SQLException | InvalidKeyException e) {
+        throw new InternalError("error trusting new safety number", e);
+      }
     }
     if (!result) {
-      throw new UnknownIdentityKey();
+      throw new UnknownIdentityKeyError();
     }
     return new Empty();
   }

@@ -23,8 +23,9 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -46,19 +47,17 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
   @Required public long timestamp;
 
   @Override
-  public SendResponse run(Request request) throws Throwable {
-    Manager m = Utils.getManager(account);
+  public SendResponse run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, NoSendPermissionError, UnknownGroupError, RateLimitError {
+    Manager m = Common.getManager(account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withRemoteDelete(new SignalServiceDataMessage.RemoteDelete(timestamp));
-    List<SendMessageResult> results;
-    try {
-      results = m.send(messageBuilder, address, group);
-    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+    Recipient recipient = null;
+    if (address != null) {
+      recipient = Common.getRecipient(m.getRecipientsTable(), address);
     }
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, group);
     return new SendResponse(results, timestamp);
   }
 }

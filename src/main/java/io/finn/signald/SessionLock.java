@@ -17,22 +17,21 @@
 
 package io.finn.signald;
 
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import org.whispersystems.signalservice.api.SignalSessionLock;
 
 public class SessionLock implements SignalSessionLock {
   private static final ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
-  private UUID account;
+  private Account account;
 
-  public SessionLock(UUID a) { account = a; }
+  public SessionLock(Account a) { account = a; }
 
   @Override
   public Lock acquire() {
-    ReentrantLock lock = null;
+    ReentrantLock lock;
     synchronized (locks) {
-      lock = locks.get(account.toString());
+      lock = locks.get(account.getUUID().toString());
       if (lock == null) {
         lock = new ReentrantLock();
         locks.put(account.toString(), lock);

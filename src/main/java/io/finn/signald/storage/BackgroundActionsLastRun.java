@@ -17,9 +17,7 @@
 
 package io.finn.signald.storage;
 
-import static io.finn.signald.db.AccountDataTable.Key.LAST_PRE_KEY_REFRESH;
-
-import io.finn.signald.db.AccountDataTable;
+import io.finn.signald.Account;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -27,7 +25,7 @@ public class BackgroundActionsLastRun {
   public long lastPreKeyRefresh;
 
   public void migrateToDB(UUID uuid) throws SQLException {
-    AccountDataTable.set(uuid, LAST_PRE_KEY_REFRESH, lastPreKeyRefresh);
+    new Account(uuid).setLastPreKeyRefresh(lastPreKeyRefresh);
     lastPreKeyRefresh = 0;
   }
 }

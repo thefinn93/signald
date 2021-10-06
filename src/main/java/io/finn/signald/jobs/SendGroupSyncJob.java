@@ -23,6 +23,7 @@ import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.GroupInfo;
 import java.io.*;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -39,7 +40,7 @@ public class SendGroupSyncJob implements Job {
 
   public SendGroupSyncJob(Manager manager) { m = manager; }
   @Override
-  public void run() throws IOException, UntrustedIdentityException {
+  public void run() throws IOException, UntrustedIdentityException, SQLException {
     File groupsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
 

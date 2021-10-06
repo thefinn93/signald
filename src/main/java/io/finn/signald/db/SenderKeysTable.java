@@ -27,8 +27,6 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.groups.state.SenderKeyStore;
-import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class SenderKeysTable implements SenderKeyStore {
   private static final Logger logger = LogManager.getLogger();
@@ -51,16 +49,16 @@ public class SenderKeysTable implements SenderKeyStore {
   @Override
   public void storeSenderKey(SignalProtocolAddress address, UUID distributionId, SenderKeyRecord record) {
     try {
-      Pair<Integer, SignalServiceAddress> recipient = recipientsTable.get(address.getName());
+      Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE + "," +
                                                                         DISTRIBUTION_ID + "," + RECORD + ") VALUES (?, ?, ?, ?, ?)");
       statement.setString(1, accountId.toString());
-      statement.setInt(2, recipient.first());
+      statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       statement.setString(4, distributionId.toString());
       statement.setBytes(5, record.serialize());
       statement.executeUpdate();
-    } catch (SQLException e) {
+    } catch (SQLException | IOException e) {
       logger.catching(e);
     }
   }
@@ -68,11 +66,11 @@ public class SenderKeysTable implements SenderKeyStore {
   @Override
   public SenderKeyRecord loadSenderKey(SignalProtocolAddress address, UUID distributionId) {
     try {
-      Pair<Integer, SignalServiceAddress> recipient = recipientsTable.get(address.getName());
+      Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT +
                                                                         " = ? AND " + DEVICE + " = ? AND " + DISTRIBUTION_ID + " = ?");
       statement.setString(1, accountId.toString());
-      statement.setInt(2, recipient.first());
+      statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       statement.setString(4, distributionId.toString());
       ResultSet rows = statement.executeQuery();

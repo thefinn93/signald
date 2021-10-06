@@ -25,10 +25,9 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
@@ -39,10 +38,8 @@ import java.util.stream.Collectors;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("leave_group")
@@ -52,12 +49,17 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("The group to leave") @Required public String groupID;
 
   @Override
-  public GroupInfo run(Request request) throws IOException, NoSuchAccount, NotAGroupMemberException, GroupNotFoundException, VerificationFailedException, SQLException,
-                                               UnknownGroupException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public GroupInfo run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UnknownGroupError, GroupVerificationError {
+    Manager m = Common.getManager(account);
 
     if (groupID.length() == 24) { // legacy (v1) group
-      m.sendQuitGroupMessage(Base64.decode(groupID));
+      try {
+        m.sendQuitGroupMessage(Base64.decode(groupID));
+      } catch (GroupNotFoundException | NotAGroupMemberException e) {
+        throw new UnknownGroupError();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error sending group quit message", e);
+      }
       io.finn.signald.storage.GroupInfo g = m.getAccountData().groupStore.getGroup(groupID);
       return new GroupInfo(g);
     }
@@ -67,25 +69,33 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
     try {
       group = accountData.groupsV2.get(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
     }
     if (group == null) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
     }
 
-    List<SignalServiceAddress> recipients = group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList());
+    List<Recipient> recipients = Common.getRecipient(m.getRecipientsTable(), group.group.getMembersList().stream().map(GroupsUtil::getMemberAddress).collect(Collectors.toList()));
 
     GroupsV2Manager groupsV2Manager = m.getGroupsV2Manager();
     Pair<SignalServiceDataMessage.Builder, Group> output;
     try {
       output = groupsV2Manager.leaveGroup(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
+    } catch (VerificationFailedException e) {
+      throw new GroupVerificationError(e);
+    } catch (IOException e) {
+      throw new InternalError("error leabing group", e);
     }
 
-    m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
+    try {
+      m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
+    } catch (IOException | SQLException e) {
+      throw new InternalError("error sending group v2 message", e);
+    }
     accountData.groupsV2.remove(output.second());
-    accountData.save();
+    Common.saveAccount(accountData);
     return new GroupInfo(output.second().getJsonGroupV2Info(m));
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -48,36 +49,32 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
-import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.util.Base64;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class AccountData {
-  public String username;
-  public String password;
+  @JsonProperty("username") String legacyUsername;
+  @JsonProperty("password") String legacyPassword;
   public JsonAddress address;
-  public int deviceId = SignalServiceAddress.DEFAULT_DEVICE_ID;
-  public String signalingKey;
-  public int preKeyIdOffset;
-  public int nextSignedPreKeyId;
-
-  @JsonProperty public String profileKey;
+  @JsonProperty("deviceId") Integer legacyDeviceId;
+  @JsonProperty("signalingKey") String legacySignalingKey;
+  @JsonProperty("preKeyIdOffset") public int legacyPreKeyIdOffset;
+  @JsonProperty("nextSignedPreKeyId") public int legacyNextSignedPreKeyId;
+  @JsonProperty("backgroundActionsLastRun") public BackgroundActionsLastRun legacyBackgroundActionsLastRun = new BackgroundActionsLastRun();
+  @JsonProperty("lastAccountRefresh") public int legacyLastAccountRefresh;
+  @JsonProperty public String legacyProfileKey;
+  @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
+  @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
 
   public boolean registered;
-
-  @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
-  @JsonIgnore public DatabaseProtocolStore axolotlStore;
   public GroupStore groupStore;
   public GroupsV2Storage groupsV2;
   public ContactStore contactStore;
-  @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
-  public BackgroundActionsLastRun backgroundActionsLastRun = new BackgroundActionsLastRun();
-
-  public int lastAccountRefresh;
   public int version;
 
   @JsonIgnore private boolean deleted = false;
+  @JsonIgnore private Recipient self;
 
   static final int VERSION_IMPORT_CONTACT_PROFILES = 1;
 
@@ -89,13 +86,13 @@ public class AccountData {
 
   AccountData() {}
 
+  // create a new pending account
   public AccountData(String pendingIdentifier) {
-    username = pendingIdentifier;
+    legacyUsername = pendingIdentifier;
     address = new JsonAddress(pendingIdentifier);
-    axolotlStore = new DatabaseProtocolStore(pendingIdentifier);
   }
 
-  public static AccountData load(File storageFile) throws IOException {
+  public static AccountData load(File storageFile) throws IOException, SQLException {
     ObjectMapper mapper = JSONUtil.GetMapper();
 
     // TODO: Add locking mechanism to prevent two instances of signald from using the same account at the same time.
@@ -107,40 +104,36 @@ public class AccountData {
     return a;
   }
 
-  private void initialize() {
-    if (axolotlStore == null) {
-      axolotlStore = new DatabaseProtocolStore(address.getUUID());
+  private void initialize() throws IOException, SQLException {
+    if (address != null && address.uuid != null) {
+      self = new RecipientsTable(address.getUUID()).get(address.getUUID());
     }
   }
 
-  public void setPending() {
-    if (axolotlStore == null) {
-      axolotlStore = new DatabaseProtocolStore(username);
-    }
-  }
-
-  public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, String signalingKey,
-                                                int deviceId, UUID server) throws InvalidInputException, IOException, SQLException {
+  public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, int deviceId,
+                                                UUID server) throws InvalidInputException, IOException, SQLException {
     logger.debug("Creating new local account by linking");
     AccountData a = new AccountData();
     a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
     a.initialize();
-    a.password = password;
 
     if (registration.getProfileKey() != null) {
-      a.profileCredentialStore.storeProfileKey(a.address.getSignalServiceAddress(), registration.getProfileKey());
+      a.profileCredentialStore.storeProfileKey(a.self, registration.getProfileKey());
     } else {
       a.generateProfileKey();
     }
 
-    a.deviceId = deviceId;
-    a.signalingKey = signalingKey;
     a.registered = true;
     a.init();
-    AccountsTable.add(a.address.number, a.address.getUUID(), Manager.getFileName(a.username), server);
-    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, registration.getIdentity().serialize());
-    AccountDataTable.set(a.address.getUUID(), AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationId);
     a.save();
+
+    AccountsTable.add(registration.getNumber(), registration.getUuid(), Manager.getFileName(registration.getNumber()), server);
+    Account account = new Account(registration.getUuid());
+    account.setDeviceId(deviceId);
+    account.setPassword(password);
+    account.setIdentityKeyPair(registration.getIdentity());
+    account.setLocalRegistrationId(registrationId);
+
     return a;
   }
 
@@ -149,9 +142,17 @@ public class AccountData {
     return new RecipientsTable(getUUID());
   }
 
-  private void update() throws IOException {
+  private void update() throws IOException, SQLException {
     if (address == null) {
-      address = new JsonAddress(username);
+      address = new JsonAddress(legacyUsername);
+    } else if (address.uuid != null && self == null) {
+      self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
+      if (profileKeyEntry != null) {
+        if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
+          profileKeyEntry.setAddress(self.getAddress());
+        }
+      }
     }
     if (groupsV2 == null) {
       groupsV2 = new GroupsV2Storage();
@@ -164,13 +165,6 @@ public class AccountData {
       getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
     }
 
-    ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(address.getSignalServiceAddress());
-    if (profileKeyEntry != null) {
-      if (!profileKeyEntry.getServiceAddress().getUuid().isPresent() && address.uuid != null) {
-        profileKeyEntry.setAddress(address.getSignalServiceAddress());
-      }
-    }
-
     if (version < VERSION_IMPORT_CONTACT_PROFILES) {
       // migrate profile keys from contacts to profileCredentialStore
       for (ContactStore.ContactInfo c : contactStore.getContacts()) {
@@ -179,16 +173,17 @@ public class AccountData {
         }
         try {
           ProfileKey p = new ProfileKey(Base64.decode(c.profileKey));
-          profileCredentialStore.storeProfileKey(c.address.getSignalServiceAddress(), p);
+          Recipient recipient = new RecipientsTable(getUUID()).get(c.address);
+          profileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
         }
       }
 
-      if (profileKey != null) {
+      if (legacyProfileKey != null) {
         try {
-          ProfileKey p = new ProfileKey(Base64.decode(profileKey));
-          profileCredentialStore.storeProfileKey(address.getSignalServiceAddress(), p);
+          ProfileKey p = new ProfileKey(Base64.decode(legacyProfileKey));
+          profileCredentialStore.storeProfileKey(self, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating own profile key", e);
         }
@@ -219,26 +214,26 @@ public class AccountData {
     if (!dataPathFile.exists()) {
       dataPathFile.mkdirs();
     }
-    File destination = new File(dataPath + "/.tmp-" + username);
+    File destination = new File(dataPath + "/.tmp-" + legacyUsername);
     logger.debug("Saving account to disk");
     writer.writeValue(destination, this);
     profileCredentialStore.markSaved();
-    destination.renameTo(new File(dataPath + "/" + username));
+    destination.renameTo(new File(dataPath + "/" + legacyUsername));
   }
 
   public void validate() throws InvalidStorageFileException {
-    if (!PhoneNumberFormatter.isValidNumber(this.username, null)) {
-      throw new InvalidStorageFileException("phone number " + this.username + " is not valid");
+    if (!PhoneNumberFormatter.isValidNumber(this.legacyUsername, null)) {
+      throw new InvalidStorageFileException("phone number " + this.legacyUsername + " is not valid");
     }
   }
 
-  public void init() throws InvalidInputException {
-    if (address == null && username != null) {
-      address = new JsonAddress(username);
+  public void init() throws InvalidInputException, IOException, SQLException {
+    if (address == null && legacyUsername != null) {
+      address = new JsonAddress(legacyUsername);
     }
 
-    if (address != null && address.number != null && username == null) {
-      username = address.number;
+    if (address != null && address.number != null && legacyUsername == null) {
+      legacyUsername = address.number;
     }
 
     if (groupStore == null) {
@@ -253,13 +248,16 @@ public class AccountData {
       contactStore = new ContactStore();
     }
 
-    if (address != null) {
-      ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(address.getSignalServiceAddress());
+    if (address != null && address.uuid != null) {
+      if (self == null) {
+        self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      }
+      ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
       if (profileKeyEntry == null) {
         generateProfileKey();
       } else {
-        if (!profileKeyEntry.getServiceAddress().getUuid().isPresent() && address.uuid != null) {
-          profileKeyEntry.setAddress(address.getSignalServiceAddress());
+        if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
+          profileKeyEntry.setAddress(self.getAddress());
         }
       }
     }
@@ -267,10 +265,10 @@ public class AccountData {
 
   // Generates a profile key if one does not exist
   public void generateProfileKey() throws InvalidInputException {
-    if (profileCredentialStore.get(address.getSignalServiceAddress()) == null) {
+    if (profileCredentialStore.get(self.getAddress()) == null) {
       byte[] key = new byte[32];
       RandomUtils.getSecureRandom().nextBytes(key);
-      profileCredentialStore.storeProfileKey(address.getSignalServiceAddress(), new ProfileKey(key));
+      profileCredentialStore.storeProfileKey(self, new ProfileKey(key));
     }
   }
 
@@ -289,13 +287,13 @@ public class AccountData {
       AccountsTable.deleteAccount(getUUID());
     }
 
-    MessageQueueTable.deleteAccount(username);
+    MessageQueueTable.deleteAccount(legacyUsername);
     try {
-      Files.delete(new File(dataPath + "/" + username).toPath());
+      Files.delete(new File(dataPath + "/" + legacyUsername).toPath());
     } catch (NoSuchFileException ignored) {
     }
     try {
-      Files.delete(new File(dataPath + "/" + username + ".d").toPath());
+      Files.delete(new File(dataPath + "/" + legacyUsername + ".d").toPath());
     } catch (NoSuchFileException ignored) {
     }
   }
@@ -312,7 +310,7 @@ public class AccountData {
 
   @JsonIgnore
   public byte[] getSelfUnidentifiedAccessKey() {
-    return UnidentifiedAccess.deriveAccessKeyFrom(profileCredentialStore.get(address.getSignalServiceAddress()).getProfileKey());
+    return UnidentifiedAccess.deriveAccessKeyFrom(profileCredentialStore.get(self.getAddress()).getProfileKey());
   }
 
   @JsonIgnore
@@ -321,11 +319,6 @@ public class AccountData {
       return null;
     }
     return address.getUUID();
-  }
-
-  @JsonIgnore
-  public DynamicCredentialsProvider getCredentialsProvider() {
-    return new DynamicCredentialsProvider(getUUID(), username, password, deviceId);
   }
 
   public String getMigratedGroupId(String groupV1Id) throws IOException {
@@ -340,13 +333,19 @@ public class AccountData {
 
   @JsonIgnore
   public ProfileKey getProfileKey() throws InvalidInputException {
-    ProfileAndCredentialEntry entry = profileCredentialStore.get(address.getSignalServiceAddress());
+    ProfileAndCredentialEntry entry = profileCredentialStore.get(self.getAddress());
     if (entry == null) {
       generateProfileKey();
-      entry = profileCredentialStore.get(address.getSignalServiceAddress());
+      entry = profileCredentialStore.get(self.getAddress());
     }
     return entry.getProfileKey();
   }
+
+  @JsonIgnore
+  public void setProfileKey(ProfileKey profileKey) {
+    profileCredentialStore.storeProfileKey(self, profileKey);
+  }
+
   // Jackson getters and setters
 
   // migrate old threadStore which tracked expiration timers, now moved to groups and contacts
@@ -360,9 +359,14 @@ public class AccountData {
         groupStore.updateGroup(g);
       } else {
         // thread ID does not match a known group. Assume it's a PM
-        ContactStore.ContactInfo c = contactStore.getContact(t.id);
-        c.messageExpirationTime = t.messageExpirationTime;
-        contactStore.updateContact(c);
+        try {
+          Recipient recipient = new RecipientsTable(address.getUUID()).get(t.id);
+          ContactStore.ContactInfo c = contactStore.getContact(recipient);
+          c.messageExpirationTime = t.messageExpirationTime;
+          contactStore.updateContact(c);
+        } catch (IOException | SQLException e) {
+          logger.warn("exception while importing contact: ", e);
+        }
       }
     }
   }
@@ -375,5 +379,47 @@ public class AccountData {
   @JsonIgnore
   public void setUUID(UUID ownUuid) {
     address.uuid = ownUuid.toString();
+  }
+
+  public String getLegacyUsername() { return legacyUsername; }
+
+  public boolean migrateToDB(UUID accountUUID) throws SQLException {
+    boolean needsSave = false;
+    Account account = new Account(accountUUID);
+
+    if (legacyPassword != null) {
+      account.setPassword(legacyPassword);
+      legacyPassword = null;
+      needsSave = true;
+      logger.debug("migrated account password to database");
+    }
+
+    if (legacyDeviceId != null) {
+      account.setDeviceId(legacyDeviceId);
+      legacyDeviceId = null;
+      needsSave = true;
+      logger.debug("migrated local device id to database");
+    } else if (account.getDeviceId() < 0) {
+      account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
+    }
+
+    if (legacyLastAccountRefresh > 0) {
+      account.setLastAccountRefresh(legacyLastAccountRefresh);
+      legacyLastAccountRefresh = -1;
+      needsSave = true;
+    }
+
+    if (legacyNextSignedPreKeyId > -1) {
+      account.setNextSignedPreKeyId(legacyNextSignedPreKeyId);
+      legacyNextSignedPreKeyId = -1;
+      needsSave = true;
+    }
+
+    if (legacyPreKeyIdOffset > 0) {
+      account.setPreKeyIdOffset(legacyPreKeyIdOffset);
+      legacyPreKeyIdOffset = -1;
+      needsSave = true;
+    }
+    return needsSave;
   }
 }

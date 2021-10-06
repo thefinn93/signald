@@ -23,10 +23,18 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
@@ -42,8 +50,9 @@ public class ListContactsRequest implements RequestType<ProfileList> {
   public boolean async;
 
   @Override
-  public ProfileList run(Request request) throws Exception {
-    Manager m = Manager.get(account);
+  public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+    Manager m = Common.getManager(account);
+    RecipientsTable recipientsTable = m.getRecipientsTable();
     ProfileList list = new ProfileList();
     for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
       ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.address.getSignalServiceAddress());
@@ -60,10 +69,13 @@ public class ListContactsRequest implements RequestType<ProfileList> {
           action.run();
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
           logger.warn("error refreshing profile:", e);
+        } catch (SQLException | IOException e) {
+          throw new InternalError("error refreshing preofile", e);
         }
       }
 
-      Profile profile = new Profile(profileEntry.getProfile(), c.address.getSignalServiceAddress(), c);
+      Recipient recipient = Common.getRecipient(recipientsTable, c.address);
+      Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
       profile.populateAvatar(m);
       list.profiles.add(profile);
     }

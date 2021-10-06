@@ -17,6 +17,7 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -29,9 +30,12 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
 public class AccountsTable {
   private static final Logger logger = LogManager.getLogger();
@@ -82,26 +86,33 @@ public class AccountsTable {
 
   public static void importFromJSON(File f) throws IOException, SQLException {
     AccountData accountData = AccountData.load(f);
+    if (accountData.getUUID() == null) {
+      logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
+      return;
+    }
     logger.info("migrating account if needed: " + accountData.address.toRedactedString());
-    add(accountData.username, accountData.getUUID(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
+    add(accountData.getLegacyUsername(), accountData.getUUID(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean needsSave = false;
+    java.util.UUID accountUUID = accountData.getUUID();
     try {
       if (accountData.legacyProtocolStore != null) {
-        accountData.legacyProtocolStore.migrateToDB(accountData.getUUID());
+        accountData.legacyProtocolStore.migrateToDB(accountUUID);
         accountData.legacyProtocolStore = null;
         needsSave = true;
       }
       if (accountData.legacyRecipientStore != null) {
-        accountData.legacyRecipientStore.migrateToDB(accountData.getUUID());
+        accountData.legacyRecipientStore.migrateToDB(accountUUID);
         accountData.legacyRecipientStore = null;
         needsSave = true;
       }
 
-      if (accountData.backgroundActionsLastRun != null) {
-        accountData.backgroundActionsLastRun.migrateToDB(accountData.getUUID());
-        accountData.backgroundActionsLastRun = null;
+      if (accountData.legacyBackgroundActionsLastRun != null) {
+        accountData.legacyBackgroundActionsLastRun.migrateToDB(accountUUID);
+        accountData.legacyBackgroundActionsLastRun = null;
         needsSave = true;
       }
+
+      needsSave = accountData.migrateToDB(accountUUID) || needsSave;
     } finally {
       if (needsSave) {
         accountData.save();
@@ -122,6 +133,32 @@ public class AccountsTable {
     statement.setString(1, address.uuid);
     statement.setString(2, address.number);
     statement.executeUpdate();
+  }
+
+  public static java.util.UUID getUUID(String e164) throws SQLException, NoSuchAccountException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?");
+    statement.setString(1, e164);
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      throw new NoSuchAccountException(e164);
+    }
+    java.util.UUID result = java.util.UUID.fromString(rows.getString(UUID));
+    rows.close();
+    return result;
+  }
+
+  public static String getE164(java.util.UUID uuid) throws SQLException, NoSuchAccountException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
+    statement.setString(1, uuid.toString());
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      throw new NoSuchAccountException(uuid.toString());
+    }
+    String result = rows.getString(E164);
+    rows.close();
+    return result;
   }
 
   public static ServersTable.Server getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
@@ -146,5 +183,44 @@ public class AccountsTable {
     statement.setString(1, server);
     statement.setString(2, account.toString());
     statement.executeUpdate();
+  }
+
+  public static DynamicCredentialsProvider getCredentialsProvider(java.util.UUID accountUUID) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
+    statement.setString(1, accountUUID.toString());
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      throw new AssertionError("account not found");
+    }
+    String e164 = rows.getString(E164);
+    rows.close();
+
+    Account account = new Account(accountUUID);
+
+    return new DynamicCredentialsProvider(accountUUID, e164, account.getPassword(), account.getDeviceId());
+  }
+
+  public static boolean exists(java.util.UUID uuid) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
+    statement.setString(1, uuid.toString());
+    ResultSet rows = statement.executeQuery();
+    if (!rows.next()) {
+      rows.close();
+      return false;
+    }
+    rows.close();
+    return true;
+  }
+
+  public static List<java.util.UUID> getAll() throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME);
+    ResultSet rows = statement.executeQuery();
+    List<java.util.UUID> results = new ArrayList<>();
+    while (rows.next()) {
+      results.add(java.util.UUID.fromString(rows.getString(UUID)));
+    }
+    rows.close();
+    return results;
   }
 }

@@ -45,33 +45,22 @@ clang-format:
   rules:
     - when: on_success
 
-build java8 x86_64-unknown-linux-gnu:
+build:
   extends: .build
-  variables:
-    JAVA_VERSION: 8
+  parallel:
+    matrix:
+      - JAVA_VERSION: [8, 9, 10, 11, 12, 13, 14, 15]
 
 build java11 x86_64-unknown-linux-gnu:
   extends: .build
   variables:
     JAVA_VERSION: 11
 
-build java8 armv7-unknown-linux-gnueabihf:
-  extends: .build
-  variables:
-    JAVA_VERSION: 8
-    SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
-
 build java11 armv7-unknown-linux-gnueabihf:
   extends: .build
   variables:
     JAVA_VERSION: 11
     SIGNALD_TARGET: armv7-unknown-linux-gnueabihf
-
-build java8 aarch64-unknown-linux-gnu:
-  extends: .build
-  variables:
-    JAVA_VERSION: 8
-    SIGNALD_TARGET: aarch64-unknown-linux-gnu
 
 build java11 aarch64-unknown-linux-gnu:
   extends: .build
@@ -235,25 +224,13 @@ unit tests x86:
   before_script:
     - cp tools/log4j2.xml src/main/resources/log4j2.xml
   script:
-    - ./gradlew test --info
+    - ./gradlew test
   rules:
     - when: on_success
-
-integration tests x86:
-  <<: *testserver
-  image: openjdk:11-jdk
-  stage: test
-  needs: []
-  before_script:
-    - cp tools/log4j2.xml src/main/resources/log4j2.xml
-  script:
-    - ./gradlew integrationTest --info
   artifacts:
+    when: always
     reports:
-      junit: build/test-results/integrationTest/TEST-*.xml
-    expire_in: 30 days
-  rules:
-    - when: on_success
+      junit: build/test-results/test/**/TEST-*.xml
 
 unit tests aarch64-unknown-linux-gnu:
   <<: *testserver
@@ -265,49 +242,6 @@ unit tests aarch64-unknown-linux-gnu:
     - apt update && apt install -y make openjdk-11-jdk-headless
   script:
     - ./gradlew test
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-integration tests aarch64-unknown-linux-gnu:
-  <<: *testserver
-  image: debian
-  stage: test
-  tags: [arm-builder]
-  needs: []
-  before_script:
-    - apt update && apt install -y make openjdk-11-jdk-headless
-  script:
-    - ./gradlew integrationTest --info
-  artifacts:
-    reports:
-      junit: build/test-results/integrationTest/TEST-*.xml
-    expire_in: 30 days
-  rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
-
-integration tests x86_64-apple-darwin:
-  <<: *testserver
-  image: debian
-  stage: test
-  tags: [darwin-builder]
-  needs: []
-  before_script:
-    - apt update && apt install -y make openjdk-11-jdk-headless
-  script:
-    - export PATH=/usr/local/opt/openjdk/bin:$PATH # work around issue with brew installed java
-    - ./gradlew integrationTest --info
-  after_script:
-    - rm -rf ~/.config/signald
-  artifacts:
-    reports:
-      junit: build/test-results/integrationTest/TEST-*.xml
-    expire_in: 30 days
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -359,6 +293,8 @@ validate protocol:
     paths:
       - protocol.json
     expire_in: 1 year
+    reports:
+      metrics: metrics.txt
   rules:
     - when: on_success
 

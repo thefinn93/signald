@@ -23,7 +23,6 @@ import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.storage.AddressResolver;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -128,18 +127,6 @@ public class JsonGroupV2Info {
       }
     } else {
       requestingMembers = null;
-    }
-  }
-
-  public void resolveMembers(AddressResolver resolver) {
-    if (members != null) {
-      members = members.stream().map(e -> e.resolve(resolver)).collect(Collectors.toList());
-    }
-    if (pendingMembers != null) {
-      pendingMembers = pendingMembers.stream().map(e -> e.resolve(resolver)).collect(Collectors.toList());
-    }
-    if (requestingMembers != null) {
-      requestingMembers = requestingMembers.stream().map(e -> e.resolve(resolver)).collect(Collectors.toList());
     }
   }
 

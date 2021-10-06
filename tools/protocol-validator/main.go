@@ -11,15 +11,20 @@ import (
 var protocol Protocol
 
 type checkOutput struct {
-	warnings []string
-	failures []string
+	id     string
+	String string
 }
 
-type check func() checkOutput
+type checkOutputs struct {
+	warnings []checkOutput
+	failures []checkOutput
+}
 
-type fieldCheck func(string, string, string, DataType) checkOutput
+type check func() checkOutputs
 
-var checks = []check{checkRequestResponseTypesExist, checkMissingCriticalFields}
+type fieldCheck func(string, string, string, DataType) checkOutputs
+
+var checks = []check{checkRequestResponseTypesExist, checkMissingCriticalFields, checkErrorsExist}
 
 var fieldChecks = []fieldCheck{checkTypeFieldCasing, checkCrossVersionReferences}
 
@@ -29,7 +34,7 @@ func main() {
 		fmt.Println(aurora.Red("error parsing stdin"))
 		panic(err)
 	}
-	combinedOutput := checkOutput{}
+	combinedOutput := checkOutputs{}
 	for _, c := range checks {
 		result := c()
 		combinedOutput.failures = append(combinedOutput.failures, result.failures...)
@@ -51,6 +56,8 @@ func main() {
 	for _, warn := range combinedOutput.warnings {
 		fmt.Println(aurora.Yellow(warn))
 	}
+
+	recordMetrics(combinedOutput)
 
 	if len(combinedOutput.failures) > 0 {
 		os.Exit(1)

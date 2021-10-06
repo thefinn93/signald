@@ -1,3 +1,15 @@
+signald (0.15.0) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.15.0
+  * several new protocol features are available, detailed in the full release notes
+  * default socket file location is now `$XDG_RUNTIME_DIR/signald/signald.sock`. The systemd service has been updated to
+     keep the socket in original location, so most users will be unaffected
+  * libsignal has been updated, which should fix incompatibilities caused by recent changes to the Signal server
+  * a prometheus metrics server is now available with `--metrics`
+  * intent to drop java 8 support announced, java 8 users should see a warning in the logs on signald startup
+
+ -- Finn <finn@janky.solutions>  Sat, 02 Oct 2021 16:20:00 -0700
+
 signald (0.14.0) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.14.0

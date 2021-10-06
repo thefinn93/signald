@@ -25,12 +25,10 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 
 @Doc("Request other devices on the account send us their group list, syncable config and contact list.")
@@ -43,23 +41,46 @@ public class RequestSyncRequest implements RequestType<Empty> {
   @Doc("request block list sync (default true)") public boolean blocked = true;
 
   @Override
-  public Empty run(Request request)
-      throws SQLException, IOException, NoSuchAccount, UntrustedIdentityException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UntrustedIdentityError {
+    Manager m = Common.getManager(account);
     if (groups) {
-      m.requestSyncGroups();
+      try {
+        m.requestSyncGroups();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error requesting group sync", e);
+      } catch (UntrustedIdentityException e) {
+        throw new UntrustedIdentityError(m.getUUID(), e);
+      }
     }
 
     if (configuration) {
-      m.requestSyncConfiguration();
+      try {
+        m.requestSyncConfiguration();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error requesting config sync", e);
+      } catch (UntrustedIdentityException e) {
+        throw new UntrustedIdentityError(m.getUUID(), e);
+      }
     }
 
     if (contacts) {
-      m.requestSyncConfiguration();
+      try {
+        m.requestSyncContacts();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error requesting contacts sync", e);
+      } catch (UntrustedIdentityException e) {
+        throw new UntrustedIdentityError(m.getUUID(), e);
+      }
     }
 
     if (blocked) {
-      m.requestSyncBlocked();
+      try {
+        m.requestSyncBlocked();
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error requesting blocklist sync", e);
+      } catch (UntrustedIdentityException e) {
+        throw new UntrustedIdentityError(m.getUUID(), e);
+      }
     }
 
     return new Empty();

@@ -20,13 +20,14 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
 import java.io.File;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.util.Base64;
 
@@ -60,7 +61,7 @@ public class Profile {
     }
   }
 
-  public Profile(SignalProfile profile, SignalServiceAddress a, ContactStore.ContactInfo contact) {
+  public Profile(SignalProfile profile, Recipient recipient, ContactStore.ContactInfo contact) {
     this(contact);
 
     if (profile != null) {
@@ -80,9 +81,9 @@ public class Profile {
     }
 
     if (address == null) {
-      address = new JsonAddress(a);
+      address = new JsonAddress(recipient);
     } else {
-      address.update(a);
+      address.update(recipient.getAddress());
     }
 
     if (profileName != null && name == null) {
@@ -90,8 +91,9 @@ public class Profile {
     }
   }
 
-  public void populateAvatar(Manager m) {
-    File f = m.getProfileAvatarFile(address.getSignalServiceAddress());
+  public void populateAvatar(Manager m) throws InternalError {
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+    File f = m.getProfileAvatarFile(recipient);
     if (f == null || !f.exists()) {
       return;
     }

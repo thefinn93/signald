@@ -23,6 +23,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -32,12 +33,12 @@ public class JsonPreview {
   public String title;
   public JsonAttachment attachment;
 
-  public JsonPreview(SignalServiceDataMessage.Preview preview, String username)
+  public JsonPreview(SignalServiceDataMessage.Preview preview, UUID accountUUID)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     url = preview.getUrl();
     title = preview.getTitle();
     if (preview.getImage().isPresent()) {
-      attachment = new JsonAttachment(preview.getImage().get(), username);
+      attachment = new JsonAttachment(preview.getImage().get(), accountUUID);
     }
   }
 }

@@ -22,16 +22,18 @@ import io.finn.signald.JsonReceiptMessage;
 import io.finn.signald.JsonTypingMessage;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import java.io.IOException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import org.whispersystems.libsignal.InvalidKeyException;
+import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -56,29 +58,29 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    this.username = username;
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, UUID accountUUID)
+      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
+    try {
+      this.username = AccountsTable.getE164(accountUUID);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new InternalError("error looking up username for envelope", e);
+    }
 
     if (envelope.hasServerGuid()) {
       uuid = envelope.getServerGuid();
     }
 
-    Manager m = Utils.getManager(username);
-    if (envelope.hasSource()) {
-      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+    Manager m = Common.getManager(accountUUID);
+    if (!envelope.isUnidentifiedSender()) {
+      source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), envelope.getSourceAddress()));
     } else if (c != null) {
-      source = new JsonAddress(m.getResolver().resolve(c.getSender()));
+      source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), (c.getSender())));
     }
 
     if (envelope.hasSourceDevice()) {
       sourceDevice = envelope.getSourceDevice();
-    }
-
-    if (source != null) {
-      if (source.getSignalServiceAddress().getRelay().isPresent()) {
-        relay = source.getSignalServiceAddress().getRelay().get();
-      }
     }
 
     type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
@@ -91,11 +93,11 @@ public class JsonMessageEnvelope {
 
     if (c != null) {
       if (c.getDataMessage().isPresent()) {
-        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), username);
+        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), accountUUID);
       }
 
       if (c.getSyncMessage().isPresent()) {
-        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), username);
+        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), accountUUID);
       }
 
       if (c.getCallMessage().isPresent()) {

@@ -18,6 +18,7 @@ type Type struct {
 	Request    bool `json:"-"`
 	Doc        string
 	Deprecated bool
+	Error      bool
 }
 
 type DataType struct {
@@ -35,4 +36,19 @@ type Action struct {
 	Response      string
 	Doc           string
 	Deprecated    bool
+	Errors        []Error
+}
+
+type Error struct {
+	Name string
+	Doc  string
+}
+
+func (a Action) HasError(e string) bool {
+	for _, candidate := range a.Errors {
+		if candidate.Name == e {
+			return true
+		}
+	}
+	return false
 }

@@ -19,10 +19,10 @@ package io.finn.signald.clientprotocol.v1.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ProtocolIgnore;
 
-@Doc("a warpper for exceptions that are not in the documented protocol")
+/* ExceptionWrapper is an Exception that can be JSON encoded nicely
+ */
 public class ExceptionWrapper extends Exception {
   private boolean unexpected = false;
 

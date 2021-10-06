@@ -18,14 +18,13 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import java.io.IOException;
-import java.sql.SQLException;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.util.HashMap;
 import java.util.Map;
-import org.whispersystems.libsignal.InvalidKeyException;
+import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -37,21 +36,18 @@ public class JsonSentTranscriptMessage {
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, String username)
-      throws IOException, NoSuchAccount, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, UUID accountUUID) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }
     timestamp = s.getTimestamp();
     expirationStartTimestamp = s.getExpirationStartTimestamp();
-    message = new JsonDataMessage(s.getMessage(), username);
+    message = new JsonDataMessage(s.getMessage(), accountUUID);
     for (SignalServiceAddress r : s.getRecipients()) {
       if (r.getNumber().isPresent()) {
         unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
       }
-      if (r.getUuid().isPresent()) {
-        unidentifiedStatus.put(r.getUuid().get().toString(), s.isUnidentified(r.getUuid().get()));
-      }
+      unidentifiedStatus.put(r.getUuid().toString(), s.isUnidentified(r.getUuid()));
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }

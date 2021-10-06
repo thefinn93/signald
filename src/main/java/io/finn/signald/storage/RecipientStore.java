@@ -50,7 +50,11 @@ public class RecipientStore {
     Iterator<JsonAddress> iterator = addresses.iterator();
     while (iterator.hasNext()) {
       JsonAddress entry = iterator.next();
-      table.get(entry.getSignalServiceAddress());
+      try {
+        table.get(entry.number, entry.getUUID());
+      } catch (IOException e) {
+        logger.warn("error migrating recipient to db: ", e);
+      }
       iterator.remove();
     }
   }

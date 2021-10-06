@@ -18,23 +18,33 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class AllIdentityKeyList {
   @JsonProperty("identity_keys") List<IdentityKeyList> identityKeys;
 
-  public AllIdentityKeyList(SignalServiceAddress ownAddress, org.whispersystems.libsignal.IdentityKey ownKey, List<IdentityKeysTable.IdentityKeyRow> entireIdentityDB) {
+  public AllIdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, List<IdentityKeysTable.IdentityKeyRow> entireIdentityDB) throws InternalError {
     Map<String, IdentityKeyList> keyMap = new HashMap<>();
-    for (IdentityKeysTable.IdentityKeyRow row : entireIdentityDB) {
-      if (!keyMap.containsKey(row.getAddress().toString())) {
-        keyMap.put(row.getAddress().toString(), new IdentityKeyList(ownAddress, ownKey, row.getAddress(), null));
+    RecipientsTable recipientsTable = self.getTable();
+    try {
+      for (IdentityKeysTable.IdentityKeyRow row : entireIdentityDB) {
+        if (!keyMap.containsKey(row.getAddress().toString())) {
+          Recipient recipient = recipientsTable.get(row.getAddress());
+          keyMap.put(row.getAddress().toString(), new IdentityKeyList(self, ownKey, recipient, null));
+        }
+        keyMap.get(row.getAddress().toString()).addKey(row);
       }
-      keyMap.get(row.getAddress().toString()).addKey(row);
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error looking up identity keys", e);
     }
     identityKeys = new ArrayList<>(keyMap.values());
   }

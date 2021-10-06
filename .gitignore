@@ -33,3 +33,5 @@ gradle-app.setting
 !gradle-wrapper.jar
 
 .idea/
+protocol.json
+metrics.txt

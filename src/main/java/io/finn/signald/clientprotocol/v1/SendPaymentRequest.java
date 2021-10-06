@@ -24,17 +24,13 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.NoSendPermissionException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
@@ -51,8 +47,10 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request)
-      throws IOException, SQLException, NoSuchAccount, InvalidRecipientException, UnknownGroupException, InvalidProxyException, InvalidKeyException, ServerNotFoundException {
-    Manager m = Utils.getManager(account);
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError, UnknownGroupError, NoSendPermissionError {
+    Manager m = Common.getManager(account);
+
+    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
 
     if (when == null) {
       when = System.currentTimeMillis();
@@ -64,11 +62,15 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
 
     List<SendMessageResult> results;
     try {
-      results = m.send(messageBuilder, address, null);
+      results = m.send(messageBuilder, recipient, null);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException | GroupNotFoundException | NotAGroupMemberException e) {
-      throw new UnknownGroupException();
+      throw new InvalidRecipientError();
+    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
+      throw new UnknownGroupError();
+    } catch (NoSendPermissionException e) {
+      throw new NoSendPermissionError();
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error sending message", e);
     }
     return new SendResponse(results, when);
   }

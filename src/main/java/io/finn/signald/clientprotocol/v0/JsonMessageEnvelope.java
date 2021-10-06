@@ -22,7 +22,9 @@ import io.finn.signald.JsonReceiptMessage;
 import io.finn.signald.JsonTypingMessage;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -32,6 +34,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
@@ -44,7 +47,7 @@ public class JsonMessageEnvelope {
   public JsonAddress source;
   public int sourceDevice;
   public String type;
-  public String relay;
+  @Doc("this field is no longer available and will never be populated") public String relay;
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   public String timestampISO;
   public long serverTimestamp; // newer versions of signal call this serverReceivedTimestamp
@@ -58,29 +61,23 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, String username)
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, UUID accountUUID)
       throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    this.username = username;
+    this.username = AccountsTable.getE164(accountUUID);
 
     if (envelope.hasServerGuid()) {
       uuid = envelope.getServerGuid();
     }
 
-    Manager m = Manager.get(username);
-    if (envelope.hasSource()) {
-      source = new JsonAddress(m.getResolver().resolve(envelope.getSourceAddress()));
+    Manager m = Manager.get(accountUUID);
+    if (!envelope.isUnidentifiedSender()) {
+      source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()).getAddress());
     } else if (c != null) {
-      source = new JsonAddress(m.getResolver().resolve(c.getSender()));
+      source = new JsonAddress(m.getRecipientsTable().get(c.getSender()).getAddress());
     }
 
     if (envelope.hasSourceDevice()) {
       sourceDevice = envelope.getSourceDevice();
-    }
-
-    if (source != null) {
-      if (source.getSignalServiceAddress().getRelay().isPresent()) {
-        relay = source.getSignalServiceAddress().getRelay().get();
-      }
     }
 
     type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
@@ -93,11 +90,11 @@ public class JsonMessageEnvelope {
 
     if (c != null) {
       if (c.getDataMessage().isPresent()) {
-        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), username);
+        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), accountUUID);
       }
 
       if (c.getSyncMessage().isPresent()) {
-        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), username);
+        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), accountUUID);
       }
 
       if (c.getCallMessage().isPresent()) {

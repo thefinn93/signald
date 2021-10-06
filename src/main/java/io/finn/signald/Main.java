@@ -22,6 +22,7 @@ import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.Database;
+import io.finn.signald.db.ServersTable;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.JSONUtil;
@@ -58,6 +59,7 @@ import picocli.CommandLine.Option;
 
 @Command(name = BuildConfig.NAME, mixinStandardHelpOptions = true, version = BuildConfig.NAME + " " + BuildConfig.VERSION)
 public class Main implements Runnable {
+  private static final String SYSTEM_SOCKET_PATH = "/var/run/signald/signald.sock";
 
   public static void main(String[] args) {
     int exitCode = new CommandLine(new Main()).execute(args);
@@ -66,22 +68,29 @@ public class Main implements Runnable {
 
   @Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting.") private boolean verbose = false;
 
-  @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = "/var/run/signald/signald.sock";
+  @Option(names = {"-s", "--socket"}, description = "The path to the socket file") private String socket_path = null;
 
   @Option(names = {"-u", "--user-socket"},
-          description = "put the socket in the user runtime directory ($XDG_RUNTIME_DIR). Currently disabled by default. Will be enabled by default in 0.15.0")
+          description = "put the socket in the user runtime directory ($XDG_RUNTIME_DIR), the default unless --socket or --system-socket is specified")
   private boolean user_socket = false;
+
+  @Option(names = {"--system-socket"}, description = "make the socket file accessible system-wide") private boolean system_socket = false;
 
   @Option(names = {"-d", "--data"}, description = "Data storage location") private String data_path = System.getProperty("user.home") + "/.config/signald";
 
   @Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db. Only sqlite is supported at this time.")
   private String db;
 
-  @Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit") private boolean dumpProtocol = false;
+  @Option(names = {"--dump-protocol"},
+          description = "print a machine-readable description of the client protocol to stdout and exit (https://signald.org/articles/protocol/documentation/)")
+  private boolean dumpProtocol = false;
 
   @Option(names = {"-m", "--metrics"}, description = "record and expose metrics in prometheus format") private boolean metrics = false;
 
-  @Option(names = {"--metrics-http-port"}, description = "metrics http listener port. Default is 9595") private int metricsHttpPort = 9595;
+  @Option(names = {"--metrics-http-port"}, description = "metrics http listener port", defaultValue = "9595", paramLabel = "port") private int metricsHttpPort;
+
+  @Option(names = {"--log-http-requests"}, description = "log all requests send to the server. this is used for debugging but generally should not be used otherwise.")
+  private boolean logHttpRequests = false;
 
   private static final Logger logger = LogManager.getLogger();
 
@@ -93,14 +102,27 @@ public class Main implements Runnable {
 
     logger.debug("Starting " + BuildConfig.NAME + " " + BuildConfig.VERSION);
 
+    if (getJavaVersion() < 11) {
+      logger.warn("Support for this version of Java may be going away. Please update your java version. For more information see https://gitlab.com/signald/signald/-/issues/219");
+    }
+
     if (dumpProtocol) {
       try {
         System.out.println(JSONUtil.GetMapper().writeValueAsString(ProtocolRequest.GetProtocolDocumentation()));
         System.exit(0);
-      } catch (JsonProcessingException e) {
+      } catch (JsonProcessingException | NoSuchMethodException e) {
         logger.catching(e);
+        System.exit(1);
       }
-      System.exit(1);
+    }
+
+    String enableHttpLogging = System.getenv("SIGNALD_HTTP_LOGGING");
+    if (enableHttpLogging != null) {
+      logHttpRequests = Boolean.parseBoolean(enableHttpLogging);
+    }
+
+    if (logHttpRequests) {
+      ServersTable.setLogHttpRequests(true);
     }
 
     String enableMetrics = System.getenv("SIGNALD_ENABLE_METRICS");
@@ -169,17 +191,19 @@ public class Main implements Runnable {
 
       new Thread(new BackgroundJobRunnerThread()).start();
 
-      String userDir = System.getenv("XDG_RUNTIME_DIR");
+      if (socket_path == null) {
+        // will be null if the environment variable is unset, in which case we will fall back to system mode
+        String userDir = System.getenv("XDG_RUNTIME_DIR");
+        if (userDir == null || system_socket) {
+          socket_path = SYSTEM_SOCKET_PATH;
+        } else {
+          if (!user_socket) {
+            logger.info("the default socket path has changed. For previous behavior, use --system-socket. See https://signald.org/articles/protocol/#socket-file-location");
+          }
 
-      if (user_socket) {
-        if (userDir != null) {
           Path userSocketDir = Paths.get(userDir, "signald");
           Files.createDirectories(userSocketDir);
           socket_path = Paths.get(userSocketDir.toString(), "signald.sock").toString();
-        }
-      } else if (socket_path.equals("/var/run/signald/signald.sock")) {
-        if (userDir != null) {
-          logger.info("the default socket path is changing in an upcoming release. See https://signald.org/articles/socket-protocol/#socket-file-location");
         }
       }
 
@@ -197,11 +221,6 @@ public class Main implements Runnable {
       } catch (SocketException e) {
         logger.fatal("Error creating socket at " + socketFile + ": " + e.getMessage());
         System.exit(1);
-      }
-
-      File[] users = new File(data_path + "/data").listFiles();
-      if (users == null) {
-        logger.warn("No users are currently defined, you'll need to register or link to your existing signal account");
       }
 
       SignalProtocolLoggerProvider.setProvider(new ProtocolLogger());
@@ -257,5 +276,18 @@ public class Main implements Runnable {
       } catch (InterruptedException ignored) {
       }
     }
+  }
+
+  private static int getJavaVersion() {
+    String version = System.getProperty("java.version");
+    if (version.startsWith("1.")) {
+      version = version.substring(2, 3);
+    } else {
+      int dot = version.indexOf(".");
+      if (dot != -1) {
+        version = version.substring(0, dot);
+      }
+    }
+    return Integer.parseInt(version);
   }
 }

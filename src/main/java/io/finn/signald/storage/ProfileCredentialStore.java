@@ -18,6 +18,7 @@
 package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.finn.signald.db.Recipient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -32,7 +33,7 @@ public class ProfileCredentialStore {
 
   @JsonIgnore
   public ProfileKeyCredential getProfileKeyCredential(UUID uuid) {
-    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(Optional.of(uuid), Optional.absent()));
+    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(uuid, Optional.absent()));
     if (entry != null) {
       return entry.getProfileKeyCredential();
     }
@@ -40,8 +41,21 @@ public class ProfileCredentialStore {
   }
 
   @JsonIgnore
+  public ProfileAndCredentialEntry get(Recipient recipient) {
+    SignalServiceAddress address = recipient.getAddress();
+    for (ProfileAndCredentialEntry entry : profiles) {
+      if (entry.getServiceAddress().matches(address)) {
+        return entry;
+      }
+    }
+    return null;
+  }
+  @JsonIgnore
   public ProfileAndCredentialEntry get(SignalServiceAddress address) {
     for (ProfileAndCredentialEntry entry : profiles) {
+      if (entry.getServiceAddress() == null) {
+        continue;
+      }
       if (entry.getServiceAddress().matches(address)) {
         return entry;
       }
@@ -56,10 +70,10 @@ public class ProfileCredentialStore {
 
   public void markSaved() { unsaved = false; }
 
-  public ProfileAndCredentialEntry storeProfileKey(SignalServiceAddress address, ProfileKey profileKey) {
-    ProfileAndCredentialEntry newEntry = new ProfileAndCredentialEntry(address, profileKey, 0, null, null, ProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
+  public ProfileAndCredentialEntry storeProfileKey(Recipient recipient, ProfileKey profileKey) {
+    ProfileAndCredentialEntry newEntry = new ProfileAndCredentialEntry(recipient.getAddress(), profileKey, 0, null, null, ProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
     for (int i = 0; i < profiles.size(); i++) {
-      if (profiles.get(i).getServiceAddress().matches(address)) {
+      if (profiles.get(i).getServiceAddress().matches(recipient.getAddress())) {
         if (!profiles.get(i).getProfileKey().equals(profileKey)) {
           profiles.set(i, newEntry);
           unsaved = true;

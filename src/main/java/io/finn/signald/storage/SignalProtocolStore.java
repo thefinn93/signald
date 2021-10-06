@@ -19,7 +19,6 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.PreKeysTable;
 import io.finn.signald.db.SessionsTable;
@@ -27,7 +26,6 @@ import io.finn.signald.db.SignedPreKeysTable;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.whispersystems.libsignal.IdentityKeyPair;
 
 public class SignalProtocolStore {
   @JsonIgnore public PreKeysTable preKeys;
@@ -41,12 +39,6 @@ public class SignalProtocolStore {
   @JsonProperty("identityKeyStore") public IdentityKeyStore legacyIdentityKeyStore;
 
   public SignalProtocolStore() {}
-
-  public SignalProtocolStore(IdentityKeyPair identityKey, int registrationId, AddressResolver resolver, UUID u) throws SQLException, IOException, NoSuchAccount {
-    legacySessionStore = new SessionStore(resolver);
-    legacySignedPreKeyStore = new SignedPreKeyStore();
-    legacyIdentityKeyStore = new IdentityKeyStore(identityKey, registrationId, resolver);
-  }
 
   public void setUUID(UUID u) {
     if (preKeys == null) {
@@ -63,7 +55,7 @@ public class SignalProtocolStore {
     }
   }
 
-  public void migrateToDB(UUID u) throws SQLException {
+  public void migrateToDB(UUID u) throws SQLException, IOException {
     legacyPreKeys.migrateToDB(u);
     legacySessionStore.migrateToDB(u);
     legacySignedPreKeyStore.migrateToDB(u);

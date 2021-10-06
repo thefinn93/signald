@@ -36,4 +36,10 @@ public class IdentityKey {
     safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();
     qrCodeData = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
   }
+
+  public IdentityKey(String trustLevel, Fingerprint fingerprint) {
+    this.trustLevel = trustLevel;
+    safetyNumber = fingerprint.getDisplayableFingerprint().getDisplayText();
+    qrCodeData = Base64.encodeBytes(fingerprint.getScannableFingerprint().getSerialized());
+  }
 }

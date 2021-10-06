@@ -20,9 +20,10 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -33,14 +34,11 @@ import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
-public class IdentityKeyStore implements org.whispersystems.libsignal.state.IdentityKeyStore {
+public class IdentityKeyStore {
   private static final Logger logger = LogManager.getLogger();
-
-  private AddressResolver resolver;
 
   public List<IdentityKeyStore.Identity> trustedKeys = new ArrayList<>();
   IdentityKeyPair identityKeyPair;
@@ -48,37 +46,12 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
   public IdentityKeyStore() {}
 
-  public IdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId, AddressResolver resolver) {
+  public IdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId) {
     this.identityKeyPair = identityKeyPair;
     this.registrationId = localRegistrationId;
-    this.resolver = resolver;
   }
 
-  public void setResolver(final AddressResolver resolver) { this.resolver = resolver; }
-
-  @Override
-  @JsonIgnore
-  public IdentityKeyPair getIdentityKeyPair() {
-    return identityKeyPair;
-  }
-
-  @Override
-  @JsonIgnore
-  public int getLocalRegistrationId() {
-    return registrationId;
-  }
-
-  @Override
-  public boolean saveIdentity(SignalProtocolAddress protocolAddress, IdentityKey identityKey) {
-    return saveIdentity(protocolAddress.getName(), identityKey, TrustLevel.TRUSTED_UNVERIFIED);
-  }
-
-  public boolean saveIdentity(String identifier, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(resolver.resolve(identifier), identityKey, trustLevel); }
   public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(address, identityKey, trustLevel, null); }
-
-  private List<Identity> getKeys(SignalProtocolAddress address) { return getKeys(address.getName()); }
-
-  private List<Identity> getKeys(String identifier) { return getKeys(resolver.resolve(identifier)); }
 
   private List<Identity> getKeys(SignalServiceAddress other) {
     List<Identity> matches = new ArrayList<>();
@@ -122,43 +95,6 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     return false;
   }
 
-  @Override
-  public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
-    // TODO implement possibility for different handling of incoming/outgoing trust decisions
-    List<IdentityKeyStore.Identity> identities = getKeys(address);
-    if (identities.size() == 0) {
-      // Trust on first use
-      return true;
-    }
-
-    for (IdentityKeyStore.Identity id : identities) {
-      if (id.identityKey.equals(identityKey)) {
-        return id.isTrusted();
-      }
-    }
-
-    return false;
-  }
-
-  @Override
-  public IdentityKey getIdentity(SignalProtocolAddress address) {
-    List<IdentityKeyStore.Identity> identities = getKeys(address);
-    if (identities.size() == 0) {
-      return null;
-    }
-
-    long maxDate = 0;
-    IdentityKeyStore.Identity maxIdentity = null;
-    for (IdentityKeyStore.Identity id : identities) {
-      final long time = id.getDateAdded().getTime();
-      if (maxIdentity == null || maxDate <= time) {
-        maxDate = time;
-        maxIdentity = id;
-      }
-    }
-    return maxIdentity.getKey();
-  }
-
   @JsonIgnore
   public List<Identity> getIdentities() {
     return trustedKeys;
@@ -166,42 +102,36 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
 
   public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
 
-  public void migrateToDB(UUID u) throws SQLException {
+  public void migrateToDB(UUID u) throws SQLException, IOException {
     IdentityKeysTable table = new IdentityKeysTable(u);
+    Account account = new Account(u);
     logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
     Iterator<Identity> iterator = trustedKeys.iterator();
+    RecipientsTable recipientsTable = account.getRecipients();
     while (iterator.hasNext()) {
       Identity entry = iterator.next();
       if (entry.identityKey == null) {
         continue;
       }
-      table.saveIdentity(entry.address.getSignalServiceAddress(), entry.identityKey, entry.trustLevel, entry.added);
+      table.saveIdentity(recipientsTable.get(entry.address), entry.identityKey, entry.trustLevel, entry.added);
       iterator.remove();
     }
 
     if (identityKeyPair != null) {
-      AccountDataTable.set(u, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+      account.setIdentityKeyPair(identityKeyPair);
       identityKeyPair = null;
     }
 
     if (registrationId > 0) {
-      AccountDataTable.set(u, AccountDataTable.Key.LOCAL_REGISTRATION_ID, registrationId);
+      account.setLocalRegistrationId(registrationId);
       registrationId = 0;
     }
   }
 
   // Getters and setters for Jackson
   @JsonSetter("identityKey")
-  public void setIdentityKey(String identityKey) throws IOException, InvalidKeyException {
+  public void setIdentityKey(String identityKey) throws IOException {
     identityKeyPair = new IdentityKeyPair(org.whispersystems.util.Base64.decode(identityKey));
-  }
-
-  @JsonGetter("identityKey")
-  public String getIdentityKeyPairJSON() {
-    if (identityKeyPair == null) {
-      return null;
-    }
-    return org.whispersystems.util.Base64.encodeBytes(identityKeyPair.serialize());
   }
 
   public static class Identity {
@@ -278,7 +208,7 @@ public class IdentityKeyStore implements org.whispersystems.libsignal.state.Iden
     @JsonGetter("trust")
     public String getTrustLevelString() {
       if (trustLevel == null) {
-        return trustLevel.TRUSTED_UNVERIFIED.name();
+        return TrustLevel.TRUSTED_UNVERIFIED.name();
       }
       return trustLevel.name();
     }

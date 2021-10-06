@@ -21,7 +21,7 @@ import static org.signal.storageservice.protos.groups.AccessControl.AccessRequir
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.storage.Group;
 import io.finn.signald.storage.GroupsV2Storage;
@@ -59,7 +59,6 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.ConflictException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -134,7 +133,7 @@ public class GroupsV2Manager {
     Group group = storage.get(groupID);
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
-    GroupChange.Actions.Builder change = GroupChange.Actions.newBuilder().setModifyDescription(groupOperations.createModifyGroupDescription(description));
+    GroupChange.Actions.Builder change = GroupChange.Actions.newBuilder().setModifyDescription(groupOperations.createModifyGroupDescriptionAction(description));
     change.setSourceUuid(UuidUtil.toByteString(self));
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
     group.group = groupChangePair.first();
@@ -188,17 +187,12 @@ public class GroupsV2Manager {
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
     Set<GroupCandidate> candidates = new HashSet<>();
     for (ProfileAndCredentialEntry profileAndCredentialEntry : members) {
-      Optional<ProfileKeyCredential> profileKeyCredential = Optional.absent();
-      if (profileAndCredentialEntry != null) {
-        profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
+      if (profileAndCredentialEntry == null) {
+        continue;
       }
-      SignalServiceAddress address = new RecipientsTable(self).resolve(profileAndCredentialEntry.getServiceAddress());
-      if (!address.getUuid().isPresent()) {
-        logger.warn("cannot add member to group because we do not know their UUID!");
-      } else {
-        UUID uuid = address.getUuid().get();
-        candidates.add(new GroupCandidate(uuid, profileKeyCredential));
-      }
+      Optional<ProfileKeyCredential> profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
+      UUID uuid = profileAndCredentialEntry.getServiceAddress().getUuid();
+      candidates.add(new GroupCandidate(uuid, profileKeyCredential));
     }
     GroupChange.Actions.Builder change = groupOperations.createModifyGroupMembershipChange(candidates, self);
 
@@ -447,7 +441,7 @@ public class GroupsV2Manager {
     return new Pair<>(decryptedGroupState, signedGroupChange);
   }
 
-  public Group createGroup(String title, String avatar, List<SignalServiceAddress> members, Member.Role memberRole, int timer)
+  public Group createGroup(String title, String avatar, List<Recipient> members, Member.Role memberRole, int timer)
       throws IOException, VerificationFailedException, InvalidGroupStateException {
     GroupSecretParams groupSecretParams = GroupSecretParams.generate();
 
@@ -467,8 +461,8 @@ public class GroupsV2Manager {
     return groupsV2Api.getGroupsV2AuthorizationString(self, today, groupSecretParams, authCredential);
   }
 
-  private GroupCandidate buildGroupCandidate(SignalServiceAddress address) {
-    UUID uuid = address.getUuid().get();
+  private GroupCandidate buildGroupCandidate(Recipient address) {
+    UUID uuid = address.getUUID();
     ProfileKeyCredential profileCredential = profileCredentialStore.getProfileKeyCredential(uuid);
     return new GroupCandidate(uuid, Optional.fromNullable(profileCredential));
   }
@@ -532,5 +526,24 @@ public class GroupsV2Manager {
     final GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
     return commitChange(group, groupOperations.createRemoveMembersChange(uuids));
+  }
+
+  public Pair<SignalServiceDataMessage.Builder, Group> setGroupAnnouncementMode(String groupID, boolean isAnnouncementGroup)
+      throws UnknownGroupException, IOException, VerificationFailedException {
+    Group group = storage.get(groupID);
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+    GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration).forGroup(groupSecretParams);
+    GroupChange.Actions.Builder change = groupOperations.createAnnouncementGroupChange(isAnnouncementGroup);
+    change.setSourceUuid(UuidUtil.toByteString(self));
+    Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
+    group.group = groupChangePair.first();
+    group.revision += 1;
+
+    GroupMasterKey masterKey = group.getMasterKey();
+    byte[] signedChange = groupChangePair.second().toByteArray();
+
+    SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
+    SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+    return new Pair<>(updateMessage, group);
   }
 }

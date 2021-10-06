@@ -24,10 +24,10 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.Group;
 import io.finn.signald.util.GroupsUtil;
@@ -42,12 +42,10 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("approve_membership")
@@ -60,19 +58,30 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws IOException, NoSuchAccount, VerificationFailedException, UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
+  public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError, GroupVerificationError {
+    Manager m = Common.getManager(account);
     AccountData accountData = m.getAccountData();
     Group group;
     try {
       group = accountData.groupsV2.get(groupID);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
     }
 
-    List<SignalServiceAddress> recipients = group.getMembers();
-    recipients.addAll(members.stream().map(JsonAddress::getSignalServiceAddress).collect(Collectors.toSet()));
+    RecipientsTable recipientsTable = m.getRecipientsTable();
+    List<Recipient> recipients;
+    try {
+      recipients = recipientsTable.get(group.getMembers());
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error looking up recipients", e);
+    }
+    for (JsonAddress member : members) {
+      try {
+        recipients.add(recipientsTable.get(member));
+      } catch (SQLException | IOException e) {
+        throw new InternalError("error looking up new member", e);
+      }
+    }
 
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
@@ -82,7 +91,14 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
 
     change.setSourceUuid(UuidUtil.toByteString(m.getUUID()));
 
-    Pair<DecryptedGroup, GroupChange> groupChangePair = m.getGroupsV2Manager().commitChange(group, change);
+    Pair<DecryptedGroup, GroupChange> groupChangePair = null;
+    try {
+      groupChangePair = m.getGroupsV2Manager().commitChange(group, change);
+    } catch (IOException e) {
+      throw new InternalError("error committing group change", e);
+    } catch (VerificationFailedException e) {
+      throw new GroupVerificationError(e);
+    }
     group.group = groupChangePair.first();
     group.revision += 1;
 
@@ -92,10 +108,15 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(masterKey).withRevision(group.revision).withSignedGroupChange(signedChange);
     SignalServiceDataMessage.Builder updateMessage = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
 
-    m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2(), recipients);
+    try {
+      m.sendGroupV2Message(updateMessage, group.getSignalServiceGroupV2(), recipients);
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error sending update message", e);
+    }
 
     accountData.groupsV2.update(group);
-    accountData.save();
+    Common.saveAccount(accountData);
+
     return group.getJsonGroupV2Info(m);
   }
 }

@@ -24,11 +24,9 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -38,11 +36,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.asamk.signal.AttachmentInvalidException;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
-import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
@@ -59,14 +52,23 @@ public class SendRequest implements RequestType<SendResponse> {
   public JsonQuote quote;
   public Long timestamp;
   public List<JsonMention> mentions;
+  public List<JsonPreview> previews;
 
   @Override
-  public SendResponse run(Request request)
-      throws IOException, AttachmentInvalidException, GroupNotFoundException, NotAGroupMemberException, InvalidRecipientException, NoSuchAccount, InvalidInputException,
-             UnknownGroupException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager manager = Utils.getManager(username);
+  public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError,
+                                                  UnknownGroupError, InvalidRecipientError, RateLimitError {
+    Manager manager = Common.getManager(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
+
+    Recipient recipient = null;
+    if (recipientAddress != null) {
+      try {
+        recipient = manager.getRecipientsTable().get(recipientAddress);
+      } catch (IOException | SQLException e) {
+        throw new InternalError("error looking up recipient", e);
+      }
+    }
 
     if (messageBody != null) {
       messageBuilder = messageBuilder.withBody(messageBody);
@@ -93,7 +95,7 @@ public class SendRequest implements RequestType<SendResponse> {
               attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false, false, attachment.getPreview(), attachment.width,
               attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
         } catch (IOException e) {
-          throw new AttachmentInvalidException(attachment.filename, e);
+          throw new InvalidAttachmentError(attachment.filename, e);
         }
       }
       messageBuilder.withAttachments(signalServiceAttachments);
@@ -112,14 +114,17 @@ public class SendRequest implements RequestType<SendResponse> {
       messageBuilder.withMentions(mentions.stream().map(JsonMention::asMention).collect(Collectors.toList()));
     }
 
-    List<SendMessageResult> results = null;
-    try {
-      results = manager.send(messageBuilder, recipientAddress, recipientGroupId);
-    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientException();
-    } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+    if (previews != null) {
+      List<SignalServiceDataMessage.Preview> signalPreviews = new ArrayList<>();
+      for (JsonPreview preview : previews) {
+        signalPreviews.add(preview.asSignalPreview());
+      }
+      messageBuilder.withPreviews(signalPreviews);
     }
+
+    List<SendMessageResult> results;
+
+    results = Common.send(manager, messageBuilder, recipient, recipientGroupId);
     return new SendResponse(results, timestamp);
   }
 }

@@ -23,16 +23,17 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyException;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchSession;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundException;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.UserAlreadyExistsException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-import org.asamk.signal.UserAlreadyExists;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 
 @Doc("After a linking URI has been requested, finish_link must be called with the session_id provided with the URI. "
      + "it will return information about the new account once the linking process is completed by the other device.")
@@ -48,20 +49,23 @@ public class FinishLinkRequest implements RequestType<Account> {
   private boolean overwrite = false;
 
   @Override
-  public Account run(Request request) throws IOException, UserAlreadyExists, TimeoutException, InvalidInputException, InvalidKeyException, NoSuchAccount, SQLException,
-                                             NoSuchSession, ServerNotFoundException, InvalidProxyException {
+  public Account run(Request request) throws NoSuchSessionError, ServerNotFoundError, InvalidProxyError, InternalError, NoSuchAccountError, UserAlreadyExistsError {
     ProvisioningManager pm = ProvisioningManager.get(sessionID);
     if (pm == null) {
-      throw new NoSuchSession();
+      throw new NoSuchSessionError();
     }
-    String accountID = null;
+    UUID accountID;
     try {
       accountID = pm.finishDeviceLink(deviceName, overwrite);
+      return new Account(accountID);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
-      throw new ServerNotFoundException(e);
+      throw new ServerNotFoundError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
-      throw new InvalidProxyException(e);
+      throw new InvalidProxyError(e);
+    } catch (IOException | SQLException | TimeoutException | InvalidInputException | InvalidKeyException | UntrustedIdentityException | NoSuchAccountException e) {
+      throw new InternalError("error finishing linking", e);
+    } catch (UserAlreadyExistsException e) {
+      throw new UserAlreadyExistsError(e);
     }
-    return new Account(Utils.getManager(accountID));
   }
 }

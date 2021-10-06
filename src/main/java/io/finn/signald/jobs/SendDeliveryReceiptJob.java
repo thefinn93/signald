@@ -18,23 +18,25 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Manager;
+import io.finn.signald.db.Recipient;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class SendDeliveryReceiptJob implements Job {
 
-  private final SignalServiceAddress to;
+  private final Recipient recipient;
   private final List<Long> timestamps = new ArrayList<>();
   private final Manager m;
 
-  public SendDeliveryReceiptJob(Manager manager, SignalServiceAddress address) {
+  public SendDeliveryReceiptJob(Manager manager, Recipient address) {
     m = manager;
-    to = address;
+    recipient = address;
   }
 
-  public SendDeliveryReceiptJob(Manager manager, SignalServiceAddress address, Long timestamp) {
+  public SendDeliveryReceiptJob(Manager manager, Recipient address, Long timestamp) {
     this(manager, address);
     addTimestamp(timestamp);
   }
@@ -42,8 +44,8 @@ public class SendDeliveryReceiptJob implements Job {
   public void addTimestamp(Long timestamp) { timestamps.add(timestamp); }
 
   @Override
-  public void run() throws Throwable {
+  public void run() throws IOException, SQLException {
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, timestamps, System.currentTimeMillis());
-    m.sendReceipt(message, to);
+    m.sendReceipt(message, recipient);
   }
 }

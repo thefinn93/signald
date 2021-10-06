@@ -32,7 +32,7 @@ public class PendingAccountDataTable {
   private static final String KEY = "key";
   private static final String VALUE = "value";
 
-  public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, SERVER_UUID }
+  public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, SERVER_UUID, PASSWORD }
 
   public static byte[] getBytes(String username, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");

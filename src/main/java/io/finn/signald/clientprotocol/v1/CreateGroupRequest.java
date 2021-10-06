@@ -26,7 +26,9 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
-import io.finn.signald.storage.AddressResolver;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.storage.Group;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -36,11 +38,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.signal.storageservice.protos.groups.Member;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @ProtocolType("create_group")
 public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
@@ -59,21 +59,24 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the message expiration timer") public int timer;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws IOException, NoSuchAccount, InvalidRequestException, InvalidGroupStateException, VerificationFailedException,
-                                                     UnknownGroupException, SQLException, InterruptedException, ExecutionException, TimeoutException, NoKnownUUID,
-                                                     OwnProfileKeyDoesNotExist, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Utils.getManager(account);
-    AddressResolver resolver = m.getResolver();
-    List<SignalServiceAddress> resolvedMembers = new ArrayList<>();
+  public JsonGroupV2Info run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError,
+                                                     InvalidRequestError, GroupVerificationError, InvalidGroupStateError, UnknownGroupError {
+    Manager m = Common.getManager(account);
+    RecipientsTable recipientsTable = m.getRecipientsTable();
+    List<Recipient> recipients = new ArrayList<>();
     if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getUUID()) == null) {
-      throw new OwnProfileKeyDoesNotExist();
+      throw new OwnProfileKeyDoesNotExistError();
     }
     for (JsonAddress member : members) {
-      SignalServiceAddress address = resolver.resolve(member.getSignalServiceAddress());
-      m.getRecipientProfileKeyCredential(address);
-      resolvedMembers.add(address);
-      if (!address.getUuid().isPresent()) {
-        throw new NoKnownUUID(address.getNumber().orNull());
+      Recipient recipient = Common.getRecipient(recipientsTable, member);
+      try {
+        m.getRecipientProfileKeyCredential(recipient);
+      } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
+        throw new InternalError("error getting recipient profile key", e);
+      }
+      recipients.add(recipient);
+      if (recipient.getUUID() == null) {
+        throw new NoKnownUUIDError(recipient.getAddress().getNumber().orNull());
       }
     }
 
@@ -87,18 +90,29 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
         role = Member.Role.DEFAULT;
         break;
       default:
-        throw new InvalidRequestException("member_role must be ADMINISTRATOR or DEFAULT");
+        throw new InvalidRequestError("member_role must be ADMINISTRATOR or DEFAULT");
       }
     }
 
-    Group group = m.getGroupsV2Manager().createGroup(title, avatar, resolvedMembers, role, timer);
-    m.getAccountData().save();
+    Group group = null;
+    try {
+      group = m.getGroupsV2Manager().createGroup(title, avatar, recipients, role, timer);
+    } catch (IOException e) {
+      throw new InternalError("error creating group", e);
+    } catch (VerificationFailedException e) {
+      throw new GroupVerificationError(e);
+    } catch (InvalidGroupStateException e) {
+      throw new InvalidGroupStateError(e);
+    }
+    Common.saveAccount(m.getAccountData());
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.revision).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
     try {
       m.sendGroupV2Message(message, signalServiceGroupV2);
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
-      throw new UnknownGroupException();
+      throw new UnknownGroupError();
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error notifying new members of group", e);
     }
     return group.getJsonGroupV2Info(m);
   }

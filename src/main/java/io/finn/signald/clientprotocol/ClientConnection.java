@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.*;
 import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccount;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
@@ -31,8 +31,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.SocketException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.newsclub.net.unix.AFUNIXSocket;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class ClientConnection implements Runnable {
@@ -88,7 +90,7 @@ public class ClientConnection implements Runnable {
   }
 
   private void handleError(PrintWriter w, Throwable error, JsonRequest request) {
-    if (error instanceof NoSuchAccount) {
+    if (error instanceof NoSuchAccountError) {
       logger.warn("unable to process request for non-existent account");
     } else if (error instanceof UnregisteredUserException) {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
@@ -151,9 +153,18 @@ public class ClientConnection implements Runnable {
 
           if (version.equals("v0")) {
             request = mapper.convertValue(rawRequest, JsonRequest.class);
-            logger.debug("All v0 requests are deprecated and will be removed at the end of 2021. Client authors, "
-                         + "see https://signald.org/articles/protocol-versioning/#deprecation. This message will become a "
-                         + "warning in signald 0.15");
+            String client = "unknown client";
+            try {
+              if (socket instanceof AFUNIXSocket) {
+                AFUNIXSocket unixsocket = (AFUNIXSocket)socket;
+                client = "client pid=" + unixsocket.getPeerCredentials().getPid();
+              }
+            } catch (SocketException e) {
+              logger.debug("error checking socket credentials to write warning message", e);
+            }
+            logger.warn(client + " sent a v0 " + type + " request. v0 support will be removed at the end of "
+                        + "2021. Please update your signald client. Client authors, see "
+                        + "https://signald.org/articles/protocol-versioning/#deprecation");
             legacySocketHandler.handleRequest(request);
           } else {
             new Request(rawRequest, socket);

@@ -38,9 +38,14 @@ public class Server {
   @JsonProperty("key_backup_url") public String keyBackupURL;
   @JsonProperty("storage_url") public String storageURL;
   @Doc("base64 encoded ZKGROUP_SERVER_PUBLIC_PARAMS value") @JsonProperty("zk_param") public String zkParams;
-  @JsonProperty("unidentified_sender_root") public String unidentifiedSenderRoot;
+  @Doc("base64 encoded") @JsonProperty("unidentified_sender_root") public String unidentifiedSenderRoot;
   public String proxy;
-  public String ca;
+  @Doc("base64 encoded trust store, password must be 'whisper'") public String ca;
+  @JsonProperty("key_backup_service_name") String keyBackupServiceName;
+  @Doc("base64 encoded") @JsonProperty("key_backup_service_id") String keyBackupServiceId;
+  @JsonProperty("key_backup_mrenclave") String keyBackupMrenclave;
+  @JsonProperty("cds_mrenclave") String cdsMrenclave;
+  @Doc("base64 encoded trust store, password must be 'whisper'") @JsonProperty("ias_ca") String iasCa;
 
   public Server() {}
 
@@ -53,6 +58,11 @@ public class Server {
     zkParams = Base64.encodeBytes(server.getZkParams());
     proxy = server.getProxy();
     ca = Base64.encodeBytes(server.getCa());
+    keyBackupServiceName = server.getKeyBackupServiceName();
+    keyBackupServiceId = Base64.encodeBytes(server.getKeyBackupServiceId());
+    keyBackupMrenclave = server.getKeyBackupMrenclave();
+    cdsMrenclave = server.getCdsMrenclave();
+    iasCa = Base64.encodeBytes(server.getIasCa());
   }
 
   @JsonIgnore
@@ -62,6 +72,6 @@ public class Server {
       cdns.put(cdn.number, cdn.url);
     }
     return new ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, Base64.decode(zkParams), Base64.decode(unidentifiedSenderRoot), proxy,
-                                   Base64.decode(ca));
+                                   Base64.decode(ca), keyBackupServiceName, Base64.decode(keyBackupServiceId), keyBackupMrenclave, cdsMrenclave, Base64.decode(iasCa));
   }
 }

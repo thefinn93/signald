@@ -17,27 +17,27 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import static io.finn.signald.util.RequestUtil.requestTypes;
+import static io.finn.signald.util.RequestUtil.REQUEST_TYPES;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitable;
 import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonFormatVisitorWrapper;
 import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.finn.signald.BuildConfig;
 import io.finn.signald.Empty;
 import io.finn.signald.JsonAccountList;
 import io.finn.signald.annotations.*;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
 import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -51,11 +51,15 @@ public class ProtocolRequest implements RequestType<JsonNode> {
   public static final String info = "This document describes objects that may be used when communicating with signald.";
 
   @Override
-  public JsonNode run(Request request) throws JsonProcessingException, NoSuchMethodException {
-    return GetProtocolDocumentation();
+  public JsonNode run(Request request) throws InternalError {
+    try {
+      return GetProtocolDocumentation();
+    } catch (JsonMappingException | NoSuchMethodException e) {
+      throw new InternalError("error building protocol documentation. If you didn't cause this, please report it. " + BuildConfig.ERROR_REPORTING_URL, e);
+    }
   }
 
-  public static JsonNode GetProtocolDocumentation() throws JsonMappingException {
+  public static JsonNode GetProtocolDocumentation() throws JsonMappingException, NoSuchMethodException {
     ObjectNode actions = JsonNodeFactory.instance.objectNode();
     List<Class<?>> uncheckedTypes = new ArrayList<>();
 
@@ -67,17 +71,18 @@ public class ProtocolRequest implements RequestType<JsonNode> {
     uncheckedTypes.add(ClientMessageWrapper.class);
     uncheckedTypes.add(io.finn.signald.clientprotocol.v0.JsonMessageEnvelope.class);
 
-    for (Class<? extends io.finn.signald.clientprotocol.RequestType<?>> r : requestTypes) {
+    for (Class<? extends io.finn.signald.clientprotocol.RequestType<?>> r : REQUEST_TYPES) {
       if (r == ProtocolRequest.class) {
         continue;
       }
       ProtocolType annotation = r.getAnnotation(ProtocolType.class);
+      String version = RequestUtil.getVersion(r);
 
       ObjectNode action = JsonNodeFactory.instance.objectNode();
       action.put("request", r.getSimpleName());
       uncheckedTypes.add(r);
 
-      logger.debug("Scanning " + r.getSimpleName());
+      logger.debug("Scanning " + r.getCanonicalName());
 
       Class<?> responseType = (Class<?>)((ParameterizedType)r.getGenericInterfaces()[0]).getActualTypeArguments()[0];
       if (responseType != Empty.class) {
@@ -94,7 +99,31 @@ public class ProtocolRequest implements RequestType<JsonNode> {
         action.put("removal_date", r.getAnnotation(Deprecated.class).value());
       }
 
-      String version = RequestUtil.getVersion(r);
+      Map<String, String> errorDocs = new HashMap<>();
+      for (ErrorDoc e : r.getAnnotationsByType(ErrorDoc.class)) {
+        errorDocs.put(e.error().getName(), e.doc());
+      }
+
+      ArrayNode errors = JsonNodeFactory.instance.arrayNode();
+      for (Class<?> exception : r.getMethod("run", Request.class).getExceptionTypes()) {
+        if (!exception.getCanonicalName().startsWith("io.finn.signald")) {
+          continue;
+        }
+        ObjectNode errorNode = JsonNodeFactory.instance.objectNode();
+        errorNode.put("name", exception.getSimpleName());
+
+        if (errorDocs.containsKey(exception.getName())) {
+          errorNode.put("doc", errorDocs.get(exception.getName()));
+        }
+
+        errors.add(errorNode);
+        uncheckedTypes.add(exception);
+      }
+
+      if (errors.size() > 0) {
+        action.set("errors", errors);
+      }
+
       ObjectNode versionedActions = actions.has(version) ? (ObjectNode)actions.get(version) : JsonNodeFactory.instance.objectNode();
       versionedActions.set(annotation.value(), action);
       if (!actions.has(version)) {
@@ -107,10 +136,12 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       if (type == null) {
         continue;
       }
+
       String version = RequestUtil.getVersion(type);
       if (version == null) {
         continue;
       }
+
       ObjectNode versionedTypes = types.has(version) ? (ObjectNode)types.get(version) : JsonNodeFactory.instance.objectNode();
       versionedTypes.set(type.getSimpleName(), scanObject(type, uncheckedTypes));
       types.set(version, versionedTypes);
@@ -126,6 +157,7 @@ public class ProtocolRequest implements RequestType<JsonNode> {
   }
 
   static JsonNode scanObject(Class<?> type, List<Class<?>> types) throws JsonMappingException {
+    logger.debug("scanning " + type.getCanonicalName());
     ObjectNode output = JsonNodeFactory.instance.objectNode();
 
     PropertyVisitorWrapper v = new PropertyVisitorWrapper(types);
@@ -139,6 +171,10 @@ public class ProtocolRequest implements RequestType<JsonNode> {
     if (type.getAnnotation(Deprecated.class) != null) {
       output.put("deprecated", true);
       output.put("removal_date", type.getAnnotation(Deprecated.class).value());
+    }
+
+    if (type.getName().startsWith("io.finn.signald.clientprotocol.v1.exceptions")) {
+      output.put("error", true);
     }
 
     return output;
