@@ -169,7 +169,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           backoff = 1;
         } else {
           if (backoff < 65) {
-            backoff = (int)(backoff * 1.5);
+            backoff = backoff * 2;
           }
           logger.warn("Disconnected from socket, reconnecting in " + backoff + " seconds");
           TimeUnit.SECONDS.sleep(backoff);
