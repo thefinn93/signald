@@ -1,18 +1,7 @@
 /*
- * Copyright (C) 2021 Finn Herzfeld
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * // Copyright 2021 signald contributors
+ * // SPDX-License-Identifier: GPL-3.0-only
+ * // See included LICENSE file
  */
 
 package io.finn.signald.clientprotocol.v1;
@@ -133,15 +122,26 @@ public class Common {
     }
   }
 
-  public static io.finn.signald.Account getAccount(String identifier) throws NoSuchAccountError, InternalError {
-    try {
-      return new Account(AccountsTable.getUUID(identifier));
-    } catch (SQLException e) {
-      throw new InternalError("error looking up local account", e);
-    } catch (NoSuchAccountException e) {
-      throw new NoSuchAccountError(e);
+  public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, InvalidRequestError {
+    UUID accountUUID;
+    if (identifier.startsWith("+")) {
+      try {
+        accountUUID = AccountsTable.getUUID(identifier);
+      } catch (SQLException e) {
+        throw new InternalError("error looking up local account", e);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      }
+    } else {
+      try {
+        accountUUID = UUID.fromString(identifier);
+      } catch (IllegalArgumentException e) {
+        throw new InvalidRequestError("invalid UUID");
+      }
     }
+    return getAccount(accountUUID);
   }
+  public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(accountUUID); }
 
   public static SignalDependencies getDependencies(UUID accountUUID) throws InvalidProxyError, ServerNotFoundError, InternalError, NoSuchAccountError {
     try {

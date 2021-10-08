@@ -1,18 +1,7 @@
 /*
- * Copyright (C) 2021 Finn Herzfeld
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * // Copyright 2021 signald contributors
+ * // SPDX-License-Identifier: GPL-3.0-only
+ * // See included LICENSE file
  */
 
 package io.finn.signald.clientprotocol.v1;
@@ -27,21 +16,25 @@ import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.MessageEncoder;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
+import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
@@ -63,7 +56,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     }
 
     try {
-      MessageReceiver.subscribe(accountUUID, new IncomingMessageEncoder(request.getSocket(), accountUUID));
+      MessageReceiver.subscribe(accountUUID, new IncomingMessageEncoder(request.getSocket(), accountUUID, account));
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -80,11 +73,21 @@ public class SubscribeRequest implements RequestType<Empty> {
     private static final Logger logger = LogManager.getLogger();
     private final ObjectMapper mapper = JSONUtil.GetMapper();
     Socket socket;
-    UUID account;
+    UUID accountUUID;
+    String account; // account identifier is still e164 for now, so that needs to be stored separately from the UUID
 
-    IncomingMessageEncoder(Socket s, UUID a) {
-      socket = s;
-      account = a;
+    private static final HashMap<Class<? extends Exception>, Class<? extends ExceptionWrapper>> exceptions = new HashMap<>();
+    static {
+      exceptions.put(ProtocolInvalidMessageException.class, ProtocolInvalidMessageError.class);
+      exceptions.put(DuplicateMessageException.class, DuplicateMessageError.class);
+      exceptions.put(org.whispersystems.signalservice.api.crypto.UntrustedIdentityException.class, UntrustedIdentityError.class);
+      exceptions.put(UntrustedIdentityException.class, UntrustedIdentityError.class);
+    }
+
+    IncomingMessageEncoder(Socket socket, UUID accountUUID, String account) {
+      this.socket = socket;
+      this.accountUUID = accountUUID;
+      this.account = account;
     }
 
     public void broadcast(ClientMessageWrapper w) throws IOException {
@@ -95,8 +98,8 @@ public class SubscribeRequest implements RequestType<Empty> {
     @Override
     public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException {
       try {
-        IncomingMessage message = new IncomingMessage(envelope, content, account);
-        broadcast(new ClientMessageWrapper(message));
+        IncomingMessage message = new IncomingMessage(envelope, content, accountUUID);
+        broadcast(new ClientMessageWrapper(account, message));
       } catch (NoSuchAccountError | ServerNotFoundError | InvalidProxyError | InternalError e) {
         logger.warn("Exception while broadcasting incoming message: " + e.toString());
       }
@@ -104,19 +107,19 @@ public class SubscribeRequest implements RequestType<Empty> {
 
     @Override
     public void broadcastReceiveFailure(Throwable exception) throws IOException {
-      broadcast(ClientMessageWrapper.Exception(exception));
+      broadcast(getError(exception));
     }
 
     @Override
     public void broadcastListenStarted() throws IOException {
-      broadcast(new ClientMessageWrapper(new ListenerState(true)));
+      broadcast(new ClientMessageWrapper(account, new ListenerState(true)));
     }
 
     @Override
     public void broadcastListenStopped(Throwable exception) throws IOException {
-      broadcast(new ClientMessageWrapper(new ListenerState(false)));
+      broadcast(new ClientMessageWrapper(account, new ListenerState(false)));
       if (exception != null) {
-        broadcast(ClientMessageWrapper.Exception(exception));
+        broadcast(getError(exception));
       }
     }
 
@@ -133,6 +136,31 @@ public class SubscribeRequest implements RequestType<Empty> {
     @Override
     public boolean equals(MessageEncoder encoder) {
       return encoder.equals(socket);
+    }
+
+    private ClientMessageWrapper getError(Throwable exception) {
+      ExceptionWrapper error;
+      try {
+        if (exceptions.containsKey(exception.getClass())) {
+          Class<? extends ExceptionWrapper> errorType = exceptions.get(exception.getClass());
+          Constructor<? extends ExceptionWrapper> constructor;
+          try {
+            constructor = errorType.getDeclaredConstructor(exception.getClass());
+            error = constructor.newInstance(exception);
+          } catch (NoSuchMethodException ignored) {
+            constructor = errorType.getDeclaredConstructor(UUID.class, exception.getClass());
+            error = constructor.newInstance(accountUUID, exception);
+          }
+        } else {
+          error = new InternalError("unexpected error while receiving", exception);
+        }
+      } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+        logger.error("fatal error rendering error response: ", e);
+        error = new InternalError("unexpected error while receiving", exception);
+      }
+      ClientMessageWrapper wrapper = new ClientMessageWrapper(account, error);
+      wrapper.error = true;
+      return wrapper;
     }
   }
 }

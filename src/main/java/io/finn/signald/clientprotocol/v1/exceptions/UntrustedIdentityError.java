@@ -21,10 +21,25 @@ public class UntrustedIdentityError extends ExceptionWrapper {
   public String identifier;
   @JsonProperty("identity_key") public IdentityKey identityKey;
 
-  public UntrustedIdentityError(UUID accountUUID, UntrustedIdentityException e) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+  UntrustedIdentityError(UUID accountUUID, String identifier, org.whispersystems.libsignal.IdentityKey libsignalIdentityKey)
+      throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError {
+    this.identifier = identifier;
     Manager m = Common.getManager(accountUUID);
-    Recipient recipient = Common.getRecipient(new RecipientsTable(accountUUID), e.getIdentifier());
-    Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnRecipient(), m.getIdentity(), recipient, e.getIdentityKey());
-    identityKey = new IdentityKey("UNTRUSTED", fingerprint);
+    Recipient recipient = Common.getRecipient(new RecipientsTable(accountUUID), identifier);
+    if (libsignalIdentityKey != null) {
+      Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnRecipient(), m.getIdentity(), recipient, libsignalIdentityKey);
+      if (fingerprint != null) {
+        identityKey = new IdentityKey("UNTRUSTED", fingerprint);
+      }
+    }
+  }
+
+  public UntrustedIdentityError(UUID accountUUID, UntrustedIdentityException e) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+    this(accountUUID, e.getIdentifier(), e.getIdentityKey());
+  }
+
+  public UntrustedIdentityError(UUID accountUUID, org.whispersystems.libsignal.UntrustedIdentityException e)
+      throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError {
+    this(accountUUID, e.getName(), e.getUntrustedIdentity());
   }
 }
