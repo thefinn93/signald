@@ -25,14 +25,14 @@ import org.whispersystems.signalservice.api.messages.SendMessageResult;
 @Deprecated(1641027661)
 public class JsonSendMessageResult {
   public JsonAddress address;
-  public SendMessageResult.Success success;
+  public JsonSendSuccess success;
   @ExampleValue("false") public boolean networkFailure;
   @ExampleValue("false") public boolean unregisteredFailure;
   public String identityFailure;
 
   public JsonSendMessageResult(SendMessageResult result) {
     address = new JsonAddress(result.getAddress());
-    success = result.getSuccess();
+    success = new JsonSendSuccess(result.getSuccess());
     networkFailure = result.isNetworkFailure();
     unregisteredFailure = result.isUnregisteredFailure();
     if (result.getIdentityFailure() != null) {
