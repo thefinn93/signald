@@ -1061,8 +1061,7 @@ public class Manager {
         jobs.addAll(handleSignalServiceDataMessage(message, true, source, sendMessageRecipient, ignoreAttachments));
       }
 
-      boolean isPrimaryDevice = account.getDeviceId() == SignalServiceAddress.DEFAULT_DEVICE_ID;
-      if (syncMessage.getRequest().isPresent() && isPrimaryDevice) {
+      if (syncMessage.getRequest().isPresent() && account.getDeviceId() == SignalServiceAddress.DEFAULT_DEVICE_ID) {
         RequestMessage rm = syncMessage.getRequest().get();
         if (rm.isContactsRequest()) {
           jobs.add(new SendContactsSyncJob(this));
@@ -1072,11 +1071,12 @@ public class Manager {
         }
       }
 
-      if (syncMessage.getBlockedList().isPresent() && isPrimaryDevice) {
+      if (syncMessage.getBlockedList().isPresent()) {
         // TODO store list of blocked numbers
+        logger.info("received list of blocked users from device " + content.getSenderDevice());
       }
 
-      if (syncMessage.getContacts().isPresent() && isPrimaryDevice) {
+      if (syncMessage.getContacts().isPresent()) {
         File tmpFile = null;
         try {
           tmpFile = Util.createTempFile();
@@ -1100,6 +1100,7 @@ public class Manager {
               }
             }
           }
+          logger.info("received contacts from device " + content.getSenderDevice());
         } catch (Exception e) {
           logger.catching(e);
         } finally {
@@ -1112,11 +1113,13 @@ public class Manager {
           }
         }
       }
+
       if (syncMessage.getVerified().isPresent()) {
         final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
         Recipient destination = getRecipientsTable().get(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
         account.getProtocolStore().saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
+        logger.info("received verified state update from device " + content.getSenderDevice());
       }
     }
     for (Job job : jobs) {

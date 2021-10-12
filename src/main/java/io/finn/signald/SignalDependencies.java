@@ -90,7 +90,11 @@ public class SignalDependencies {
 
       dependencies.executor.shutdown();
 
-      synchronized (dependencies.websocketLock) { dependencies.websocket.disconnect(); }
+      synchronized (dependencies.websocketLock) {
+        if (dependencies.websocket != null) {
+          dependencies.websocket.disconnect();
+        }
+      }
     }
   }
 
