@@ -953,7 +953,6 @@ public class Manager {
             }
           }
         }
-        accountData.save();
         handler.handleMessage(envelope, content, exception);
       } finally {
         accountData.getDatabase().getMessageQueueTable().deleteEnvelope(storedEnvelope.databaseId);
@@ -1021,7 +1020,6 @@ public class Manager {
     } finally {
       logger.debug("disconnecting websocket");
       websocket.disconnect();
-      accountData.save();
     }
   }
 
