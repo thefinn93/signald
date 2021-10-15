@@ -665,6 +665,7 @@ public class LegacySocketHandler {
     }
 
     m.updateContact(request.contact);
+    m.getAccountData().save();
     this.reply("contact_updated", null, request.id);
   }
 

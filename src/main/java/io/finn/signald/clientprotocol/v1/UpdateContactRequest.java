@@ -18,6 +18,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
@@ -48,11 +49,14 @@ public class UpdateContactRequest implements RequestType<Profile> {
     c.color = color;
     c.inboxPosition = inboxPosition;
     ContactStore.ContactInfo contactInfo;
+
+    Manager m = Common.getManager(account);
     try {
-      contactInfo = Common.getManager(account).updateContact(c);
+      contactInfo = m.updateContact(c);
     } catch (IOException | SQLException e) {
       throw new InternalError("error updating contact", e);
     }
+    Common.saveAccount(m.getAccountData());
     return new Profile(contactInfo);
   }
 }

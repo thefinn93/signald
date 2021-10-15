@@ -92,6 +92,9 @@ public class Main implements Runnable {
   @Option(names = {"--log-http-requests"}, description = "log all requests send to the server. this is used for debugging but generally should not be used otherwise.")
   private boolean logHttpRequests = false;
 
+  @Option(names = {"--decrypt-timeout"}, description = "decryption timeout (in seconds). if signald detects that decryption has taken longer than this, it will exit with code 101")
+  private int decryptionTimeout = 10;
+
   private static final Logger logger = LogManager.getLogger();
 
   public void run() {
@@ -152,6 +155,7 @@ public class Main implements Runnable {
       logger.debug("Using data folder " + data_path);
 
       Manager.setDataPath(data_path);
+      Manager.setDecryptionTimeout(decryptionTimeout);
       AccountData.setDataPath(data_path);
 
       if (db == null) {

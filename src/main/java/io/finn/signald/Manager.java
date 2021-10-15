@@ -28,6 +28,7 @@ import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
+import io.prometheus.client.Histogram;
 import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -97,6 +98,9 @@ public class Manager {
   private final static int ACCOUNT_REFRESH_VERSION = 4;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
+  private static final Histogram messageDecryptionTime =
+      Histogram.build().name(BuildConfig.NAME + "_message_decryption_time").help("Time (in seconds) to decrypt incoming messages").labelNames("account_uuid").register();
+  private static int decryptionTimeout = 10;
 
   private static String dataPath;
   private static String attachmentsPath;
@@ -122,9 +126,6 @@ public class Manager {
       managers.put(uuid.toString(), m);
     }
 
-    // unclear why this was here, verifying it's safe to remove
-    // m.groupsV2Manager = new GroupsV2Manager(m.dependencies.getAccountManager().getGroupsV2Api(), accountData.groupsV2, accountData.profileCredentialStore, uuid,
-    // m.serviceConfiguration);
     RefreshPreKeysJob.runIfNeeded(uuid, m);
     m.refreshAccountIfNeeded();
     try {
@@ -181,6 +182,8 @@ public class Manager {
     avatarsPath = path + "/avatars";
     stickersPath = path + "/stickers";
   }
+
+  public static void setDecryptionTimeout(int d) { decryptionTimeout = d; }
 
   public Account getAccount() { return account; }
 
@@ -438,6 +441,7 @@ public class Manager {
     return SignalServiceDataMessage.newBuilder().asGroupMessage(group.build());
   }
 
+  // set expiration for a v1 group
   public List<SendMessageResult> setExpiration(byte[] groupId, int expiresInSeconds) throws IOException, GroupNotFoundException, NotAGroupMemberException, SQLException {
     if (groupId == null) {
       return null;
@@ -452,6 +456,7 @@ public class Manager {
     return sendMessage(messageBuilder, members);
   }
 
+  // set expiration for a 1-to-1 conversation
   public List<SendMessageResult> setExpiration(Recipient recipient, int expiresInSeconds) throws IOException, SQLException {
     ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
     contact.messageExpirationTime = expiresInSeconds;
@@ -484,9 +489,7 @@ public class Manager {
       Recipient recipient = new RecipientsTable(accountUUID).get(contact.address.number, null);
       contact.address = new JsonAddress(recipient.getAddress());
     }
-    ContactStore.ContactInfo c = accountData.contactStore.updateContact(contact);
-    accountData.save();
-    return c;
+    return accountData.contactStore.updateContact(contact);
   }
 
   public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar)
@@ -667,27 +670,30 @@ public class Manager {
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
              SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException,
              SQLException, InterruptedException {
-    Semaphore sem = new Semaphore(1);
-    sem.acquire();
-    Thread t = new Thread(() -> {
-      // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
-      // without this it just hangs and breaks in difficult to detect ways.
-      try {
-        boolean decryptFinished = sem.tryAcquire(10, TimeUnit.SECONDS);
-        if (!decryptFinished) {
-          logger.error("took over 10 seconds to decrypt, exiting");
-          System.exit(101);
-        }
-        sem.release();
-      } catch (InterruptedException e) {
-        logger.error("error in decryption watchdog thread", e);
-      }
-    });
-
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
     SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getProtocolStore(), new SessionLock(account), certificateValidator);
+    Semaphore sem = new Semaphore(1);
+    if (decryptionTimeout > 0) {
+      sem.acquire();
+      Thread t = new Thread(() -> {
+        // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
+        // without this it just hangs and breaks in difficult to detect ways.
+        try {
+          boolean decryptFinished = sem.tryAcquire(decryptionTimeout, TimeUnit.SECONDS);
+          if (!decryptFinished) {
+            logger.error("took over " + decryptionTimeout + " seconds to decrypt, exiting");
+            System.exit(101);
+          }
+          sem.release();
+        } catch (InterruptedException e) {
+          logger.error("error in decryption watchdog thread", e);
+        }
+      });
 
-    t.start();
+      t.start();
+    }
+
+    Histogram.Timer timer = messageDecryptionTime.labels(account.getUUID().toString()).startTimer();
     try {
       return cipher.decrypt(envelope);
     } catch (ProtocolUntrustedIdentityException e) {
@@ -698,7 +704,11 @@ public class Manager {
       }
       throw e;
     } finally {
-      sem.release();
+      if (decryptionTimeout > 0) {
+        sem.release();
+      }
+      double duration = timer.observeDuration();
+      logger.debug("message decrypted in " + duration + " seconds");
     }
   }
 
@@ -917,7 +927,6 @@ public class Manager {
             }
           }
         }
-        accountData.save();
         handler.handleMessage(envelope, content, exception);
         try {
           Files.delete(fileEntry.toPath());
@@ -966,8 +975,11 @@ public class Manager {
     accountData.saveIfNeeded();
 
     SignalWebSocket websocket = dependencies.getWebSocket();
+
     logger.debug("connecting to websocket");
     websocket.connect();
+
+    MessageQueueTable messageQueueTable = new Database(getUUID()).getMessageQueueTable();
 
     try {
       while (true) {
@@ -977,7 +989,7 @@ public class Manager {
           Optional<SignalServiceEnvelope> result = websocket.readOrEmpty(unit.toMillis(timeout), encryptedEnvelope -> {
             // store message on disk, before acknowledging receipt to the server
             try {
-              long id = accountData.getDatabase().getMessageQueueTable().storeEnvelope(encryptedEnvelope);
+              long id = messageQueueTable.storeEnvelope(encryptedEnvelope);
               databaseId.setValue(id);
             } catch (SQLException e) {
               logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
@@ -1011,7 +1023,7 @@ public class Manager {
         try {
           Long id = databaseId.getValue();
           if (id != null) {
-            accountData.getDatabase().getMessageQueueTable().deleteEnvelope(id);
+            messageQueueTable.deleteEnvelope(id);
           }
         } catch (SQLException e) {
           logger.error("failed to remove cached message from database");
@@ -1097,6 +1109,7 @@ public class Manager {
                 accountData.profileCredentialStore.storeProfileKey(recipient, c.getProfileKey().get());
               }
             }
+            accountData.save();
           }
           logger.info("received contacts from device " + content.getSenderDevice());
         } catch (Exception e) {
