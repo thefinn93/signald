@@ -121,6 +121,19 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     return removed;
   }
 
+  public static void resetReconnectBackoff(UUID accountUUID) {
+    synchronized (receivers) {
+      MessageReceiver receiver = receivers.get(accountUUID.toString());
+      if (receiver == null) {
+        return;
+      }
+      if (receiver.backoff != 0) {
+        receiver.backoff = 0;
+        logger.debug("websocket connected, resetting backoff");
+      }
+    }
+  }
+
   private boolean remove(Socket socket) { return sockets.remove(socket); }
 
   public void run() {
@@ -184,7 +197,6 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
   @Override
   public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
-    backoff = 0;
     if (exception != null) {
       if (exception instanceof SelfSendException) {
         logger.debug("ignoring SelfSendException (see https://gitlab.com/signald/signald/-/issues/24)");

@@ -19,6 +19,7 @@ package io.finn.signald;
 
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,7 +45,12 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
   private final HealthState identified = new HealthState();
   private final HealthState unidentified = new HealthState();
 
-  public SignalWebSocketHealthMonitor(SleepTimer sleepTimer) { this.sleepTimer = sleepTimer; }
+  private final UUID accountUUID;
+
+  public SignalWebSocketHealthMonitor(UUID accountUUID, SleepTimer sleepTimer) {
+    this.sleepTimer = sleepTimer;
+    this.accountUUID = accountUUID;
+  }
 
   public void monitor(SignalWebSocket signalWebSocket) {
     Preconditions.checkNotNull(signalWebSocket);
@@ -71,6 +77,7 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
     switch (connectionState) {
     case CONNECTED:
       logger.debug("WebSocket is now connected");
+      MessageReceiver.resetReconnectBackoff(accountUUID);
       break;
     case AUTHENTICATION_FAILED:
       logger.debug("WebSocket authentication failed");

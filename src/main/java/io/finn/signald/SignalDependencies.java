@@ -68,6 +68,8 @@ public class SignalDependencies {
   private SignalServiceAccountManager accountManager;
   private final Object accountManagerLock = new Object();
 
+  private final UUID accountUUID;
+
   public static SignalDependencies get(UUID accountUUID) throws SQLException, ServerNotFoundException, InvalidProxyException, IOException, NoSuchAccountException {
     synchronized (instances) {
       SignalDependencies d = instances.get(accountUUID.toString());
@@ -102,6 +104,7 @@ public class SignalDependencies {
     dataStore = account.getProtocolStore();
     credentialsProvider = account.getCredentialsProvider();
     this.server = server;
+    accountUUID = account.getUUID();
     sessionLock = new SessionLock(account);
   }
 
@@ -109,7 +112,7 @@ public class SignalDependencies {
     synchronized (websocketLock) {
       if (websocket == null) {
         UptimeSleepTimer timer = new UptimeSleepTimer();
-        SignalWebSocketHealthMonitor healthMonitor = new SignalWebSocketHealthMonitor(timer);
+        SignalWebSocketHealthMonitor healthMonitor = new SignalWebSocketHealthMonitor(accountUUID, timer);
         WebSocketFactory webSocketFactory = new WebSocketFactory() {
           @Override
           public WebSocketConnection createWebSocket() {
