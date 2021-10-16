@@ -124,6 +124,11 @@ public class SubscribeRequest implements RequestType<Empty> {
     }
 
     @Override
+    public void broadcastWebSocketConnectionStateChange(org.whispersystems.signalservice.api.websocket.WebSocketConnectionState state, boolean unidentified) throws IOException {
+      broadcast(new ClientMessageWrapper(account, new WebSocketConnectionState(state, unidentified)));
+    }
+
+    @Override
     public boolean isClosed() {
       return socket.isClosed();
     }

@@ -40,6 +40,7 @@ import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 
 public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
   final UUID account;
@@ -99,6 +100,25 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     }
   }
 
+  public static void handleWebSocketConnectionStateChange(UUID accountUUID, WebSocketConnectionState connectionState, boolean unidentified) {
+    synchronized (receivers) {
+      MessageReceiver receiver = receivers.get(accountUUID.toString());
+      if (receiver == null) {
+        return;
+      }
+
+      if (connectionState == WebSocketConnectionState.CONNECTED) {
+        receiver.sockets.broadcastListenStarted();
+        if (receiver.backoff != 0) {
+          receiver.backoff = 0;
+          logger.debug("websocket connected, resetting backoff");
+        }
+      }
+
+      receiver.sockets.broadcastWebSocketConnectionStateChange(connectionState, unidentified);
+    }
+  }
+
   // must be called from within a sychronized(receivers) block
   private static boolean synchronizedUnsubscribe(UUID account, Socket s) {
     if (!receivers.containsKey(account.toString())) {
@@ -119,19 +139,6 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       receivers.remove(account.toString());
     }
     return removed;
-  }
-
-  public static void resetReconnectBackoff(UUID accountUUID) {
-    synchronized (receivers) {
-      MessageReceiver receiver = receivers.get(accountUUID.toString());
-      if (receiver == null) {
-        return;
-      }
-      if (receiver.backoff != 0) {
-        receiver.backoff = 0;
-        logger.debug("websocket connected, resetting backoff");
-      }
-    }
   }
 
   private boolean remove(Socket socket) { return sockets.remove(socket); }
@@ -270,6 +277,10 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           }
         }
       }
+    }
+
+    public void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) {
+      broadcast(r -> r.broadcastWebSocketConnectionStateChange(state, unidentified));
     }
 
     public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) { broadcast(r -> r.broadcastIncomingMessage(envelope, content)); }

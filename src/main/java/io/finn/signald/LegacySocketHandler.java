@@ -74,6 +74,7 @@ import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
+import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 import org.whispersystems.signalservice.internal.push.LockedException;
 import org.whispersystems.util.Base64;
 
@@ -792,6 +793,25 @@ public class LegacySocketHandler {
     @Override
     public void broadcastListenStopped(Throwable exception) throws IOException {
       broadcast(new JsonMessageWrapper("listener_stopped", accountE164, exception));
+    }
+
+    @Override
+    public void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) throws IOException {
+      switch (state) {
+      case DISCONNECTED:
+      case AUTHENTICATION_FAILED:
+      case FAILED:
+        this.broadcastListenStopped(null);
+        break;
+      case CONNECTED:
+        this.broadcastListenStarted();
+        break;
+      }
+      HashMap<String, String> stateChange = new HashMap<String, String>();
+      stateChange.put("account", accountE164);
+      stateChange.put("state", state.name());
+      stateChange.put("socket", unidentified ? "UNIDENTIFIED" : "IDENTIFIED");
+      broadcast(new JsonMessageWrapper("websocket_connection_state_change", stateChange));
     }
 
     @Override

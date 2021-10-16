@@ -63,29 +63,20 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
         .subscribeOn(Schedulers.computation())
         .observeOn(Schedulers.computation())
         .distinctUntilChanged()
-        .subscribe(s -> onStateChange(s, identified));
+        .subscribe(s -> onStateChange(s, identified, false));
 
     // noinspection ResultOfMethodCallIgnored
     signalWebSocket.getUnidentifiedWebSocketState()
         .subscribeOn(Schedulers.computation())
         .observeOn(Schedulers.computation())
         .distinctUntilChanged()
-        .subscribe(s -> onStateChange(s, unidentified));
+        .subscribe(s -> onStateChange(s, unidentified, true));
   }
 
-  private synchronized void onStateChange(WebSocketConnectionState connectionState, HealthState healthState) {
-    switch (connectionState) {
-    case CONNECTED:
-      logger.debug("WebSocket is now connected");
-      MessageReceiver.resetReconnectBackoff(accountUUID);
-      break;
-    case AUTHENTICATION_FAILED:
-      logger.debug("WebSocket authentication failed");
-      break;
-    case FAILED:
-      logger.debug("WebSocket connection failed");
-      break;
-    }
+  private synchronized void onStateChange(WebSocketConnectionState connectionState, HealthState healthState, boolean unidentified) {
+    logger.debug((unidentified ? "unidentified" : "identified") + " websocket state: " + connectionState.name());
+
+    MessageReceiver.handleWebSocketConnectionStateChange(accountUUID, connectionState, unidentified);
 
     healthState.needsKeepAlive = connectionState == WebSocketConnectionState.CONNECTED;
 

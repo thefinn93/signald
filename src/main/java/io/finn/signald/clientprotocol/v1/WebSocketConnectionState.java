@@ -19,9 +19,12 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
 
-@Doc("prior attempt to indicate signald connectivity state. WebSocketConnectionState messages will be delivered at the "
-     + " same time as well as in other parts of the websocket lifecycle.")
-public class ListenerState {
-  public boolean connected;
-  public ListenerState(boolean c) { connected = c; }
+@Doc("indicates when the websocket connection state to the signal server has changed")
+public class WebSocketConnectionState {
+  @Doc("One of: DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING, DISCONNECTING, AUTHENTICATION_FAILED, FAILED") public String state;
+  @Doc("One of: UNIDENTIFIED, IDENTIFIED") public String socket;
+  public WebSocketConnectionState(org.whispersystems.signalservice.api.websocket.WebSocketConnectionState state, boolean unidentified) {
+    this.state = state.name();
+    socket = unidentified ? "UNIDENTIFIED" : "IDENTIFIED";
+  }
 }
