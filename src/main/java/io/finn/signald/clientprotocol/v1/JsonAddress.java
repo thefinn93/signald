@@ -154,7 +154,9 @@ public class JsonAddress {
     return getSignalServiceAddress().hashCode();
   }
 
-  public boolean matches(JsonAddress other) { return (uuid != null && other.uuid.equals(uuid) || (number != null && other.number.equals(number))); }
+  public boolean matches(JsonAddress other) {
+    return (uuid != null && other.uuid != null && other.uuid.equals(uuid) || (number != null && other.number != null && other.number.equals(number)));
+  }
 
   public boolean matches(SignalServiceAddress other) { return matches(new JsonAddress(other)); }
 
