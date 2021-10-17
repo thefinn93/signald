@@ -142,12 +142,18 @@ public class RecipientsTable {
       storedE164 = e164;
     }
 
+    // query did not include a UUID
     if (storedUUID == null) {
+      // ask the server for the UUID (throws UnregisteredUserException if the e164 isn't registered)
       storedUUID = getRegisteredUser(e164);
+
       if (rowid > 0) {
+        // if the e164 was in the database already, update the existing row
         update(UUID, storedUUID.toString(), rowid);
       } else {
-        rowid = storeNew(storedUUID, e164);
+        // if the e164 was not in the database, re-run the get() with both e164 and UUID
+        // can't just insert because the newly-discovered UUID might already be in the database
+        return get(e164, storedUUID);
       }
     }
 
