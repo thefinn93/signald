@@ -244,7 +244,7 @@ public class LegacySocketHandler {
 
     Recipient recipient = request.recipientAddress == null ? null : manager.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getUUID());
     GroupIdentifier groupIdentifier = request.recipientGroupId == null ? null : new GroupIdentifier(Base64.decode(request.recipientGroupId));
-    handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier), request);
+    handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier, null), request);
   }
 
   private void typing(JsonRequest request, SignalServiceTypingMessage.Action action)
@@ -720,7 +720,7 @@ public class LegacySocketHandler {
 
     GroupIdentifier groupIdentifier = request.recipientGroupId == null ? null : new GroupIdentifier(Base64.decode(request.recipientGroupId));
 
-    handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier), request);
+    handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier, null), request);
   }
 
   private void refreshAccount(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {

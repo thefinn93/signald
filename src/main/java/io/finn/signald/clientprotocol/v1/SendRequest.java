@@ -53,6 +53,7 @@ public class SendRequest implements RequestType<SendResponse> {
   public Long timestamp;
   public List<JsonMention> mentions;
   public List<JsonPreview> previews;
+  @Doc("Optionally set to a sub-set of group members. Ignored if recipientGroupId isn't specified") public List<JsonAddress> members;
 
   @Override
   public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError,
@@ -124,7 +125,7 @@ public class SendRequest implements RequestType<SendResponse> {
 
     List<SendMessageResult> results;
 
-    results = Common.send(manager, messageBuilder, recipient, recipientGroupId);
+    results = Common.send(manager, messageBuilder, recipient, recipientGroupId, members);
     return new SendResponse(results, timestamp);
   }
 }

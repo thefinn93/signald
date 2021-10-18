@@ -46,6 +46,8 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
 
   @Required public long timestamp;
 
+  @Doc("Optionally set to a sub-set of group members. Ignored if group isn't specified") public List<JsonAddress> members;
+
   @Override
   public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, NoSendPermissionError,
                                                   UnknownGroupError, InvalidRequestError, RateLimitError {
@@ -57,7 +59,7 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
     if (address != null) {
       recipient = Common.getRecipient(m.getRecipientsTable(), address);
     }
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, group);
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, group, members);
     return new SendResponse(results, timestamp);
   }
 }

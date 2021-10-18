@@ -6,4 +6,8 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-public class DuplicateMessageError extends ExceptionWrapper {}
+import org.whispersystems.libsignal.DuplicateMessageException;
+
+public class DuplicateMessageError extends ExceptionWrapper {
+  public DuplicateMessageError(DuplicateMessageException e) { super(e); }
+}

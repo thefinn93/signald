@@ -84,6 +84,8 @@ public class SubscribeRequest implements RequestType<Empty> {
       exceptions.put(UntrustedIdentityException.class, UntrustedIdentityError.class);
     }
 
+    public static HashMap<Class<? extends Exception>, Class<? extends ExceptionWrapper>> getExceptions() { return exceptions; }
+
     IncomingMessageEncoder(Socket socket, UUID accountUUID, String account) {
       this.socket = socket;
       this.accountUUID = accountUUID;

@@ -38,6 +38,7 @@ public class ReactRequest implements RequestType<SendResponse> {
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
   @Required public JsonReaction reaction;
   public long timestamp;
+  @Doc("Optionally set to a sub-set of group members. Ignored if recipientGroupId isn't specified") public List<JsonAddress> members;
 
   @Override
   public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InternalError, InvalidRecipientError,
@@ -56,7 +57,7 @@ public class ReactRequest implements RequestType<SendResponse> {
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, recipientGroupId);
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, recipientGroupId, members);
     return new SendResponse(results, timestamp);
   }
 }

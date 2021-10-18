@@ -70,7 +70,8 @@ public class RequestUtil {
       RemoveServerRequest.class,                                                                                          // v1        remove_server
       SendPaymentRequest.class,                                                                                           // v1        send_payment
       RemoteConfigRequest.class,                                                                                          // v1        get_remote_config
-      RefuseMembershipRequest.class                                                                                       // v1        refuse_membership
+      RefuseMembershipRequest.class,                                                                                      // v1        refuse_membership
+      SubmitChallengeRequest.class                                                                                        // v1        submit_challenge
   );
 
   public static String getVersion(Class<?> t) {

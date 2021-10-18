@@ -25,6 +25,7 @@ import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.signal.storageservice.protos.groups.GroupChange;
@@ -110,18 +111,27 @@ public class Common {
     }
   }
 
-  public static List<SendMessageResult> send(Manager manager, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId)
+  public static List<SendMessageResult> send(Manager manager, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
+                                             List<JsonAddress> members)
       throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError, RateLimitError, InvalidRequestError {
     GroupIdentifier groupIdentifier = null;
+    List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
       try {
         groupIdentifier = new GroupIdentifier(Base64.decode(recipientGroupId));
       } catch (InvalidInputException | IOException e) {
         throw new InvalidRequestError(e.getMessage());
       }
+      if (members != null) {
+        memberRecipients = new ArrayList<>();
+        RecipientsTable recipientsTable = manager.getRecipientsTable();
+        for (JsonAddress member : members) {
+          memberRecipients.add(getRecipient(recipientsTable, member));
+        }
+      }
     }
     try {
-      return manager.send(messageBuilder, recipient, groupIdentifier);
+      return manager.send(messageBuilder, recipient, groupIdentifier, memberRecipients);
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientError();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {

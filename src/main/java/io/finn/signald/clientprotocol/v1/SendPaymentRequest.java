@@ -57,7 +57,7 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
     messageBuilder.withPayment(new SignalServiceDataMessage.Payment(payment.getPaymentNotification()));
     messageBuilder.withTimestamp(when);
 
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null);
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null, null);
     return new SendResponse(results, when);
   }
 }

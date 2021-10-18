@@ -49,7 +49,7 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
       timestamp = System.currentTimeMillis();
     }
     messageBuilder.withTimestamp(timestamp);
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null);
+    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null, null);
     return new SendResponse(results, timestamp);
   }
 }

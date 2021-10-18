@@ -714,7 +714,7 @@ public class Manager {
 
   private void handleEndSession(Recipient address) { account.getProtocolStore().deleteAllSessions(address); }
 
-  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, GroupIdentifier recipientGroupId)
+  public List<SendMessageResult> send(SignalServiceDataMessage.Builder message, Recipient recipient, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws IOException, InvalidRecipientException, UnknownGroupException, SQLException, NoSendPermissionException, InvalidInputException {
     if (recipientGroupId != null && recipient == null) {
       Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
@@ -722,16 +722,25 @@ public class Manager {
         throw new UnknownGroupException();
       }
       GroupsTable.Group group = groupOptional.get();
+      if (members == null) {
+        members = group.getMembers();
+      }
 
       if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
         logger.warn("refusing to send to an announcement only group that we're not an admin in.");
         throw new NoSendPermissionException();
       }
-      return sendGroupV2Message(messageBuilder, group);
+
+      DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
+      if (timer != null && timer.getDuration() != 0) {
+        message.withExpiration(timer.getDuration());
+      }
+
+      return sendGroupV2Message(message, group.getSignalServiceGroupV2(), members);
     } else if (recipient != null && recipientGroupId == null) {
       List<Recipient> r = new ArrayList<>();
       r.add(recipient);
-      return sendMessage(messageBuilder, r);
+      return sendMessage(message, r);
     } else {
       throw new InvalidRecipientException();
     }
