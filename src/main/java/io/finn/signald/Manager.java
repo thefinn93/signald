@@ -603,8 +603,8 @@ public class Manager {
               try {
                 Recipient recipient = getRecipientsTable().get(r.getAddress());
                 account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
-              } catch (SQLException throwables) {
-                throwables.printStackTrace();
+              } catch (SQLException e) {
+                logger.error("error storing new identity", e);
               }
             }
           }
