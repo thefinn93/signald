@@ -41,7 +41,7 @@ public @interface ExampleValue {
   String LOCAL_UUID = "\"0cc10e61-d64c-4dbc-b51c-334f7dd45a4a\"";
   String LOCAL_GROUP_AVATAR_PATH = "\"/var/lib/signald/avatars/group-EdSqI90cS0UomDpgUXOlCoObWvQOXlH5G3Z2d3f4ayE=\"";
   String GROUP_JOIN_URI = "\"https://signal.group/#CjQKINH_GZhXhfifTcnBkaKTNRxW-hHKnGSq-cJNyPVqHRp8EhDUB7zjKNEl0NaULhsqJCX3\"";
-  String LINKING_URI = "\"tsdevice:/?uuid=jAaZ5lxLfh7zVw5WELd6-Q&pub_key=BfFbjSwmAgpVJBXUdfmSgf61eX3a%2Bq9AoxAVpl1HUap9\"";
+  String LINKING_URI = "\"sgnl://linkdevice?uuid=jAaZ5lxLfh7zVw5WELd6-Q&pub_key=BfFbjSwmAgpVJBXUdfmSgf61eX3a%2Bq9AoxAVpl1HUap9\"";
   String SAFETY_NUMBER = "\"373453558586758076680580548714989751943247272727416091564451\"";
   String REMOTE_CONFIG_NAME = "desktop.mediaQuality.levels";
   String REMOTE_CONFIG_VALUE = "1:2,61:2,81:2,82:2,65:2,31:2,47:2,41:2,32:2,385:2,971:2,974:2,49:2,33:2,*:1";
