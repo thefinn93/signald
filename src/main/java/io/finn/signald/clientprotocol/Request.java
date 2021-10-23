@@ -57,7 +57,6 @@ public class Request {
   private String version;
   private String id;
   private final Socket socket;
-  private final PrintWriter writer;
 
   private final ObjectMapper mapper = JSONUtil.GetMapper();
 
@@ -100,7 +99,6 @@ public class Request {
   public Request(JsonNode request, Socket s) throws IOException {
     socket = s;
     initializeMapper();
-    writer = new PrintWriter(socket.getOutputStream(), true);
 
     if (request.has("id")) {
       id = request.get("id").asText();
@@ -237,9 +235,9 @@ public class Request {
     return errors;
   }
 
-  private void error(Object data) throws JsonProcessingException { reply(JsonMessageWrapper.error(type, data, id)); }
+  private void error(Object data) throws IOException { reply(JsonMessageWrapper.error(type, data, id)); }
 
-  private void reply(JsonMessageWrapper message) throws JsonProcessingException { writer.println(mapper.writeValueAsString(message)); }
+  private void reply(JsonMessageWrapper message) throws IOException { new PrintWriter(getSocket().getOutputStream(), true).println(mapper.writeValueAsString(message)); }
 
   public Socket getSocket() { return socket; }
 
