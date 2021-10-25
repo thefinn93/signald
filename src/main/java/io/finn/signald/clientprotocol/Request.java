@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +58,7 @@ public class Request {
   private String version;
   private String id;
   private final Socket socket;
+  private Logger logger;
 
   private final ObjectMapper mapper = JSONUtil.GetMapper();
 
@@ -126,7 +128,7 @@ public class Request {
       return;
     }
 
-    Logger logger = LogManager.getLogger(type);
+    logger = LogManager.getLogger(type);
 
     if (!requests.containsKey(type)) {
       error(new RequestValidationFailure("Unknown request type: " + type));
@@ -141,7 +143,7 @@ public class Request {
     Class<? extends RequestType<?>> requestClass = requests.get(type).get(version);
 
     if (requestClass.getAnnotation(Deprecated.class) != null) {
-      logger.warn(type + " " + version + " is deprecated and will be removed in a future version of signald. please update your client");
+      logger.warn("{} {} is deprecated and will be removed in a future version of signald. please update your client", type, version);
     }
 
     requestType = mapper.convertValue(request, requestClass);
@@ -156,7 +158,7 @@ public class Request {
       Object r = requestType.run(this);
       reply(new JsonMessageWrapper(type, r, id));
       if (id != null) {
-        logger.info("handled request " + id + " successfully");
+        logger.info("handled request {} successfully", id);
       }
     } catch (ExceptionWrapper e) {
       error(e);
@@ -237,7 +239,13 @@ public class Request {
 
   private void error(Object data) throws IOException { reply(JsonMessageWrapper.error(type, data, id)); }
 
-  private void reply(JsonMessageWrapper message) throws IOException { new PrintWriter(getSocket().getOutputStream(), true).println(mapper.writeValueAsString(message)); }
+  private void reply(JsonMessageWrapper message) throws IOException {
+    try {
+      new PrintWriter(getSocket().getOutputStream(), true).println(mapper.writeValueAsString(message));
+    } catch (SocketException e) {
+      logger.warn("Could not send reply: {}", e.getMessage());
+    }
+  }
 
   public Socket getSocket() { return socket; }
 
