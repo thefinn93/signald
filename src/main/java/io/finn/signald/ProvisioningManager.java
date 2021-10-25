@@ -82,7 +82,7 @@ public class ProvisioningManager {
   public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
     String deviceUuid = accountManager.getNewDeviceUuid();
     String deviceKey = Base64.encodeBytesWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
-    return new URI("sgnl://linkdevice/?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
+    return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
   public UUID finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException,
