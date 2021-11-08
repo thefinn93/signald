@@ -49,6 +49,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
@@ -81,8 +82,8 @@ public class Group {
     }
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedMember member : group.getMembersList()) {
-      UUID uuid = DecryptedGroupUtil.toUuid(member);
-      l.add(new SignalServiceAddress(uuid, Optional.absent()));
+      ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
+      l.add(new SignalServiceAddress(aci, Optional.absent()));
     }
     return l;
   }
@@ -94,8 +95,8 @@ public class Group {
     }
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedPendingMember member : group.getPendingMembersList()) {
-      UUID uuid = DecryptedGroupUtil.toUuid(member);
-      l.add(new SignalServiceAddress(uuid, Optional.absent()));
+      ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
+      l.add(new SignalServiceAddress(aci, Optional.absent()));
     }
     return l;
   }

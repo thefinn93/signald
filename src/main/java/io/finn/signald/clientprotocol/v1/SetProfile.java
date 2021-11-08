@@ -19,9 +19,13 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.storage.SignalProfile;
 import io.finn.signald.util.AttachmentUtil;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -33,40 +37,60 @@ import org.whispersystems.util.Base64;
 public class SetProfile implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The phone number of the account to use") @Required public String account;
 
-  @ExampleValue("\"signald user\"") @Doc("New profile name. Set to empty string for no profile name") @Required public String name;
+  @ExampleValue("\"signald user\"") @Doc("Change the profile name") public String name;
 
   @ExampleValue(ExampleValue.LOCAL_EXTERNAL_JPG) @Doc("Path to new profile avatar file. If unset or null, unset the profile avatar") public String avatarFile;
 
-  @Doc("an optional about string. If unset, null or an empty string will unset profile about field") public String about;
+  @Doc("Change the 'about' profile field") public String about;
 
-  @Doc("an optional single emoji character. If unset, null or an empty string will unset profile emoji") public String emoji;
+  @Doc("Change the profile emoji") public String emoji;
 
-  @Doc("an optional *base64-encoded* MobileCoin address to set in the profile. Note that this is not the traditional "
-       + "MobileCoin address encoding, which is custom. Clients are responsible for converting between MobileCoin's "
-       + "custom base58 on the user-facing side and base64 encoding on the signald side. If unset, null or an empty "
-       + "string, will empty the profile payment address")
+  @Doc("Change the profile payment address. Payment address must be a *base64-encoded* MobileCoin address. Note that "
+       + "this is not the traditional MobileCoin address encoding, which is custom. Clients are responsible for "
+       + "converting between MobileCoin's custom base58 on the user-facing side and base64 encoding on the signald side.")
   @JsonProperty("mobilecoin_address")
   public String mobilecoinAddress;
 
+  @Doc("configure visible badge IDs") @JsonProperty("visible_badge_ids") public List<String> visibleBadgeIds;
+
+  private static final Logger logger = LogManager.getLogger();
+
   @Override
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRequestError {
-    File avatar = avatarFile == null ? null : new File(avatarFile);
 
     Manager m = Common.getManager(account);
 
+    SignalProfile existing = m.getAccountData().profileCredentialStore.get(m.getOwnRecipient()).getProfile();
+
+    File avatar = null;
+    if (avatarFile != null) {
+      avatar = new File(avatarFile);
+    } else {
+      File a = m.getProfileAvatarFile(m.getOwnRecipient());
+      if (a.exists()) {
+        avatar = a;
+      }
+    }
+
     if (name == null) {
-      name = "";
+      name = existing.getName();
     }
 
     if (about == null) {
-      about = "";
+      about = existing.getAbout();
     }
 
     if (emoji == null) {
-      emoji = "";
+      emoji = existing.getEmoji();
     }
 
-    Optional<SignalServiceProtos.PaymentAddress> paymentAddress = Optional.absent();
+    Optional<SignalServiceProtos.PaymentAddress> paymentAddress;
+    try {
+      paymentAddress = Optional.fromNullable(existing.getPaymentAddress());
+    } catch (IOException e) {
+      logger.warn("error getting current payment address while setting profile: {}", e.getMessage());
+      paymentAddress = Optional.absent();
+    }
 
     if (mobilecoinAddress != null && !mobilecoinAddress.equals("")) {
       byte[] decodedAddress;
@@ -85,8 +109,12 @@ public class SetProfile implements RequestType<Empty> {
       paymentAddress = Optional.of(paymentAddressBuilder.build());
     }
 
+    if (visibleBadgeIds == null) {
+      visibleBadgeIds = existing.getVisibleBadgesIds();
+    }
+
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      m.getAccountManager().setVersionedProfile(m.getUUID(), m.getAccountData().getProfileKey(), name, about, emoji, paymentAddress, streamDetails);
+      m.getAccountManager().setVersionedProfile(m.getACI(), m.getAccountData().getProfileKey(), name, about, emoji, paymentAddress, streamDetails, visibleBadgeIds);
     } catch (IOException e) {
       throw new InternalError("error reading avatar file", e);
     } catch (InvalidInputException e) {

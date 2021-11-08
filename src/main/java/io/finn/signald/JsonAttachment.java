@@ -30,6 +30,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
 
 @Deprecated(1641027661)
@@ -92,11 +93,11 @@ public class JsonAttachment {
     }
   }
 
-  public JsonAttachment(SignalServiceAttachment attachment, UUID accountUUID)
+  public JsonAttachment(SignalServiceAttachment attachment, ACI aci)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this(attachment);
     if (attachment.isPointer()) {
-      File file = Manager.get(accountUUID).getAttachmentFile(id);
+      File file = Manager.get(aci).getAttachmentFile(id);
       if (file.exists()) {
         this.storedFilename = file.toString();
       }

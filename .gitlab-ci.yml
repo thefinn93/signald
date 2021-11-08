@@ -7,7 +7,6 @@ stages:
   - downstreams
 
 variables:
-  zkgroup_ver: "0.7.0"
   DOCKER_TLS_CERTDIR: "/certs"
 
 .testserver: &testserver
@@ -85,10 +84,8 @@ build deb x86:
       - "signald_*"
     expire_in: 30 days
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
-      when: on_success
-    - when: manual
-      allow_failure: true
+    - when: on_success
+
 
 build deb aarch64:
   image: registry.gitlab.com/signald/infrastructure/signald-builder-arm64-v8:010941fc
@@ -224,7 +221,7 @@ unit tests x86:
   before_script:
     - cp tools/log4j2.xml src/main/resources/log4j2.xml
   script:
-    - ./gradlew test
+    - ./gradlew test --info
   rules:
     - when: on_success
   artifacts:
@@ -241,7 +238,7 @@ unit tests aarch64-unknown-linux-gnu:
   before_script:
     - apt update && apt install -y make openjdk-11-jdk-headless
   script:
-    - ./gradlew test
+    - ./gradlew test --info
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -258,7 +255,7 @@ unit tests x86_64-apple-darwin:
     - apt update && apt install -y make openjdk-11-jdk-headless
   script:
     - export PATH=/usr/local/opt/openjdk/bin:$PATH # work around issue with brew installed java
-    - ./gradlew test
+    - ./gradlew test --info
   after_script:
     - rm -rf ~/.config/signald
   rules:

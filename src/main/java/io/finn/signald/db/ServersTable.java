@@ -65,6 +65,7 @@ public class ServersTable {
   private static final String KEY_BACKUP_MRENCLAVE = "key_backup_mrenclave";
   private static final String CDS_MRENCLAVE = "cds_mrenclave";
   private static final String IAS_CA = "ias_ca";
+  private static final String CDSH_URL = "cdsh_url";
 
   private static final Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", BuildConfig.USER_AGENT).build());
   private static final Logger logger = LogManager.getLogger();
@@ -88,7 +89,7 @@ public class ServersTable {
     byte[] cdsCa = Base64.decode(BuildConfig.CDS_CA);
 
     return new Server(DEFAULT_SERVER, BuildConfig.SIGNAL_URL, cdns, BuildConfig.SIGNAL_CONTACT_DISCOVERY_URL, BuildConfig.SIGNAL_KEY_BACKUP_URL, BuildConfig.SIGNAL_STORAGE_URL,
-                      zkparam, unidentifiedSenderRoot, BuildConfig.SIGNAL_PROXY, ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa);
+                      zkparam, unidentifiedSenderRoot, BuildConfig.SIGNAL_PROXY, ca, keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
   }
 
   public static Server getServer(UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
@@ -131,7 +132,7 @@ public class ServersTable {
     rows.close();
 
     return new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
-                      keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa);
+                      keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
   }
 
   public static List<Server> allServers() throws SQLException {
@@ -161,7 +162,7 @@ public class ServersTable {
 
       try {
         Server server = new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
-                                   keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa);
+                                   keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
         servers.add(server);
       } catch (IOException | InvalidProxyException e) {
         logger.warn("failed to load signal server " + serverUUID.toString() + " from database: " + e.getMessage());
@@ -223,9 +224,11 @@ public class ServersTable {
     String cdsMrenclave;
     byte[] iasCa;
 
+    String cdshURL;
+
     public Server(UUID uuid, String serviceURL, HashMap<Integer, String> cdnURLs, String contactDiscoveryURL, String keyBackupURL, String storageURL, byte[] zkParams,
                   byte[] unidentifiedSenderRoot, String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave,
-                  byte[] iasCa) throws InvalidProxyException {
+                  byte[] iasCa, String cdshURL) throws InvalidProxyException {
       this.uuid = uuid;
       this.serviceURL = serviceURL;
       this.cdnURLs = cdnURLs;
@@ -249,14 +252,15 @@ public class ServersTable {
       this.keyBackupMrenclave = keyBackupMrenclave;
       this.cdsMrenclave = cdsMrenclave;
       this.iasCa = iasCa;
+      this.cdshURL = cdshURL;
     }
 
     // constructor that takes cdnURLs as a JSON-encoded string
     Server(UUID uuid, String serviceURL, String cdnURLs, String contactDiscoveryURL, String keyBackupURL, String storageURL, byte[] zkParam, byte[] unidentifiedSenderRoot,
-           String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] cdsCa)
+           String proxy, byte[] ca, String keyBackupServiceName, byte[] keyBackupServiceId, String keyBackupMrenclave, String cdsMrenclave, byte[] cdsCa, String cdshURL)
         throws IOException, InvalidProxyException {
       this(uuid, serviceURL, (HashMap<Integer, String>)null, contactDiscoveryURL, keyBackupURL, storageURL, zkParam, unidentifiedSenderRoot, proxy, ca, keyBackupServiceName,
-           keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa);
+           keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, cdshURL);
       TypeReference<HashMap<Integer, String>> cdnURLType = new TypeReference<HashMap<Integer, String>>() {};
       this.cdnURLs = JSONUtil.GetMapper().readValue(cdnURLs, cdnURLType);
     }
@@ -279,10 +283,18 @@ public class ServersTable {
         }
       }
 
-      return new SignalServiceConfiguration(new SignalServiceUrl[] {new SignalServiceUrl(serviceURL, trustStore)}, signalCdnUrlMap,
-                                            new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(contactDiscoveryURL, trustStore)},
-                                            new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(keyBackupURL, trustStore)},
-                                            new SignalStorageUrl[] {new SignalStorageUrl(storageURL, trustStore)}, getInterceptors(), Optional.absent(), proxyOptional, zkParams);
+      return new SignalServiceConfiguration(
+          new SignalServiceUrl[] {new SignalServiceUrl(serviceURL, trustStore)},                            // SignalServiceUrl[] signalServiceUrls
+          signalCdnUrlMap,                                                                                  // Map<Integer, SignalCdnUrl[]> signalCdnUrlMap
+          new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(contactDiscoveryURL, trustStore)}, // SignalContactDiscoveryUrl[] signalContactDiscoveryUrls
+          new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(keyBackupURL, trustStore)},        // SignalKeyBackupServiceUrl[] signalKeyBackupServiceUrls
+          new SignalStorageUrl[] {new SignalStorageUrl(storageURL, trustStore)},                            // SignalStorageUrl[] signalStorageUrls
+          new SignalCdshUrl[] {new SignalCdshUrl(cdshURL, trustStore)},                                     // SignalCdshUrl[] signalCdshUrls
+          getInterceptors(),                                                                                // List<Interceptor> networkInterceptors
+          Optional.absent(),                                                                                // Optional<Dns> dns
+          proxyOptional,                                                                                    // Optional<SignalProxy> proxy
+          zkParams                                                                                          // byte[] zkGroupServerPublicParams
+      );
     }
 
     private List<Interceptor> getInterceptors() {

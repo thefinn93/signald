@@ -40,10 +40,11 @@ import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 
 public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable {
-  final UUID account;
+  private final ACI aci;
   private final Manager m;
   private int backoff = 0;
   private final SocketManager sockets;
@@ -54,39 +55,39 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       Gauge.build().name(BuildConfig.NAME + "_subscribed_accounts").help("number of accounts subscribed to messages from the Signal server").register();
   static final Counter receivedMessages = Counter.build().name(BuildConfig.NAME + "_received_messages").help("number of messages received").labelNames("account_uuid").register();
 
-  public MessageReceiver(UUID account) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    this.account = account;
-    this.m = Manager.get(account);
-    this.uuid = m.getUUID().toString();
+  public MessageReceiver(ACI aci) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    this.aci = aci;
+    this.m = Manager.get(aci);
+    this.uuid = m.getACI().toString();
     this.sockets = new SocketManager();
   }
 
-  public static void subscribe(UUID account, MessageEncoder receiver)
+  public static void subscribe(ACI aci, MessageEncoder receiver)
       throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     synchronized (receivers) {
-      if (!receivers.containsKey(account.toString())) {
-        MessageReceiver r = new MessageReceiver(account);
+      if (!receivers.containsKey(aci.toString())) {
+        MessageReceiver r = new MessageReceiver(aci);
         new Thread(r).start();
-        receivers.put(account.toString(), r);
+        receivers.put(aci.toString(), r);
       }
-      receivers.get(account.toString()).sockets.add(receiver);
+      receivers.get(aci.toString()).sockets.add(receiver);
     }
-    logger.debug("message receiver for " + Util.redact(account) + " got new subscriber. subscriber count: " + receivers.get(account.toString()).sockets.size());
+    logger.debug("message receiver for " + Util.redact(aci) + " got new subscriber. subscriber count: " + receivers.get(aci.toString()).sockets.size());
   }
 
-  public static boolean unsubscribe(UUID account, Socket s) {
+  public static boolean unsubscribe(ACI aci, Socket s) {
     synchronized (receivers) {
-      if (!receivers.containsKey(account.toString())) {
+      if (!receivers.containsKey(aci.toString())) {
         return false;
       }
-      return synchronizedUnsubscribe(account, s);
+      return synchronizedUnsubscribe(aci, s);
     }
   }
 
   public static void unsubscribeAll(Socket s) {
     synchronized (receivers) {
       for (String r : receivers.keySet()) {
-        synchronizedUnsubscribe(UUID.fromString(r), s);
+        synchronizedUnsubscribe(ACI.from(UUID.fromString(r)), s);
       }
     }
   }
@@ -120,23 +121,23 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
   }
 
   // must be called from within a sychronized(receivers) block
-  private static boolean synchronizedUnsubscribe(UUID account, Socket s) {
-    if (!receivers.containsKey(account.toString())) {
+  private static boolean synchronizedUnsubscribe(ACI aci, Socket s) {
+    if (!receivers.containsKey(aci.toString())) {
       return false;
     }
 
-    boolean removed = receivers.get(account.toString()).remove(s);
+    boolean removed = receivers.get(aci.toString()).remove(s);
     if (removed) {
-      logger.debug("message receiver for " + Util.redact(account) + " lost a subscriber. subscriber count: " + receivers.get(account.toString()).sockets.size());
+      logger.debug("message receiver for " + Util.redact(aci) + " lost a subscriber. subscriber count: " + receivers.get(aci.toString()).sockets.size());
     }
-    if (removed && receivers.get(account.toString()).sockets.size() == 0) {
-      logger.info("Last client for " + Util.redact(account) + " unsubscribed, shutting down message pipe");
+    if (removed && receivers.get(aci.toString()).sockets.size() == 0) {
+      logger.info("Last client for " + Util.redact(aci) + " unsubscribed, shutting down message pipe");
       try {
-        SignalDependencies.get(account).getWebSocket().disconnect();
+        SignalDependencies.get(aci).getWebSocket().disconnect();
       } catch (IOException | SQLException | ServerNotFoundException | InvalidProxyException | NoSuchAccountException e) {
         logger.catching(e);
       }
-      receivers.remove(account.toString());
+      receivers.remove(aci.toString());
     }
     return removed;
   }
@@ -145,16 +146,16 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
   public void run() {
     boolean notifyOnConnect = true;
-    logger.debug("starting message receiver for " + Util.redact(account));
+    logger.debug("starting message receiver for " + Util.redact(aci));
     try {
-      Thread.currentThread().setName(Util.redact(account) + "-receiver");
+      Thread.currentThread().setName(Util.redact(aci) + "-receiver");
       while (sockets.size() > 0) {
         double timeout = 3600;
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
 
-        if (!AccountsTable.exists(account)) {
-          logger.info("account no longer exists, not re-connecting");
+        if (!AccountsTable.exists(aci)) {
+          logger.info("account no longer exists, not (re)-connecting");
           break;
         }
 
@@ -195,9 +196,9 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           TimeUnit.SECONDS.sleep(backoff);
         }
       }
-      logger.debug("shutting down message receiver for " + Util.redact(account));
+      logger.debug("shutting down message receiver for " + Util.redact(aci));
     } catch (Exception e) {
-      logger.error("shutting down message receiver for " + Util.redact(account), e);
+      logger.error("shutting down message receiver for " + Util.redact(aci), e);
       sockets.broadcastListenStopped(e);
     }
   }

@@ -18,13 +18,14 @@
 package io.finn.signald.exceptions;
 
 import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class UserAlreadyExistsException extends Exception {
-  private final UUID uuid;
-  public UserAlreadyExistsException(UUID uuid) {
+  private final ACI aci;
+  public UserAlreadyExistsException(ACI aci) {
     super("a user with that UUID is already registered");
-    this.uuid = uuid;
+    this.aci = aci;
   }
 
-  public UUID getUuid() { return uuid; }
+  public ACI getACI() { return aci; }
 }

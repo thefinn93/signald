@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyStore;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class SignedPreKeysTable implements SignedPreKeyStore {
   private final static Logger logger = LogManager.getLogger();
@@ -38,15 +39,15 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
   private static final String ID = "id";
   private static final String RECORD = "record";
 
-  private final UUID uuid;
+  private final ACI aci;
 
-  public SignedPreKeysTable(UUID u) { uuid = u; }
+  public SignedPreKeysTable(ACI aci) { this.aci = aci; }
 
   @Override
   public SignedPreKeyRecord loadSignedPreKey(int signedPreKeyId) throws InvalidKeyIdException {
     try {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
       ResultSet rows = statement.executeQuery();
       if (!rows.next()) {
@@ -66,7 +67,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
   public List<SignedPreKeyRecord> loadSignedPreKeys() {
     try {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       ResultSet rows = statement.executeQuery();
       List<SignedPreKeyRecord> results = new ArrayList<>();
       while (rows.next()) {
@@ -86,7 +87,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
       PreparedStatement statement =
           Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?) ON CONFLICT(" +
                                               ACCOUNT_UUID + "," + ID + ") DO UPDATE SET " + RECORD + " = excluded." + RECORD);
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
       statement.setBytes(3, record.serialize());
       statement.executeUpdate();
@@ -100,7 +101,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
   public boolean containsSignedPreKey(int signedPreKeyId) {
     try {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
       ResultSet rows = statement.executeQuery();
       boolean result = rows.next();
@@ -116,7 +117,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
   public void removeSignedPreKey(int signedPreKeyId) {
     try {
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
       statement.executeUpdate();
     } catch (SQLException e) {

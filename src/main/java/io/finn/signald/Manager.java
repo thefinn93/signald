@@ -79,6 +79,7 @@ import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
@@ -108,31 +109,39 @@ public class Manager {
   private static String stickersPath;
 
   private final AccountData accountData;
-  private final UUID accountUUID;
+  private final ACI aci;
   private final Account account;
   private final Recipient self;
   private final SignalDependencies dependencies;
-
   public static Manager get(UUID uuid) throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    return get(ACI.from(uuid));
+  }
+
+  public static Manager get(ACI aci) throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
+    return get(aci, false);
+  }
+  public static Manager get(ACI aci, boolean offline)
+      throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Logger logger = LogManager.getLogger("manager");
     AccountData accountData;
     Manager m;
     synchronized (managers) {
-      if (managers.containsKey(uuid.toString())) {
-        return managers.get(uuid.toString());
+      if (managers.containsKey(aci.toString())) {
+        return managers.get(aci.toString());
       }
-      accountData = AccountData.load(AccountsTable.getFile(uuid));
-      m = new Manager(uuid, accountData);
-      managers.put(uuid.toString(), m);
+      accountData = AccountData.load(AccountsTable.getFile(aci));
+      m = new Manager(aci, accountData);
+      managers.put(aci.toString(), m);
     }
 
-    RefreshPreKeysJob.runIfNeeded(uuid, m);
-    m.refreshAccountIfNeeded();
-    try {
-      m.getRecipientProfileKeyCredential(m.self);
-    } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
+    if (!offline) {
+      RefreshPreKeysJob.runIfNeeded(aci, m);
+      m.refreshAccountIfNeeded();
+      try {
+        m.getRecipientProfileKeyCredential(m.self);
+      } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
+      }
     }
-
     logger.info("created a manager for " + m.self.toRedactedString());
     return m;
   }
@@ -162,18 +171,18 @@ public class Manager {
     return allManagers;
   }
 
-  Manager(UUID accountUUID, AccountData accountData) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
-    this.accountUUID = accountUUID;
-    account = new Account(accountUUID);
+  Manager(ACI aci, AccountData accountData) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
+    this.aci = aci;
+    account = new Account(aci);
     this.accountData = accountData;
-    self = new RecipientsTable(accountUUID).get(accountUUID);
-    logger = LogManager.getLogger("manager-" + Util.redact(accountUUID.toString()));
-    ServersTable.Server server = AccountsTable.getServer(accountUUID);
+    self = new RecipientsTable(aci).get(aci);
+    logger = LogManager.getLogger("manager-" + Util.redact(aci.toString()));
+    ServersTable.Server server = AccountsTable.getServer(aci);
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
-    dependencies = SignalDependencies.get(accountUUID);
-    logger.info("Created a manager for " + Util.redact(accountUUID.toString()));
-    synchronized (managers) { managers.put(accountUUID.toString(), this); }
+    dependencies = SignalDependencies.get(aci);
+    logger.info("Created a manager for " + Util.redact(aci.toString()));
+    synchronized (managers) { managers.put(aci.toString(), this); }
   }
 
   public static void setDataPath(String path) {
@@ -187,7 +196,9 @@ public class Manager {
 
   public Account getAccount() { return account; }
 
-  public UUID getUUID() { return accountUUID; }
+  public UUID getUUID() { return aci.uuid(); }
+
+  public ACI getACI() { return aci; }
 
   public Recipient getOwnRecipient() { return self; }
 
@@ -329,7 +340,7 @@ public class Manager {
       throw new GroupNotFoundException(groupId);
     }
 
-    if (!g.isMember(accountData.address)) {
+    if (!g.isMember(self.getAddress())) {
       throw new NotAGroupMemberException(groupId, g.name);
     }
 
@@ -486,7 +497,7 @@ public class Manager {
 
   public ContactStore.ContactInfo updateContact(ContactStore.ContactInfo contact) throws IOException, SQLException {
     if (contact.address.uuid == null) {
-      Recipient recipient = new RecipientsTable(accountUUID).get(contact.address.number, null);
+      Recipient recipient = new RecipientsTable(aci.uuid()).get(contact.address.number, null);
       contact.address = new JsonAddress(recipient.getAddress());
     }
     return accountData.contactStore.updateContact(contact);
@@ -988,7 +999,7 @@ public class Manager {
     logger.debug("connecting to websocket");
     websocket.connect();
 
-    MessageQueueTable messageQueueTable = new Database(getUUID()).getMessageQueueTable();
+    MessageQueueTable messageQueueTable = new Database(aci.uuid()).getMessageQueueTable();
 
     try {
       while (true) {
@@ -1062,7 +1073,7 @@ public class Manager {
     }
 
     if (envelope.isPreKeySignalMessage()) {
-      jobs.add(new RefreshPreKeysJob(getUUID()));
+      jobs.add(new RefreshPreKeysJob(aci));
     }
 
     if (content.getSyncMessage().isPresent()) {
@@ -1163,9 +1174,9 @@ public class Manager {
       }
       int type = in.readInt();
       String source = in.readUTF();
-      UUID sourceUuid = null;
+      ACI sourceACI = null;
       if (version >= 3) {
-        sourceUuid = UuidUtil.parseOrNull(in.readUTF());
+        sourceACI = ACI.parseOrNull(in.readUTF());
       }
       int sourceDevice = in.readInt();
       if (version == 1) {
@@ -1198,18 +1209,18 @@ public class Manager {
       if (version >= 4) {
         serverDeliveredTimestamp = in.readLong();
       }
-      Optional<SignalServiceAddress> sourceAddress = sourceUuid == null && source.isEmpty() ? Optional.absent() : Optional.of(new SignalServiceAddress(sourceUuid, source));
+      Optional<SignalServiceAddress> sourceAddress = sourceACI == null && source.isEmpty() ? Optional.absent() : Optional.of(new SignalServiceAddress(sourceACI, source));
       return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
     }
   }
 
   public File getContactAvatarFile(Recipient recipient) { return new File(avatarsPath, "contact-" + recipient.getAddress().getNumber().get()); }
 
-  public File getProfileAvatarFile(Recipient address) {
-    if (address.getAddress().getUuid() == null) {
+  public File getProfileAvatarFile(Recipient recipient) {
+    if (recipient.getUUID() == null) {
       return null;
     }
-    return new File(avatarsPath, address.getAddress().getUuid().toString());
+    return new File(avatarsPath, recipient.getUUID().toString());
   }
 
   private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, Recipient recipient) throws IOException, InvalidMessageException, MissingConfigurationException {
@@ -1459,18 +1470,18 @@ public class Manager {
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      dependencies.getAccountManager().setVersionedProfile(accountData.address.getUUID(), accountData.getProfileKey(), name, "", "", Optional.absent(), streamDetails);
+      dependencies.getAccountManager().setVersionedProfile(self.getACI(), accountData.getProfileKey(), name, "", "", Optional.absent(), streamDetails, new ArrayList<>());
     }
   }
 
   public SignalServiceProfile getSignalServiceProfile(Recipient recipient, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
     final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
     ListenableFuture<ProfileAndCredential> profile =
-        messageReceiver.retrieveProfile(recipient.getAddress(), Optional.of(profileKey), getUnidentifiedAccess(), SignalServiceProfile.RequestType.PROFILE);
+        messageReceiver.retrieveProfile(recipient.getAddress(), Optional.of(profileKey), getUnidentifiedAccess(), SignalServiceProfile.RequestType.PROFILE, Locale.getDefault());
     return profile.get(10, TimeUnit.SECONDS).getProfile();
   }
 
-  public RecipientsTable getRecipientsTable() { return new RecipientsTable(getUUID()); }
+  public RecipientsTable getRecipientsTable() { return new RecipientsTable(aci.uuid()); }
 
   public void refreshAccount() throws IOException, SQLException {
     String deviceName = account.getDeviceName();
@@ -1510,7 +1521,7 @@ public class Manager {
 
   public SignalProfile decryptProfile(final Recipient recipient, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) throws IOException {
     File localAvatarPath = null;
-    if (recipient.getAddress().getUuid() != null) {
+    if (recipient.getACI() != null) {
       localAvatarPath = getProfileAvatarFile(recipient);
       if (encryptedProfile.getAvatar() != null) {
         createPrivateDirectories(avatarsPath);
@@ -1566,7 +1577,10 @@ public class Manager {
       } catch (InvalidCiphertextException ignored) {
       }
     }
-    return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess, paymentAddress);
+
+    List<SignalServiceProfile.Badge> badges = encryptedProfile.getBadges();
+
+    return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess, paymentAddress, badges);
   }
 
   private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {
@@ -1587,9 +1601,9 @@ public class Manager {
     if (remote) {
       dependencies.getAccountManager().deleteAccount();
     }
-    SignalDependencies.delete(accountUUID);
+    SignalDependencies.delete(aci);
     accountData.delete();
-    synchronized (managers) { managers.remove(accountUUID.toString()); }
+    synchronized (managers) { managers.remove(aci.toString()); }
     logger.info("deleted all local account data");
   }
 

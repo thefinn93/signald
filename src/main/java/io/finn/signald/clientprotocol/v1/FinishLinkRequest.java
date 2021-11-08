@@ -34,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Doc("After a linking URI has been requested, finish_link must be called with the session_id provided with the URI. "
      + "it will return information about the new account once the linking process is completed by the other device.")
@@ -54,10 +55,10 @@ public class FinishLinkRequest implements RequestType<Account> {
     if (pm == null) {
       throw new NoSuchSessionError();
     }
-    UUID accountID;
+    ACI aci;
     try {
-      accountID = pm.finishDeviceLink(deviceName, overwrite);
-      return new Account(accountID);
+      aci = pm.finishDeviceLink(deviceName, overwrite);
+      return new Account(aci);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
       throw new ServerNotFoundError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {

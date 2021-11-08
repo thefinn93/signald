@@ -70,7 +70,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     Manager m = Common.getManager(account);
     RecipientsTable recipientsTable = m.getRecipientsTable();
     List<Recipient> recipients = new ArrayList<>();
-    if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getUUID()) == null) {
+    if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getACI()) == null) {
       throw new OwnProfileKeyDoesNotExistError();
     }
     for (JsonAddress member : members) {

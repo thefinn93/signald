@@ -24,6 +24,7 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.storage.SignalProfile;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -71,7 +72,7 @@ public class RefreshProfileJob implements Job {
     SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
     Optional<ProfileKey> profileKeyOptional = Optional.fromNullable(profileEntry.getProfileKey());
     SignalServiceAddress address = profileEntry.getServiceAddress();
-    profileAndCredential = m.getMessageReceiver().retrieveProfile(address, profileKeyOptional, Optional.absent(), requestType).get(10, TimeUnit.SECONDS);
+    profileAndCredential = m.getMessageReceiver().retrieveProfile(address, profileKeyOptional, Optional.absent(), requestType, Locale.getDefault()).get(10, TimeUnit.SECONDS);
 
     long now = System.currentTimeMillis();
     final ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();

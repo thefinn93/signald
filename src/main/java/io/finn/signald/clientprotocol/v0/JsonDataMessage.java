@@ -36,6 +36,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.messages.shared.SharedContact;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Deprecated(1641027661)
 public class JsonDataMessage {
@@ -75,14 +76,14 @@ public class JsonDataMessage {
 
   @Doc("list of mentions in the message") public List<JsonMention> mentions;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, UUID accountUUID)
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {
       attachments = new ArrayList<>(dataMessage.getAttachments().get().size());
       for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
-        attachments.add(new JsonAttachment(attachment, accountUUID));
+        attachments.add(new JsonAttachment(attachment, aci));
       }
     }
 
@@ -93,7 +94,7 @@ public class JsonDataMessage {
     if (dataMessage.getGroupContext().isPresent()) {
       SignalServiceGroupContext groupContext = dataMessage.getGroupContext().get();
       if (groupContext.getGroupV1().isPresent()) {
-        group = new JsonGroupInfo(groupContext.getGroupV1().get(), accountUUID);
+        group = new JsonGroupInfo(groupContext.getGroupV1().get(), aci);
       }
       if (groupContext.getGroupV2().isPresent()) {
         groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanitized();
@@ -117,7 +118,7 @@ public class JsonDataMessage {
     if (dataMessage.getPreviews().isPresent()) {
       previews = new ArrayList<>();
       for (SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
-        previews.add(new JsonPreview(p, accountUUID));
+        previews.add(new JsonPreview(p, aci));
       }
     }
 

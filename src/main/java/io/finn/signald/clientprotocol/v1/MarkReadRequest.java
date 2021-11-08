@@ -62,7 +62,7 @@ public class MarkReadRequest implements RequestType<Empty> {
     } catch (IOException e) {
       throw new InternalError("error sending receipt", e);
     } catch (UntrustedIdentityException e) {
-      throw new UntrustedIdentityError(m.getUUID(), e);
+      throw new UntrustedIdentityError(m.getACI(), e);
     }
 
     List<ReadMessage> readMessages = new LinkedList<>();
@@ -74,7 +74,7 @@ public class MarkReadRequest implements RequestType<Empty> {
     } catch (IOException e) {
       throw new InternalError("error sending sync message", e);
     } catch (UntrustedIdentityException e) {
-      throw new UntrustedIdentityError(m.getUUID(), e);
+      throw new UntrustedIdentityError(m.getACI(), e);
     }
     return new Empty();
   }

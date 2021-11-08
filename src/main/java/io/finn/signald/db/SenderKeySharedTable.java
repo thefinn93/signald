@@ -28,7 +28,10 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceDataStore;
+import org.whispersystems.signalservice.api.SignalServiceSenderKeyStore;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public class SenderKeySharedTable {
@@ -40,20 +43,16 @@ public class SenderKeySharedTable {
   private static final String DEVICE = "device";
   private static final String ADDRESS = "address";
 
-  private final UUID accountUUID;
-  private final RecipientsTable recipientsTable;
+  private final ACI aci;
 
-  public SenderKeySharedTable(UUID uuid) {
-    accountUUID = uuid;
-    recipientsTable = new RecipientsTable(uuid);
-  }
+  public SenderKeySharedTable(ACI aci) { this.aci = aci; }
 
   public Set<SignalProtocolAddress> getSenderKeySharedWith(DistributionId distributionId) {
     Set<SignalProtocolAddress> addresses = new HashSet<>();
     try {
       PreparedStatement statement =
           Database.getConn().prepareStatement("SELECT " + ADDRESS + "," + DEVICE + ") FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
-      statement.setString(1, accountUUID.toString());
+      statement.setString(1, aci.toString());
       statement.setString(2, distributionId.toString());
 
       ResultSet rows = statement.executeQuery();
@@ -72,7 +71,7 @@ public class SenderKeySharedTable {
       PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ADDRESS + "," + DEVICE + "," +
                                                                         DISTRIBUTION_ID + ") VALUES (?, ?, ?)");
       for (SignalProtocolAddress address : addresses) {
-        statement.setString(1, accountUUID.toString());
+        statement.setString(1, aci.toString());
         statement.setString(2, address.getName());
         statement.setInt(3, address.getDeviceId());
         statement.setString(4, distributionId.toString());
@@ -89,7 +88,7 @@ public class SenderKeySharedTable {
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE +
                                                                         " = ? AND " + DISTRIBUTION_ID + " = ?");
       for (SignalProtocolAddress address : addresses) {
-        statement.setString(1, accountUUID.toString());
+        statement.setString(1, aci.toString());
         statement.setString(2, distributionId.toString());
         statement.setInt(3, address.getDeviceId());
         statement.setString(4, distributionId.toString());
@@ -103,7 +102,7 @@ public class SenderKeySharedTable {
 
   public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> collection) {}
 
-  public boolean isMultiDevice() { return new Account(accountUUID).getMultiDevice(); }
+  public boolean isMultiDevice() { return new Account(aci).getMultiDevice(); }
 
   public SignalServiceDataStore.Transaction beginTransaction() {
     return ()

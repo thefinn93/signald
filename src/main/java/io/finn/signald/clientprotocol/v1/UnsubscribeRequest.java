@@ -31,6 +31,7 @@ import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @ProtocolType("unsubscribe")
 @Doc("See subscribe for more info")
@@ -39,16 +40,16 @@ public class UnsubscribeRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws NoSuchAccountError, InternalError {
-    UUID accountUUID;
+    ACI aci;
     try {
-      accountUUID = AccountsTable.getUUID(account);
+      aci = AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {
       throw new InternalError("error getting account UUID", e);
     }
 
-    MessageReceiver.unsubscribe(accountUUID, request.getSocket());
+    MessageReceiver.unsubscribe(aci, request.getSocket());
     return new Empty();
   }
 }

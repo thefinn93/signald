@@ -156,7 +156,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
             }
             recipients.add(recipientsTable.get(profileAndCredentialEntry.getServiceAddress()));
             Optional<ProfileKeyCredential> profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
-            UUID uuid = profileAndCredentialEntry.getServiceAddress().getUuid();
+            UUID uuid = profileAndCredentialEntry.getServiceAddress().getAci().uuid();
             candidates.add(new GroupCandidate(uuid, profileKeyCredential));
           }
           change = groupOperations.createModifyGroupMembershipChange(candidates, a.getUUID());

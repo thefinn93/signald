@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Deprecated(1641027661)
 public class JsonSyncMessage {
@@ -47,20 +48,20 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, UUID accountUUID)
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, ACI aci)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     if (syncMessage.getSent().isPresent()) {
-      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), accountUUID);
+      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), aci);
     }
 
     if (syncMessage.getContacts().isPresent()) {
       ContactsMessage c = syncMessage.getContacts().get();
-      contacts = new JsonAttachment(c.getContactsStream(), accountUUID);
+      contacts = new JsonAttachment(c.getContactsStream(), aci);
       contactsComplete = c.isComplete();
     }
 
     if (syncMessage.getGroups().isPresent()) {
-      groups = new JsonAttachment(syncMessage.getGroups().get(), accountUUID);
+      groups = new JsonAttachment(syncMessage.getGroups().get(), aci);
     }
 
     if (syncMessage.getBlockedList().isPresent()) {

@@ -34,6 +34,7 @@ import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.state.IdentityKeyStore;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class IdentityKeysTable implements IdentityKeyStore {
@@ -49,7 +50,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
   private Account account;
   private String pendingAccountIdentifier;
 
-  public IdentityKeysTable(UUID uuid) { account = new Account(uuid); }
+  public IdentityKeysTable(ACI aci) { account = new Account(aci); }
 
   public IdentityKeysTable(String pendingAccountIdentifier) { this.pendingAccountIdentifier = pendingAccountIdentifier; }
 
@@ -196,11 +197,11 @@ public class IdentityKeysTable implements IdentityKeyStore {
     List<IdentityKeyRow> results = new ArrayList<>();
     while (row.next()) {
       String uuidstr = row.getString(RecipientsTable.UUID);
-      UUID uuid = null;
+      ACI aci = null;
       if (uuidstr != null) {
-        uuid = UUID.fromString(uuidstr);
+        aci = ACI.from(UUID.fromString(uuidstr));
       }
-      SignalServiceAddress address = new SignalServiceAddress(uuid, row.getString(RecipientsTable.E164));
+      SignalServiceAddress address = new SignalServiceAddress(aci, row.getString(RecipientsTable.E164));
       IdentityKey identityKey = new IdentityKey(row.getBytes(IDENTITY_KEY), 0);
       TrustLevel trustLevel = TrustLevel.valueOf(row.getString(TRUST_LEVEL));
       Date added = new Date(row.getLong(ADDED));
@@ -223,8 +224,8 @@ public class IdentityKeysTable implements IdentityKeyStore {
       if (uuidstr == null) {
         continue; // no UUID no
       }
-      UUID uuid = UUID.fromString(uuidstr);
-      SignalServiceAddress address = new SignalServiceAddress(uuid, row.getString(RecipientsTable.E164));
+      ACI aci = ACI.from(UUID.fromString(uuidstr));
+      SignalServiceAddress address = new SignalServiceAddress(aci, row.getString(RecipientsTable.E164));
       IdentityKey identityKey = new IdentityKey(row.getBytes(IDENTITY_KEY), 0);
       TrustLevel trustLevel = TrustLevel.valueOf(row.getString(TRUST_LEVEL));
       Date added = new Date(row.getLong(ADDED));

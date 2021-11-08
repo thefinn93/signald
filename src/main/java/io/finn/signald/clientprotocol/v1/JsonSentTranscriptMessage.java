@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class JsonSentTranscriptMessage {
@@ -36,18 +37,18 @@ public class JsonSentTranscriptMessage {
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, UUID accountUUID) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }
     timestamp = s.getTimestamp();
     expirationStartTimestamp = s.getExpirationStartTimestamp();
-    message = new JsonDataMessage(s.getMessage(), accountUUID);
+    message = new JsonDataMessage(s.getMessage(), aci);
     for (SignalServiceAddress r : s.getRecipients()) {
       if (r.getNumber().isPresent()) {
         unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
       }
-      unidentifiedStatus.put(r.getUuid().toString(), s.isUnidentified(r.getUuid()));
+      unidentifiedStatus.put(r.getAci().toString(), s.isUnidentified(r.getAci()));
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }

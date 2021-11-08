@@ -32,6 +32,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.messages.shared.SharedContact;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class JsonDataMessage {
   @Doc("the timestamp that the message was sent at, according to the sender's device. This is used to uniquely identify "
@@ -79,13 +80,13 @@ public class JsonDataMessage {
 
   @Doc("details about the MobileCoin payment attached to the message, if present") public Payment payment;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, UUID accountUUID) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {
       attachments = new ArrayList<>(dataMessage.getAttachments().get().size());
       for (SignalServiceAttachment attachment : dataMessage.getAttachments().get()) {
-        attachments.add(new JsonAttachment(attachment, accountUUID));
+        attachments.add(new JsonAttachment(attachment, aci));
       }
     }
 
@@ -96,7 +97,7 @@ public class JsonDataMessage {
     if (dataMessage.getGroupContext().isPresent()) {
       SignalServiceGroupContext groupContext = dataMessage.getGroupContext().get();
       if (groupContext.getGroupV1().isPresent()) {
-        group = new JsonGroupInfo(groupContext.getGroupV1().get(), accountUUID);
+        group = new JsonGroupInfo(groupContext.getGroupV1().get(), aci);
       }
       if (groupContext.getGroupV2().isPresent()) {
         groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanitized();
@@ -120,7 +121,7 @@ public class JsonDataMessage {
     if (dataMessage.getPreviews().isPresent()) {
       previews = new ArrayList<>();
       for (SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
-        previews.add(new JsonPreview(p, accountUUID));
+        previews.add(new JsonPreview(p, aci));
       }
     }
 

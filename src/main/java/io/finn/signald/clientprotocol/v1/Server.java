@@ -72,6 +72,6 @@ public class Server {
       cdns.put(cdn.number, cdn.url);
     }
     return new ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, Base64.decode(zkParams), Base64.decode(unidentifiedSenderRoot), proxy,
-                                   Base64.decode(ca), keyBackupServiceName, Base64.decode(keyBackupServiceId), keyBackupMrenclave, cdsMrenclave, Base64.decode(iasCa));
+                                   Base64.decode(ca), keyBackupServiceName, Base64.decode(keyBackupServiceId), keyBackupMrenclave, cdsMrenclave, Base64.decode(iasCa), "");
   }
 }

@@ -41,6 +41,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.SleepTimer;
@@ -85,9 +86,9 @@ public class ProvisioningManager {
     return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
-  public UUID finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException,
-                                                                            InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException,
-                                                                            NoSuchAccountException {
+  public ACI finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException,
+                                                                           InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException,
+                                                                           NoSuchAccountException {
     SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
     if (overwrite) {
       try {
@@ -97,12 +98,13 @@ public class ProvisioningManager {
     }
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, ret.getIdentity().getPrivateKey());
     int deviceId = accountManager.finishNewDeviceRegistration(ret.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
-    UUID uuid = ret.getUuid();
-    if (AccountsTable.exists(uuid)) {
-      throw new UserAlreadyExistsException(uuid);
+
+    ACI aci = ret.getAci();
+    if (AccountsTable.exists(aci)) {
+      throw new UserAlreadyExistsException(aci);
     }
 
-    Manager m = new Manager(ret.getUuid(), AccountData.createLinkedAccount(ret, password, registrationId, deviceId, server));
+    Manager m = new Manager(ret.getAci(), AccountData.createLinkedAccount(ret, password, registrationId, deviceId, server));
     m.getAccount().setDeviceName(deviceName);
 
     m.refreshPreKeys();
@@ -110,6 +112,6 @@ public class ProvisioningManager {
     m.requestSyncContacts();
     // m.requestSyncBlocked(); // TODO: implement support for blocking
     m.requestSyncConfiguration();
-    return uuid;
+    return aci;
   }
 }

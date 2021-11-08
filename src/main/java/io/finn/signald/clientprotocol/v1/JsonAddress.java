@@ -25,6 +25,7 @@ import io.finn.signald.db.Recipient;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -39,7 +40,8 @@ public class JsonAddress {
 
   public JsonAddress() {}
 
-  public JsonAddress(String n, UUID uuid) {
+  public JsonAddress(String n, ACI aci) {
+    UUID uuid = aci == null ? null : aci.uuid();
     if (!n.startsWith("+") && UuidUtil.isUuid(n)) {
       logger.warn("Number field has a valid UUID in it! Converting to UUID field (this is to fix a data migration "
                   + "issue in signald, do not rely on this behavior when using the socket API)");
@@ -60,7 +62,7 @@ public class JsonAddress {
 
   @JsonIgnore
   public SignalServiceAddress getSignalServiceAddress() {
-    return new SignalServiceAddress(getUUID(), number);
+    return new SignalServiceAddress(getACI(), number);
   }
 
   public UUID getUUID() {
@@ -68,6 +70,14 @@ public class JsonAddress {
       return null;
     }
     return UUID.fromString(uuid);
+  }
+
+  @JsonIgnore
+  public ACI getACI() {
+    if (uuid == null) {
+      return null;
+    }
+    return ACI.from(UUID.fromString(uuid));
   }
 
   public JsonAddress(SignalServiceAddress address) {
@@ -82,8 +92,8 @@ public class JsonAddress {
       }
     }
 
-    if (address.getUuid() != null) {
-      uuid = address.getUuid().toString();
+    if (address.getAci() != null) {
+      uuid = address.getAci().toString();
     }
   }
   public JsonAddress(Recipient recipient) { this(recipient.getAddress()); }
@@ -161,8 +171,8 @@ public class JsonAddress {
   public boolean matches(SignalServiceAddress other) { return matches(new JsonAddress(other)); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getUuid() != null) {
-      uuid = a.getUuid().toString();
+    if (uuid == null && a.getAci() != null) {
+      uuid = a.getAci().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {

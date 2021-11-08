@@ -27,6 +27,7 @@ import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Doc("A local account in signald")
 public class Account {
@@ -42,18 +43,20 @@ public class Account {
 
   @Doc("indicates the account has not completed registration") public Boolean pending;
 
-  public Account(UUID accountUUID) throws NoSuchAccountError, InternalError {
+  public Account(UUID accountUUID) throws NoSuchAccountError, InternalError { this(ACI.from(accountUUID)); }
+
+  public Account(ACI aci) throws NoSuchAccountError, InternalError {
     try {
       try {
-        accountID = AccountsTable.getE164(accountUUID);
+        accountID = AccountsTable.getE164(aci);
       } catch (NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
       }
-      deviceID = AccountDataTable.getInt(accountUUID, AccountDataTable.Key.DEVICE_ID);
+      deviceID = AccountDataTable.getInt(aci, AccountDataTable.Key.DEVICE_ID);
     } catch (SQLException e) {
       throw new InternalError("error resolving account e164", e);
     }
-    address = new JsonAddress(accountID, accountUUID);
+    address = new JsonAddress(accountID, aci);
   }
 
   public Account(RegistrationManager m) {

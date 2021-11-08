@@ -21,6 +21,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
@@ -46,8 +49,10 @@ public class SignalProfile {
 
   @JsonProperty private final PaymentAddress paymentAddress;
 
+  @JsonProperty private final List<SignalServiceProfile.Badge> badges;
+
   public SignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess,
-                       final SignalServiceProtos.PaymentAddress paymentAddress) {
+                       final SignalServiceProtos.PaymentAddress paymentAddress, List<SignalServiceProfile.Badge> badges) {
     this.identityKey = encryptedProfile.getIdentityKey();
     this.name = name;
     this.avatarFile = avatarFile;
@@ -61,12 +66,18 @@ public class SignalProfile {
     } else {
       this.paymentAddress = null;
     }
+    if (badges != null) {
+      this.badges = badges;
+    } else {
+      this.badges = new ArrayList<>();
+    }
   }
 
   public SignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
                        @JsonProperty("unidentifiedAccess") final String unidentifiedAccess,
                        @JsonProperty("unrestrictedUnidentifiedAccess") final boolean unrestrictedUnidentifiedAccess, @JsonProperty("capabilities") final Capabilities capabilities,
-                       @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji, @JsonProperty("paymentAddress") final PaymentAddress paymentAddress) {
+                       @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji, @JsonProperty("paymentAddress") final PaymentAddress paymentAddress,
+                       @JsonProperty("badge") List<SignalServiceProfile.Badge> badges) {
     this.identityKey = identityKey;
     this.name = name;
     this.avatarFile = null;
@@ -76,15 +87,35 @@ public class SignalProfile {
     this.about = about;
     this.emoji = emoji;
     this.paymentAddress = paymentAddress;
+    if (badges != null) {
+      this.badges = badges;
+    } else {
+      this.badges = new ArrayList<>();
+    }
   }
 
   public String getIdentityKey() { return identityKey; }
 
-  public String getName() { return name; }
+  public String getName() {
+    if (name == null) {
+      return "";
+    }
+    return name;
+  }
 
-  public String getAbout() { return about; }
+  public String getAbout() {
+    if (about == null) {
+      return "";
+    }
+    return about;
+  }
 
-  public String getEmoji() { return emoji; }
+  public String getEmoji() {
+    if (emoji == null) {
+      return "";
+    }
+    return emoji;
+  }
 
   public File getAvatarFile() { return avatarFile; }
 
@@ -100,6 +131,11 @@ public class SignalProfile {
       return null;
     }
     return paymentAddress.get();
+  }
+
+  @JsonIgnore
+  public List<String> getVisibleBadgesIds() {
+    return badges.stream().filter(SignalServiceProfile.Badge::isVisible).map(SignalServiceProfile.Badge::getId).collect(Collectors.toList());
   }
 
   @Override
@@ -148,6 +184,10 @@ public class SignalProfile {
 
     @JsonProperty public boolean senderKey;
 
+    @JsonProperty public boolean announcementGroup;
+
+    @JsonProperty public boolean changeNumber;
+
     public Capabilities() {}
 
     public Capabilities(SignalServiceProfile.Capabilities capabilities) {
@@ -155,6 +195,8 @@ public class SignalProfile {
       gv2 = capabilities.isGv2();
       storage = capabilities.isStorage();
       senderKey = capabilities.isSenderKey();
+      announcementGroup = capabilities.isAnnouncementGroup();
+      changeNumber = capabilities.isChangeNumber();
     }
 
     public boolean equals(Capabilities other) {

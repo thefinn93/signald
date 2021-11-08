@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class AccountDataTable {
   private static final Logger logger = LogManager.getLogger();
@@ -48,10 +49,10 @@ public class AccountDataTable {
     NEXT_SIGNED_PRE_KEY_ID
   }
 
-  public static byte[] getBytes(UUID uuid, Key key) throws SQLException {
+  public static byte[] getBytes(ACI aci, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
-    statement.setString(2, uuid.toString());
+    statement.setString(2, aci.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
@@ -62,10 +63,10 @@ public class AccountDataTable {
     return result;
   }
 
-  public static int getInt(UUID uuid, Key key) throws SQLException {
+  public static int getInt(ACI aci, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
-    statement.setString(2, uuid.toString());
+    statement.setString(2, aci.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
@@ -76,10 +77,10 @@ public class AccountDataTable {
     return result;
   }
 
-  public static long getLong(UUID uuid, Key key) throws SQLException {
+  public static long getLong(ACI aci, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
-    statement.setString(2, uuid.toString());
+    statement.setString(2, aci.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
@@ -90,10 +91,10 @@ public class AccountDataTable {
     return result;
   }
 
-  public static String getString(UUID uuid, Key key) throws SQLException {
+  public static String getString(ACI aci, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
-    statement.setString(2, uuid.toString());
+    statement.setString(2, aci.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
@@ -104,10 +105,10 @@ public class AccountDataTable {
     return result;
   }
 
-  public static Boolean getBoolean(UUID uuid, Key key) throws SQLException {
+  public static Boolean getBoolean(ACI aci, Key key) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
-    statement.setString(2, uuid.toString());
+    statement.setString(2, aci.toString());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
       rows.close();
@@ -118,51 +119,51 @@ public class AccountDataTable {
     return result;
   }
 
-  public static void set(UUID uuid, Key key, byte[] value) throws SQLException {
+  public static void set(ACI aci, Key key, byte[] value) throws SQLException {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
                                             KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, uuid.toString());
+    statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setBytes(3, value);
     statement.executeUpdate();
   }
 
-  public static void set(UUID uuid, Key key, int value) throws SQLException {
+  public static void set(ACI aci, Key key, int value) throws SQLException {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
                                             KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, uuid.toString());
+    statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setInt(3, value);
     statement.executeUpdate();
   }
 
-  public static void set(UUID uuid, Key key, long value) throws SQLException {
+  public static void set(ACI aci, Key key, long value) throws SQLException {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
                                             KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, uuid.toString());
+    statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setLong(3, value);
     statement.executeUpdate();
   }
 
-  public static void set(UUID uuid, Key key, String value) throws SQLException {
+  public static void set(ACI aci, Key key, String value) throws SQLException {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
                                             KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, uuid.toString());
+    statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setString(3, value);
     statement.executeUpdate();
   }
 
-  public static void set(UUID uuid, Key key, boolean value) throws SQLException {
+  public static void set(ACI aci, Key key, boolean value) throws SQLException {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," +
                                             KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, uuid.toString());
+    statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setBoolean(3, value);
     statement.executeUpdate();

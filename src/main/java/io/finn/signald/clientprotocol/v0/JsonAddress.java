@@ -23,6 +23,7 @@ import io.finn.signald.annotations.Deprecated;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -57,14 +58,18 @@ public class JsonAddress {
 
   @JsonIgnore
   public SignalServiceAddress getSignalServiceAddress() {
-    return new SignalServiceAddress(getUUID(), number);
+    return new SignalServiceAddress(getACI(), number);
   }
 
-  public UUID getUUID() {
+  // unused, but required for backwards compatibility
+  public UUID getUUID() { return UUID.fromString(uuid); }
+
+  @JsonIgnore
+  public ACI getACI() {
     if (uuid == null) {
       return null;
     }
-    return UUID.fromString(uuid);
+    return ACI.from(UUID.fromString(uuid));
   }
 
   public JsonAddress(SignalServiceAddress address) {
@@ -79,8 +84,8 @@ public class JsonAddress {
       }
     }
 
-    if (address.getUuid() != null) {
-      uuid = address.getUuid().toString();
+    if (address.getAci() != null) {
+      uuid = address.getAci().uuid().toString();
     }
   }
 
@@ -155,8 +160,8 @@ public class JsonAddress {
   public boolean matches(SignalServiceAddress other) { return getSignalServiceAddress().matches(other); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getUuid() != null) {
-      uuid = a.getUuid().toString();
+    if (uuid == null && a.getAci() != null) {
+      uuid = a.getAci().uuid().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {

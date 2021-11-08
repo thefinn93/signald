@@ -31,6 +31,7 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class SessionsTable implements SessionStore {
@@ -42,12 +43,12 @@ public class SessionsTable implements SessionStore {
   private static final String DEVICE_ID = "device_id";
   private static final String RECORD = "record";
 
-  private final UUID uuid;
+  private final ACI aci;
   private final RecipientsTable recipientsTable;
 
-  public SessionsTable(UUID uuid) {
-    this.uuid = uuid;
-    recipientsTable = new RecipientsTable(uuid);
+  public SessionsTable(ACI aci) {
+    this.aci = aci;
+    recipientsTable = new RecipientsTable(aci);
   }
 
   @Override
@@ -56,7 +57,7 @@ public class SessionsTable implements SessionStore {
       Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement =
           Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       ResultSet rows = statement.executeQuery();
@@ -82,7 +83,7 @@ public class SessionsTable implements SessionStore {
         Recipient recipient = recipientsTable.get(address.getName());
         PreparedStatement statement =
             Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?");
-        statement.setString(1, uuid.toString());
+        statement.setString(1, aci.toString());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         ResultSet rows = statement.executeQuery();
@@ -105,7 +106,7 @@ public class SessionsTable implements SessionStore {
       Recipient recipient = recipientsTable.get(name);
       PreparedStatement statement =
           Database.getConn().prepareStatement("SELECT " + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       ResultSet rows = statement.executeQuery();
       List<Integer> results = new ArrayList<>();
@@ -129,7 +130,7 @@ public class SessionsTable implements SessionStore {
       Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," +
                                                                         RECORD + ") VALUES (?, ?, ?, ?)");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       statement.setBytes(4, record.serialize());
@@ -145,7 +146,7 @@ public class SessionsTable implements SessionStore {
       Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement =
           Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       ResultSet rows = statement.executeQuery();
@@ -168,7 +169,7 @@ public class SessionsTable implements SessionStore {
       Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement =
           Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
     } catch (SQLException | IOException e) {
@@ -181,7 +182,7 @@ public class SessionsTable implements SessionStore {
     try {
       Recipient recipient = recipientsTable.get(name);
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
     } catch (SQLException | IOException e) {
       logger.catching(e);
@@ -210,7 +211,7 @@ public class SessionsTable implements SessionStore {
 
       PreparedStatement statement = Database.getConn().prepareStatement(query);
       int i = 0;
-      statement.setString(i++, uuid.toString());
+      statement.setString(i++, aci.toString());
       for (Recipient recipient : recipientList) {
         statement.setInt(i++, recipient.getId());
       }

@@ -30,6 +30,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class IncomingMessage {
@@ -50,10 +51,9 @@ public class IncomingMessage {
   @JsonProperty("typing_message") public TypingMessage typingMessage;
   @JsonProperty("server_guid") public String serverGuid;
 
-  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, UUID accountUUID)
-      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
+  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci) throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
     try {
-      account = AccountsTable.getE164(accountUUID);
+      account = AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {
@@ -65,9 +65,9 @@ public class IncomingMessage {
     }
 
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Common.getRecipient(new RecipientsTable(accountUUID), envelope.getSourceAddress()));
+      source = new JsonAddress(Common.getRecipient(new RecipientsTable(aci), envelope.getSourceAddress()));
     } else if (content != null) {
-      source = new JsonAddress(Common.getRecipient(new RecipientsTable(accountUUID), content.getSender()));
+      source = new JsonAddress(Common.getRecipient(new RecipientsTable(aci), content.getSender()));
     }
 
     if (envelope.hasSourceDevice()) {
@@ -83,11 +83,11 @@ public class IncomingMessage {
 
     if (content != null) {
       if (content.getDataMessage().isPresent()) {
-        this.dataMessage = new JsonDataMessage(content.getDataMessage().get(), accountUUID);
+        this.dataMessage = new JsonDataMessage(content.getDataMessage().get(), aci);
       }
 
       if (content.getSyncMessage().isPresent()) {
-        this.syncMessage = new JsonSyncMessage(content.getSyncMessage().get(), accountUUID);
+        this.syncMessage = new JsonSyncMessage(content.getSyncMessage().get(), aci);
       }
 
       if (content.getCallMessage().isPresent()) {

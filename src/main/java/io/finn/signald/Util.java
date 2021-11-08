@@ -21,6 +21,7 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
 
 public class Util {
@@ -45,7 +46,10 @@ public class Util {
 
   public static File createTempFile() throws IOException { return File.createTempFile("signald_tmp_", ".tmp"); }
 
+  public static String redact(ACI aci) { return redact(aci.toString()); }
+
   public static String redact(UUID uuid) { return redact(uuid.toString()); }
+
   public static String redact(String in) {
     if (in == null) {
       return "[null]";

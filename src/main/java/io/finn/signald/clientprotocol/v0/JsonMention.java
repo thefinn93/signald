@@ -22,6 +22,7 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Deprecated(1641027661)
 public class JsonMention {
@@ -37,10 +38,10 @@ public class JsonMention {
   public JsonMention() {}
 
   public JsonMention(SignalServiceDataMessage.Mention m) {
-    uuid = m.getUuid().toString();
+    uuid = m.getAci().toString();
     start = m.getStart();
     length = m.getLength();
   }
 
-  public SignalServiceDataMessage.Mention asMention() { return new SignalServiceDataMessage.Mention(UUID.fromString(uuid), start, length); }
+  public SignalServiceDataMessage.Mention asMention() { return new SignalServiceDataMessage.Mention(ACI.from(UUID.fromString(uuid)), start, length); }
 }

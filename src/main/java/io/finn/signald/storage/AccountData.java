@@ -47,6 +47,7 @@ import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.PhoneNumberFormatter;
 import org.whispersystems.util.Base64;
@@ -114,7 +115,7 @@ public class AccountData {
                                                 UUID server) throws InvalidInputException, IOException, SQLException {
     logger.debug("Creating new local account by linking");
     AccountData a = new AccountData();
-    a.address = new JsonAddress(registration.getNumber(), registration.getUuid());
+    a.address = new JsonAddress(registration.getNumber(), registration.getAci());
     a.initialize();
 
     if (registration.getProfileKey() != null) {
@@ -127,8 +128,8 @@ public class AccountData {
     a.init();
     a.save();
 
-    AccountsTable.add(registration.getNumber(), registration.getUuid(), Manager.getFileName(registration.getNumber()), server);
-    Account account = new Account(registration.getUuid());
+    AccountsTable.add(registration.getNumber(), registration.getAci(), Manager.getFileName(registration.getNumber()), server);
+    Account account = new Account(registration.getAci());
     account.setDeviceId(deviceId);
     account.setPassword(password);
     account.setIdentityKeyPair(registration.getIdentity());
@@ -149,7 +150,7 @@ public class AccountData {
       self = new RecipientsTable(address.getUUID()).get(address.getUUID());
       ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
       if (profileKeyEntry != null) {
-        if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
+        if (profileKeyEntry.getServiceAddress().getAci() == null && address.uuid != null) {
           profileKeyEntry.setAddress(self.getAddress());
         }
       }
@@ -260,7 +261,7 @@ public class AccountData {
       if (profileKeyEntry == null) {
         generateProfileKey();
       } else {
-        if (profileKeyEntry.getServiceAddress().getUuid() == null && address.uuid != null) {
+        if (profileKeyEntry.getServiceAddress().getAci() == null && address.uuid != null) {
           profileKeyEntry.setAddress(self.getAddress());
         }
       }
@@ -326,7 +327,7 @@ public class AccountData {
 
   public GroupIdentifier getMigratedGroupId(String groupV1Id) throws IOException, InvalidInputException, SQLException {
     GroupIdentifier groupV2Id = new GroupIdentifier(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
-    GroupsTable groupsTable = new GroupsTable(getUUID());
+    GroupsTable groupsTable = new GroupsTable(ACI.from(getUUID()));
     Optional<GroupsTable.Group> groupOptional = groupsTable.get(groupV2Id);
     if (groupOptional.isPresent()) {
       groupStore.deleteGroup(groupV1Id);
@@ -381,8 +382,8 @@ public class AccountData {
   }
 
   @JsonIgnore
-  public void setUUID(UUID ownUuid) {
-    address.uuid = ownUuid.toString();
+  public void setUUID(ACI aci) {
+    address.uuid = aci.toString();
   }
 
   public String getLegacyUsername() { return legacyUsername; }

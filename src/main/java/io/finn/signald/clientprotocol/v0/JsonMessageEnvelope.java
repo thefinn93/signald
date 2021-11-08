@@ -38,6 +38,7 @@ import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 @Deprecated(1641027661)
@@ -61,15 +62,15 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, UUID accountUUID)
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, ACI aci)
       throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    this.username = AccountsTable.getE164(accountUUID);
+    this.username = AccountsTable.getE164(aci);
 
     if (envelope.hasServerGuid()) {
       uuid = envelope.getServerGuid();
     }
 
-    Manager m = Manager.get(accountUUID);
+    Manager m = Manager.get(aci);
     if (!envelope.isUnidentifiedSender()) {
       source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()).getAddress());
     } else if (c != null) {
@@ -90,11 +91,11 @@ public class JsonMessageEnvelope {
 
     if (c != null) {
       if (c.getDataMessage().isPresent()) {
-        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), accountUUID);
+        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), aci);
       }
 
       if (c.getSyncMessage().isPresent()) {
-        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), accountUUID);
+        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), aci);
       }
 
       if (c.getCallMessage().isPresent()) {

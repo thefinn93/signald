@@ -54,7 +54,7 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
   }
 
   public void migrateToDB(Account account) {
-    PreKeysTable table = new PreKeysTable(account.getUUID());
+    PreKeysTable table = new PreKeysTable(account.getACI());
     Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
     logger.info("migrating " + store.size() + " prekeys to database");
     while (iterator.hasNext()) {

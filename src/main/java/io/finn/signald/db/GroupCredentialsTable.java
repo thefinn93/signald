@@ -19,6 +19,7 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class GroupCredentialsTable {
   private static final Logger logger = LogManager.getLogger();
@@ -28,9 +29,9 @@ public class GroupCredentialsTable {
   private static final String DATE = "date";
   private static final String CREDENTIAL = "credential";
 
-  private final UUID accountUUID;
+  private final ACI aci;
 
-  public GroupCredentialsTable(UUID accountUUID) { this.accountUUID = accountUUID; }
+  public GroupCredentialsTable(ACI aci) { this.aci = aci; }
 
   public AuthCredentialResponse getCredential(GroupsV2Api groupsV2Api, int today) throws InvalidInputException, SQLException, IOException {
     Optional<AuthCredentialResponse> todaysCredentials = getCredential(today);
@@ -44,7 +45,7 @@ public class GroupCredentialsTable {
 
   private Optional<AuthCredentialResponse> getCredential(int date) throws SQLException, InvalidInputException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + CREDENTIAL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DATE + " = ?");
-    statement.setString(1, accountUUID.toString());
+    statement.setString(1, aci.toString());
     statement.setInt(2, date);
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
@@ -58,7 +59,7 @@ public class GroupCredentialsTable {
     PreparedStatement statement =
         Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + " (" + ACCOUNT_UUID + "," + DATE + "," + CREDENTIAL + ") VALUES (?, ?, ?)");
     for (Map.Entry<Integer, AuthCredentialResponse> entry : credentials.entrySet()) {
-      statement.setString(1, accountUUID.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, entry.getKey());
       statement.setBytes(3, entry.getValue().serialize());
       statement.executeUpdate();

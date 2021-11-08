@@ -26,5 +26,5 @@ public class ServiceConfig {
   public final static long MAX_ENVELOPE_SIZE = 0;
   public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
   public final static boolean AUTOMATIC_NETWORK_RETRY = true;
-  public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false, true);
+  public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, true, false, true, false, true, false);
 }

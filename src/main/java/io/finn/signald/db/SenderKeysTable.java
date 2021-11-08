@@ -27,6 +27,7 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.groups.state.SenderKeyStore;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class SenderKeysTable implements SenderKeyStore {
   private static final Logger logger = LogManager.getLogger();
@@ -38,12 +39,12 @@ public class SenderKeysTable implements SenderKeyStore {
   private static final String DISTRIBUTION_ID = "distribution_id";
   private static final String RECORD = "record";
 
-  private final UUID accountId;
+  private final ACI aci;
   private final RecipientsTable recipientsTable;
 
-  public SenderKeysTable(UUID uuid) {
-    accountId = uuid;
-    recipientsTable = new RecipientsTable(uuid);
+  public SenderKeysTable(ACI aci) {
+    this.aci = aci;
+    recipientsTable = new RecipientsTable(aci);
   }
 
   @Override
@@ -52,7 +53,7 @@ public class SenderKeysTable implements SenderKeyStore {
       Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE + "," +
                                                                         DISTRIBUTION_ID + "," + RECORD + ") VALUES (?, ?, ?, ?, ?)");
-      statement.setString(1, accountId.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       statement.setString(4, distributionId.toString());
@@ -69,7 +70,7 @@ public class SenderKeysTable implements SenderKeyStore {
       Recipient recipient = recipientsTable.get(address.getName());
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT +
                                                                         " = ? AND " + DEVICE + " = ? AND " + DISTRIBUTION_ID + " = ?");
-      statement.setString(1, accountId.toString());
+      statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       statement.setString(4, distributionId.toString());

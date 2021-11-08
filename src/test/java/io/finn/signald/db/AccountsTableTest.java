@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.*;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class AccountsTableTest {
   private File databaseFile;
@@ -50,7 +51,7 @@ public class AccountsTableTest {
   @Test
   @DisplayName("try to get e164 of non-existent account")
   void getE164_NoSuchAccountException() {
-    Assertions.assertThrows(NoSuchAccountException.class, () -> { AccountsTable.getE164(UUID.randomUUID()); });
+    Assertions.assertThrows(NoSuchAccountException.class, () -> { AccountsTable.getE164(ACI.from(UUID.randomUUID())); });
   }
 
   @Test

@@ -33,9 +33,9 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class JsonMessageEnvelope {
@@ -58,10 +58,9 @@ public class JsonMessageEnvelope {
   public JsonReceiptMessage receipt;
   public JsonTypingMessage typing;
 
-  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, UUID accountUUID)
-      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
+  public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, ACI aci) throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
     try {
-      this.username = AccountsTable.getE164(accountUUID);
+      this.username = AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {
@@ -72,7 +71,7 @@ public class JsonMessageEnvelope {
       uuid = envelope.getServerGuid();
     }
 
-    Manager m = Common.getManager(accountUUID);
+    Manager m = Common.getManager(aci);
     if (!envelope.isUnidentifiedSender()) {
       source = new JsonAddress(Common.getRecipient(m.getRecipientsTable(), envelope.getSourceAddress()));
     } else if (c != null) {
@@ -93,11 +92,11 @@ public class JsonMessageEnvelope {
 
     if (c != null) {
       if (c.getDataMessage().isPresent()) {
-        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), accountUUID);
+        this.dataMessage = new JsonDataMessage(c.getDataMessage().get(), aci);
       }
 
       if (c.getSyncMessage().isPresent()) {
-        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), accountUUID);
+        this.syncMessage = new JsonSyncMessage(c.getSyncMessage().get(), aci);
       }
 
       if (c.getCallMessage().isPresent()) {

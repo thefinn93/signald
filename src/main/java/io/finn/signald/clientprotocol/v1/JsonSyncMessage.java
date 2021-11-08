@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class JsonSyncMessage {
   public JsonSentTranscriptMessage sent;
@@ -42,19 +43,19 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, UUID accountUUID) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
     if (syncMessage.getSent().isPresent()) {
-      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), accountUUID);
+      this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), aci);
     }
 
     if (syncMessage.getContacts().isPresent()) {
       ContactsMessage c = syncMessage.getContacts().get();
-      contacts = new JsonAttachment(c.getContactsStream(), accountUUID);
+      contacts = new JsonAttachment(c.getContactsStream(), aci);
       contactsComplete = c.isComplete();
     }
 
     if (syncMessage.getGroups().isPresent()) {
-      groups = new JsonAttachment(syncMessage.getGroups().get(), accountUUID);
+      groups = new JsonAttachment(syncMessage.getGroups().get(), aci);
     }
 
     if (syncMessage.getBlockedList().isPresent()) {

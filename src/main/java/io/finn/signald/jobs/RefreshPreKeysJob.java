@@ -30,25 +30,26 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class RefreshPreKeysJob implements Job {
   public static long INTERVAL = TimeUnit.DAYS.toMillis(3);
   private static final Logger logger = LogManager.getLogger();
 
-  private final UUID uuid;
+  private final ACI aci;
 
-  public RefreshPreKeysJob(UUID u) { uuid = u; }
+  public RefreshPreKeysJob(ACI aci) { this.aci = aci; }
 
   @Override
   public void run() throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(uuid);
+    Manager m = Manager.get(aci);
     runWithManager(m);
   }
 
-  public static void runIfNeeded(UUID uuid, Manager m) throws SQLException, IOException {
-    long lastRefresh = new Account(uuid).getLastPreKeyRefresh();
+  public static void runIfNeeded(ACI aci, Manager m) throws SQLException, IOException {
+    long lastRefresh = new Account(aci).getLastPreKeyRefresh();
     if (System.currentTimeMillis() - lastRefresh > INTERVAL) {
-      RefreshPreKeysJob job = new RefreshPreKeysJob(uuid);
+      RefreshPreKeysJob job = new RefreshPreKeysJob(aci);
       job.runWithManager(m);
     }
   }

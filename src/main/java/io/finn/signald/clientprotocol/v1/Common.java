@@ -39,6 +39,7 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.util.Base64;
@@ -47,26 +48,30 @@ import org.whispersystems.util.Base64;
  * and convert their exceptions to documented v1 exceptions
  */
 public class Common {
-  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError { return getManager(identifier, false); }
+
+  static Manager getManager(String identifier, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     if (identifier.startsWith("+")) {
-      UUID accountID;
+      ACI aci;
       try {
-        accountID = AccountsTable.getUUID(identifier);
+        aci = AccountsTable.getACI(identifier);
       } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
       } catch (SQLException e) {
         throw new InternalError("error getting manager", e);
       }
-      return getManager(accountID);
+      return getManager(aci, offline);
     } else {
-      return getManager(UUID.fromString(identifier));
+      return getManager(ACI.from(UUID.fromString(identifier)));
     }
   }
 
-  public static Manager getManager(UUID account) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  public static Manager getManager(ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError { return getManager(aci, false); }
+
+  public static Manager getManager(ACI aci, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     Manager m;
     try {
-      m = Manager.get(account);
+      m = Manager.get(aci, offline);
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -266,7 +271,7 @@ public class Common {
     }
 
     try {
-      return getManager(account.getUUID()).sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), recipients);
+      return getManager(account.getACI()).sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), recipients);
     } catch (IOException | SQLException e) {
       throw new InternalError("error sending group update", e);
     }

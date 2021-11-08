@@ -42,6 +42,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -110,12 +111,12 @@ public class RegistrationManager {
     handleResponseException(r);
 
     VerifyAccountResponse result = r.getResult().get();
-    UUID accountUUID = UUID.fromString(result.getUuid());
-    accountData.setUUID(accountUUID);
-    Account account = new Account(accountUUID);
+    ACI aci = ACI.from(UUID.fromString(result.getUuid()));
+    accountData.setUUID(aci);
+    Account account = new Account(aci);
 
     String server = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.SERVER_UUID);
-    AccountsTable.add(e164, accountUUID, getFileName(), server == null ? null : UUID.fromString(server));
+    AccountsTable.add(e164, aci, getFileName(), server == null ? null : UUID.fromString(server));
 
     String password = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.PASSWORD);
     account.setPassword(password);
@@ -123,8 +124,8 @@ public class RegistrationManager {
     byte[] identityKeyPair = PendingAccountDataTable.getBytes(e164, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
     account.setIdentityKeyPair(new IdentityKeyPair(identityKeyPair));
 
-    Recipient self = new RecipientsTable(accountUUID).get(accountUUID);
-    new IdentityKeysTable(accountUUID).saveIdentity(self, new IdentityKeyPair(identityKeyPair).getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
+    Recipient self = new RecipientsTable(aci).get(aci);
+    new IdentityKeysTable(aci).saveIdentity(self, new IdentityKeyPair(identityKeyPair).getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
     account.setLocalRegistrationId(registrationID);
     account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
@@ -135,7 +136,7 @@ public class RegistrationManager {
     accountData.setProfileKey(profileKey);
     accountData.save();
 
-    return Manager.get(accountUUID);
+    return Manager.get(aci);
   }
 
   public String getE164() { return e164; }

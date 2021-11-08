@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Deprecated(1641027661)
 public class JsonPreview {
@@ -33,12 +34,12 @@ public class JsonPreview {
   public String title;
   public JsonAttachment attachment;
 
-  public JsonPreview(SignalServiceDataMessage.Preview preview, UUID accountUUID)
+  public JsonPreview(SignalServiceDataMessage.Preview preview, ACI aci)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     url = preview.getUrl();
     title = preview.getTitle();
     if (preview.getImage().isPresent()) {
-      attachment = new JsonAttachment(preview.getImage().get(), accountUUID);
+      attachment = new JsonAttachment(preview.getImage().get(), aci);
     }
   }
 }

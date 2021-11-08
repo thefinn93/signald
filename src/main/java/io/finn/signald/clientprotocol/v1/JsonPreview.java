@@ -19,6 +19,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Doc("metadata about one of the links in a message")
 public class JsonPreview {
@@ -30,13 +31,13 @@ public class JsonPreview {
 
   public JsonPreview() {}
 
-  public JsonPreview(SignalServiceDataMessage.Preview preview, UUID accountUUID) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
+  public JsonPreview(SignalServiceDataMessage.Preview preview, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
     url = preview.getUrl();
     title = preview.getTitle();
     description = preview.getDescription();
     date = preview.getDate();
     if (preview.getImage().isPresent()) {
-      attachment = new JsonAttachment(preview.getImage().get(), accountUUID);
+      attachment = new JsonAttachment(preview.getImage().get(), aci);
     }
   }
 

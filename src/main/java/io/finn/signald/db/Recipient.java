@@ -19,6 +19,7 @@ package io.finn.signald.db;
 
 import io.finn.signald.clientprotocol.v0.JsonAddress;
 import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class Recipient {
@@ -38,7 +39,9 @@ public class Recipient {
 
   public String toRedactedString() { return new JsonAddress(address).toRedactedString(); }
 
-  public UUID getUUID() { return address.getUuid(); }
+  public UUID getUUID() { return address.getAci().uuid(); }
+
+  public ACI getACI() { return address.getAci(); }
 
   public boolean equals(Recipient other) { return other.getId() == getId(); }
 

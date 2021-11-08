@@ -37,6 +37,7 @@ import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
@@ -57,16 +58,16 @@ public class GroupsTable {
   private static final String DISTRIBUTION_ID = "distribution_id";
   private static final String GROUP_INFO = "group_info";
 
-  private final UUID accountUUID;
+  private final ACI aci;
 
-  public GroupsTable(UUID accountUUID) { this.accountUUID = accountUUID; }
+  public GroupsTable(ACI aci) { this.aci = aci; }
 
   public Optional<Group> get(SignalServiceGroupV2 group) throws InvalidProtocolBufferException, InvalidInputException, SQLException {
     return get(GroupSecretParams.deriveFromMasterKey(group.getMasterKey()).getPublicParams().getGroupIdentifier());
   }
   public Optional<Group> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROWID + ", * FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + GROUP_ID + " = ?");
-    statement.setString(1, accountUUID.toString());
+    statement.setString(1, aci.toString());
     statement.setBytes(2, identifier.serialize());
     ResultSet rows = statement.executeQuery();
     if (!rows.next()) {
@@ -77,7 +78,7 @@ public class GroupsTable {
 
   public List<Group> getAll() throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROWID + ",* FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, accountUUID.toString());
+    statement.setString(1, aci.toString());
     ResultSet rows = statement.executeQuery();
     List<Group> allGroups = new ArrayList<>();
     while (rows.next()) {
@@ -98,7 +99,7 @@ public class GroupsTable {
         ") VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (" + ACCOUNT_UUID + "," + GROUP_ID + ") DO UPDATE SET " + REVISION + "=excluded." + REVISION + "," + DISTRIBUTION_ID +
         "=excluded." + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "=excluded." + LAST_AVATAR_FETCH + "," + GROUP_INFO + "=excluded." + GROUP_INFO);
     int i = 1;
-    statement.setString(i++, accountUUID.toString());
+    statement.setString(i++, aci.toString());
     statement.setBytes(i++, GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier().serialize());
     statement.setBytes(i++, masterKey.serialize());
     statement.setInt(i++, revision);

@@ -106,7 +106,7 @@ public class IdentityKeyStore {
   public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
 
   public void migrateToDB(Account account) throws SQLException, IOException {
-    IdentityKeysTable table = new IdentityKeysTable(account.getUUID());
+    IdentityKeysTable table = new IdentityKeysTable(account.getACI());
     logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
     Iterator<Identity> iterator = trustedKeys.iterator();
     RecipientsTable recipientsTable = account.getRecipients();

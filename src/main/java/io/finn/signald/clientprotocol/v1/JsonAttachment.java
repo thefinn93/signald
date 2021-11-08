@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
 
 @Doc("represents a file attached to a message. When seding, only `filename` is required.")
@@ -79,10 +80,10 @@ public class JsonAttachment {
     }
   }
 
-  public JsonAttachment(SignalServiceAttachment attachment, UUID accountUUID) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+  public JsonAttachment(SignalServiceAttachment attachment, ACI aci) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
     this(attachment);
     if (attachment.isPointer()) {
-      File file = Common.getManager(accountUUID).getAttachmentFile(id);
+      File file = Common.getManager(aci).getAttachmentFile(id);
       if (file.exists()) {
         this.storedFilename = file.toString();
       }

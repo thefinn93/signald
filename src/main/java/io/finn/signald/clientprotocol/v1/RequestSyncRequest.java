@@ -49,7 +49,7 @@ public class RequestSyncRequest implements RequestType<Empty> {
       } catch (IOException | SQLException e) {
         throw new InternalError("error requesting group sync", e);
       } catch (UntrustedIdentityException e) {
-        throw new UntrustedIdentityError(m.getUUID(), e);
+        throw new UntrustedIdentityError(m.getACI(), e);
       }
     }
 
@@ -59,7 +59,7 @@ public class RequestSyncRequest implements RequestType<Empty> {
       } catch (IOException | SQLException e) {
         throw new InternalError("error requesting config sync", e);
       } catch (UntrustedIdentityException e) {
-        throw new UntrustedIdentityError(m.getUUID(), e);
+        throw new UntrustedIdentityError(m.getACI(), e);
       }
     }
 
@@ -69,7 +69,7 @@ public class RequestSyncRequest implements RequestType<Empty> {
       } catch (IOException | SQLException e) {
         throw new InternalError("error requesting contacts sync", e);
       } catch (UntrustedIdentityException e) {
-        throw new UntrustedIdentityError(m.getUUID(), e);
+        throw new UntrustedIdentityError(m.getACI(), e);
       }
     }
 
@@ -79,7 +79,7 @@ public class RequestSyncRequest implements RequestType<Empty> {
       } catch (IOException | SQLException e) {
         throw new InternalError("error requesting blocklist sync", e);
       } catch (UntrustedIdentityException e) {
-        throw new UntrustedIdentityError(m.getUUID(), e);
+        throw new UntrustedIdentityError(m.getACI(), e);
       }
     }
 

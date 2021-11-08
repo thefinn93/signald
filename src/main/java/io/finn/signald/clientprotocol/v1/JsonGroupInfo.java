@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
@@ -38,7 +39,7 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, UUID accountUUID) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  JsonGroupInfo(SignalServiceGroup groupInfo, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
       this.members = new ArrayList<>();
@@ -49,7 +50,7 @@ public class JsonGroupInfo {
     if (groupInfo.getName().isPresent()) {
       this.name = groupInfo.getName().get();
     } else {
-      GroupInfo group = Common.getManager(accountUUID).getGroup(groupInfo.getGroupId());
+      GroupInfo group = Common.getManager(aci).getGroup(groupInfo.getGroupId());
       if (group != null) {
         this.name = group.name;
       }

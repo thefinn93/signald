@@ -37,6 +37,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @ProtocolType("subscribe")
 @Doc("receive incoming messages. After making a subscribe request, incoming messages will be sent to the client encoded "
@@ -46,9 +47,9 @@ public class SubscribeRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
-    UUID accountUUID;
+    ACI aci;
     try {
-      accountUUID = AccountsTable.getUUID(account);
+      aci = AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {
@@ -56,7 +57,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     }
 
     try {
-      MessageReceiver.subscribe(accountUUID, new IncomingMessageEncoder(request.getSocket(), accountUUID, account));
+      MessageReceiver.subscribe(aci, new IncomingMessageEncoder(request.getSocket(), aci, account));
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -73,7 +74,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     private static final Logger logger = LogManager.getLogger();
     private final ObjectMapper mapper = JSONUtil.GetMapper();
     Socket socket;
-    UUID accountUUID;
+    ACI aci;
     String account; // account identifier is still e164 for now, so that needs to be stored separately from the UUID
 
     private static final HashMap<Class<? extends Exception>, Class<? extends ExceptionWrapper>> exceptions = new HashMap<>();
@@ -86,9 +87,9 @@ public class SubscribeRequest implements RequestType<Empty> {
 
     public static HashMap<Class<? extends Exception>, Class<? extends ExceptionWrapper>> getExceptions() { return exceptions; }
 
-    IncomingMessageEncoder(Socket socket, UUID accountUUID, String account) {
+    IncomingMessageEncoder(Socket socket, ACI aci, String account) {
       this.socket = socket;
-      this.accountUUID = accountUUID;
+      this.aci = aci;
       this.account = account;
     }
 
@@ -100,10 +101,10 @@ public class SubscribeRequest implements RequestType<Empty> {
     @Override
     public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException {
       try {
-        IncomingMessage message = new IncomingMessage(envelope, content, accountUUID);
+        IncomingMessage message = new IncomingMessage(envelope, content, aci);
         broadcast(new ClientMessageWrapper(account, message));
       } catch (NoSuchAccountError | ServerNotFoundError | InvalidProxyError | InternalError e) {
-        logger.warn("Exception while broadcasting incoming message: " + e.toString());
+        logger.warn("Exception while broadcasting incoming message: " + e);
       }
     }
 
@@ -156,7 +157,7 @@ public class SubscribeRequest implements RequestType<Empty> {
             error = constructor.newInstance(exception);
           } catch (NoSuchMethodException ignored) {
             constructor = errorType.getDeclaredConstructor(UUID.class, exception.getClass());
-            error = constructor.newInstance(accountUUID, exception);
+            error = constructor.newInstance(aci, exception);
           }
         } else {
           error = new InternalError("unexpected error while receiving", exception);

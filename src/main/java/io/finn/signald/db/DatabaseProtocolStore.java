@@ -30,6 +30,7 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceDataStore;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public class DatabaseProtocolStore implements SignalServiceDataStore {
@@ -40,23 +41,23 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   private final SenderKeysTable senderKeys;
   private final SenderKeySharedTable senderKeyShared;
 
-  public DatabaseProtocolStore(UUID uuid) {
-    preKeys = new PreKeysTable(uuid);
-    sessions = new SessionsTable(uuid);
-    signedPrekeys = new SignedPreKeysTable(uuid);
-    identityKeys = new IdentityKeysTable(uuid);
-    senderKeys = new SenderKeysTable(uuid);
-    senderKeyShared = new SenderKeySharedTable(uuid);
+  public DatabaseProtocolStore(ACI aci) {
+    preKeys = new PreKeysTable(aci);
+    sessions = new SessionsTable(aci);
+    signedPrekeys = new SignedPreKeysTable(aci);
+    identityKeys = new IdentityKeysTable(aci);
+    senderKeys = new SenderKeysTable(aci);
+    senderKeyShared = new SenderKeySharedTable(aci);
   }
 
   public DatabaseProtocolStore(String identifier) {
-    UUID uuid = null;
-    preKeys = new PreKeysTable(uuid);
-    sessions = new SessionsTable(uuid);
-    signedPrekeys = new SignedPreKeysTable(uuid);
     identityKeys = new IdentityKeysTable(identifier);
-    senderKeys = new SenderKeysTable(uuid);
-    senderKeyShared = new SenderKeySharedTable(uuid);
+
+    preKeys = new PreKeysTable(null);
+    sessions = new SessionsTable(null);
+    signedPrekeys = new SignedPreKeysTable(null);
+    senderKeys = new SenderKeysTable(null);
+    senderKeyShared = new SenderKeySharedTable(null);
   }
 
   @Override

@@ -21,6 +21,7 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class JsonMention {
   @ExampleValue(ExampleValue.REMOTE_UUID) @Doc("The UUID of the account being mentioned") public String uuid;
@@ -35,10 +36,10 @@ public class JsonMention {
   public JsonMention() {}
 
   public JsonMention(SignalServiceDataMessage.Mention m) {
-    uuid = m.getUuid().toString();
+    uuid = m.getAci().toString();
     start = m.getStart();
     length = m.getLength();
   }
 
-  public SignalServiceDataMessage.Mention asMention() { return new SignalServiceDataMessage.Mention(UUID.fromString(uuid), start, length); }
+  public SignalServiceDataMessage.Mention asMention() { return new SignalServiceDataMessage.Mention(ACI.from(UUID.fromString(uuid)), start, length); }
 }

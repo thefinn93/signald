@@ -23,6 +23,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class MessageQueueTable {
@@ -101,8 +102,8 @@ public class MessageQueueTable {
     String senderE164 = rows.getString(SOURCE_E164);
     String senderUUIDString = rows.getString(SOURCE_UUID);
     if ((senderE164 != null && senderE164.length() > 0) || (senderUUIDString != null && senderUUIDString.length() > 0)) {
-      UUID senderUUID = (senderUUIDString != null && senderUUIDString.length() > 0) ? UUID.fromString(senderUUIDString) : null;
-      sender = Optional.of(new SignalServiceAddress(senderUUID, senderE164));
+      ACI senderACI = (senderUUIDString != null && senderUUIDString.length() > 0) ? ACI.from(UUID.fromString(senderUUIDString)) : null;
+      sender = Optional.of(new SignalServiceAddress(senderACI, senderE164));
     }
     int senderDevice = rows.getInt(SOURCE_DEVICE);
     long timestamp = rows.getLong(TIMESTAMP);

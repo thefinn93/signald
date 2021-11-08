@@ -55,7 +55,7 @@ public class LegacyGroupsV2Storage {
     boolean needsSave = false;
 
     if (credentials != null) {
-      GroupCredentialsTable credentialsTable = new GroupCredentialsTable(account.getUUID());
+      GroupCredentialsTable credentialsTable = new GroupCredentialsTable(account.getACI());
       HashMap<Integer, AuthCredentialResponse> credentialResponseHashMap = new HashMap<>();
       for (Map.Entry<Integer, JsonAuthCredential> entry : credentials.entrySet()) {
         credentialResponseHashMap.put(entry.getKey(), entry.getValue().credential);

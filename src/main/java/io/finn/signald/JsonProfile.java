@@ -55,13 +55,13 @@ public class JsonProfile {
       unrestricted_unidentified_access = true;
     }
     capabilities = new JsonCapabilities(p.getCapabilities());
-    if (p.getUuid() != null) {
-      uuid = p.getUuid().toString();
+    if (p.getAci() != null) {
+      uuid = p.getAci().uuid().toString();
     }
     address = a;
   }
 
-  public class JsonCapabilities {
+  public static class JsonCapabilities {
     public boolean gv2;
     public boolean storage;
     @JsonProperty("gv1-migration") public boolean gv1Migration;

@@ -42,7 +42,7 @@ public class DeleteAccountRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
-    Manager m = Common.getManager(account);
+    Manager m = Common.getManager(account, !server);
     try {
       m.deleteAccount(server);
     } catch (IOException | SQLException e) {

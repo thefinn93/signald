@@ -81,7 +81,7 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
   }
 
   public void migrateToDB(Account account) {
-    SignedPreKeysTable signedPreKeysTable = new SignedPreKeysTable(account.getUUID());
+    SignedPreKeysTable signedPreKeysTable = new SignedPreKeysTable(account.getACI());
     logger.info("migrating " + store.size() + " signed pre-keys to the database");
     Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
     while (iterator.hasNext()) {

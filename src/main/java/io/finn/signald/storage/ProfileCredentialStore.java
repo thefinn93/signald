@@ -25,6 +25,7 @@ import java.util.UUID;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class ProfileCredentialStore {
@@ -33,7 +34,12 @@ public class ProfileCredentialStore {
 
   @JsonIgnore
   public ProfileKeyCredential getProfileKeyCredential(UUID uuid) {
-    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(uuid, Optional.absent()));
+    return getProfileKeyCredential(ACI.from(uuid));
+  }
+
+  @JsonIgnore
+  public ProfileKeyCredential getProfileKeyCredential(ACI aci) {
+    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(aci, Optional.absent()));
     if (entry != null) {
       return entry.getProfileKeyCredential();
     }

@@ -41,21 +41,6 @@ public class SignalProtocolStore {
 
   public SignalProtocolStore() {}
 
-  public void setUUID(UUID u) {
-    if (preKeys == null) {
-      preKeys = new PreKeysTable(u);
-    }
-    if (sessionStore == null) {
-      sessionStore = new SessionsTable(u);
-    }
-    if (signedPreKeyStore == null) {
-      signedPreKeyStore = new SignedPreKeysTable(u);
-    }
-    if (identityKeyStore == null) {
-      identityKeyStore = new IdentityKeysTable(u);
-    }
-  }
-
   public void migrateToDB(Account account) throws SQLException, IOException {
     legacyPreKeys.migrateToDB(account);
     legacySessionStore.migrateToDB(account);

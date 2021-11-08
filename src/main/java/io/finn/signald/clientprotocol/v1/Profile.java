@@ -26,6 +26,7 @@ import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -50,6 +51,8 @@ public class Profile {
        + "on the signald side. If unset, null or an empty string, will empty the profile payment address")
   @JsonProperty("mobilecoin_address")
   public String mobileCoinAddress;
+
+  @Doc("currently unclear how these work, as they are not available in the production Signal apps") @JsonProperty("visible_badge_ids") public List<String> visibleBadgeIds;
 
   public Profile(ContactStore.ContactInfo contact) {
     if (contact != null) {
@@ -78,6 +81,8 @@ public class Profile {
       } catch (IOException e) {
         logger.warn("error decrypting payment profile address: " + e.getMessage());
       }
+
+      visibleBadgeIds = profile.getVisibleBadgesIds();
     }
 
     if (address == null) {

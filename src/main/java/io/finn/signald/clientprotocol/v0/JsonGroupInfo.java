@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
@@ -41,7 +42,7 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, UUID accountUUID)
+  JsonGroupInfo(SignalServiceGroup groupInfo, ACI aci)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
@@ -53,7 +54,7 @@ public class JsonGroupInfo {
     if (groupInfo.getName().isPresent()) {
       this.name = groupInfo.getName().get();
     } else {
-      GroupInfo group = Manager.get(accountUUID).getGroup(groupInfo.getGroupId());
+      GroupInfo group = Manager.get(aci).getGroup(groupInfo.getGroupId());
       if (group != null) {
         this.name = group.name;
       }

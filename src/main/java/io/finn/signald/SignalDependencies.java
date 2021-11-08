@@ -38,6 +38,7 @@ import org.signal.zkgroup.profiles.ClientZkProfileOperations;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.api.websocket.WebSocketFactory;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -71,21 +72,25 @@ public class SignalDependencies {
   private final UUID accountUUID;
 
   public static SignalDependencies get(UUID accountUUID) throws SQLException, ServerNotFoundException, InvalidProxyException, IOException, NoSuchAccountException {
+    return get(ACI.from(accountUUID));
+  }
+
+  public static SignalDependencies get(ACI aci) throws SQLException, ServerNotFoundException, InvalidProxyException, IOException, NoSuchAccountException {
     synchronized (instances) {
-      SignalDependencies d = instances.get(accountUUID.toString());
+      SignalDependencies d = instances.get(aci.toString());
       if (d == null) {
-        ServersTable.Server server = AccountsTable.getServer(accountUUID);
-        Account account = new Account(accountUUID);
+        ServersTable.Server server = AccountsTable.getServer(aci);
+        Account account = new Account(aci);
         d = new SignalDependencies(account, server);
-        instances.put(accountUUID.toString(), d);
+        instances.put(aci.toString(), d);
       }
       return d;
     }
   }
 
-  public static void delete(UUID accountUUID) {
+  public static void delete(ACI aci) {
     synchronized (instances) {
-      SignalDependencies dependencies = instances.remove(accountUUID.toString());
+      SignalDependencies dependencies = instances.remove(aci.toString());
       if (dependencies == null) {
         return;
       }

@@ -78,7 +78,7 @@ public class TypingRequest implements RequestType<Empty> {
         } catch (IOException | SQLException exception) {
           logger.error("internal error while saving new identity", exception);
         }
-        throw new UntrustedIdentityError(m.getUUID(), e);
+        throw new UntrustedIdentityError(m.getACI(), e);
       } catch (IOException e) {
         throw new InternalError("error sending typing message", e);
       }

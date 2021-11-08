@@ -50,7 +50,7 @@ public class SessionStore {
   public synchronized List<SessionInfo> getSessions() { return sessions; }
 
   public void migrateToDB(Account account) {
-    SessionsTable table = new SessionsTable(account.getUUID());
+    SessionsTable table = new SessionsTable(account.getACI());
     logger.info("migrating " + sessions.size() + " sessions to the database");
     Iterator<SessionInfo> iterator = sessions.iterator();
     while (iterator.hasNext()) {

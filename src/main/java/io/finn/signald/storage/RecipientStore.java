@@ -51,7 +51,7 @@ public class RecipientStore {
     while (iterator.hasNext()) {
       JsonAddress entry = iterator.next();
       try {
-        table.get(entry.number, entry.getUUID());
+        table.get(entry.number, entry.getACI());
       } catch (IOException e) {
         logger.warn("error migrating recipient to db: ", e);
       }
