@@ -162,7 +162,8 @@ public class GroupsTable {
       try {
         fetchAvatar();
       } catch (IOException | InvalidProxyException | SQLException | ServerNotFoundException | NoSuchAccountException e) {
-        logger.warn("Failed to fetch group avatar:" + e.getMessage());
+        logger.warn("Failed to fetch group avatar: " + e.getMessage());
+        logger.debug("stack trace for group avi fetch failure: ", e);
       }
       JsonGroupV2Info jsonGroupV2Info = new JsonGroupV2Info(SignalServiceGroupV2.newBuilder(masterKey).withRevision(revision).build(), group);
       File avatarFile = getGroupAvatarFile(getId());
