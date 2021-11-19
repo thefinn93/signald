@@ -42,15 +42,17 @@ public class SetDeviceNameRequest implements RequestType<Empty> {
   @Override
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
     Manager m = Common.getManager(account);
-    try {
-      m.refreshAccount();
-    } catch (IOException | SQLException e) {
-      throw new InternalError("error saving new device name", e);
-    }
+
     try {
       m.getAccount().setDeviceName(deviceName);
     } catch (SQLException e) {
       throw new InternalError("error storing new device name locally", e);
+    }
+
+    try {
+      m.refreshAccount();
+    } catch (IOException | SQLException e) {
+      throw new InternalError("error saving new device name", e);
     }
     return new Empty();
   }
