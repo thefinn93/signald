@@ -108,12 +108,17 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         return;
       }
 
-      if (connectionState == WebSocketConnectionState.CONNECTED) {
+      switch (connectionState) {
+      case AUTHENTICATION_FAILED:
+        receivers.get(accountUUID.toString()).sockets.removeAll();
+        break;
+      case CONNECTED:
         receiver.sockets.broadcastListenStarted();
         if (receiver.backoff != 0) {
           receiver.backoff = 0;
           logger.debug("websocket connected, resetting backoff");
         }
+        break;
       }
 
       receiver.sockets.broadcastWebSocketConnectionStateChange(connectionState, unidentified);
