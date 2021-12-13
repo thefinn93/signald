@@ -18,7 +18,6 @@
 
 # https://github.com/signalapp/Signal-Desktop/blob/5c810c65cc78af59c77a9852d6c40fd98d122b91/aptly.sh was helpful
 
-gpg --import "${SIGNING_KEY_PATH}"
 
 aptly repo create signald
 aptly mirror create -ignore-signatures backfill-mirror https://updates.signald.org "${DISTRIBUTION}" main
@@ -31,4 +30,7 @@ done
 aptly repo import backfill-mirror signald signaldctl 'signald (>= 0.14.0)'
 
 aptly repo add signald signald_*.deb
+
+gpg1 --import "${SIGNING_KEY_PATH}"
+gpg1 --list-secret-keys
 aptly publish repo -config=.aptly.conf -batch -gpg-key="${SIGNING_KEY_ID}" -distribution="${DISTRIBUTION}" "signald" "s3:updates.signald.org:"
