@@ -61,7 +61,8 @@ public class RequestUtil {
       SendPaymentRequest.class,                                                                                           // v1        send_payment
       RemoteConfigRequest.class,                                                                                          // v1        get_remote_config
       RefuseMembershipRequest.class,                                                                                      // v1        refuse_membership
-      SubmitChallengeRequest.class                                                                                        // v1        submit_challenge
+      SubmitChallengeRequest.class,                                                                                       // v1        submit_challenge
+      IsIdentifierRegisteredRequest.class                                                                                 // v1        is_identifier_registered
   );
 
   public static String getVersion(Class<?> t) {
