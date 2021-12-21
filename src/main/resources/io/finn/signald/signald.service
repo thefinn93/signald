@@ -17,4 +17,4 @@ UMask=0007
 SuccessExitStatus=143
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
