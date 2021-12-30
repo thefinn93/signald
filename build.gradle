@@ -86,6 +86,16 @@ static String getTarget() {
     return target
 }
 
+static String getVersion() {
+    String version = System.getenv("VERSION")
+    if(version != null) {
+        System.out.println("signald version set to " + version)
+        return version
+    }
+    System.out.println("signald version not set")
+    return "unversioned"
+}
+
 repositories {
     maven {url "https://gitlab.com/api/v4/groups/6853927/-/packages/maven"} // https://gitlab.com/groups/signald/-/packages
     maven {url "https://plugins.gradle.org/m2/"}
@@ -132,7 +142,7 @@ dependencies {
 
 buildConfig {
   packageName = "io.finn.signald"
-  version = System.getenv("VERSION") ?: "unversioned"
+  version = getVersion()
   appName = System.getenv("CI_PROJECT_NAME") ?: "signald"
 
   buildConfigField 'String', "ERROR_REPORTING_URL", "https://gitlab.com/signald/signald/-/issues/new"
