@@ -3,11 +3,11 @@ Upstream-Name: signald
 Source: <https://gitlab.com/signald/signald>
 
 Files: *
-Copyright: 2021 Finn Herzfeld <finn@janky.solutions>
+Copyright: 2022 signald contributors <signald@janky.solutions>
 License: GPL-3.0+
 
 Files: debian/*
-Copyright: 2021 Finn Herzfeld <signald@janky.solutions>
+Copyright: 2022 signald contributors <signald@janky.solutions>
 License: GPL-3.0+
 
 License: GPL-3.0+

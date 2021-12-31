@@ -1,18 +1,8 @@
 /*
- * Copyright (C) 2021 Finn Herzfeld
+ * Copyright 2022 signald contributors
+ * SPDX-License-Identifier: GPL-3.0-only
+ * See included LICENSE file
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package io.finn.signald.clientprotocol;
@@ -162,8 +152,8 @@ public class ClientConnection implements Runnable {
             } catch (SocketException e) {
               logger.debug("error checking socket credentials to write warning message", e);
             }
-            logger.warn(client + " sent a v0 " + type + " request. v0 support will be removed at the end of "
-                        + "2021. Please update your signald client. Client authors, see "
+            logger.warn(client + " sent a v0 " + type + " request. v0 support will be removed soon!"
+                        + "Please update your signald client. Client authors, see "
                         + "https://signald.org/articles/protocol-versioning/#deprecation");
             legacySocketHandler.handleRequest(request);
           } else {
