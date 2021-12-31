@@ -210,7 +210,7 @@ docker manifest:
         token=$(curl -sfd "{\"username\": \"${DOCKER_HUB_USERNAME}\", \"password\": \"${DOCKER_HUB_PASSWORD}\"}" -H "Content-Type: application/json" https://hub.docker.com/v2/users/login/ | jq -r '.token')
         for platform in amd64 arm64-v8 arm-v7; do
           echo "deleting tag ${VERSION}-${platform}"
-          curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/${DOCKER_HUB_USERNAME}/signald/tags/${VERSION}-${platform}/
+          curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/signald/signald/tags/${VERSION}-${platform}/
         done
 
         echo "image pushed to docker.io/signald/signald:${VERSION}"
