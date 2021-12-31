@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class GroupInfo {
   @JsonProperty public byte[] groupId;
@@ -43,6 +44,9 @@ public class GroupInfo {
   public List<SignalServiceAddress> getMembers() {
     List<SignalServiceAddress> l = new ArrayList<>();
     for (JsonAddress m : members) {
+      if (m.uuid == null) {
+        m.uuid = UuidUtil.UNKNOWN_UUID.toString();
+      }
       l.add(m.getSignalServiceAddress());
     }
     return l;
