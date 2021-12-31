@@ -195,15 +195,15 @@ docker manifest:
       if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then 
         set -x
         for platform in amd64 arm64-v8 arm-v7; do
-          docker tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-${platform}"
-          docker push --quiet "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-${platform}"
+          docker tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
+          docker push --quiet "docker.io/signald/signald:${VERSION}-${platform}"
         done
 
-        docker -l debug manifest create "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-amd64" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-arm64-v8" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-arm-v7"
-        docker -l debug manifest push "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}"
+        docker -l debug manifest create "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
+        docker -l debug manifest push "docker.io/signald/signald:${VERSION}"
 
-        docker -l debug manifest create "docker.io/${DOCKER_HUB_USERNAME}/signald:latest" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-amd64" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-arm64-v8" "docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}-arm-v7"
-        docker -l debug manifest push "docker.io/${DOCKER_HUB_USERNAME}/signald:latest"
+        docker -l debug manifest create "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
+        docker -l debug manifest push "docker.io/signald/signald:latest"
         
         set +x # to avoid printing tokens
         echo "Authenticating to docker hub..."
@@ -213,7 +213,7 @@ docker manifest:
           curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/${DOCKER_HUB_USERNAME}/signald/tags/${VERSION}-${platform}/
         done
 
-        echo "image pushed to docker.io/${DOCKER_HUB_USERNAME}/signald:${VERSION}"
+        echo "image pushed to docker.io/signald/signald:${VERSION}"
       fi
   rules:
     - if: '$CI_PROJECT_PATH == "signald/signald"'

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -exuo pipefail
 
-DOCKER_HUB_IMAGE=signaldrobot/signald
+DOCKER_HUB_IMAGE=signald/signald
 
 for platform in amd64 arm64-v8 arm-v7; do
     docker tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/${DOCKER_HUB_IMAGE}:${VERSION}-${platform}"
