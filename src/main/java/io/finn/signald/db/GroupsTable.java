@@ -248,5 +248,8 @@ public class GroupsTable {
     statement.executeUpdate();
   }
 
-  public static void setGroupAvatarPath(String path) { groupAvatarPath = path; }
+  public static void setGroupAvatarPath(String path) throws IOException {
+    groupAvatarPath = path;
+    Files.createDirectories(new File(groupAvatarPath).toPath());
+  }
 }

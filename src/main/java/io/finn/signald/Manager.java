@@ -185,11 +185,12 @@ public class Manager {
     synchronized (managers) { managers.put(aci.toString(), this); }
   }
 
-  public static void setDataPath(String path) {
+  public static void setDataPath(String path) throws IOException {
     dataPath = path + "/data";
     attachmentsPath = path + "/attachments";
     avatarsPath = path + "/avatars";
     stickersPath = path + "/stickers";
+    GroupsTable.setGroupAvatarPath(avatarsPath);
   }
 
   public static void setDecryptionTimeout(int d) { decryptionTimeout = d; }
