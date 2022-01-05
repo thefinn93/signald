@@ -272,6 +272,7 @@ unit tests x86_64-apple-darwin:
   rules:
     - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
+      allow_failure: true # until the darwin machine gets downgraded to a supported java version or signald adds support for java 17
     - when: manual
       allow_failure: true
 
