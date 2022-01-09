@@ -199,8 +199,12 @@ docker manifest:
           docker push --quiet "docker.io/signald/signald:${VERSION}-${platform}"
         done
 
-        docker -l debug manifest create "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
-        docker -l debug manifest push "docker.io/signald/signald:${VERSION}"
+        # count commits since last tag
+        commits="$(git rev-list $(git describe --always --abbrev=0 HEAD)..HEAD --count)"
+        if [ "${commits}" = "0" ]; then # an actual release
+          docker -l debug manifest create "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
+          docker -l debug manifest push "docker.io/signald/signald:${VERSION}"
+        fi
 
         docker -l debug manifest create "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
         docker -l debug manifest push "docker.io/signald/signald:latest"
@@ -216,9 +220,7 @@ docker manifest:
         echo "image pushed to docker.io/signald/signald:${VERSION}"
       fi
   rules:
-    - if: '$CI_PROJECT_PATH == "signald/signald"'
-      when: on_success
-    - if: '$CI_PROJECT_PATH == "signald/signald-test"'
+    - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_BRANCH'
       when: on_success
     - when: manual
       allow_failure: true
@@ -286,7 +288,7 @@ publish debian packages:
   variables:
     DISTRIBUTION: unstable
   rules:
-    - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_REF_PROTECTED == "true"'
+    - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_BRANCH'
       when: on_success
 
 validate protocol:
