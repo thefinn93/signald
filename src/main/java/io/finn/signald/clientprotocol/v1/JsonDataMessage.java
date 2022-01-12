@@ -17,11 +17,9 @@ import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
-import org.whispersystems.signalservice.api.messages.shared.SharedContact;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class JsonDataMessage {
@@ -105,7 +103,10 @@ public class JsonDataMessage {
     }
 
     if (dataMessage.getSharedContacts().isPresent()) {
-      contacts = dataMessage.getSharedContacts().get();
+      contacts = new ArrayList<>();
+      for (org.whispersystems.signalservice.api.messages.shared.SharedContact c : dataMessage.getSharedContacts().get()) {
+        contacts.add(new SharedContact(c));
+      }
     }
 
     if (dataMessage.getPreviews().isPresent()) {

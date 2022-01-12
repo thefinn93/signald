@@ -83,7 +83,6 @@ static String getVersion() {
 
 repositories {
     maven {url "https://gitlab.com/api/v4/groups/6853927/-/packages/maven"} // https://gitlab.com/groups/signald/-/packages
-    maven {url "https://plugins.gradle.org/m2/"}
     mavenCentral()
 }
 
