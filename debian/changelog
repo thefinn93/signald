@@ -1,3 +1,10 @@
+signald (0.16.1) unstable; urgency=medium
+
+  * A bug fix release. Details at https://gitlab.com/signald/signald/-/issues/271
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.16.1
+
+ -- Finn <finn@janky.solutions>  Thu, 13 Jan 2022 14:57:07 -0800
+
 signald (0.16.0) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.16.0
