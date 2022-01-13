@@ -143,7 +143,7 @@ public class GroupsTable {
     public DecryptedGroup getDecryptedGroup() { return group; }
 
     public void setDecryptedGroup(DecryptedGroup decryptedGroup) throws SQLException {
-      PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + REVISION + " = ?, " + GROUP_INFO + " = ? WHERE " + ROWID + " + ?");
+      PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + REVISION + " = ?, " + GROUP_INFO + " = ? WHERE " + ROWID + " = ?");
       statement.setInt(1, decryptedGroup.getRevision());
       statement.setBytes(2, decryptedGroup.toByteArray());
       statement.setInt(3, rowId);
