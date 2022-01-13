@@ -28,6 +28,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Security;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -181,6 +182,10 @@ public class Main implements Runnable {
             logger.warn("account file " + f.getAbsolutePath() + " does NOT appear to have a valid phone number in the filename!");
           }
         }
+      }
+
+      for (UUID accountUUID : AccountsTable.getAll()) {
+        AccountRepair.repairAccountIfNeeded(new Account(accountUUID));
       }
 
       new Thread(new BackgroundJobRunnerThread()).start();

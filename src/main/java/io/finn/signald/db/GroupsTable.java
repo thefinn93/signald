@@ -134,6 +134,8 @@ public class GroupsTable {
 
     public GroupIdentifier getId() { return GroupsUtil.GetIdentifierFromMasterKey(masterKey); }
 
+    public String getIdString() { return Base64.encodeBytes(getId().serialize()); }
+
     public int getRevision() { return revision; }
 
     public GroupMasterKey getMasterKey() { return masterKey; }

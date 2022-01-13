@@ -34,9 +34,10 @@ public class AccountDataTable {
     MULTI_DEVICE,
     DEVICE_ID,
     PASSWORD,
-    LAST_ACCOUNT_REFRESH,
+    LAST_ACCOUNT_REFRESH, // server account updates when new device properties are added
     PRE_KEY_ID_OFFSET,
-    NEXT_SIGNED_PRE_KEY_ID
+    NEXT_SIGNED_PRE_KEY_ID,
+    LAST_ACCOUNT_REPAIR // fixes to historical signald bugs (see ../AccountRepair.java)
   }
 
   public static byte[] getBytes(ACI aci, Key key) throws SQLException {

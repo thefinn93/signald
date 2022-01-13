@@ -29,6 +29,6 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @Override
   public JsonGroupV2Info run(Request request)
       throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError, InvalidGroupStateError, InvalidRequestError {
-    return Common.getGroup(Common.getAccount(account), groupID).getJsonGroupV2Info();
+    return Common.getGroup(Common.getAccount(account), groupID, revision).getJsonGroupV2Info();
   }
 }

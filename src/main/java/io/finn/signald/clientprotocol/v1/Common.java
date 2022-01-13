@@ -207,6 +207,11 @@ public class Common {
   }
 
   public static GroupsTable.Group getGroup(Account account, String groupId)
+      throws UnknownGroupError, NoSuchAccountError, ServerNotFoundError, InvalidRequestError, InternalError, InvalidProxyError {
+    return getGroup(account, groupId, -1);
+  }
+
+  public static GroupsTable.Group getGroup(Account account, String groupId, int revision)
       throws UnknownGroupError, InvalidRequestError, InternalError, NoSuchAccountError, InvalidProxyError, ServerNotFoundError {
     Groups groups = getGroups(account);
 
@@ -229,7 +234,7 @@ public class Common {
 
     Optional<GroupsTable.Group> groupOptional;
     try {
-      groupOptional = groups.getGroup(g.get());
+      groupOptional = groups.getGroup(g.get(), revision);
     } catch (InvalidGroupStateException | VerificationFailedException | IOException | InvalidInputException | SQLException e) {
       throw new InternalError("error fetching group state", e);
     }
