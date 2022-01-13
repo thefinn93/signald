@@ -16,7 +16,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 
 public class AccountRepair {
   private final static Logger logger = LogManager.getLogger();
-  private final static int ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS = 1;
+  public final static int ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS = 1;
 
   public static void repairAccountIfNeeded(Account account) throws SQLException {
     int lastAccountRepair = AccountDataTable.getInt(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR);
