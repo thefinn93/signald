@@ -204,6 +204,12 @@ docker manifest:
         if [ "${commits}" = "0" ]; then # an actual release
           docker -l debug manifest create "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
           docker -l debug manifest push "docker.io/signald/signald:${VERSION}"
+
+          docker -l debug manifest create "docker.io/finn/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
+          docker -l debug manifest push "docker.io/finn/signald:${VERSION}"
+
+          docker -l debug manifest create "docker.io/finn/signald:latest" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
+          docker -l debug manifest push "docker.io/finn/signald:latest"
         fi
 
         docker -l debug manifest create "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"

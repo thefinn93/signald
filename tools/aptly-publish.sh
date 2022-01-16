@@ -17,7 +17,7 @@ for version in $(aptly package show signald | grep Version | awk '{print $2}' | 
   aptly repo import backfill-mirror signald "signald (= $version)"
 done
 
-aptly repo import backfill-mirror signald signaldctl 'signald (>= 0.14.0)'
+aptly repo import backfill-mirror signald signaldctl 'signald (>= 0.16.0)'
 
 aptly repo add signald signald_*.deb
 
