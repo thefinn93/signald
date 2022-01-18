@@ -187,6 +187,8 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     return senderKeys.loadSenderKey(signalProtocolAddress, distributionId);
   }
 
+  public SenderKeysTable getSenderKeys() { return senderKeys; }
+
   @Override
   public Set<SignalProtocolAddress> getSenderKeySharedWith(DistributionId distributionId) {
     return senderKeyShared.getSenderKeySharedWith(distributionId);
@@ -206,6 +208,8 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   public boolean isMultiDevice() {
     return senderKeyShared.isMultiDevice();
   }
+
+  public SenderKeySharedTable getSenderKeyShared() { return senderKeyShared; }
 
   @Override
   public Transaction beginTransaction() {

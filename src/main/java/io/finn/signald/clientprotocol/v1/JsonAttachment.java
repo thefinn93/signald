@@ -14,10 +14,16 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.UUID;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
 
@@ -97,5 +103,20 @@ public class JsonAttachment {
       return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
     }
     return Optional.absent();
+  }
+
+  public SignalServiceAttachmentStream asStream() throws IOException {
+    File attachmentFile = new File(filename);
+    InputStream attachmentStream = new FileInputStream(attachmentFile);
+    final long attachmentSize = attachmentFile.length();
+    if (contentType == null) {
+      contentType = Files.probeContentType(attachmentFile.toPath());
+      if (contentType == null) {
+        contentType = "application/octet-stream";
+      }
+    }
+    return new SignalServiceAttachmentStream(
+        attachmentStream, contentType, attachmentSize, customFilename == null ? Optional.fromNullable(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false,
+        false, getPreview(), width, height, System.currentTimeMillis(), Optional.fromNullable(caption), Optional.fromNullable(blurhash), null, null, Optional.absent());
   }
 }
