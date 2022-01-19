@@ -193,15 +193,14 @@ public class SessionsTable implements SessionStore {
       List<Recipient> recipientList = recipientsTable.get(addressList);
 
       String query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + DEVICE_ID + "," + RECORD + " FROM " + TABLE_NAME + "," +
-                     RecipientsTable.TABLE_NAME + " WHERE " + TABLE_NAME + '.' + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " = " +
-                     RECIPIENT + " AND (";
+                     RecipientsTable.TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " = " + RECIPIENT + " AND (";
       for (int i = 0; i < recipientList.size() - 1; i++) {
-        query += RECIPIENT + " = ? OR ";
+        query += RECIPIENT + " = ? OR";
       }
       query += RECIPIENT + " = ?)";
 
       PreparedStatement statement = Database.getConn().prepareStatement(query);
-      int i = 1;
+      int i = 0;
       statement.setString(i++, aci.toString());
       for (Recipient recipient : recipientList) {
         statement.setInt(i++, recipient.getId());

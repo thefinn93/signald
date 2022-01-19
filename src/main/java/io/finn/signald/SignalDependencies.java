@@ -167,6 +167,4 @@ public class SignalDependencies {
     }
     return accountManager;
   }
-
-  public SessionLock getSessionLock() { return sessionLock; }
 }

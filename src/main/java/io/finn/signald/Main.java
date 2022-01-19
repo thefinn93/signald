@@ -84,7 +84,7 @@ public class Main implements Runnable {
   private boolean logHttpRequests = false;
 
   @Option(names = {"--decrypt-timeout"}, description = "decryption timeout (in seconds). if signald detects that decryption has taken longer than this, it will exit with code 101")
-  private int decryptionTimeout = 30;
+  private int decryptionTimeout = 10;
 
   private static final Logger logger = LogManager.getLogger();
 

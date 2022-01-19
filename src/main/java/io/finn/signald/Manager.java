@@ -48,7 +48,10 @@ import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -61,7 +64,6 @@ import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.crypto.*;
-import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
@@ -668,8 +670,8 @@ public class Manager {
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope)
       throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
-             UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException, SQLException,
-             InterruptedException {
+             SelfSendException, UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException,
+             SQLException, InterruptedException {
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
     SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getProtocolStore(), new SessionLock(account), certificateValidator);
     Semaphore sem = new Semaphore(1);
@@ -703,9 +705,6 @@ public class Manager {
         throw identityException;
       }
       throw e;
-    } catch (SelfSendException e) {
-      logger.debug("Dropping UD message from self (because that's what Signal Android does)");
-      return null;
     } finally {
       if (decryptionTimeout > 0) {
         sem.release();
@@ -931,7 +930,7 @@ public class Manager {
           } catch (Exception e) {
             exception = e;
           }
-          if (exception == null && content != null) {
+          if (exception == null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
             } catch (VerificationFailedException e) {
@@ -939,9 +938,7 @@ public class Manager {
             }
           }
         }
-        if (exception == null && content != null) {
-          handler.handleMessage(envelope, content, exception);
-        }
+        handler.handleMessage(envelope, content, exception);
         try {
           Files.delete(fileEntry.toPath());
         } catch (IOException e) {
@@ -968,7 +965,7 @@ public class Manager {
           } catch (Exception e) {
             exception = e;
           }
-          if (exception == null && content != null) {
+          if (exception == null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
             } catch (VerificationFailedException e) {
@@ -976,9 +973,7 @@ public class Manager {
             }
           }
         }
-        if (exception == null && content != null) {
-          handler.handleMessage(envelope, content, exception);
-        }
+        handler.handleMessage(envelope, content, exception);
       } finally {
         accountData.getDatabase().getMessageQueueTable().deleteEnvelope(storedEnvelope.databaseId);
       }
@@ -1031,13 +1026,11 @@ public class Manager {
           } catch (Exception e) {
             exception = e;
           }
-          if (exception == null && content != null) {
+          if (exception == null) {
             handleMessage(envelope, content, ignoreAttachments);
           }
         }
-        if (exception == null && content != null) {
-          handler.handleMessage(envelope, content, exception);
-        }
+        handler.handleMessage(envelope, content, exception);
         try {
           Long id = databaseId.getValue();
           if (id != null) {
@@ -1061,12 +1054,7 @@ public class Manager {
     }
     RecipientsTable recipientsTable = getRecipientsTable();
     Recipient source = recipientsTable.get((envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender());
-    if (content.getSenderKeyDistributionMessage().isPresent()) {
-      logger.debug("handling sender key distribution message from {}", content.getSender().getIdentifier());
-      getMessageSender().processSenderKeyDistributionMessage(new SignalProtocolAddress(content.getSender().getIdentifier(), content.getSenderDevice()),
-                                                             content.getSenderKeyDistributionMessage().get());
-    }
-
+    accountData.getResolver();
     if (content.getDataMessage().isPresent()) {
       if (content.isNeedsReceipt()) {
         jobs.add(new SendDeliveryReceiptJob(this, source, content.getTimestamp()));
@@ -1440,18 +1428,7 @@ public class Manager {
     byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(selfProfileKey);
     byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
 
-    if (selfUnidentifiedAccessKey == null) {
-      logger.debug("cannot get unidentified access: no unidentified access key for own account");
-      return Optional.absent();
-    }
-
-    if (selfUnidentifiedAccessCertificate == null) {
-      logger.debug("cannot get unidentified access: no unidentified access certificate for own account");
-      return Optional.absent();
-    }
-
-    if (recipientUnidentifiedAccessKey == null) {
-      logger.debug("cannot get unidentified access: no unidentified access key for recipient");
+    if (recipientUnidentifiedAccessKey == null || selfUnidentifiedAccessKey == null || selfUnidentifiedAccessCertificate == null) {
       return Optional.absent();
     }
 
@@ -1459,7 +1436,6 @@ public class Manager {
       return Optional.of(new UnidentifiedAccessPair(new UnidentifiedAccess(recipientUnidentifiedAccessKey, selfUnidentifiedAccessCertificate),
                                                     new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate)));
     } catch (InvalidCertificateException e) {
-      logger.debug("cannot get unidentififed access: ", e);
       return Optional.absent();
     }
   }

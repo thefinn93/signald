@@ -24,7 +24,6 @@ import io.finn.signald.storage.SignalProfile;
 import io.finn.signald.util.AttachmentUtil;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -75,27 +74,22 @@ public class SetProfile implements RequestType<Empty> {
     }
 
     if (name == null) {
-      name = existing == null ? "" : existing.getName();
+      name = existing.getName();
     }
 
     if (about == null) {
-      about = existing == null ? "" : existing.getAbout();
+      about = existing.getAbout();
     }
 
     if (emoji == null) {
-      emoji = existing == null ? "" : existing.getEmoji();
+      emoji = existing.getEmoji();
     }
 
     Optional<SignalServiceProtos.PaymentAddress> paymentAddress;
-
-    if (existing != null) {
-      try {
-        paymentAddress = Optional.fromNullable(existing.getPaymentAddress());
-      } catch (IOException e) {
-        logger.warn("error getting current payment address while setting profile: {}", e.getMessage());
-        paymentAddress = Optional.absent();
-      }
-    } else {
+    try {
+      paymentAddress = Optional.fromNullable(existing.getPaymentAddress());
+    } catch (IOException e) {
+      logger.warn("error getting current payment address while setting profile: {}", e.getMessage());
       paymentAddress = Optional.absent();
     }
 
@@ -117,7 +111,7 @@ public class SetProfile implements RequestType<Empty> {
     }
 
     if (visibleBadgeIds == null) {
-      visibleBadgeIds = existing == null ? new ArrayList<>() : existing.getVisibleBadgesIds();
+      visibleBadgeIds = existing.getVisibleBadgesIds();
     }
 
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {

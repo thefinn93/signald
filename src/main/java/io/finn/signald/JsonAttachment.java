@@ -9,19 +9,17 @@ package io.finn.signald;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Deprecated;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidAttachmentError;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import java.io.*;
-import java.nio.file.Files;
+import java.io.File;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
 

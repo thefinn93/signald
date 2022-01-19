@@ -29,11 +29,11 @@ public class BackgroundJobRunnerThread implements Runnable {
         break;
       }
 
-      logger.debug("running job {}", job.getClass().getName());
+      logger.debug("running job " + job.getClass().getName());
       try {
         job.run();
       } catch (Throwable t) {
-        logger.warn("error running {}", job.getClass().getName());
+        logger.warn("error running" + job.getClass().getName());
         logger.debug(t);
       }
     }

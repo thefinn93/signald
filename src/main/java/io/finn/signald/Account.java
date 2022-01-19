@@ -78,7 +78,7 @@ public class Account {
       }
       return isMultidevice;
     } catch (SQLException e) {
-      logger.error("error fetching multidevice status from db", e);
+      logger.error("error fetching mutlidevice status from db", e);
       return false;
     }
   }

@@ -33,8 +33,6 @@ public class ProfileAndCredentialEntry {
   private static final Logger logger = LogManager.getLogger();
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
 
-  private static final byte[] UNRESTRICTED_KEY = new byte[16];
-
   private SignalServiceAddress serviceAddress;
 
   private final ProfileKey profileKey;
@@ -76,26 +74,14 @@ public class ProfileAndCredentialEntry {
   public UnidentifiedAccessMode unidentifiedAccessMode;
 
   public byte[] getUnidentifiedAccessKey() {
-    switch (unidentifiedAccessMode) {
-    case UNKNOWN:
-      if (profileKey == null) {
-        return UNRESTRICTED_KEY;
-      } else {
-        return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-      }
-    case DISABLED:
+    if (profile == null) {
       return null;
-    case ENABLED:
-      if (profileKey == null) {
-        return null;
-      } else {
-        return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-      }
-    case UNRESTRICTED:
-      return UNRESTRICTED_KEY;
-    default:
-      throw new AssertionError("Unknown mode: " + unidentifiedAccessMode);
     }
+    if (profile.isUnrestrictedUnidentifiedAccess()) {
+      return Util.getSecretBytes(16);
+    }
+
+    return UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
   }
 
   public UnidentifiedAccessMode getUnidentifiedAccessMode() { return unidentifiedAccessMode; }
