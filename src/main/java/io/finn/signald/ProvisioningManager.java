@@ -48,6 +48,7 @@ public class ProvisioningManager {
   private final int registrationId;
   private final String password;
   private final UUID server;
+  private SignalServiceAccountManager.NewDeviceRegistrationReturn newDeviceRegistration;
 
   public static LinkingURI create(UUID server) throws TimeoutException, IOException, URISyntaxException, SQLException, ServerNotFoundException, InvalidProxyException {
     UUID sessionID = UUID.randomUUID();
@@ -76,25 +77,30 @@ public class ProvisioningManager {
     return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
   }
 
+  public void waitForScan() throws IOException, TimeoutException { newDeviceRegistration = accountManager.getNewDeviceRegistration(identityKey); }
+
   public ACI finishDeviceLink(String deviceName, boolean overwrite) throws IOException, TimeoutException, UserAlreadyExistsException, InvalidInputException, SQLException,
                                                                            InvalidKeyException, ServerNotFoundException, InvalidProxyException, UntrustedIdentityException,
                                                                            NoSuchAccountException {
-    SignalServiceAccountManager.NewDeviceRegistrationReturn ret = accountManager.getNewDeviceRegistration(identityKey);
+    if (newDeviceRegistration == null) {
+      waitForScan();
+    }
+
     if (overwrite) {
       try {
-        Manager.get(ret.getNumber()).deleteAccount(false);
+        Manager.get(newDeviceRegistration.getNumber()).deleteAccount(false);
       } catch (NoSuchAccountException | InvalidKeyException | ServerNotFoundException | InvalidProxyException ignored) {
       }
     }
-    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, ret.getIdentity().getPrivateKey());
-    int deviceId = accountManager.finishNewDeviceRegistration(ret.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
+    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getIdentity().getPrivateKey());
+    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
 
-    ACI aci = ret.getAci();
+    ACI aci = newDeviceRegistration.getAci();
     if (AccountsTable.exists(aci)) {
       throw new UserAlreadyExistsException(aci);
     }
 
-    Manager m = new Manager(ret.getAci(), AccountData.createLinkedAccount(ret, password, registrationId, deviceId, server));
+    Manager m = new Manager(newDeviceRegistration.getAci(), AccountData.createLinkedAccount(newDeviceRegistration, password, registrationId, deviceId, server));
     m.getAccount().setDeviceName(deviceName);
 
     m.refreshPreKeys();
