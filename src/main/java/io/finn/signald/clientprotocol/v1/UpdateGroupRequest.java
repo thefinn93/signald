@@ -21,6 +21,9 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.File;
 import java.io.IOException;
@@ -213,6 +216,12 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         Common.updateGroup(a, group, change);
       } catch (IOException | SQLException | ExecutionException | InterruptedException | InvalidInputException | TimeoutException e) {
         throw new InternalError("error updating group", e);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      } catch (ServerNotFoundException e) {
+        throw new ServerNotFoundError(e);
+      } catch (InvalidProxyException e) {
+        throw new InvalidProxyError(e);
       }
       return new GroupInfo(group.getJsonGroupV2Info());
     }

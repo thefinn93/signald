@@ -8,10 +8,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import io.finn.signald.*;
 import io.finn.signald.Account;
-import io.finn.signald.Groups;
-import io.finn.signald.Manager;
-import io.finn.signald.SignalDependencies;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.AccountsTable;
@@ -29,11 +27,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidRegistrationIdException;
+import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
@@ -118,8 +121,8 @@ public class Common {
   }
 
   public static List<SendMessageResult> send(Manager manager, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
-                                             List<JsonAddress> members)
-      throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError, RateLimitError, InvalidRequestError {
+                                             List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError, RateLimitError,
+                                                                               InvalidRequestError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
     GroupIdentifier groupIdentifier = null;
     List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
@@ -137,7 +140,12 @@ public class Common {
       }
     }
     try {
-      return manager.send(messageBuilder, recipient, groupIdentifier, memberRecipients);
+      if (recipientGroupId != null) {
+        MessageSender messageSender = new MessageSender(manager.getAccount());
+        return messageSender.sendGroupMessage(messageBuilder, groupIdentifier, memberRecipients);
+      } else {
+        return manager.send(messageBuilder, recipient, groupIdentifier, memberRecipients);
+      }
     } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
       throw new InvalidRecipientError();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
@@ -146,7 +154,14 @@ public class Common {
       throw new NoSendPermissionError();
     } catch (RateLimitException e) {
       throw new RateLimitError(e);
-    } catch (IOException | SQLException | InvalidInputException e) {
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
+    } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | NoSessionException |
+             TimeoutException | ExecutionException | InterruptedException e) {
       throw new InternalError("error sending message", e);
     }
   }

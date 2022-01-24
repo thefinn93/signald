@@ -9,28 +9,24 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-import io.finn.signald.JsonAttachment;
 import io.finn.signald.Manager;
+import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
-import java.io.File;
-import java.io.FileInputStream;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.messages.*;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {
@@ -66,27 +62,25 @@ public class SendRequest implements RequestType<SendResponse> {
     }
 
     if (attachments != null) {
+      SignalServiceMessageSender sender;
+      try {
+        sender = SignalDependencies.get(manager.getACI()).getMessageSender();
+      } catch (SQLException | IOException e) {
+        throw new InternalError("unexpected error getting message sender to upload attachments", e);
+      } catch (ServerNotFoundException e) {
+        throw new ServerNotFoundError(e);
+      } catch (InvalidProxyException e) {
+        throw new InvalidProxyError(e);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      }
+
       List<SignalServiceAttachment> signalServiceAttachments = new ArrayList<>(attachments.size());
       for (JsonAttachment attachment : attachments) {
         try {
-          File attachmentFile = new File(attachment.filename);
-          InputStream attachmentStream = new FileInputStream(attachmentFile);
-          final long attachmentSize = attachmentFile.length();
-          if (attachment.contentType == null) {
-            attachment.contentType = Files.probeContentType(attachmentFile.toPath());
-            if (attachment.contentType == null) {
-              attachment.contentType = "application/octet-stream";
-            }
-          }
-          String customFilename = attachmentFile.getName();
-          if (attachment.customFilename != null) {
-            customFilename = attachment.customFilename;
-          }
-          signalServiceAttachments.add(new SignalServiceAttachmentStream(
-              attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false, false, attachment.getPreview(), attachment.width,
-              attachment.height, System.currentTimeMillis(), Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+          signalServiceAttachments.add(sender.uploadAttachment(attachment.asStream()));
         } catch (IOException e) {
-          throw new InvalidAttachmentError(attachment.filename, e);
+          throw new InternalError("error uploading attachment", e);
         }
       }
       messageBuilder.withAttachments(signalServiceAttachments);

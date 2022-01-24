@@ -7,6 +7,7 @@
 
 package io.finn.signald;
 
+import io.finn.signald.clientprotocol.v1.Profile;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.DatabaseProtocolStore;
 import io.finn.signald.db.ServersTable;
@@ -29,6 +30,7 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.api.websocket.WebSocketFactory;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -58,6 +60,9 @@ public class SignalDependencies {
 
   private SignalServiceAccountManager accountManager;
   private final Object accountManagerLock = new Object();
+
+  private ProfileService profileService;
+  private final Object profileServiceLock = new Object();
 
   private final UUID accountUUID;
 
@@ -129,7 +134,7 @@ public class SignalDependencies {
   public SignalServiceMessageReceiver getMessageReceiver() {
     synchronized (messageReceiverLock) {
       if (messageReceiver == null) {
-        ClientZkProfileOperations profileOperations = ClientZkOperations.create(server.getSignalServiceConfiguration()).getProfileOperations();
+        ClientZkProfileOperations profileOperations = getProfileOperations();
         messageReceiver = new SignalServiceMessageReceiver(server.getSignalServiceConfiguration(), credentialsProvider, BuildConfig.USER_AGENT, profileOperations,
                                                            ServiceConfig.AUTOMATIC_NETWORK_RETRY);
       }
@@ -140,7 +145,7 @@ public class SignalDependencies {
   public SignalServiceMessageSender getMessageSender() {
     synchronized (messageSenderLock) {
       if (messageSender == null) {
-        ClientZkProfileOperations profileOperations = ClientZkOperations.create(server.getSignalServiceConfiguration()).getProfileOperations();
+        ClientZkProfileOperations profileOperations = getProfileOperations();
         messageSender = new SignalServiceMessageSender(server.getSignalServiceConfiguration(), credentialsProvider, dataStore, sessionLock, BuildConfig.USER_AGENT, getWebSocket(),
                                                        Optional.absent(), profileOperations, executor, ServiceConfig.MAX_ENVELOPE_SIZE, ServiceConfig.AUTOMATIC_NETWORK_RETRY);
       }
@@ -167,4 +172,18 @@ public class SignalDependencies {
     }
     return accountManager;
   }
+
+  public SessionLock getSessionLock() { return sessionLock; }
+
+  public ProfileService getProfileService() {
+    synchronized (profileServiceLock) {
+      if (profileService == null) {
+        ClientZkProfileOperations profileOperations = getProfileOperations();
+        profileService = new ProfileService(profileOperations, getMessageReceiver(), getWebSocket());
+      }
+    }
+    return profileService;
+  }
+
+  private ClientZkProfileOperations getProfileOperations() { return ClientZkOperations.create(server.getSignalServiceConfiguration()).getProfileOperations(); }
 }

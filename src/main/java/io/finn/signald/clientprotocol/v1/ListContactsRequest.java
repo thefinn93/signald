@@ -19,6 +19,9 @@ import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
@@ -60,7 +63,13 @@ public class ListContactsRequest implements RequestType<ProfileList> {
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
           logger.warn("error refreshing profile:", e);
         } catch (SQLException | IOException e) {
-          throw new InternalError("error refreshing preofile", e);
+          throw new InternalError("error refreshing profile", e);
+        } catch (NoSuchAccountException e) {
+          throw new NoSuchAccountError(e);
+        } catch (ServerNotFoundException e) {
+          throw new ServerNotFoundError(e);
+        } catch (InvalidProxyException e) {
+          throw new InvalidProxyError(e);
         }
       }
 

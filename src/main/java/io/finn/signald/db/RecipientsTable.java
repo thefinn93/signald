@@ -132,9 +132,15 @@ public class RecipientsTable {
     }
 
     // query included an e164 that wasn't in the database
-    if (e164 != null && storedE164 == null) {
+    if (e164 != null && rowid > -1 && storedE164 == null) {
       update(E164, e164, rowid);
       storedE164 = e164;
+    }
+
+    if (e164 != null && !e164.equals(storedE164)) {
+      // phone number change
+      // TODO: notify clients?
+      update(E164, e164, rowid);
     }
 
     // query did not include a UUID

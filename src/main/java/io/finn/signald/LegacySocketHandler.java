@@ -137,9 +137,6 @@ public class LegacySocketHandler {
     case "leave_group":
       leaveGroup(request);
       break;
-    case "get_user":
-      getUser(request);
-      break;
     case "get_identities":
       getIdentities(request);
       break;
@@ -551,16 +548,6 @@ public class LegacySocketHandler {
       this.reply("linking_error", new JsonStatusMessage(1, "Timed out while waiting for device to link", request), request.id);
     } catch (UserAlreadyExistsException e) {
       this.reply("linking_error", new JsonStatusMessage(3, e.getMessage(), request), request.id);
-    }
-  }
-
-  private void getUser(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(request.username);
-    Optional<ContactTokenDetails> contact = m.getUser(request.recipientAddress.number);
-    if (contact.isPresent()) {
-      this.reply("user", new JsonContactTokenDetails(contact.get()), request.id);
-    } else {
-      this.reply("user_not_registered", null, request.id);
     }
   }
 

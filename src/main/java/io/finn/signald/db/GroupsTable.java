@@ -112,6 +112,17 @@ public class GroupsTable {
 
   private static File getGroupAvatarFile(GroupIdentifier groupId) { return new File(groupAvatarPath, "group-" + Base64.encodeBytes(groupId.serialize()).replace("/", "_")); }
 
+  public static void deleteAccount(UUID uuid) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
+    statement.setString(1, uuid.toString());
+    statement.executeUpdate();
+  }
+
+  public static void setGroupAvatarPath(String path) throws IOException {
+    groupAvatarPath = path;
+    Files.createDirectories(new File(groupAvatarPath).toPath());
+  }
+
   public static class Group {
     private final int rowId;
     private final Account account;
@@ -243,16 +254,16 @@ public class GroupsTable {
       }
       return false;
     }
-  }
 
-  public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    statement.executeUpdate();
-  }
-
-  public static void setGroupAvatarPath(String path) throws IOException {
-    groupAvatarPath = path;
-    Files.createDirectories(new File(groupAvatarPath).toPath());
+    public DistributionId getOrCreateDistributionId() throws SQLException {
+      if (distributionId == null) {
+        distributionId = DistributionId.create();
+        PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + DISTRIBUTION_ID + " = ? WHERE " + ROWID + " = ?");
+        statement.setString(1, distributionId.toString());
+        statement.setInt(2, rowId);
+        statement.executeUpdate();
+      }
+      return distributionId;
+    }
   }
 }

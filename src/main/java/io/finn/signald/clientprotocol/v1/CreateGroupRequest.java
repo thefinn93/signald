@@ -69,6 +69,12 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
         m.getRecipientProfileKeyCredential(recipient);
       } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
         throw new InternalError("error getting recipient profile key", e);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      } catch (ServerNotFoundException e) {
+        throw new ServerNotFoundError(e);
+      } catch (InvalidProxyException e) {
+        throw new InvalidProxyError(e);
       }
       recipients.add(recipient);
       if (recipient.getUUID() == null) {
@@ -95,12 +101,18 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     GroupsTable.Group group;
     try {
       group = Common.getGroups(Common.getAccount(account)).createGroup(title, avatarFile, recipients, role, timer);
-    } catch (IOException | SQLException | InvalidInputException | ServerNotFoundException | NoSuchAccountException | InvalidKeyException | InvalidProxyException e) {
+    } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {
       throw new InternalError("error creating group", e);
     } catch (VerificationFailedException e) {
       throw new GroupVerificationError(e);
     } catch (InvalidGroupStateException e) {
       throw new InvalidGroupStateError(e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     Common.saveAccount(m.getAccountData());

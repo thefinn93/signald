@@ -27,7 +27,7 @@ import org.whispersystems.signalservice.api.push.DistributionId;
 public class SenderKeySharedTable {
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String TABLE_NAME = "sender_keys";
+  private static final String TABLE_NAME = "sender_key_shared";
   private static final String ACCOUNT_UUID = "account_uuid";
   private static final String DISTRIBUTION_ID = "distribution_id";
   private static final String DEVICE = "device";
@@ -41,7 +41,7 @@ public class SenderKeySharedTable {
     Set<SignalProtocolAddress> addresses = new HashSet<>();
     try {
       PreparedStatement statement =
-          Database.getConn().prepareStatement("SELECT " + ADDRESS + "," + DEVICE + ") FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
+          Database.getConn().prepareStatement("SELECT " + ADDRESS + "," + DEVICE + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setString(2, distributionId.toString());
 
@@ -59,7 +59,7 @@ public class SenderKeySharedTable {
   public void markSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
     try {
       PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ADDRESS + "," + DEVICE + "," +
-                                                                        DISTRIBUTION_ID + ") VALUES (?, ?, ?)");
+                                                                        DISTRIBUTION_ID + ") VALUES (?, ?, ?, ?)");
       for (SignalProtocolAddress address : addresses) {
         statement.setString(1, aci.toString());
         statement.setString(2, address.getName());
@@ -90,7 +90,20 @@ public class SenderKeySharedTable {
     }
   }
 
-  public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> collection) {}
+  public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> addresses) {
+    try {
+      PreparedStatement statement =
+          Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE + " = ?");
+      for (SignalProtocolAddress address : addresses) {
+        statement.setString(1, aci.toString());
+        statement.setInt(3, address.getDeviceId());
+        statement.addBatch();
+      }
+      statement.executeBatch();
+    } catch (SQLException e) {
+      logger.catching(e);
+    }
+  }
 
   public boolean isMultiDevice() { return new Account(aci).getMultiDevice(); }
 
@@ -100,5 +113,17 @@ public class SenderKeySharedTable {
                    // No-op transaction should be safe, as it's only a performance improvement
                    // this is what signal-cli does, we should investigate eventually
                };
+  }
+
+  public void deleteAllFor(DistributionId distributionId) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
+    statement.setString(1, aci.toString());
+    statement.setString(2, distributionId.toString());
+  }
+
+  public static void deleteAccount(UUID uuid) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
+    statement.setString(1, uuid.toString());
+    statement.executeUpdate();
   }
 }

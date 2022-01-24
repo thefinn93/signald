@@ -18,6 +18,9 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.GroupsTable;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
@@ -45,6 +48,12 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
       ownProfileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
     } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
       throw new InternalError("error getting own profile key credential", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     if (ownProfileKeyCredential == null) {

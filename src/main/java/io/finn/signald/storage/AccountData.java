@@ -272,16 +272,18 @@ public class AccountData {
   public boolean isDeleted() { return deleted; }
 
   public void delete() throws SQLException, IOException {
-    PreKeysTable.deleteAccount(getUUID());
-    SessionsTable.deleteAccount(getUUID());
-    SignedPreKeysTable.deleteAccount(getUUID());
-    IdentityKeysTable.deleteAccount(getUUID());
-    RecipientsTable.deleteAccount(getUUID());
-    GroupsTable.deleteAccount(getUUID());
-    GroupCredentialsTable.deleteAccount(getUUID());
     AccountDataTable.deleteAccount(getUUID());
     AccountsTable.deleteAccount(getUUID());
+    GroupCredentialsTable.deleteAccount(getUUID());
+    GroupsTable.deleteAccount(getUUID());
+    IdentityKeysTable.deleteAccount(getUUID());
     MessageQueueTable.deleteAccount(legacyUsername);
+    PreKeysTable.deleteAccount(getUUID());
+    SessionsTable.deleteAccount(getUUID());
+    RecipientsTable.deleteAccount(getUUID());
+    SenderKeySharedTable.deleteAccount(getUUID());
+    SenderKeysTable.deleteAccount(getUUID());
+    SignedPreKeysTable.deleteAccount(getUUID());
     try {
       Files.delete(new File(dataPath + "/" + legacyUsername).toPath());
     } catch (NoSuchFileException ignored) {

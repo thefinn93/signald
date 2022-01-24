@@ -17,6 +17,9 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ContactStore;
@@ -62,6 +65,12 @@ public class GetProfileRequest implements RequestType<Profile> {
         action.run();
       } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
         throw new InternalError("error refreshing profile", e);
+      } catch (NoSuchAccountException e) {
+        throw new NoSuchAccountError(e);
+      } catch (ServerNotFoundException e) {
+        throw new ServerNotFoundError(e);
+      } catch (InvalidProxyException e) {
+        throw new InvalidProxyError(e);
       }
     }
 
