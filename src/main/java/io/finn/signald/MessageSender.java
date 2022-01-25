@@ -60,7 +60,7 @@ public class MessageSender {
     }
     GroupsTable.Group group = groupOptional.get();
     if (members == null) {
-      members = group.getMembers();
+      members = group.getMembers().stream().filter(x -> !self.equals(x)).toList();
     }
 
     if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
@@ -92,9 +92,6 @@ public class MessageSender {
       legacyTargets.addAll(members);
     } else {
       for (Recipient member : members) {
-        if (self.equals(member)) {
-          continue;
-        }
         ProfileAndCredentialEntry profileAndCredentialEntry;
         try {
           profileAndCredentialEntry = m.getRecipientProfileKeyCredential(member);
