@@ -60,7 +60,7 @@ public class MessageSender {
     }
     GroupsTable.Group group = groupOptional.get();
     if (members == null) {
-      members = group.getMembers().stream().filter(x -> !self.equals(x)).toList();
+      members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
     }
 
     if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
