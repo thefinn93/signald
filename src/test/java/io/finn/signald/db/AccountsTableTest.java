@@ -7,6 +7,7 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.Config;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +28,7 @@ public class AccountsTableTest {
     Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
     flyway.migrate();
 
-    Database.setConnectionString(db);
+    Config.testInit(db);
   }
 
   @AfterEach

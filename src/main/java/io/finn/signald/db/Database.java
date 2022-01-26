@@ -7,6 +7,7 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.Config;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -16,16 +17,13 @@ import org.apache.logging.log4j.Logger;
 
 public class Database {
   private static final Logger logger = LogManager.getLogger();
-  private static String connectionString;
   private static Connection conn;
 
   private UUID uuid;
 
-  public static void setConnectionString(String c) { connectionString = c; }
-
   public static Connection getConn() throws SQLException {
     if (conn == null) {
-      conn = DriverManager.getConnection(connectionString);
+      conn = DriverManager.getConnection(Config.getDb());
     }
     return conn;
   }

@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 import io.finn.signald.Account;
+import io.finn.signald.Config;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
@@ -75,7 +76,7 @@ public class TypingRequest implements RequestType<Empty> {
         messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         try {
-          Common.getAccount(account).getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          Common.getAccount(account).getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
         } catch (IOException | SQLException exception) {
           logger.error("internal error while saving new identity", exception);
         }

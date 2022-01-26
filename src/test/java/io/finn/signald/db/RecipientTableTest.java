@@ -10,6 +10,7 @@ package io.finn.signald.db;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import io.finn.signald.Config;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -40,7 +41,7 @@ public class RecipientTableTest {
     Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
     flyway.migrate();
 
-    Database.setConnectionString(db);
+    Config.testInit(db);
 
     recipientsTable.get(SELF_ADDRESS);
     recipientsTable.get(ADDRESS_A);

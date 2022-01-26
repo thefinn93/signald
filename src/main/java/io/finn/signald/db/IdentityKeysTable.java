@@ -8,6 +8,7 @@
 package io.finn.signald.db;
 
 import io.finn.signald.Account;
+import io.finn.signald.Config;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -142,16 +143,21 @@ public class IdentityKeysTable implements IdentityKeyStore {
             return trustLevel == TrustLevel.TRUSTED_UNVERIFIED || trustLevel == TrustLevel.TRUSTED_VERIFIED;
           }
         } catch (InvalidKeyException e) {
-          logger.warn("Error parsing IdentityKey on row " + rows.getRow() + ": " + e.getMessage());
+          logger.warn("Error parsing IdentityKey on row {}: {}", rows.getRow(), e.getMessage());
         }
         moreRows = rows.next();
       }
       rows.close();
-      saveIdentity(address.getName(), identityKey, TrustLevel.UNTRUSTED);
+      saveIdentity(address.getName(), identityKey, Config.getNewKeyTrustLevel());
     } catch (SQLException | IOException e) {
       logger.catching(e);
     }
-    return false;
+    if (Config.getNewKeyTrustLevel() == TrustLevel.TRUSTED_UNVERIFIED) {
+      logger.debug("new identity key found for remote user, marking trusted anyway");
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override

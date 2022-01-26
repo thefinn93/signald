@@ -301,7 +301,7 @@ public class AccountData {
 
   @JsonIgnore
   public static void setDataPath(String path) {
-    dataPath = path + "/data";
+    dataPath = path;
   }
 
   @JsonIgnore

@@ -87,7 +87,6 @@ public class Manager {
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
   private static final Histogram messageDecryptionTime =
       Histogram.build().name(BuildConfig.NAME + "_message_decryption_time").help("Time (in seconds) to decrypt incoming messages").labelNames("account_uuid").register();
-  private static int decryptionTimeout = 10;
 
   private static String dataPath;
   private static String attachmentsPath;
@@ -171,15 +170,16 @@ public class Manager {
     synchronized (managers) { managers.put(aci.toString(), this); }
   }
 
-  public static void setDataPath(String path) throws IOException {
-    dataPath = path + "/data";
-    attachmentsPath = path + "/attachments";
-    avatarsPath = path + "/avatars";
-    stickersPath = path + "/stickers";
+  public static void setDataPath() throws IOException {
+    LogManager.getLogger().debug("Using data folder {}", Config.getDataPath());
+    dataPath = Config.getDataPath() + "/data";
+    AccountData.setDataPath(dataPath);
+    attachmentsPath = Config.getDataPath() + "/attachments";
+    avatarsPath = Config.getDataPath() + "/avatars";
+    stickersPath = Config.getDataPath() + "/stickers";
     GroupsTable.setGroupAvatarPath(avatarsPath);
+    createPrivateDirectories(dataPath);
   }
-
-  public static void setDecryptionTimeout(int d) { decryptionTimeout = d; }
 
   public Account getAccount() { return account; }
 
@@ -535,7 +535,7 @@ public class Manager {
     try {
       messageSender.sendSyncMessage(message, getAccessPairFor(self));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       throw e;
     }
   }
@@ -547,7 +547,7 @@ public class Manager {
       messageSender.sendTyping(address, getAccessPairFor(recipient), message);
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -566,7 +566,7 @@ public class Manager {
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -598,7 +598,7 @@ public class Manager {
             if (r.getIdentityFailure() != null) {
               try {
                 Recipient recipient = getRecipientsTable().get(r.getAddress());
-                account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+                account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
               } catch (SQLException e) {
                 logger.error("error storing new identity", e);
               }
@@ -606,7 +606,7 @@ public class Manager {
           }
           return result;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
           return Collections.emptyList();
         }
       } else if (recipients.size() == 1 && recipients.contains(self)) {
@@ -619,7 +619,7 @@ public class Manager {
         try {
           messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+          account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
           results.add(SendMessageResult.identityFailure(self.getAddress(), e.getIdentityKey()));
         }
         return results;
@@ -645,7 +645,7 @@ public class Manager {
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
-              account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+              account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
             }
             results.add(SendMessageResult.identityFailure(recipient.getAddress(), e.getIdentityKey()));
           }
@@ -669,15 +669,16 @@ public class Manager {
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
     SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getDeviceId(), account.getProtocolStore(), new SessionLock(account), certificateValidator);
     Semaphore sem = new Semaphore(1);
-    if (decryptionTimeout > 0) {
+    int watchdogTime = Config.getDecryptionTimeout();
+    if (watchdogTime > 0) {
       sem.acquire();
       Thread t = new Thread(() -> {
         // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
         // without this it just hangs and breaks in difficult to detect ways.
         try {
-          boolean decryptFinished = sem.tryAcquire(decryptionTimeout, TimeUnit.SECONDS);
+          boolean decryptFinished = sem.tryAcquire(watchdogTime, TimeUnit.SECONDS);
           if (!decryptFinished) {
-            logger.error("took over " + decryptionTimeout + " seconds to decrypt, exiting");
+            logger.error("took over {} seconds to decrypt, exiting", watchdogTime);
             System.exit(101);
           }
           sem.release();
@@ -695,7 +696,7 @@ public class Manager {
     } catch (ProtocolUntrustedIdentityException e) {
       if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
         org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
-        account.getProtocolStore().saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), TrustLevel.UNTRUSTED);
+        account.getProtocolStore().saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), Config.getNewKeyTrustLevel());
         throw identityException;
       }
       throw e;
@@ -703,7 +704,7 @@ public class Manager {
       logger.debug("Dropping UD message from self (because that's what Signal Android does)");
       return null;
     } finally {
-      if (decryptionTimeout > 0) {
+      if (watchdogTime > 0) {
         sem.release();
       }
       double duration = timer.observeDuration();

@@ -10,6 +10,7 @@ package io.finn.signald.db;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.finn.signald.BuildConfig;
+import io.finn.signald.Config;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.JSONUtil;
@@ -59,9 +60,6 @@ public class ServersTable {
 
   private static final Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", BuildConfig.USER_AGENT).build());
   private static final Logger logger = LogManager.getLogger();
-  private static boolean logHttpRequests = false;
-
-  public static void setLogHttpRequests(boolean log) { logHttpRequests = log; }
 
   public static Server getDefaultServer() throws IOException, InvalidProxyException {
     HashMap<Integer, String> cdns = new HashMap<>();
@@ -290,7 +288,7 @@ public class ServersTable {
     private List<Interceptor> getInterceptors() {
       List<Interceptor> interceptors = new ArrayList<>();
       interceptors.add(userAgentInterceptor);
-      if (logHttpRequests) {
+      if (Config.getLogHttpRequests()) {
         HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
         httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
         interceptors.add(httpLoggingInterceptor);

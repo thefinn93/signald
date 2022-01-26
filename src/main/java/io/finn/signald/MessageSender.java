@@ -17,7 +17,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.TrustLevel;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.signal.storageservice.protos.groups.local.EnabledState;
@@ -141,7 +140,7 @@ public class MessageSender {
         results.addAll(messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(),
                                                           SignalServiceMessageSender.SenderKeyGroupEvents.EMPTY));
       } catch (UntrustedIdentityException e) {
-        account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), TrustLevel.UNTRUSTED);
+        account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       } catch (NoSessionException ignored) {
         logger.debug("no session, falling back to legacy send");
         legacyTargets.addAll(senderKeyTargets);
@@ -157,7 +156,7 @@ public class MessageSender {
       if (r.getIdentityFailure() != null) {
         try {
           Recipient recipient = account.getRecipients().get(r.getAddress());
-          account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), TrustLevel.UNTRUSTED);
+          account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
         } catch (SQLException e) {
           logger.error("error storing new identity", e);
         }
