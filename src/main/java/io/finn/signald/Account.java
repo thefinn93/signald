@@ -144,4 +144,8 @@ public class Account {
   }
 
   public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId); }
+
+  public SenderKeySharedTable getSenderKeysSharedWith() { return new SenderKeySharedTable(aci); }
+
+  public Recipient getSelf() throws SQLException, IOException { return getRecipients().get(aci); }
 }

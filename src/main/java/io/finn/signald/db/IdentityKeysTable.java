@@ -13,10 +13,7 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
@@ -123,11 +120,11 @@ public class IdentityKeysTable implements IdentityKeyStore {
   @Override
   public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
     try {
-      int recipientID = account.getRecipients().get(address.getName()).getId();
+      Recipient recipient = account.getRecipients().get(address.getName());
       PreparedStatement statement =
           Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
       statement.setString(1, account.getUUID().toString());
-      statement.setInt(2, recipientID);
+      statement.setInt(2, recipient.getId());
       ResultSet rows = statement.executeQuery();
 
       boolean moreRows = rows.next();
@@ -149,9 +146,14 @@ public class IdentityKeysTable implements IdentityKeyStore {
       }
       rows.close();
       saveIdentity(address.getName(), identityKey, Config.getNewKeyTrustLevel());
+
+      // no existing key found, archive sessions and re-share sender keys
+      account.getProtocolStore().archiveSession(address);
+      account.getProtocolStore().getSenderKeyShared().deleteForAll(recipient);
     } catch (SQLException | IOException e) {
       logger.catching(e);
     }
+
     if (Config.getNewKeyTrustLevel() == TrustLevel.TRUSTED_UNVERIFIED) {
       logger.debug("new identity key found for remote user, marking trusted anyway");
       return true;
@@ -258,7 +260,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
 
     public String getTrustLevelString() {
       if (trustLevel == null) {
-        return trustLevel.TRUSTED_UNVERIFIED.name();
+        return TrustLevel.TRUSTED_UNVERIFIED.name();
       }
       return trustLevel.name();
     }

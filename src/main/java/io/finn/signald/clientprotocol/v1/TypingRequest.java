@@ -76,7 +76,7 @@ public class TypingRequest implements RequestType<Empty> {
         messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
         try {
-          Common.getAccount(account).getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+          Common.getAccount(account).getProtocolStore().handleUntrustedIdentityException(e);
         } catch (IOException | SQLException exception) {
           logger.error("internal error while saving new identity", exception);
         }

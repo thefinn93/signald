@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import javax.xml.crypto.Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -107,23 +108,28 @@ public class SenderKeySharedTable {
 
   public boolean isMultiDevice() { return new Account(aci).getMultiDevice(); }
 
-  public SignalServiceDataStore.Transaction beginTransaction() {
-    return ()
-               -> {
-                   // No-op transaction should be safe, as it's only a performance improvement
-                   // this is what signal-cli does, we should investigate eventually
-               };
-  }
-
   public void deleteAllFor(DistributionId distributionId) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
     statement.setString(1, aci.toString());
     statement.setString(2, distributionId.toString());
   }
 
+  public void deleteForAll(Recipient recipient) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?");
+    statement.setString(1, aci.toString());
+    statement.setString(2, recipient.getACI().toString());
+    statement.executeUpdate();
+  }
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
+    statement.executeUpdate();
+  }
+
+  public void deleteSharedWith(Recipient source) throws SQLException {
+    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?");
+    statement.setString(1, aci.toString());
+    statement.setString(2, source.getACI().toString());
     statement.executeUpdate();
   }
 }

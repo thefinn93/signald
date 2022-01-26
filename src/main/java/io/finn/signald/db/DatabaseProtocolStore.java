@@ -7,6 +7,8 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.Account;
+import io.finn.signald.Config;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -15,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -30,6 +33,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   private final IdentityKeysTable identityKeys;
   private final SenderKeysTable senderKeys;
   private final SenderKeySharedTable senderKeyShared;
+  private final Account account;
 
   public DatabaseProtocolStore(ACI aci) {
     preKeys = new PreKeysTable(aci);
@@ -38,6 +42,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     identityKeys = new IdentityKeysTable(aci);
     senderKeys = new SenderKeysTable(aci);
     senderKeyShared = new SenderKeySharedTable(aci);
+    account = new Account(aci);
   }
 
   public DatabaseProtocolStore(String identifier) {
@@ -48,6 +53,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     signedPrekeys = new SignedPreKeysTable(null);
     senderKeys = new SenderKeysTable(null);
     senderKeyShared = new SenderKeySharedTable(null);
+    account = null;
   }
 
   @Override
@@ -64,6 +70,18 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   public boolean saveIdentity(SignalProtocolAddress address, IdentityKey identityKey) {
     return identityKeys.saveIdentity(address, identityKey);
   }
+
+  public void handleUntrustedIdentityException(org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) throws SQLException, IOException {
+    identityKeys.saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+    if (account == null) {
+      return;
+    }
+    Recipient recipient = account.getRecipients().get(e.getIdentifier());
+    sessions.archiveAllSessions(recipient);
+    senderKeyShared.deleteForAll(recipient);
+  }
+
+  public void archiveAllSessions(Recipient recipient) throws SQLException { sessions.archiveAllSessions(recipient); }
 
   public boolean saveIdentity(String identifier, IdentityKey key, TrustLevel level) throws IOException, SQLException { return identityKeys.saveIdentity(identifier, key, level); }
 
@@ -214,5 +232,13 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   @Override
   public Transaction beginTransaction() {
     return null;
+  }
+
+  public boolean isCurrentRatchetKey(Recipient source, int sourceDeviceId, ECPublicKey key) {
+    SessionRecord session = sessions.loadSession(new SignalProtocolAddress(source.getAddress().getIdentifier(), sourceDeviceId));
+    if (session == null) {
+      return false;
+    }
+    return session.currentRatchetKeyMatches(key);
   }
 }

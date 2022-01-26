@@ -108,7 +108,7 @@ public class RegistrationManager {
     String server = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.SERVER_UUID);
     AccountsTable.add(e164, aci, getFileName(), server == null ? null : UUID.fromString(server));
 
-    AccountDataTable.set(aci, AccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS);
+    AccountDataTable.set(aci, AccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
     String password = PendingAccountDataTable.getString(e164, PendingAccountDataTable.Key.PASSWORD);
     account.setPassword(password);

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +22,7 @@ import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionStore;
+import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -28,6 +30,7 @@ public class SessionsTable implements SessionStore {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String TABLE_NAME = "sessions";
+  private static final String ROW_ID = "rowid";
   private static final String ACCOUNT_UUID = "account_uuid";
   private static final String RECIPIENT = "recipient";
   private static final String DEVICE_ID = "device_id";
@@ -193,8 +196,8 @@ public class SessionsTable implements SessionStore {
       List<Recipient> recipientList = recipientsTable.get(addressList);
 
       String query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + DEVICE_ID + "," + RECORD + " FROM " + TABLE_NAME + "," +
-                     RecipientsTable.TABLE_NAME + " WHERE " + TABLE_NAME + '.' + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " = " +
-                     RECIPIENT + " AND (";
+                     RecipientsTable.TABLE_NAME + " WHERE " + TABLE_NAME + '.' + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + ROW_ID + " = " + RECIPIENT +
+                     " AND (";
       for (int i = 0; i < recipientList.size() - 1; i++) {
         query += RECIPIENT + " = ? OR ";
       }
@@ -222,5 +225,41 @@ public class SessionsTable implements SessionStore {
       logger.catching(e);
     }
     return new HashSet<>();
+  }
+
+  public void archiveAllSessions(Recipient recipient) throws SQLException {
+    PreparedStatement statement =
+        Database.getConn().prepareStatement("SELECT " + RECORD + "," + ROW_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
+    statement.setString(1, aci.toString());
+    statement.setInt(2, recipient.getId());
+    ResultSet rows = statement.executeQuery();
+
+    List<Pair<Integer, SessionRecord>> records = new ArrayList<>();
+    while (rows.next()) {
+      int deviceId = rows.getInt(DEVICE_ID);
+      SessionRecord record;
+      try {
+        record = new SessionRecord(rows.getBytes(RECORD));
+      } catch (IOException e) {
+        logger.warn("error loading session for {} device id {}", recipient.toRedactedString(), deviceId);
+        continue;
+      }
+      record.archiveCurrentState();
+      records.add(new Pair<>(deviceId, record));
+    }
+    rows.close();
+
+    String storeStatementString = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," + RECORD + ") VALUES "
+                                  + "(?, ?, ?, ?), ".repeat(records.size() - 1) + "(?, ?, ?, ?)";
+    PreparedStatement storeStatement = Database.getConn().prepareStatement(storeStatementString);
+    int i = 1;
+    for (Pair<Integer, SessionRecord> record : records) {
+      storeStatement.setString(i++, aci.toString());
+      storeStatement.setInt(i++, recipient.getId());
+      storeStatement.setInt(i++, record.first());
+      storeStatement.setBytes(i++, record.second().serialize());
+    }
+    int updated = storeStatement.executeUpdate();
+    logger.info("archived {} session(s) with {}", updated, recipient.toRedactedString());
   }
 }

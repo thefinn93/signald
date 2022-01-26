@@ -2,6 +2,7 @@ package io.finn.signald;
 
 import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.SenderKeySharedTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -17,6 +18,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 public class AccountRepair {
   private final static Logger logger = LogManager.getLogger();
   public final static int ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS = 1;
+  public final static int ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED = 2;
 
   public static void repairAccountIfNeeded(Account account) throws SQLException {
     int lastAccountRepair = AccountDataTable.getInt(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR);
@@ -24,6 +26,16 @@ public class AccountRepair {
     if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS) {
       refreshAllGroups(account);
     }
+
+    if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED) {
+      clearSenderKeyShared(account);
+    }
+  }
+
+  private static void clearSenderKeyShared(Account account) throws SQLException {
+    logger.info("clearing all sender key shared state to make sure they get re-shared");
+    SenderKeySharedTable.deleteAccount(account.getUUID());
+    AccountDataTable.set(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
   }
 
   private static void refreshAllGroups(Account account) {

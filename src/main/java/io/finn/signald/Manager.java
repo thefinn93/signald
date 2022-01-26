@@ -55,6 +55,7 @@ import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
 import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
+import org.whispersystems.libsignal.protocol.DecryptionErrorMessage;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
@@ -535,7 +536,7 @@ public class Manager {
     try {
       messageSender.sendSyncMessage(message, getAccessPairFor(self));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+      account.getProtocolStore().handleUntrustedIdentityException(e);
       throw e;
     }
   }
@@ -547,7 +548,7 @@ public class Manager {
       messageSender.sendTyping(address, getAccessPairFor(recipient), message);
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+      account.getProtocolStore().handleUntrustedIdentityException(e);
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -566,7 +567,7 @@ public class Manager {
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+      account.getProtocolStore().handleUntrustedIdentityException(e);
       return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
@@ -606,7 +607,7 @@ public class Manager {
           }
           return result;
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+          account.getProtocolStore().handleUntrustedIdentityException(e);
           return Collections.emptyList();
         }
       } else if (recipients.size() == 1 && recipients.contains(self)) {
@@ -619,7 +620,7 @@ public class Manager {
         try {
           messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-          account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+          account.getProtocolStore().handleUntrustedIdentityException(e);
           results.add(SendMessageResult.identityFailure(self.getAddress(), e.getIdentityKey()));
         }
         return results;
@@ -645,7 +646,7 @@ public class Manager {
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
-              account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
+              account.getProtocolStore().handleUntrustedIdentityException(e);
             }
             results.add(SendMessageResult.identityFailure(recipient.getAddress(), e.getIdentityKey()));
           }
@@ -1056,12 +1057,28 @@ public class Manager {
     if (content == null) {
       return;
     }
+
     RecipientsTable recipientsTable = getRecipientsTable();
     Recipient source = recipientsTable.get((envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender());
     if (content.getSenderKeyDistributionMessage().isPresent()) {
       logger.debug("handling sender key distribution message from {}", content.getSender().getIdentifier());
       getMessageSender().processSenderKeyDistributionMessage(new SignalProtocolAddress(content.getSender().getIdentifier(), content.getSenderDevice()),
                                                              content.getSenderKeyDistributionMessage().get());
+    }
+
+    if (content.getDecryptionErrorMessage().isPresent()) {
+      DecryptionErrorMessage message = content.getDecryptionErrorMessage().get();
+      logger.debug("Received a decryption error message (resend request for {})", message.getTimestamp());
+      if (message.getRatchetKey().isPresent()) {
+        int sourceDeviceId = (envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceDevice() : content.getSenderDevice();
+        if (message.getDeviceId() == account.getDeviceId() && account.getProtocolStore().isCurrentRatchetKey(source, sourceDeviceId, message.getRatchetKey().get())) {
+          logger.debug("Renewing the session with sender");
+          jobs.add(new ResetSessionJob(account, source));
+        }
+      } else {
+        logger.debug("Reset shared sender keys with this recipient");
+        account.getSenderKeysSharedWith().deleteSharedWith(source);
+      }
     }
 
     if (content.getDataMessage().isPresent()) {
@@ -1374,6 +1391,7 @@ public class Manager {
         continue;
       }
       account.getProtocolStore().saveIdentity(recipient, id.getKey(), level);
+
       try {
         sendVerifiedMessage(recipient, id.getKey(), level);
       } catch (IOException | org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {

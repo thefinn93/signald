@@ -8,6 +8,7 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
+import io.finn.signald.db.AccountDataTable;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -99,6 +100,8 @@ public class ProvisioningManager {
     if (AccountsTable.exists(aci)) {
       throw new UserAlreadyExistsException(aci);
     }
+
+    AccountDataTable.set(aci, AccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
     Manager m = new Manager(newDeviceRegistration.getAci(), AccountData.createLinkedAccount(newDeviceRegistration, password, registrationId, deviceId, server));
     m.getAccount().setDeviceName(deviceName);
