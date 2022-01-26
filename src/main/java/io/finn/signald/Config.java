@@ -42,10 +42,14 @@ public class Config {
   @CommandLine.
   Option(names = {"--decrypt-timeout"}, description = "decryption timeout (in seconds). if signald detects that decryption has taken longer than this, it will exit with code 101")
   private static int decryptionTimeout = 30;
-  @CommandLine.Option(names = {"--trust-all-keys"}, description = "when a new key is seen, set trust level to TRUSTED_UNVERIFIED (default is UNTRUSTED)")
-  private static boolean trustAllKeys;
+  @CommandLine.Option(names = {"--trust-new-keys"}, description = "when a remote key changes, set trust level to TRUSTED_UNVERIFIED (instead of UNTRUSTED)")
+  private static boolean trustNewKeys;
 
   public static void init() throws IOException {
+    if (System.getenv("SIGNALD_VERBOSE_LOGGING") != null) {
+      verbose = Boolean.parseBoolean(System.getenv("SIGNALD_VERBOSE_LOGGING"));
+    }
+
     if (verbose) {
       Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
       LogSetup.setup();
@@ -70,11 +74,11 @@ public class Config {
       metrics = Boolean.parseBoolean(System.getenv("SIGNALD_ENABLE_METRICS"));
     }
 
-    if (System.getenv("SIGNALD_TRUST_ALL_KEYS") != null) {
-      trustAllKeys = Boolean.parseBoolean(System.getenv("SIGNALD_TRUST_ALL_KEYS"));
+    if (System.getenv("SIGNALD_TRUST_NEW_KEYS") != null) {
+      trustNewKeys = Boolean.parseBoolean(System.getenv("SIGNALD_TRUST_NEW_KEYS"));
     }
 
-    if (trustAllKeys) {
+    if (trustNewKeys) {
       logger.info("new keys will be marked as TRUSTED_UNVERIFIED instead of UNTRUSTED");
     }
 
@@ -127,5 +131,5 @@ public class Config {
 
   public static String getSocketPath() { return socketPath; }
 
-  public static TrustLevel getNewKeyTrustLevel() { return trustAllKeys ? TrustLevel.TRUSTED_UNVERIFIED : TrustLevel.UNTRUSTED; }
+  public static TrustLevel getNewKeyTrustLevel() { return trustNewKeys ? TrustLevel.TRUSTED_UNVERIFIED : TrustLevel.UNTRUSTED; }
 }
