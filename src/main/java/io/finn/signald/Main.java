@@ -102,7 +102,7 @@ public class Main {
       logger.info("Binding to socket {}", Config.getSocketPath());
       AFUNIXServerSocket server = AFUNIXServerSocket.newInstance();
       try {
-        server.bind(new AFUNIXSocketAddress(socketFile));
+        server.bind(AFUNIXSocketAddress.of(socketFile));
       } catch (SocketException e) {
         logger.fatal("Error creating socket at {}: {}", socketFile, e.getMessage());
         System.exit(1);

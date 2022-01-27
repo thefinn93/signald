@@ -8,7 +8,6 @@
 import org.gradle.nativeplatform.platform.internal.ArchitectureInternal
 import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
-import org.xml.sax.SAXParseException
 
 plugins {
    id 'com.github.gmazzo.buildconfig' version '3.0.3'
@@ -88,20 +87,20 @@ repositories {
 
 dependencies {
     implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_38'
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.66'
-    implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.3.2'
-    implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.3.2'
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.69'
+    implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.4.0'
+    implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.4.0'
     implementation 'org.apache.logging.log4j:log4j-api:2.17.1'
     implementation 'org.apache.logging.log4j:log4j-core:2.17.1'
     implementation 'org.slf4j:slf4j-nop:1.8.0-beta4'
     implementation 'info.picocli:picocli:4.6.2'
-    implementation 'org.xerial:sqlite-jdbc:3.34.0'
-    implementation 'org.flywaydb:flyway-core:7.5.3'
+    implementation 'org.xerial:sqlite-jdbc:3.36.0.2'
+    implementation 'org.flywaydb:flyway-core:8.4.1'
     implementation 'com.google.protobuf:protobuf-javalite:3.10.0'
-    implementation 'io.prometheus:simpleclient:0.11.0'
-    implementation 'io.prometheus:simpleclient_hotspot:0.11.0'
-    implementation 'io.prometheus:simpleclient_httpserver:0.11.0'
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.1'
+    implementation 'io.prometheus:simpleclient:0.14.1'
+    implementation 'io.prometheus:simpleclient_hotspot:0.14.1'
+    implementation 'io.prometheus:simpleclient_httpserver:0.14.1'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
 }
 

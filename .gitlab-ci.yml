@@ -49,7 +49,7 @@ build:
   extends: .build
   parallel:
     matrix:
-      - JAVA_VERSION: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+      - JAVA_VERSION: [11, 12, 13, 14, 15, 16, 17]
 
 build java11 x86_64-unknown-linux-gnu:
   extends: .build
