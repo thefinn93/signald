@@ -888,7 +888,11 @@ public class Manager {
     if (message.getSticker().isPresent()) {
       DownloadStickerJob job = new DownloadStickerJob(this, message.getSticker().get());
       if (job.needsDownload()) {
-        jobs.add(job);
+        try {
+          job.run();
+        } catch (NoSuchAccountException | InvalidMessageException e) {
+          logger.error("Sticker failed to download");
+        }
       }
     }
 
@@ -1171,13 +1175,7 @@ public class Manager {
       }
     }
     for (Job job : jobs) {
-      try {
-        logger.debug("running " + job.getClass().getName());
-        job.run();
-      } catch (Throwable t) {
-        logger.warn("Error running " + job.getClass().getName());
-        logger.debug(t);
-      }
+      BackgroundJobRunnerThread.queue(job);
     }
   }
 
