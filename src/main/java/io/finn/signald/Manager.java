@@ -83,7 +83,7 @@ public class Manager {
   private final Logger logger;
   private final SignalServiceConfiguration serviceConfiguration;
   private final ECPublicKey unidentifiedSenderTrustRoot;
-  private final static int ACCOUNT_REFRESH_VERSION = 4;
+  private final static int ACCOUNT_REFRESH_VERSION = 5;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
   private static final Histogram messageDecryptionTime =
