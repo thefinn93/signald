@@ -52,6 +52,10 @@ public class JsonAddress {
 
   @JsonIgnore
   public SignalServiceAddress getSignalServiceAddress() {
+    if (uuid == null) {
+      return new SignalServiceAddress(ACI.UNKNOWN, number);
+    }
+
     return new SignalServiceAddress(getACI(), number);
   }
 
