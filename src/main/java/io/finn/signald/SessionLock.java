@@ -7,6 +7,7 @@
 
 package io.finn.signald;
 
+import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
@@ -23,15 +24,21 @@ public class SessionLock implements SignalSessionLock {
   @Override
   public Lock acquire() {
     ReentrantLock lock;
+    String key = account.getACI().toString();
     synchronized (locks) {
-      lock = locks.get(account.getUUID().toString());
+      lock = locks.get(key);
       if (lock == null) {
+        logger.debug("first lock acquision for this account");
         lock = new ReentrantLock();
-        locks.put(account.toString(), lock);
+        locks.put(key, lock);
       }
     }
+    logger.debug("acquiring session lock (held by current thread: {}, held by {}, queue length {})", lock.isHeldByCurrentThread(), lock.getHoldCount(), lock.getQueueLength());
+    long start = System.currentTimeMillis();
     lock.lock();
-    logger.debug("session lock acquired for account {}", Util.redact(account.getACI()));
+    long acquireTime = System.currentTimeMillis() - start;
+    logger.debug("session lock acquired for account {} in {} ms (held by {}, queue length {})", Util.redact(account.getACI()), acquireTime, lock.getHoldCount(),
+                 lock.getQueueLength());
     return lock::unlock;
   }
 }

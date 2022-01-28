@@ -533,7 +533,7 @@ public class Manager {
 
   public void sendSyncMessage(SignalServiceSyncMessage message) throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException, SQLException {
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
-    try {
+    try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       messageSender.sendSyncMessage(message, getAccessPairFor(self));
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       account.getProtocolStore().handleUntrustedIdentityException(e);
@@ -544,7 +544,7 @@ public class Manager {
   public SendMessageResult sendTypingMessage(SignalServiceTypingMessage message, Recipient recipient) throws IOException, SQLException {
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
     SignalServiceAddress address = recipient.getAddress();
-    try {
+    try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       messageSender.sendTyping(address, getAccessPairFor(recipient), message);
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -557,13 +557,17 @@ public class Manager {
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
     SignalServiceAddress address = recipient.getAddress();
     try {
-      messageSender.sendReceipt(address, getAccessPairFor(recipient), message);
+      try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+        messageSender.sendReceipt(address, getAccessPairFor(recipient), message);
+      }
       if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
         List<ReadMessage> readMessages = new LinkedList<>();
         for (Long ts : message.getTimestamps()) {
           readMessages.add(new ReadMessage(address, ts));
         }
-        messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(self));
+        try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+          messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(self));
+        }
       }
       return null;
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -592,9 +596,12 @@ public class Manager {
         try {
           final boolean isRecipientUpdate = false;
           List<SignalServiceAddress> recipientAddresses = recipients.stream().map(Recipient::getAddress).collect(Collectors.toList());
-          List<SendMessageResult> result = messageSender.sendDataMessage(recipientAddresses, getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
-                                                                         SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
-                                                                         sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
+          List<SendMessageResult> result;
+          try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+            result = messageSender.sendDataMessage(recipientAddresses, getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
+                                                   SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
+                                                   sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
+          }
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               try {
@@ -617,7 +624,7 @@ public class Manager {
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
-        try {
+        try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
           messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           account.getProtocolStore().handleUntrustedIdentityException(e);
@@ -637,12 +644,18 @@ public class Manager {
               SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), message, message.getExpiresInSeconds(),
                                                                            Collections.singletonMap(recipient.getAddress(), unidentifiedAccess.isPresent()), false);
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
-              messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
+              try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+                messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
+              }
               //              results.add(SendMessageResult.success(recipient, devices, false, unidentifiedAccess.isPresent(), true, (System.currentTimeMillis() - start),
               //              Optional.absent());
             } else {
-              results.add(
-                  messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, new IndividualSendEventsLogger(recipient)));
+              try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+                results.add(
+                    messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, new IndividualSendEventsLogger(recipient)));
+              } finally {
+                logger.debug("send complete");
+              }
             }
           } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
             if (e.getIdentityKey() != null) {
@@ -668,7 +681,7 @@ public class Manager {
              UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException, SQLException,
              InterruptedException {
     CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
-    SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getDeviceId(), account.getProtocolStore(), new SessionLock(account), certificateValidator);
+    SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getDeviceId(), account.getProtocolStore(), dependencies.getSessionLock(), certificateValidator);
     Semaphore sem = new Semaphore(1);
     int watchdogTime = Config.getDecryptionTimeout();
     if (watchdogTime > 0) {

@@ -9,6 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
+import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -18,10 +19,15 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.SignalSessionLock;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
@@ -59,7 +65,21 @@ public class MarkReadRequest implements RequestType<Empty> {
     for (Long ts : timestamps) {
       readMessages.add(new ReadMessage(recipient.getAddress(), ts));
     }
+
+    SignalDependencies dependencies;
     try {
+      dependencies = SignalDependencies.get(m.getACI());
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error getting account", e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    }
+
+    try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnRecipient()));
     } catch (IOException e) {
       throw new InternalError("error sending sync message", e);
