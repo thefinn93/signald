@@ -597,11 +597,9 @@ public class Manager {
           final boolean isRecipientUpdate = false;
           List<SignalServiceAddress> recipientAddresses = recipients.stream().map(Recipient::getAddress).collect(Collectors.toList());
           List<SendMessageResult> result;
-          try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-            result = messageSender.sendDataMessage(recipientAddresses, getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
-                                                   SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
-                                                   sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
-          }
+          result = messageSender.sendDataMessage(recipientAddresses, getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
+                                                 SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
+                                                 sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               try {
