@@ -136,7 +136,7 @@ public class MessageSender {
       List<SignalServiceAddress> recipientAddresses = senderKeyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
 
       logger.debug("sending group message to {} members via a distribution group", recipientAddresses.size());
-      try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+      try {
         results.addAll(messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(),
                                                           SignalServiceMessageSender.SenderKeyGroupEvents.EMPTY));
       } catch (UntrustedIdentityException e) {
