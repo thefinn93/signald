@@ -11,6 +11,7 @@ import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.clientprotocol.v1.Profile;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
@@ -715,6 +716,20 @@ public class Manager {
     } catch (SelfSendException e) {
       logger.debug("Dropping UD message from self (because that's what Signal Android does)");
       return null;
+    } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
+      logger.debug("Failed to decrypt incoming message", e);
+      Recipient sender = getRecipientsTable().get(e.getSender());
+      ProfileAndCredentialEntry senderProfile = accountData.profileCredentialStore.get(sender);
+      ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
+      if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile().getCapabilities().senderKey && selfProfile != null &&
+          selfProfile.getProfile().getCapabilities().senderKey) {
+        logger.debug("Received invalid message, requesting message resend.");
+        BackgroundJobRunnerThread.queue(new SendRetryMessageRequestRequest(account, e, envelope));
+      } else {
+        logger.debug("Received invalid message, queuing reset session action.");
+        BackgroundJobRunnerThread.queue(new ResetSessionJob(account, sender));
+      }
+      throw e;
     } finally {
       if (watchdogTime > 0) {
         sem.release();
