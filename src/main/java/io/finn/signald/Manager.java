@@ -11,7 +11,6 @@ import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.clientprotocol.v1.Profile;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
@@ -967,7 +966,7 @@ public class Manager {
             }
           }
         }
-        if (exception == null && content != null) {
+        if (exception != null || content != null) {
           handler.handleMessage(envelope, content, exception);
         }
         try {
@@ -1004,7 +1003,7 @@ public class Manager {
             }
           }
         }
-        if (exception == null && content != null) {
+        if (exception != null || content != null) {
           handler.handleMessage(envelope, content, exception);
         }
       } finally {
@@ -1063,7 +1062,7 @@ public class Manager {
             handleMessage(envelope, content, ignoreAttachments);
           }
         }
-        if (exception == null && content != null) {
+        if (exception != null || content != null) {
           handler.handleMessage(envelope, content, exception);
         }
         try {
@@ -1102,7 +1101,7 @@ public class Manager {
       if (message.getRatchetKey().isPresent()) {
         int sourceDeviceId = (envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceDevice() : content.getSenderDevice();
         if (message.getDeviceId() == account.getDeviceId() && account.getProtocolStore().isCurrentRatchetKey(source, sourceDeviceId, message.getRatchetKey().get())) {
-          logger.debug("Renewing the session with sender");
+          logger.debug("Resetting the session with sender");
           jobs.add(new ResetSessionJob(account, source));
         }
       } else {
