@@ -43,7 +43,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
   private static final HashMap<String, MessageReceiver> receivers = new HashMap<>();
   static final Gauge subscribedAccounts =
       Gauge.build().name(BuildConfig.NAME + "_subscribed_accounts").help("number of accounts subscribed to messages from the Signal server").register();
-  static final Counter receivedMessages = Counter.build().name(BuildConfig.NAME + "_received_messages").help("number of messages received").labelNames("account_uuid").register();
+  static final Counter receivedMessages =
+      Counter.build().name(BuildConfig.NAME + "_received_messages").help("number of messages received").labelNames("account_uuid", "error").register();
 
   public MessageReceiver(ACI aci) throws SQLException, IOException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     this.aci = aci;
@@ -220,7 +221,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     } else {
       this.sockets.broadcastIncomingMessage(envelope, content);
     }
-    receivedMessages.labels(uuid).inc();
+    String errorLabel = exception == null ? "" : exception.getClass().getCanonicalName();
+    receivedMessages.labels(uuid, errorLabel).inc();
   }
 
   static class SocketManager {
