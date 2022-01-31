@@ -19,7 +19,6 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class SendRetryMessageRequestRequest implements Job {
@@ -54,8 +53,8 @@ public class SendRetryMessageRequestRequest implements Job {
     }
 
     DecryptionErrorMessage decryptionErrorMessage = DecryptionErrorMessage.forOriginalMessage(originalContent, envelopeType, envelope.getTimestamp(), senderDevice);
-
     Optional<UnidentifiedAccessPair> unidentifiedAccessPair = Manager.get(account.getACI()).getAccessPairFor(sender);
+    logger.debug("Sending decryption error message");
     try {
       account.getSignalDependencies().getMessageSender().sendRetryReceipt(sender.getAddress(), unidentifiedAccessPair, groupId, decryptionErrorMessage);
     } catch (UntrustedIdentityException e) {
@@ -64,11 +63,15 @@ public class SendRetryMessageRequestRequest implements Job {
   }
 
   private static int envelopeTypeToCiphertextMessageType(int envelopeType) {
-    return switch (envelopeType) {
-            case SignalServiceProtos.Envelope.Type.PREKEY_BUNDLE_VALUE -> CiphertextMessage.PREKEY_TYPE;
-            case SignalServiceProtos.Envelope.Type.UNIDENTIFIED_SENDER_VALUE -> CiphertextMessage.SENDERKEY_TYPE;
-            case SignalServiceProtos.Envelope.Type.PLAINTEXT_CONTENT_VALUE -> CiphertextMessage.PLAINTEXT_CONTENT_TYPE;
-            default -> CiphertextMessage.WHISPER_TYPE;
-        };
+    switch (envelopeType) {
+    case SignalServiceProtos.Envelope.Type.PREKEY_BUNDLE_VALUE:
+      return CiphertextMessage.PREKEY_TYPE;
+    case SignalServiceProtos.Envelope.Type.UNIDENTIFIED_SENDER_VALUE:
+      return CiphertextMessage.SENDERKEY_TYPE;
+    case SignalServiceProtos.Envelope.Type.PLAINTEXT_CONTENT_VALUE:
+      return CiphertextMessage.PLAINTEXT_CONTENT_TYPE;
+    default:
+      return CiphertextMessage.WHISPER_TYPE;
     }
+  }
 }
