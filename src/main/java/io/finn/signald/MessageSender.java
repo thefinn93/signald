@@ -38,6 +38,8 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
+import org.whispersystems.signalservice.internal.push.exceptions.InvalidUnidentifiedAccessHeaderException;
 
 public class MessageSender {
   private static final Logger logger = LogManager.getLogger();
@@ -51,8 +53,7 @@ public class MessageSender {
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws UnknownGroupException, NoSendPermissionException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException,
-             InvalidProxyException, InvalidKeyException, InvalidCertificateException, NoSessionException, InvalidRegistrationIdException, TimeoutException, ExecutionException,
-             InterruptedException {
+             InvalidProxyException, InvalidKeyException, InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
     Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
     if (!groupOptional.isPresent()) {
       throw new UnknownGroupException();
@@ -143,6 +144,17 @@ public class MessageSender {
         account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       } catch (NoSessionException ignored) {
         logger.debug("no session, falling back to legacy send");
+        rotateOurKey(distributionId);
+        legacyTargets.addAll(senderKeyTargets);
+      } catch (InvalidKeyException ignored) {
+        logger.debug("invalid key. Falling back to legacy sends");
+        rotateOurKey(distributionId);
+        legacyTargets.addAll(senderKeyTargets);
+      } catch (InvalidUnidentifiedAccessHeaderException ignored) {
+        logger.debug("Someone had a bad UD header. Falling back to legacy sends.");
+        legacyTargets.addAll(senderKeyTargets);
+      } catch (NotFoundException ignored) {
+        logger.debug("someone was unregistered, falling back to legacy send");
         legacyTargets.addAll(senderKeyTargets);
       }
     }
