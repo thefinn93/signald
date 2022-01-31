@@ -160,8 +160,8 @@ public class Common {
       throw new ServerNotFoundError(e);
     } catch (InvalidProxyException e) {
       throw new InvalidProxyError(e);
-    } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | NoSessionException |
-             TimeoutException | ExecutionException | InterruptedException e) {
+    } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | TimeoutException |
+             ExecutionException | InterruptedException e) {
       throw new InternalError("error sending message", e);
     }
   }
