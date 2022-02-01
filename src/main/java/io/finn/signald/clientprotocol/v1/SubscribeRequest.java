@@ -158,7 +158,7 @@ public class SubscribeRequest implements RequestType<Empty> {
             error = constructor.newInstance(exception);
           } catch (NoSuchMethodException ignored) {
             constructor = errorType.getDeclaredConstructor(UUID.class, exception.getClass());
-            error = constructor.newInstance(aci, exception);
+            error = constructor.newInstance(aci.uuid(), exception);
           }
         } else {
           error = new InternalError("unexpected error while receiving", exception);
