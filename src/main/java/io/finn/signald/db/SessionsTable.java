@@ -249,6 +249,11 @@ public class SessionsTable implements SessionStore {
     }
     rows.close();
 
+    if (records.size() == 0) {
+      logger.debug("no sessions to archive");
+      return;
+    }
+
     String storeStatementString = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," + RECORD + ") VALUES "
                                   + "(?, ?, ?, ?), ".repeat(records.size() - 1) + "(?, ?, ?, ?)";
     PreparedStatement storeStatement = Database.getConn().prepareStatement(storeStatementString);
