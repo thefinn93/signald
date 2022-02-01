@@ -229,7 +229,7 @@ public class SessionsTable implements SessionStore {
 
   public void archiveAllSessions(Recipient recipient) throws SQLException {
     PreparedStatement statement =
-        Database.getConn().prepareStatement("SELECT " + RECORD + "," + ROW_ID + "," + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
+        Database.getConn().prepareStatement("SELECT " + RECORD + "," + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
     statement.setString(1, aci.toString());
     statement.setInt(2, recipient.getId());
     ResultSet rows = statement.executeQuery();
