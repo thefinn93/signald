@@ -723,7 +723,7 @@ public class Manager {
       if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile().getCapabilities().senderKey && selfProfile != null &&
           selfProfile.getProfile().getCapabilities().senderKey) {
         logger.debug("Received invalid message, requesting message resend.");
-        BackgroundJobRunnerThread.queue(new SendRetryMessageRequestRequest(account, e, envelope));
+        BackgroundJobRunnerThread.queue(new SendRetryMessageRequestJob(account, e, envelope));
       } else {
         logger.debug("Received invalid message, queuing reset session action.");
         BackgroundJobRunnerThread.queue(new ResetSessionJob(account, sender));

@@ -21,13 +21,13 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
-public class SendRetryMessageRequestRequest implements Job {
+public class SendRetryMessageRequestJob implements Job {
   private static final Logger logger = LogManager.getLogger();
   private final Account account;
   private final ProtocolException protocolException;
   private final SignalServiceEnvelope envelope;
 
-  public SendRetryMessageRequestRequest(Account account, ProtocolException e, SignalServiceEnvelope envelope) {
+  public SendRetryMessageRequestJob(Account account, ProtocolException e, SignalServiceEnvelope envelope) {
     this.account = account;
     protocolException = e;
     this.envelope = envelope;
@@ -54,7 +54,7 @@ public class SendRetryMessageRequestRequest implements Job {
 
     DecryptionErrorMessage decryptionErrorMessage = DecryptionErrorMessage.forOriginalMessage(originalContent, envelopeType, envelope.getTimestamp(), senderDevice);
     Optional<UnidentifiedAccessPair> unidentifiedAccessPair = Manager.get(account.getACI()).getAccessPairFor(sender);
-    logger.debug("Sending decryption error message");
+    logger.info("requesting message redelivery");
     try {
       account.getSignalDependencies().getMessageSender().sendRetryReceipt(sender.getAddress(), unidentifiedAccessPair, groupId, decryptionErrorMessage);
     } catch (UntrustedIdentityException e) {
