@@ -217,7 +217,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       } else {
         logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
       }
-      this.sockets.broadcastReceiveFailure(exception);
+      this.sockets.broadcastReceiveFailure(envelope, exception);
     } else {
       this.sockets.broadcastIncomingMessage(envelope, content);
     }
@@ -283,7 +283,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
     public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) { broadcast(r -> r.broadcastIncomingMessage(envelope, content)); }
 
-    public void broadcastReceiveFailure(Throwable exception) { broadcast(r -> r.broadcastReceiveFailure(exception)); }
+    public void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) { broadcast(r -> r.broadcastReceiveFailure(envelope, exception)); }
 
     public void broadcastListenStarted() { broadcast(MessageEncoder::broadcastListenStarted); }
 

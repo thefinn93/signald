@@ -21,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
+// TODO: can we delete this entire thing?
 class SocketManager {
   private final static ObjectMapper mapper = JSONUtil.GetMapper();
   private static final Logger logger = LogManager.getLogger();
@@ -60,7 +61,7 @@ class SocketManager {
         continue;
       }
       try {
-        l.broadcastReceiveFailure(exception);
+        l.broadcastReceiveFailure(null, exception);
       } catch (IOException e) {
         logger.warn("IOException while writing to client socket: " + e.getMessage());
       }

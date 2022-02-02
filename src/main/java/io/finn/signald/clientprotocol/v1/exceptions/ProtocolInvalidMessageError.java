@@ -9,6 +9,9 @@ package io.finn.signald.clientprotocol.v1.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
+import org.signal.libsignal.metadata.protocol.UnidentifiedSenderMessageContent;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.util.Base64;
 
 public class ProtocolInvalidMessageError extends ExceptionWrapper {
@@ -16,8 +19,9 @@ public class ProtocolInvalidMessageError extends ExceptionWrapper {
   @JsonProperty("sender_device") public final int senderDevice;
   @JsonProperty("content_hint") public int contentHint;
   @JsonProperty("group_id") public String groupId;
+  public long timestamp;
 
-  public ProtocolInvalidMessageError(ProtocolInvalidMessageException e) {
+  public ProtocolInvalidMessageError(SignalServiceEnvelope envelope, ProtocolInvalidMessageException e) {
     super(e);
     sender = e.getSender();
     senderDevice = e.getSenderDevice();
@@ -25,5 +29,6 @@ public class ProtocolInvalidMessageError extends ExceptionWrapper {
     if (e.getGroupId().isPresent()) {
       groupId = Base64.encodeBytes(e.getGroupId().get());
     }
+    timestamp = envelope.getTimestamp();
   }
 }

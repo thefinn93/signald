@@ -15,7 +15,7 @@ import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 
 public interface MessageEncoder {
   void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException;
-  void broadcastReceiveFailure(Throwable exception) throws IOException;
+  void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) throws IOException;
   void broadcastListenStarted() throws IOException;
   void broadcastListenStopped(Throwable exception) throws IOException;
   void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) throws IOException;

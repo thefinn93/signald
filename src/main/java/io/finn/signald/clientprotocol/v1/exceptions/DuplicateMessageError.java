@@ -8,7 +8,12 @@
 package io.finn.signald.clientprotocol.v1.exceptions;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 
 public class DuplicateMessageError extends ExceptionWrapper {
-  public DuplicateMessageError(DuplicateMessageException e) { super(e); }
+  public long timestamp;
+  public DuplicateMessageError(SignalServiceEnvelope envelope, DuplicateMessageException e) {
+    super(e);
+    timestamp = envelope.getTimestamp();
+  }
 }

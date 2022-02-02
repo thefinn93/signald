@@ -110,8 +110,8 @@ public class SubscribeRequest implements RequestType<Empty> {
     }
 
     @Override
-    public void broadcastReceiveFailure(Throwable exception) throws IOException {
-      broadcast(getError(exception));
+    public void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) throws IOException {
+      broadcast(getError(envelope, exception));
     }
 
     @Override
@@ -123,7 +123,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     public void broadcastListenStopped(Throwable exception) throws IOException {
       broadcast(new ClientMessageWrapper(account, new ListenerState(false)));
       if (exception != null) {
-        broadcast(getError(exception));
+        broadcast(getError(null, exception));
       }
     }
 
@@ -147,15 +147,15 @@ public class SubscribeRequest implements RequestType<Empty> {
       return encoder.equals(socket);
     }
 
-    private ClientMessageWrapper getError(Throwable exception) {
+    private ClientMessageWrapper getError(SignalServiceEnvelope envelope, Throwable exception) {
       ExceptionWrapper error;
       try {
         if (exceptions.containsKey(exception.getClass())) {
           Class<? extends ExceptionWrapper> errorType = exceptions.get(exception.getClass());
           Constructor<? extends ExceptionWrapper> constructor;
           try {
-            constructor = errorType.getDeclaredConstructor(exception.getClass());
-            error = constructor.newInstance(exception);
+            constructor = errorType.getDeclaredConstructor(SignalServiceEnvelope.class, exception.getClass());
+            error = constructor.newInstance(envelope, exception);
           } catch (NoSuchMethodException ignored) {
             constructor = errorType.getDeclaredConstructor(UUID.class, exception.getClass());
             error = constructor.newInstance(aci, exception);

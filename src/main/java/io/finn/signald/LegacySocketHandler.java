@@ -753,7 +753,7 @@ public class LegacySocketHandler {
     }
 
     @Override
-    public void broadcastReceiveFailure(Throwable exception) throws IOException {
+    public void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) throws IOException {
       if (exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
         JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, accountE164);
         broadcast(new JsonMessageWrapper("inbound_identity_failure", message));
