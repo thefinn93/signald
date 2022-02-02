@@ -22,6 +22,7 @@ import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
+import io.prometheus.client.Histogram;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -74,6 +75,8 @@ public class AccountData {
 
   static final Counter savesCount =
       Counter.build().name(BuildConfig.NAME + "_saves_total").help("Total number of times the JSON file was written to the disk").labelNames("account_uuid").register();
+  private static final Histogram saveTime =
+      Histogram.build().name(BuildConfig.NAME + "_save_time_seconds").help("json file write time in seconds.").labelNames("account_uuid").register();
 
   AccountData() {}
 
@@ -202,18 +205,23 @@ public class AccountData {
     }
     validate();
 
-    savesCount.labels(address.uuid == null ? "null" : address.uuid).inc();
+    savesCount.labels(address.uuid == null ? "" : address.uuid).inc();
+    Histogram.Timer timer = saveTime.labels(address.uuid == null ? "" : address.uuid).startTimer();
 
-    ObjectWriter writer = JSONUtil.GetWriter();
-    File dataPathFile = new File(dataPath);
-    if (!dataPathFile.exists()) {
-      dataPathFile.mkdirs();
+    try {
+      ObjectWriter writer = JSONUtil.GetWriter();
+      File dataPathFile = new File(dataPath);
+      if (!dataPathFile.exists()) {
+        dataPathFile.mkdirs();
+      }
+      File destination = new File(dataPath + "/.tmp-" + legacyUsername);
+      logger.debug("Saving account to disk");
+      writer.writeValue(destination, this);
+      profileCredentialStore.markSaved();
+      destination.renameTo(new File(dataPath + "/" + legacyUsername));
+    } finally {
+      timer.observeDuration();
     }
-    File destination = new File(dataPath + "/.tmp-" + legacyUsername);
-    logger.debug("Saving account to disk");
-    writer.writeValue(destination, this);
-    profileCredentialStore.markSaved();
-    destination.renameTo(new File(dataPath + "/" + legacyUsername));
   }
 
   public void validate() throws InvalidStorageFileException {

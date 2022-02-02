@@ -44,7 +44,7 @@ public class AccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_bytes", statement);
     if (!rows.next()) {
       rows.close();
       return null;
@@ -58,7 +58,7 @@ public class AccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_int", statement);
     if (!rows.next()) {
       rows.close();
       return -1;
@@ -72,7 +72,7 @@ public class AccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_long", statement);
     if (!rows.next()) {
       rows.close();
       return -1;
@@ -86,7 +86,7 @@ public class AccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_string", statement);
     if (!rows.next()) {
       rows.close();
       return null;
@@ -100,7 +100,7 @@ public class AccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_boolean", statement);
     if (!rows.next()) {
       rows.close();
       return null;
@@ -117,7 +117,7 @@ public class AccountDataTable {
     statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setBytes(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_bytes", statement);
   }
 
   public static void set(ACI aci, Key key, int value) throws SQLException {
@@ -127,7 +127,7 @@ public class AccountDataTable {
     statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setInt(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_int", statement);
   }
 
   public static void set(ACI aci, Key key, long value) throws SQLException {
@@ -137,7 +137,7 @@ public class AccountDataTable {
     statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setLong(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_long", statement);
   }
 
   public static void set(ACI aci, Key key, String value) throws SQLException {
@@ -147,7 +147,7 @@ public class AccountDataTable {
     statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setString(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_string", statement);
   }
 
   public static void set(ACI aci, Key key, boolean value) throws SQLException {
@@ -157,12 +157,12 @@ public class AccountDataTable {
     statement.setString(1, aci.toString());
     statement.setString(2, key.name());
     statement.setBoolean(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_boolean", statement);
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }

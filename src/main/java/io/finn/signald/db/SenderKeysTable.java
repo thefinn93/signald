@@ -32,12 +32,8 @@ public class SenderKeysTable implements SenderKeyStore {
   private static final String CREATED_AT = "created_at";
 
   private final ACI aci;
-  private final RecipientsTable recipientsTable;
 
-  public SenderKeysTable(ACI aci) {
-    this.aci = aci;
-    recipientsTable = new RecipientsTable(aci);
-  }
+  public SenderKeysTable(ACI aci) { this.aci = aci; }
 
   @Override
   public void storeSenderKey(SignalProtocolAddress address, UUID distributionId, SenderKeyRecord record) {
@@ -50,7 +46,7 @@ public class SenderKeysTable implements SenderKeyStore {
       statement.setString(4, distributionId.toString());
       statement.setBytes(5, record.serialize());
       statement.setLong(6, System.currentTimeMillis());
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_store", statement);
     } catch (SQLException e) {
       logger.catching(e);
     }
@@ -65,7 +61,7 @@ public class SenderKeysTable implements SenderKeyStore {
       statement.setString(2, address.getName());
       statement.setInt(3, address.getDeviceId());
       statement.setString(4, distributionId.toString());
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_load", statement);
       if (!rows.next()) {
         rows.close();
         return null;
@@ -86,7 +82,7 @@ public class SenderKeysTable implements SenderKeyStore {
     statement.setString(2, address.getName());
     statement.setInt(3, address.getDeviceId());
     statement.setString(4, distributionId.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_created_time", statement);
     if (!rows.next()) {
       rows.close();
       return -1;
@@ -102,11 +98,12 @@ public class SenderKeysTable implements SenderKeyStore {
     statement.setString(1, aci.toString());
     statement.setString(2, address);
     statement.setString(3, distributionId.toString());
+    Database.executeQuery(TABLE_NAME + "_delete_all_for", statement);
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeQuery(TABLE_NAME + "_delete_account", statement);
   }
 }

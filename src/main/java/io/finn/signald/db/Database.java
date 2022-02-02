@@ -7,19 +7,21 @@
 
 package io.finn.signald.db;
 
+import io.finn.signald.BuildConfig;
 import io.finn.signald.Config;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import io.prometheus.client.Histogram;
+import java.sql.*;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Database {
   private static final Logger logger = LogManager.getLogger();
+  private static final Histogram queryLatency =
+      Histogram.build().name(BuildConfig.NAME + "_sqlite_query_latency_seconds").help("sqlite latency in seconds.").labelNames("query").register();
   private static Connection conn;
 
-  private UUID uuid;
+  private final UUID uuid;
 
   public static Connection getConn() throws SQLException {
     if (conn == null) {
@@ -40,4 +42,52 @@ public class Database {
   public Database(UUID u) { uuid = u; }
 
   public MessageQueueTable getMessageQueueTable() { return new MessageQueueTable(uuid); }
+
+  public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException {
+    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    try {
+      return statement.executeQuery();
+    } finally {
+      double seconds = timer.observeDuration();
+      if (Config.getLogDatabaseTransactions()) {
+        logger.debug("executed query {} in {} ms", name, seconds * 1000);
+      }
+    }
+  }
+
+  public static int executeUpdate(String name, PreparedStatement statement) throws SQLException {
+    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    try {
+      return statement.executeUpdate();
+    } finally {
+      double seconds = timer.observeDuration();
+      if (Config.getLogDatabaseTransactions()) {
+        logger.debug("executed query {} in {} ms", name, seconds * 1000);
+      }
+    }
+  }
+
+  public static ResultSet getGeneratedKeys(String name, PreparedStatement statement) throws SQLException {
+    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    try {
+      return statement.getGeneratedKeys();
+    } finally {
+      double seconds = timer.observeDuration();
+      if (Config.getLogDatabaseTransactions()) {
+        logger.debug("executed query {} in {} ms", name, seconds * 1000);
+      }
+    }
+  }
+
+  public static int[] executeBatch(String name, PreparedStatement statement) throws SQLException {
+    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    try {
+      return statement.executeBatch();
+    } finally {
+      double seconds = timer.observeDuration();
+      if (Config.getLogDatabaseTransactions()) {
+        logger.debug("executed query {} in {} ms", name, seconds * 1000);
+      }
+    }
+  }
 }

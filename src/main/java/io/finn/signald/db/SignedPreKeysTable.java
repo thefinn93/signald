@@ -39,7 +39,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_load_signed_prekey", statement);
       if (!rows.next()) {
         rows.close();
         throw new InvalidKeyIdException("No such signed prekey record " + signedPreKeyId);
@@ -58,7 +58,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
     try {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
       statement.setString(1, aci.toString());
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_load_all_signed_prekeys", statement);
       List<SignedPreKeyRecord> results = new ArrayList<>();
       while (rows.next()) {
         results.add(new SignedPreKeyRecord(rows.getBytes(RECORD)));
@@ -80,7 +80,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
       statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
       statement.setBytes(3, record.serialize());
-      statement.executeUpdate();
+      Database.executeQuery(TABLE_NAME + "_store_signed_prekey", statement);
     } catch (SQLException e) {
       logger.catching(e);
       throw new AssertionError(e);
@@ -93,7 +93,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_contains_signed_prekey", statement);
       boolean result = rows.next();
       rows.close();
       return result;
@@ -109,7 +109,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_remove_signed_prekey", statement);
     } catch (SQLException e) {
       logger.catching(e);
       throw new AssertionError(e);
@@ -119,6 +119,6 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }

@@ -84,7 +84,7 @@ public class RecipientsTable {
     }
 
     statement.setString(3, uuid.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get", statement);
     List<Recipient> results = new ArrayList<>();
     while (rows.next()) {
       int rowid = rows.getInt(ROW_ID);
@@ -173,8 +173,8 @@ public class RecipientsTable {
     if (e164 != null) {
       statement.setString(3, e164);
     }
-    statement.executeUpdate();
-    ResultSet rows = connection.prepareStatement("SELECT last_insert_rowid()").executeQuery();
+    Database.executeUpdate(TABLE_NAME + "_store_name", statement);
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_stored", connection.prepareStatement("SELECT last_insert_rowid()"));
     if (!rows.next()) {
       throw new AssertionError("error fetching ID of last row inserted while storing " + aci + "/" + e164);
     }
@@ -188,20 +188,20 @@ public class RecipientsTable {
     statement.setString(1, value);
     statement.setString(2, uuid.toString());
     statement.setInt(3, row);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_update", statement);
   }
 
   private void delete(int row)throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ROW_ID + " = ? AND " + ACCOUNT_UUID + " = ?");
     statement.setInt(1, row);
     statement.setString(2, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete", statement);
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 
   private ACI getRegisteredUser(final String number) throws IOException, SQLException {

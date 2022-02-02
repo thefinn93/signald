@@ -39,7 +39,7 @@ public class AccountsTable {
   public static File getFile(ACI aci) throws SQLException, NoSuchAccountException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + FILENAME + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
     statement.setString(1, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_file_aci", statement);
     if (!rows.next()) {
       rows.close();
       throw new NoSuchAccountException(aci.toString());
@@ -52,7 +52,7 @@ public class AccountsTable {
   public static File getFile(String e164) throws SQLException, NoSuchAccountException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + FILENAME + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?");
     statement.setString(1, e164);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_file_e164", statement);
     if (!rows.next()) {
       rows.close();
       throw new NoSuchAccountException(e164);
@@ -71,7 +71,7 @@ public class AccountsTable {
     }
     statement.setString(3, filename);
     statement.setString(4, server == null ? null : server.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_add", statement);
     AddressUtil.addKnownAddress(new SignalServiceAddress(aci, e164));
   }
 
@@ -118,7 +118,7 @@ public class AccountsTable {
   public static void deleteAccount(java.util.UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete", statement);
   }
 
   public static void setUUID(JsonAddress address) throws SQLException {
@@ -127,7 +127,7 @@ public class AccountsTable {
     PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + UUID + " = ? WHERE " + E164 + " = ?");
     statement.setString(1, address.uuid);
     statement.setString(2, address.number);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_uuid", statement);
   }
 
   public static java.util.UUID getUUID(String e164) throws SQLException, NoSuchAccountException { return getACI(e164).uuid(); }
@@ -135,7 +135,7 @@ public class AccountsTable {
   public static ACI getACI(String e164) throws SQLException, NoSuchAccountException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?");
     statement.setString(1, e164);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_aci", statement);
     if (!rows.next()) {
       rows.close();
       throw new NoSuchAccountException(e164);
@@ -148,7 +148,7 @@ public class AccountsTable {
   public static String getE164(ACI aci) throws SQLException, NoSuchAccountException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
     statement.setString(1, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_e164", statement);
     if (!rows.next()) {
       rows.close();
       throw new NoSuchAccountException(aci.toString());
@@ -165,7 +165,7 @@ public class AccountsTable {
   public static ServersTable.Server getServer(ACI aci) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + SERVER + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
     statement.setString(1, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_server", statement);
     if (!rows.next()) {
       rows.close();
       throw new AssertionError("account not found");
@@ -183,13 +183,13 @@ public class AccountsTable {
     PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + SERVER + " = ? WHERE " + UUID + " = ?");
     statement.setString(1, server);
     statement.setString(2, aci.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_server", statement);
   }
 
   public static DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
     statement.setString(1, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_credentials_provider", statement);
     if (!rows.next()) {
       rows.close();
       throw new AssertionError("account not found");
@@ -207,7 +207,7 @@ public class AccountsTable {
   public static boolean exists(ACI aci) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?");
     statement.setString(1, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_check_exists", statement);
     if (!rows.next()) {
       rows.close();
       return false;
@@ -218,7 +218,7 @@ public class AccountsTable {
 
   public static List<java.util.UUID> getAll() throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + UUID + " FROM " + TABLE_NAME);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_all", statement);
     List<java.util.UUID> results = new ArrayList<>();
     while (rows.next()) {
       results.add(java.util.UUID.fromString(rows.getString(UUID)));

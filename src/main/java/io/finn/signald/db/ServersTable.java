@@ -86,7 +86,7 @@ public class ServersTable {
                                                                       PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME + "," + KEY_BACKUP_SERVICE_ID + "," + KEY_BACKUP_MRENCLAVE +
                                                                       "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_server", statement);
 
     // If there are no rows returned, check if it's one of the preloaded servers
     if (!rows.next()) {
@@ -130,7 +130,7 @@ public class ServersTable {
         Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " + KEY_BACKUP_URL + ", " +
                                             STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME +
                                             "," + KEY_BACKUP_SERVICE_ID + "," + KEY_BACKUP_MRENCLAVE + "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_all_servers", statement);
     while (rows.next()) {
       UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
       String serviceURL = rows.getString(SERVICE_URL);
@@ -153,7 +153,7 @@ public class ServersTable {
                                    keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
         servers.add(server);
       } catch (IOException | InvalidProxyException e) {
-        logger.warn("failed to load signal server " + serverUUID.toString() + " from database: " + e.getMessage());
+        logger.warn("failed to load signal server " + serverUUID + " from database: " + e.getMessage());
       }
     }
     rows.close();
@@ -184,13 +184,13 @@ public class ServersTable {
       statement.setString(i++, null);
     }
     statement.setBytes(i, server.ca);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_create", statement);
   }
 
   public static void delete(UUID server)throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
     statement.setString(1, server.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete", statement);
   }
 
   public static class Server {
@@ -366,7 +366,7 @@ public class ServersTable {
       try {
         PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + field + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
         statement.setString(1, uuid.toString());
-        ResultSet rows = statement.executeQuery();
+        ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_key", statement);
         if (!rows.next()) {
           rows.close();
           logger.warn("this should never happen: no results for server when getting keystore");

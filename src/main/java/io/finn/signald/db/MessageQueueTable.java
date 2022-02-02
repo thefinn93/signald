@@ -65,7 +65,7 @@ public class MessageQueueTable {
     statement.setString(12, envelope.getServerGuid());
     statement.executeUpdate();
 
-    ResultSet generatedKeys = statement.getGeneratedKeys();
+    ResultSet generatedKeys = Database.getGeneratedKeys(TABLE_NAME + "_store_envelope", statement);
     generatedKeys.next();
     return generatedKeys.getLong(1);
   }
@@ -74,14 +74,14 @@ public class MessageQueueTable {
     Connection conn = Database.getConn();
     PreparedStatement statement = conn.prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ID + " = ?");
     statement.setLong(1, id);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_envelope", statement);
   }
 
   public StoredEnvelope nextEnvelope() throws SQLException {
     Connection conn = Database.getConn();
     PreparedStatement statement = conn.prepareStatement("SELECT * FROM " + TABLE_NAME + " WHERE " + ACCOUNT + " = ? ORDER BY " + ID + " LIMIT 1");
     statement.setString(1, uuid.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_next_envelope", statement);
     if (!rows.next()) {
       rows.close();
       return null;
@@ -111,6 +111,6 @@ public class MessageQueueTable {
   public static void deleteAccount(String account) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT + " = ?");
     statement.setString(1, account);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }

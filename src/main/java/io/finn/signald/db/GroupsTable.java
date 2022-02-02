@@ -70,7 +70,7 @@ public class GroupsTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROWID + ", * FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + GROUP_ID + " = ?");
     statement.setString(1, aci.toString());
     statement.setBytes(2, identifier.serialize());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get", statement);
     if (!rows.next()) {
       return Optional.absent();
     }
@@ -80,7 +80,7 @@ public class GroupsTable {
   public List<Group> getAll() throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROWID + ",* FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, aci.toString());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_all", statement);
     List<Group> allGroups = new ArrayList<>();
     while (rows.next()) {
       try {
@@ -107,7 +107,7 @@ public class GroupsTable {
     statement.setString(i++, distributionId == null ? null : distributionId.toString());
     statement.setInt(i++, lastAvatarFetch);
     statement.setBytes(i++, decryptedGroup.toByteArray());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_upsert", statement);
   }
 
   private static File getGroupAvatarFile(GroupIdentifier groupId) { return new File(groupAvatarPath, "group-" + Base64.encodeBytes(groupId.serialize()).replace("/", "_")); }
@@ -115,7 +115,7 @@ public class GroupsTable {
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 
   public static void setGroupAvatarPath(String path) throws IOException {
@@ -160,7 +160,7 @@ public class GroupsTable {
       statement.setInt(1, decryptedGroup.getRevision());
       statement.setBytes(2, decryptedGroup.toByteArray());
       statement.setInt(3, rowId);
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_set_decrypted_group", statement);
       revision = decryptedGroup.getRevision();
       this.group = decryptedGroup;
     }
@@ -170,7 +170,7 @@ public class GroupsTable {
     public void delete() throws SQLException {
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ROWID + " = ?");
       statement.setInt(1, rowId);
-      statement.execute();
+      Database.executeUpdate(TABLE_NAME + "_delete", statement);
     }
 
     public JsonGroupV2Info getJsonGroupV2Info() {
@@ -261,7 +261,7 @@ public class GroupsTable {
         PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + DISTRIBUTION_ID + " = ? WHERE " + ROWID + " = ?");
         statement.setString(1, distributionId.toString());
         statement.setInt(2, rowId);
-        statement.executeUpdate();
+        Database.executeUpdate(TABLE_NAME + "_create_distribution_id", statement);
       }
       return distributionId;
     }

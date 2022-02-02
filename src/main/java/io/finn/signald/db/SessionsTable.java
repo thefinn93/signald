@@ -53,7 +53,7 @@ public class SessionsTable implements SessionStore {
       statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_load", statement);
       if (!rows.next()) {
         rows.close();
         logger.debug("loadSession() called but no sessions found: " + recipient.toRedactedString() + " device " + address.getDeviceId());
@@ -79,7 +79,7 @@ public class SessionsTable implements SessionStore {
         statement.setString(1, aci.toString());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
-        ResultSet rows = statement.executeQuery();
+        ResultSet rows = Database.executeQuery(TABLE_NAME + "_load_existing", statement);
         if (!rows.next()) {
           rows.close();
           throw new NoSessionException("Unable to find session for at least one recipient");
@@ -101,7 +101,7 @@ public class SessionsTable implements SessionStore {
           Database.getConn().prepareStatement("SELECT " + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_sub_device_session", statement);
       List<Integer> results = new ArrayList<>();
       while (rows.next()) {
         int deviceId = rows.getInt(DEVICE_ID);
@@ -127,7 +127,7 @@ public class SessionsTable implements SessionStore {
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
       statement.setBytes(4, record.serialize());
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_store", statement);
     } catch (SQLException | IOException e) {
       logger.catching(e);
     }
@@ -142,7 +142,7 @@ public class SessionsTable implements SessionStore {
       statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_contains", statement);
       if (!rows.next()) {
         rows.close();
         return false;
@@ -165,6 +165,7 @@ public class SessionsTable implements SessionStore {
       statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
       statement.setInt(3, address.getDeviceId());
+      Database.executeUpdate(TABLE_NAME + "_delete", statement);
     } catch (SQLException | IOException e) {
       logger.catching(e);
     }
@@ -177,6 +178,7 @@ public class SessionsTable implements SessionStore {
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, recipient.getId());
+      Database.executeUpdate(TABLE_NAME + "_delete_all", statement);
     } catch (SQLException | IOException e) {
       logger.catching(e);
     }
@@ -187,7 +189,7 @@ public class SessionsTable implements SessionStore {
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 
   public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
@@ -209,7 +211,7 @@ public class SessionsTable implements SessionStore {
       for (Recipient recipient : recipientList) {
         statement.setInt(i++, recipient.getId());
       }
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_addresses_with_active_sessions", statement);
       Set<SignalProtocolAddress> results = new HashSet<>();
       while (rows.next()) {
         String name = rows.getString(RecipientsTable.UUID);
@@ -232,7 +234,7 @@ public class SessionsTable implements SessionStore {
         Database.getConn().prepareStatement("SELECT " + RECORD + "," + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
     statement.setString(1, aci.toString());
     statement.setInt(2, recipient.getId());
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_archive_all_sessions_find", statement);
 
     List<Pair<Integer, SessionRecord>> records = new ArrayList<>();
     while (rows.next()) {
@@ -264,7 +266,7 @@ public class SessionsTable implements SessionStore {
       storeStatement.setInt(i++, record.first());
       storeStatement.setBytes(i++, record.second().serialize());
     }
-    int updated = storeStatement.executeUpdate();
+    int updated = Database.executeUpdate(TABLE_NAME + "_archive_all_sessions", storeStatement);
     logger.info("archived {} session(s) with {}", updated, recipient.toRedactedString());
   }
 }

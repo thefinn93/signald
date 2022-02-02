@@ -37,7 +37,7 @@ public class PreKeysTable implements PreKeyStore {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, preKeyId);
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_load_pre_key", statement);
       if (!rows.next()) {
         rows.close();
         throw new InvalidKeyIdException("prekey not found");
@@ -58,7 +58,7 @@ public class PreKeysTable implements PreKeyStore {
       statement.setString(1, aci.toString());
       statement.setInt(2, preKeyId);
       statement.setBytes(3, record.serialize());
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_store_pre_key", statement);
     } catch (SQLException t) {
       logger.error("failed to store prekey", t);
     }
@@ -70,7 +70,7 @@ public class PreKeysTable implements PreKeyStore {
       PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, preKeyId);
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_contains_pre_key", statement);
       if (!rows.next()) {
         rows.close();
         return false;
@@ -89,7 +89,7 @@ public class PreKeysTable implements PreKeyStore {
       PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
       statement.setString(1, aci.toString());
       statement.setInt(2, preKeyId);
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_remove_pre_key", statement);
     } catch (SQLException t) {
       logger.error("failed to delete prekey", t);
     }
@@ -98,6 +98,6 @@ public class PreKeysTable implements PreKeyStore {
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }

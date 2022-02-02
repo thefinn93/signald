@@ -44,6 +44,9 @@ public class Config {
   private static int decryptionTimeout = 30;
   @CommandLine.Option(names = {"--trust-new-keys"}, description = "when a remote key changes, set trust level to TRUSTED_UNVERIFIED (instead of UNTRUSTED)")
   private static boolean trustNewKeys;
+  @CommandLine.Option(names = {"--log-database-transactions"},
+                      description = "log when DB transactions occur and how long they took. Note that db logs are at the debug level, so --verbose should also be used")
+  private static boolean logDatabaseTransactions;
 
   public static void init() throws IOException {
     if (System.getenv("SIGNALD_VERBOSE_LOGGING") != null) {
@@ -70,8 +73,8 @@ public class Config {
       logHttpRequests = Boolean.parseBoolean(System.getenv("SIGNALD_HTTP_LOGGING"));
     }
 
-    if (System.getenv("SIGNALD_ENABLE_METRICS") != null) {
-      metrics = Boolean.parseBoolean(System.getenv("SIGNALD_ENABLE_METRICS"));
+    if (System.getenv("SIGNALD_LOG_DB_TRANSACTIONS") != null) {
+      logDatabaseTransactions = Boolean.parseBoolean(System.getenv("SIGNALD_LOG_DB_TRANSACTIONS"));
     }
 
     if (System.getenv("SIGNALD_TRUST_NEW_KEYS") != null) {
@@ -80,6 +83,10 @@ public class Config {
 
     if (trustNewKeys) {
       logger.info("new keys will be marked as TRUSTED_UNVERIFIED instead of UNTRUSTED");
+    }
+
+    if (System.getenv("SIGNALD_ENABLE_METRICS") != null) {
+      metrics = Boolean.parseBoolean(System.getenv("SIGNALD_ENABLE_METRICS"));
     }
 
     if (metrics) {
@@ -132,4 +139,6 @@ public class Config {
   public static String getSocketPath() { return socketPath; }
 
   public static TrustLevel getNewKeyTrustLevel() { return trustNewKeys ? TrustLevel.TRUSTED_UNVERIFIED : TrustLevel.UNTRUSTED; }
+
+  public static boolean getLogDatabaseTransactions() { return logDatabaseTransactions; }
 }

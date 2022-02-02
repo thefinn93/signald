@@ -48,7 +48,7 @@ public class GroupCredentialsTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + CREDENTIAL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DATE + " = ?");
     statement.setString(1, aci.toString());
     statement.setInt(2, date);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement);
     if (!rows.next()) {
       rows.close();
       return Optional.absent();
@@ -63,13 +63,13 @@ public class GroupCredentialsTable {
       statement.setString(1, aci.toString());
       statement.setInt(2, entry.getKey());
       statement.setBytes(3, entry.getValue().serialize());
-      statement.executeUpdate();
+      Database.executeUpdate(TABLE_NAME + "_set_credentials", statement);
     }
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }

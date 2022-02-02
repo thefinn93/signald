@@ -14,6 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import javax.xml.crypto.Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
@@ -109,7 +110,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
       statement.setBytes(3, identityKey.serialize());
       statement.setString(4, trustLevel.name());
       statement.setLong(5, added.getTime());
-      return statement.executeUpdate() > 0;
+      return Database.executeUpdate(TABLE_NAME + "_save_identity", statement) > 0;
     } catch (SQLException e) {
       logger.catching(e);
     }
@@ -125,7 +126,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
           Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
       statement.setString(1, account.getUUID().toString());
       statement.setInt(2, recipient.getId());
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_is_trusted_identity", statement);
 
       boolean moreRows = rows.next();
       if (!moreRows) {
@@ -170,7 +171,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
                                                                         " = ? ORDER BY " + ADDED + " DESC LIMIT 1");
       statement.setString(1, account.getUUID().toString());
       statement.setInt(2, recipientID);
-      ResultSet rows = statement.executeQuery();
+      ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_identity", statement);
       if (!rows.next()) {
         rows.close();
         return null;
@@ -191,7 +192,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
         "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
     statement.setString(1, account.getUUID().toString());
     statement.setInt(2, recipient.getId());
-    ResultSet row = statement.executeQuery();
+    ResultSet row = Database.executeQuery(TABLE_NAME + "_get_identities", statement);
     List<IdentityKeyRow> results = new ArrayList<>();
     while (row.next()) {
       String uuidstr = row.getString(RecipientsTable.UUID);
@@ -215,7 +216,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
         TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " + RecipientsTable.TABLE_NAME +
         "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ?");
     statement.setString(1, account.getUUID().toString());
-    ResultSet row = statement.executeQuery();
+    ResultSet row = Database.executeQuery(TABLE_NAME + "_all_get_identities", statement);
     List<IdentityKeyRow> results = new ArrayList<>();
     while (row.next()) {
       String uuidstr = row.getString(RecipientsTable.UUID);
@@ -276,6 +277,6 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }

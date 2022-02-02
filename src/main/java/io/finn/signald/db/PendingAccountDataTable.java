@@ -28,7 +28,7 @@ public class PendingAccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, username);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_bytes", statement);
     if (!rows.next()) {
       rows.close();
       return null;
@@ -42,7 +42,7 @@ public class PendingAccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, username);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_string", statement);
     if (!rows.next()) {
       rows.close();
       return null;
@@ -56,7 +56,7 @@ public class PendingAccountDataTable {
     PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
     statement.setString(1, key.name());
     statement.setString(2, username);
-    ResultSet rows = statement.executeQuery();
+    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_int", statement);
     if (!rows.next()) {
       rows.close();
       return -1;
@@ -72,7 +72,7 @@ public class PendingAccountDataTable {
     statement.setString(1, username);
     statement.setString(2, key.name());
     statement.setBytes(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_bytes", statement);
   }
 
   public static void set(String username, Key key, String value) throws SQLException {
@@ -81,7 +81,7 @@ public class PendingAccountDataTable {
     statement.setString(1, username);
     statement.setString(2, key.name());
     statement.setString(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_string", statement);
   }
 
   public static void set(String username, Key key, int value) throws SQLException {
@@ -90,12 +90,12 @@ public class PendingAccountDataTable {
     statement.setString(1, username);
     statement.setString(2, key.name());
     statement.setInt(3, value);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_set_int", statement);
   }
 
   public static void clear(String username) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + USERNAME + " = ?");
     statement.setString(1, username);
-    statement.executeUpdate();
+    Database.executeUpdate(TABLE_NAME + "_clear", statement);
   }
 }
