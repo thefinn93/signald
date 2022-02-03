@@ -8,8 +8,6 @@
 package io.finn.signald.db;
 
 import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,31 +43,33 @@ public class GroupCredentialsTable {
   }
 
   private Optional<AuthCredentialResponse> getCredential(int date) throws SQLException, InvalidInputException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + CREDENTIAL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DATE + " = ?");
-    statement.setString(1, aci.toString());
-    statement.setInt(2, date);
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement);
-    if (!rows.next()) {
-      rows.close();
-      return Optional.absent();
+    var query = "SELECT " + CREDENTIAL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DATE + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, aci.toString());
+      statement.setInt(2, date);
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement)) {
+        return rows.next() ? Optional.of(new AuthCredentialResponse(rows.getBytes(CREDENTIAL))) : Optional.absent();
+      }
     }
-    return Optional.of(new AuthCredentialResponse(rows.getBytes(CREDENTIAL)));
   }
 
   public void setCredentials(HashMap<Integer, AuthCredentialResponse> credentials) throws SQLException {
-    PreparedStatement statement =
-        Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + " (" + ACCOUNT_UUID + "," + DATE + "," + CREDENTIAL + ") VALUES (?, ?, ?)");
-    for (Map.Entry<Integer, AuthCredentialResponse> entry : credentials.entrySet()) {
-      statement.setString(1, aci.toString());
-      statement.setInt(2, entry.getKey());
-      statement.setBytes(3, entry.getValue().serialize());
-      Database.executeUpdate(TABLE_NAME + "_set_credentials", statement);
+    var query = "INSERT OR REPLACE INTO " + TABLE_NAME + " (" + ACCOUNT_UUID + "," + DATE + "," + CREDENTIAL + ") VALUES (?, ?, ?)";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      for (Map.Entry<Integer, AuthCredentialResponse> entry : credentials.entrySet()) {
+        statement.setString(1, aci.toString());
+        statement.setInt(2, entry.getKey());
+        statement.setBytes(3, entry.getValue().serialize());
+        Database.executeUpdate(TABLE_NAME + "_set_credentials", statement);
+      }
     }
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
   }
 }

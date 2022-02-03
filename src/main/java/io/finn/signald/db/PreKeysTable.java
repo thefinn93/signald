@@ -8,8 +8,6 @@
 package io.finn.signald.db;
 
 import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
@@ -34,17 +32,17 @@ public class PreKeysTable implements PreKeyStore {
   @Override
   public PreKeyRecord loadPreKey(int preKeyId) throws InvalidKeyIdException {
     try {
-      PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
-      statement.setString(1, aci.toString());
-      statement.setInt(2, preKeyId);
-      ResultSet rows = Database.executeQuery(TABLE_NAME + "_load_pre_key", statement);
-      if (!rows.next()) {
-        rows.close();
-        throw new InvalidKeyIdException("prekey not found");
+      var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, aci.toString());
+        statement.setInt(2, preKeyId);
+        try (var rows = Database.executeQuery(TABLE_NAME + "_load_pre_key", statement)) {
+          if (!rows.next()) {
+            throw new InvalidKeyIdException("prekey not found");
+          }
+          return new PreKeyRecord(rows.getBytes(RECORD));
+        }
       }
-      PreKeyRecord record = new PreKeyRecord(rows.getBytes(RECORD));
-      rows.close();
-      return record;
     } catch (SQLException | IOException t) {
       throw new InvalidKeyIdException(t);
     }
@@ -53,12 +51,13 @@ public class PreKeysTable implements PreKeyStore {
   @Override
   public void storePreKey(int preKeyId, PreKeyRecord record) {
     try {
-      PreparedStatement statement =
-          Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?);");
-      statement.setString(1, aci.toString());
-      statement.setInt(2, preKeyId);
-      statement.setBytes(3, record.serialize());
-      Database.executeUpdate(TABLE_NAME + "_store_pre_key", statement);
+      var query = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ID + "," + RECORD + ") VALUES (?, ?, ?);";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, aci.toString());
+        statement.setInt(2, preKeyId);
+        statement.setBytes(3, record.serialize());
+        Database.executeUpdate(TABLE_NAME + "_store_pre_key", statement);
+      }
     } catch (SQLException t) {
       logger.error("failed to store prekey", t);
     }
@@ -67,16 +66,14 @@ public class PreKeysTable implements PreKeyStore {
   @Override
   public boolean containsPreKey(int preKeyId) {
     try {
-      PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
-      statement.setString(1, aci.toString());
-      statement.setInt(2, preKeyId);
-      ResultSet rows = Database.executeQuery(TABLE_NAME + "_contains_pre_key", statement);
-      if (!rows.next()) {
-        rows.close();
-        return false;
+      var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, aci.toString());
+        statement.setInt(2, preKeyId);
+        try (var rows = Database.executeQuery(TABLE_NAME + "_contains_pre_key", statement)) {
+          return rows.next();
+        }
       }
-      rows.close();
-      return true;
     } catch (SQLException t) {
       logger.error("failed to check if prekey exists", t);
       return false;
@@ -86,18 +83,22 @@ public class PreKeysTable implements PreKeyStore {
   @Override
   public void removePreKey(int preKeyId) {
     try {
-      PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?");
-      statement.setString(1, aci.toString());
-      statement.setInt(2, preKeyId);
-      Database.executeUpdate(TABLE_NAME + "_remove_pre_key", statement);
+      var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, aci.toString());
+        statement.setInt(2, preKeyId);
+        Database.executeUpdate(TABLE_NAME + "_remove_pre_key", statement);
+      }
     } catch (SQLException t) {
       logger.error("failed to delete prekey", t);
     }
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
   }
 }

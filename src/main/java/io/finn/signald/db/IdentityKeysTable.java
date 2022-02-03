@@ -10,11 +10,8 @@ package io.finn.signald.db;
 import io.finn.signald.Account;
 import io.finn.signald.Config;
 import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import javax.xml.crypto.Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
@@ -104,13 +101,14 @@ public class IdentityKeysTable implements IdentityKeyStore {
         query = "INSERT OR IGNORE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + IDENTITY_KEY + "," + TRUST_LEVEL + "," + ADDED + ") VALUES (?, ?, ?, ?, ?)";
         trustLevel = TrustLevel.TRUSTED_UNVERIFIED;
       }
-      PreparedStatement statement = Database.getConn().prepareStatement(query);
-      statement.setString(1, account.getUUID().toString());
-      statement.setInt(2, recipient.getId());
-      statement.setBytes(3, identityKey.serialize());
-      statement.setString(4, trustLevel.name());
-      statement.setLong(5, added.getTime());
-      return Database.executeUpdate(TABLE_NAME + "_save_identity", statement) > 0;
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, account.getUUID().toString());
+        statement.setInt(2, recipient.getId());
+        statement.setBytes(3, identityKey.serialize());
+        statement.setString(4, trustLevel.name());
+        statement.setLong(5, added.getTime());
+        return Database.executeUpdate(TABLE_NAME + "_save_identity", statement) > 0;
+      }
     } catch (SQLException e) {
       logger.catching(e);
     }
@@ -122,30 +120,29 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public boolean isTrustedIdentity(SignalProtocolAddress address, IdentityKey identityKey, Direction direction) {
     try {
       Recipient recipient = account.getRecipients().get(address.getName());
-      PreparedStatement statement =
-          Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
-      statement.setString(1, account.getUUID().toString());
-      statement.setInt(2, recipient.getId());
-      ResultSet rows = Database.executeQuery(TABLE_NAME + "_is_trusted_identity", statement);
-
-      boolean moreRows = rows.next();
-      if (!moreRows) {
-        // no known keys, trust key on first use
-        rows.close();
-        return true;
-      }
-      while (moreRows) {
-        try {
-          if (identityKey.equals(new IdentityKey(rows.getBytes(IDENTITY_KEY), 0))) {
-            TrustLevel trustLevel = TrustLevel.valueOf(rows.getString(TRUST_LEVEL));
-            return trustLevel == TrustLevel.TRUSTED_UNVERIFIED || trustLevel == TrustLevel.TRUSTED_VERIFIED;
+      var query = "SELECT " + IDENTITY_KEY + "," + TRUST_LEVEL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, account.getUUID().toString());
+        statement.setInt(2, recipient.getId());
+        try (var rows = Database.executeQuery(TABLE_NAME + "_is_trusted_identity", statement)) {
+          boolean moreRows = rows.next();
+          if (!moreRows) {
+            // no known keys, trust key on first use
+            return true;
           }
-        } catch (InvalidKeyException e) {
-          logger.warn("Error parsing IdentityKey on row {}: {}", rows.getRow(), e.getMessage());
+          while (moreRows) {
+            try {
+              if (identityKey.equals(new IdentityKey(rows.getBytes(IDENTITY_KEY), 0))) {
+                TrustLevel trustLevel = TrustLevel.valueOf(rows.getString(TRUST_LEVEL));
+                return trustLevel == TrustLevel.TRUSTED_UNVERIFIED || trustLevel == TrustLevel.TRUSTED_VERIFIED;
+              }
+            } catch (InvalidKeyException e) {
+              logger.warn("Error parsing IdentityKey on row {}: {}", rows.getRow(), e.getMessage());
+            }
+            moreRows = rows.next();
+          }
         }
-        moreRows = rows.next();
       }
-      rows.close();
       saveIdentity(address.getName(), identityKey, Config.getNewKeyTrustLevel());
 
       // no existing key found, archive sessions and re-share sender keys
@@ -167,18 +164,14 @@ public class IdentityKeysTable implements IdentityKeyStore {
   public IdentityKey getIdentity(SignalProtocolAddress address) {
     try {
       int recipientID = account.getRecipients().get(address.getName()).getId();
-      PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + IDENTITY_KEY + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT +
-                                                                        " = ? ORDER BY " + ADDED + " DESC LIMIT 1");
-      statement.setString(1, account.getUUID().toString());
-      statement.setInt(2, recipientID);
-      ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_identity", statement);
-      if (!rows.next()) {
-        rows.close();
-        return null;
+      var query = "SELECT " + IDENTITY_KEY + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? ORDER BY " + ADDED + " DESC LIMIT 1";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, account.getUUID().toString());
+        statement.setInt(2, recipientID);
+        try (var rows = Database.executeQuery(TABLE_NAME + "_get_identity", statement)) {
+          return rows.next() ? new IdentityKey(rows.getBytes(IDENTITY_KEY), 0) : null;
+        }
       }
-      IdentityKey result = new IdentityKey(rows.getBytes(IDENTITY_KEY), 0);
-      rows.close();
-      return result;
     } catch (SQLException | InvalidKeyException | IOException e) {
       logger.catching(e);
       return null;
@@ -186,52 +179,54 @@ public class IdentityKeysTable implements IdentityKeyStore {
   }
 
   public List<IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException {
-    PreparedStatement statement = Database.getConn().prepareStatement(
-        "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
-        TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " + RecipientsTable.TABLE_NAME +
-        "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?");
-    statement.setString(1, account.getUUID().toString());
-    statement.setInt(2, recipient.getId());
-    ResultSet row = Database.executeQuery(TABLE_NAME + "_get_identities", statement);
-    List<IdentityKeyRow> results = new ArrayList<>();
-    while (row.next()) {
-      String uuidstr = row.getString(RecipientsTable.UUID);
-      ACI aci = null;
-      if (uuidstr != null) {
-        aci = ACI.from(UUID.fromString(uuidstr));
+    var query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
+                TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " +
+                RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getUUID().toString());
+      statement.setInt(2, recipient.getId());
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_identities", statement)) {
+        List<IdentityKeyRow> results = new ArrayList<>();
+        while (rows.next()) {
+          String uuidstr = rows.getString(RecipientsTable.UUID);
+          ACI aci = null;
+          if (uuidstr != null) {
+            aci = ACI.from(UUID.fromString(uuidstr));
+          }
+          SignalServiceAddress address = new SignalServiceAddress(aci, rows.getString(RecipientsTable.E164));
+          IdentityKey identityKey = new IdentityKey(rows.getBytes(IDENTITY_KEY), 0);
+          TrustLevel trustLevel = TrustLevel.valueOf(rows.getString(TRUST_LEVEL));
+          Date added = new Date(rows.getLong(ADDED));
+          results.add(new IdentityKeyRow(address, identityKey, trustLevel, added));
+        }
+        return results;
       }
-      SignalServiceAddress address = new SignalServiceAddress(aci, row.getString(RecipientsTable.E164));
-      IdentityKey identityKey = new IdentityKey(row.getBytes(IDENTITY_KEY), 0);
-      TrustLevel trustLevel = TrustLevel.valueOf(row.getString(TRUST_LEVEL));
-      Date added = new Date(row.getLong(ADDED));
-      results.add(new IdentityKeyRow(address, identityKey, trustLevel, added));
     }
-    row.close();
-    return results;
   }
 
   public List<IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException {
-    PreparedStatement statement = Database.getConn().prepareStatement(
-        "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
-        TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " + RecipientsTable.TABLE_NAME +
-        "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ?");
-    statement.setString(1, account.getUUID().toString());
-    ResultSet row = Database.executeQuery(TABLE_NAME + "_all_get_identities", statement);
-    List<IdentityKeyRow> results = new ArrayList<>();
-    while (row.next()) {
-      String uuidstr = row.getString(RecipientsTable.UUID);
-      if (uuidstr == null) {
-        continue; // no UUID no
+    var query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + RecipientsTable.TABLE_NAME + "." + RecipientsTable.E164 + "," + IDENTITY_KEY + "," +
+                TRUST_LEVEL + "," + ADDED + " FROM " + TABLE_NAME + " JOIN " + RecipientsTable.TABLE_NAME + " ON " + TABLE_NAME + "." + RECIPIENT + " = " +
+                RecipientsTable.TABLE_NAME + "." + RecipientsTable.ROW_ID + " WHERE " + TABLE_NAME + "." + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, account.getUUID().toString());
+      try (var rows = Database.executeQuery(TABLE_NAME + "_all_get_identities", statement)) {
+        List<IdentityKeyRow> results = new ArrayList<>();
+        while (rows.next()) {
+          String uuidstr = rows.getString(RecipientsTable.UUID);
+          if (uuidstr == null) {
+            continue; // no UUID no
+          }
+          ACI aci = ACI.from(UUID.fromString(uuidstr));
+          SignalServiceAddress address = new SignalServiceAddress(aci, rows.getString(RecipientsTable.E164));
+          IdentityKey identityKey = new IdentityKey(rows.getBytes(IDENTITY_KEY), 0);
+          TrustLevel trustLevel = TrustLevel.valueOf(rows.getString(TRUST_LEVEL));
+          Date added = new Date(rows.getLong(ADDED));
+          results.add(new IdentityKeyRow(address, identityKey, trustLevel, added));
+        }
+        return results;
       }
-      ACI aci = ACI.from(UUID.fromString(uuidstr));
-      SignalServiceAddress address = new SignalServiceAddress(aci, row.getString(RecipientsTable.E164));
-      IdentityKey identityKey = new IdentityKey(row.getBytes(IDENTITY_KEY), 0);
-      TrustLevel trustLevel = TrustLevel.valueOf(row.getString(TRUST_LEVEL));
-      Date added = new Date(row.getLong(ADDED));
-      results.add(new IdentityKeyRow(address, identityKey, trustLevel, added));
     }
-    row.close();
-    return results;
   }
 
   public static class IdentityKeyRow {
@@ -275,8 +270,10 @@ public class IdentityKeysTable implements IdentityKeyStore {
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
   }
 }

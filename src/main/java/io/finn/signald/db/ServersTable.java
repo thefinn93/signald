@@ -21,8 +21,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import okhttp3.Interceptor;
@@ -81,116 +79,117 @@ public class ServersTable {
   }
 
   public static Server getServer(UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " +
-                                                                      KEY_BACKUP_URL + ", " + STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," +
-                                                                      PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME + "," + KEY_BACKUP_SERVICE_ID + "," + KEY_BACKUP_MRENCLAVE +
-                                                                      "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_server", statement);
+    var query = "SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " + KEY_BACKUP_URL + ", " + STORAGE_URL + ", " +
+                ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME + "," + KEY_BACKUP_SERVICE_ID + "," +
+                KEY_BACKUP_MRENCLAVE + "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_server", statement)) {
+        // If there are no rows returned, check if it's one of the preloaded servers
+        if (!rows.next()) {
+          if (DEFAULT_SERVER.equals(uuid)) {
+            // if the default server isn't in the DB, create it
+            Server server = getDefaultServer();
+            create(server);
+            return server;
+          }
 
-    // If there are no rows returned, check if it's one of the preloaded servers
-    if (!rows.next()) {
-      rows.close();
+          throw new ServerNotFoundException(uuid);
+        }
 
-      if (DEFAULT_SERVER.equals(uuid)) {
-        // if the default server isn't in the DB, create it
-        Server server = getDefaultServer();
-        create(server);
-        return server;
+        UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
+        String serviceURL = rows.getString(SERVICE_URL);
+        String cdnURLs = rows.getString(CDN_URLS);
+        String contactDiscoveryURL = rows.getString(CONTACT_DISCOVERY_URL);
+        String keyBackupURL = rows.getString(KEY_BACKUP_URL);
+        String storageURL = rows.getString(STORAGE_URL);
+        byte[] zkGroupPublicParams = rows.getBytes(ZK_GROUP_PUBLIC_PARAMS);
+        byte[] unidentifiedSenderRoot = rows.getBytes(UNIDENTIFIED_SENDER_ROOT);
+        String proxyString = rows.getString(PROXY);
+        byte[] ca = rows.getBytes(CA);
+        String keyBackupServiceName = rows.getString(KEY_BACKUP_SERVICE_NAME);
+        byte[] keyBackupServiceId = rows.getBytes(KEY_BACKUP_SERVICE_ID);
+        String keyBackupMrenclave = rows.getString(KEY_BACKUP_MRENCLAVE);
+        String cdsMrenclave = rows.getString(CDS_MRENCLAVE);
+        byte[] cdsCa = rows.getBytes(IAS_CA);
+
+        return new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
+                          keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
       }
-
-      throw new ServerNotFoundException(uuid);
     }
-
-    UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
-    String serviceURL = rows.getString(SERVICE_URL);
-    String cdnURLs = rows.getString(CDN_URLS);
-    String contactDiscoveryURL = rows.getString(CONTACT_DISCOVERY_URL);
-    String keyBackupURL = rows.getString(KEY_BACKUP_URL);
-    String storageURL = rows.getString(STORAGE_URL);
-    byte[] zkGroupPublicParams = rows.getBytes(ZK_GROUP_PUBLIC_PARAMS);
-    byte[] unidentifiedSenderRoot = rows.getBytes(UNIDENTIFIED_SENDER_ROOT);
-    String proxyString = rows.getString(PROXY);
-    byte[] ca = rows.getBytes(CA);
-    String keyBackupServiceName = rows.getString(KEY_BACKUP_SERVICE_NAME);
-    byte[] keyBackupServiceId = rows.getBytes(KEY_BACKUP_SERVICE_ID);
-    String keyBackupMrenclave = rows.getString(KEY_BACKUP_MRENCLAVE);
-    String cdsMrenclave = rows.getString(CDS_MRENCLAVE);
-    byte[] cdsCa = rows.getBytes(IAS_CA);
-    rows.close();
-
-    return new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
-                      keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
   }
 
   public static List<Server> allServers() throws SQLException {
     List<Server> servers = new ArrayList<>();
 
-    PreparedStatement statement =
-        Database.getConn().prepareStatement("SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " + KEY_BACKUP_URL + ", " +
-                                            STORAGE_URL + ", " + ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME +
-                                            "," + KEY_BACKUP_SERVICE_ID + "," + KEY_BACKUP_MRENCLAVE + "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME);
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_all_servers", statement);
-    while (rows.next()) {
-      UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
-      String serviceURL = rows.getString(SERVICE_URL);
-      String cdnURLs = rows.getString(CDN_URLS);
-      String contactDiscoveryURL = rows.getString(CONTACT_DISCOVERY_URL);
-      String keyBackupURL = rows.getString(KEY_BACKUP_URL);
-      String storageURL = rows.getString(STORAGE_URL);
-      byte[] zkGroupPublicParams = rows.getBytes(ZK_GROUP_PUBLIC_PARAMS);
-      byte[] unidentifiedSenderRoot = rows.getBytes(UNIDENTIFIED_SENDER_ROOT);
-      String proxyString = rows.getString(PROXY);
-      byte[] ca = rows.getBytes(CA);
-      String keyBackupServiceName = rows.getString(KEY_BACKUP_SERVICE_NAME);
-      byte[] keyBackupServiceId = rows.getBytes(KEY_BACKUP_SERVICE_ID);
-      String keyBackupMrenclave = rows.getString(KEY_BACKUP_MRENCLAVE);
-      String cdsMrenclave = rows.getString(CDS_MRENCLAVE);
-      byte[] cdsCa = rows.getBytes(IAS_CA);
+    var query = "SELECT " + SERVER_UUID + "," + SERVICE_URL + ", " + CDN_URLS + "," + CONTACT_DISCOVERY_URL + ", " + KEY_BACKUP_URL + ", " + STORAGE_URL + ", " +
+                ZK_GROUP_PUBLIC_PARAMS + ", " + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + "," + KEY_BACKUP_SERVICE_NAME + "," + KEY_BACKUP_SERVICE_ID + "," +
+                KEY_BACKUP_MRENCLAVE + "," + CDS_MRENCLAVE + "," + IAS_CA + " FROM " + TABLE_NAME;
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_all_servers", statement)) {
+        while (rows.next()) {
+          UUID serverUUID = UUID.fromString(rows.getString(SERVER_UUID));
+          String serviceURL = rows.getString(SERVICE_URL);
+          String cdnURLs = rows.getString(CDN_URLS);
+          String contactDiscoveryURL = rows.getString(CONTACT_DISCOVERY_URL);
+          String keyBackupURL = rows.getString(KEY_BACKUP_URL);
+          String storageURL = rows.getString(STORAGE_URL);
+          byte[] zkGroupPublicParams = rows.getBytes(ZK_GROUP_PUBLIC_PARAMS);
+          byte[] unidentifiedSenderRoot = rows.getBytes(UNIDENTIFIED_SENDER_ROOT);
+          String proxyString = rows.getString(PROXY);
+          byte[] ca = rows.getBytes(CA);
+          String keyBackupServiceName = rows.getString(KEY_BACKUP_SERVICE_NAME);
+          byte[] keyBackupServiceId = rows.getBytes(KEY_BACKUP_SERVICE_ID);
+          String keyBackupMrenclave = rows.getString(KEY_BACKUP_MRENCLAVE);
+          String cdsMrenclave = rows.getString(CDS_MRENCLAVE);
+          byte[] cdsCa = rows.getBytes(IAS_CA);
 
-      try {
-        Server server = new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
-                                   keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
-        servers.add(server);
-      } catch (IOException | InvalidProxyException e) {
-        logger.warn("failed to load signal server " + serverUUID + " from database: " + e.getMessage());
+          try {
+            Server server = new Server(serverUUID, serviceURL, cdnURLs, contactDiscoveryURL, keyBackupURL, storageURL, zkGroupPublicParams, unidentifiedSenderRoot, proxyString, ca,
+                                       keyBackupServiceName, keyBackupServiceId, keyBackupMrenclave, cdsMrenclave, cdsCa, "");
+            servers.add(server);
+          } catch (IOException | InvalidProxyException e) {
+            logger.warn("failed to load signal server " + serverUUID + " from database: " + e.getMessage());
+          }
+        }
+        return servers;
       }
     }
-    rows.close();
-    return servers;
   }
 
   public static void create(Server server) throws SQLException, JsonProcessingException {
-    PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + SERVER_UUID + "," + SERVICE_URL + "," + CDN_URLS + "," +
-                                                                      CONTACT_DISCOVERY_URL + "," + KEY_BACKUP_URL + "," + STORAGE_URL + "," + ZK_GROUP_PUBLIC_PARAMS + "," +
-                                                                      UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    var query = "INSERT INTO " + TABLE_NAME + "(" + SERVER_UUID + "," + SERVICE_URL + "," + CDN_URLS + "," + CONTACT_DISCOVERY_URL + "," + KEY_BACKUP_URL + "," + STORAGE_URL +
+                "," + ZK_GROUP_PUBLIC_PARAMS + "," + UNIDENTIFIED_SENDER_ROOT + "," + PROXY + "," + CA + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      if (server.uuid == null) {
+        server.uuid = UUID.randomUUID();
+      }
 
-    if (server.uuid == null) {
-      server.uuid = UUID.randomUUID();
+      int i = 1;
+      statement.setString(i++, server.uuid.toString());
+      statement.setString(i++, server.serviceURL);
+      statement.setString(i++, JSONUtil.GetMapper().writeValueAsString(server.cdnURLs));
+      statement.setString(i++, server.contactDiscoveryURL);
+      statement.setString(i++, server.keyBackupURL);
+      statement.setString(i++, server.storageURL);
+      statement.setBytes(i++, server.zkParams);
+      statement.setBytes(i++, server.unidentifiedSenderRoot);
+      if (server.proxy != null) {
+        statement.setString(i++, server.proxy);
+      } else {
+        statement.setString(i++, null);
+      }
+      statement.setBytes(i, server.ca);
+      Database.executeUpdate(TABLE_NAME + "_create", statement);
     }
-
-    int i = 1;
-    statement.setString(i++, server.uuid.toString());
-    statement.setString(i++, server.serviceURL);
-    statement.setString(i++, JSONUtil.GetMapper().writeValueAsString(server.cdnURLs));
-    statement.setString(i++, server.contactDiscoveryURL);
-    statement.setString(i++, server.keyBackupURL);
-    statement.setString(i++, server.storageURL);
-    statement.setBytes(i++, server.zkParams);
-    statement.setBytes(i++, server.unidentifiedSenderRoot);
-    if (server.proxy != null) {
-      statement.setString(i++, server.proxy);
-    } else {
-      statement.setString(i++, null);
-    }
-    statement.setBytes(i, server.ca);
-    Database.executeUpdate(TABLE_NAME + "_create", statement);
   }
 
   public static void delete(UUID server)throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
-    statement.setString(1, server.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, server.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete", statement);
+    }
   }
 
   public static class Server {
@@ -364,17 +363,17 @@ public class ServersTable {
     @Override
     public InputStream getKeyStoreInputStream() {
       try {
-        PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + field + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?");
-        statement.setString(1, uuid.toString());
-        ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_key", statement);
-        if (!rows.next()) {
-          rows.close();
-          logger.warn("this should never happen: no results for server when getting keystore");
-          return null;
+        var query = "SELECT " + field + " FROM " + TABLE_NAME + " WHERE " + SERVER_UUID + " = ?";
+        try (var statement = Database.getConn().prepareStatement(query)) {
+          statement.setString(1, uuid.toString());
+          try (var rows = Database.executeQuery(TABLE_NAME + "_get_key", statement)) {
+            if (!rows.next()) {
+              logger.warn("this should never happen: no results for server when getting keystore");
+              return null;
+            }
+            return new ByteArrayInputStream(rows.getBytes(field));
+          }
         }
-
-        byte[] ca = rows.getBytes(field);
-        return new ByteArrayInputStream(ca);
       } catch (SQLException e) {
         logger.error("error getting server for keystore", e);
         return null;

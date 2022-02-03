@@ -18,7 +18,6 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import java.io.*;
 import java.nio.file.Files;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -67,55 +66,61 @@ public class GroupsTable {
     return get(GroupSecretParams.deriveFromMasterKey(group.getMasterKey()).getPublicParams().getGroupIdentifier());
   }
   public Optional<Group> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROWID + ", * FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + GROUP_ID + " = ?");
-    statement.setString(1, aci.toString());
-    statement.setBytes(2, identifier.serialize());
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get", statement);
-    if (!rows.next()) {
-      return Optional.absent();
+    var query = "SELECT " + ROWID + ", * FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + GROUP_ID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, aci.toString());
+      statement.setBytes(2, identifier.serialize());
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
+        return rows.next() ? Optional.of(new Group(rows)) : Optional.absent();
+      }
     }
-    return Optional.of(new Group(rows));
   }
 
   public List<Group> getAll() throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROWID + ",* FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, aci.toString());
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_all", statement);
-    List<Group> allGroups = new ArrayList<>();
-    while (rows.next()) {
-      try {
-        allGroups.add(new Group(rows));
-      } catch (InvalidInputException | InvalidProtocolBufferException e) {
-        logger.error("error parsing group " + rows.getString(GROUP_ID) + " from database", e);
+    var query = "SELECT " + ROWID + ",* FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, aci.toString());
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_all", statement)) {
+        List<Group> allGroups = new ArrayList<>();
+        while (rows.next()) {
+          try {
+            allGroups.add(new Group(rows));
+          } catch (InvalidInputException | InvalidProtocolBufferException e) {
+            logger.error("error parsing group " + rows.getString(GROUP_ID) + " from database", e);
+          }
+        }
+        return allGroups;
       }
     }
-    return allGroups;
   }
 
   public void upsert(GroupMasterKey masterKey, int revision, DecryptedGroup decryptedGroup) throws SQLException { upsert(masterKey, revision, decryptedGroup, null, -1); }
 
   public void upsert(GroupMasterKey masterKey, int revision, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement(
-        "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + GROUP_ID + "," + MASTER_KEY + "," + REVISION + "," + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "," + GROUP_INFO +
-        ") VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (" + ACCOUNT_UUID + "," + GROUP_ID + ") DO UPDATE SET " + REVISION + "=excluded." + REVISION + "," + DISTRIBUTION_ID +
-        "=excluded." + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "=excluded." + LAST_AVATAR_FETCH + "," + GROUP_INFO + "=excluded." + GROUP_INFO);
-    int i = 1;
-    statement.setString(i++, aci.toString());
-    statement.setBytes(i++, GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier().serialize());
-    statement.setBytes(i++, masterKey.serialize());
-    statement.setInt(i++, revision);
-    statement.setString(i++, distributionId == null ? null : distributionId.toString());
-    statement.setInt(i++, lastAvatarFetch);
-    statement.setBytes(i++, decryptedGroup.toByteArray());
-    Database.executeUpdate(TABLE_NAME + "_upsert", statement);
+    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + GROUP_ID + "," + MASTER_KEY + "," + REVISION + "," + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "," +
+                GROUP_INFO + ") VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (" + ACCOUNT_UUID + "," + GROUP_ID + ") DO UPDATE SET " + REVISION + "=excluded." + REVISION + "," +
+                DISTRIBUTION_ID + "=excluded." + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "=excluded." + LAST_AVATAR_FETCH + "," + GROUP_INFO + "=excluded." + GROUP_INFO;
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      int i = 1;
+      statement.setString(i++, aci.toString());
+      statement.setBytes(i++, GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier().serialize());
+      statement.setBytes(i++, masterKey.serialize());
+      statement.setInt(i++, revision);
+      statement.setString(i++, distributionId == null ? null : distributionId.toString());
+      statement.setInt(i++, lastAvatarFetch);
+      statement.setBytes(i++, decryptedGroup.toByteArray());
+      Database.executeUpdate(TABLE_NAME + "_upsert", statement);
+    }
   }
 
   private static File getGroupAvatarFile(GroupIdentifier groupId) { return new File(groupAvatarPath, "group-" + Base64.encodeBytes(groupId.serialize()).replace("/", "_")); }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
   }
 
   public static void setGroupAvatarPath(String path) throws IOException {
@@ -156,21 +161,25 @@ public class GroupsTable {
     public DecryptedGroup getDecryptedGroup() { return group; }
 
     public void setDecryptedGroup(DecryptedGroup decryptedGroup) throws SQLException {
-      PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + REVISION + " = ?, " + GROUP_INFO + " = ? WHERE " + ROWID + " = ?");
-      statement.setInt(1, decryptedGroup.getRevision());
-      statement.setBytes(2, decryptedGroup.toByteArray());
-      statement.setInt(3, rowId);
-      Database.executeUpdate(TABLE_NAME + "_set_decrypted_group", statement);
-      revision = decryptedGroup.getRevision();
-      this.group = decryptedGroup;
+      var query = "UPDATE " + TABLE_NAME + " SET " + REVISION + " = ?, " + GROUP_INFO + " = ? WHERE " + ROWID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setInt(1, decryptedGroup.getRevision());
+        statement.setBytes(2, decryptedGroup.toByteArray());
+        statement.setInt(3, rowId);
+        Database.executeUpdate(TABLE_NAME + "_set_decrypted_group", statement);
+        revision = decryptedGroup.getRevision();
+        this.group = decryptedGroup;
+      }
     }
 
     public SignalServiceGroupV2 getSignalServiceGroupV2() { return SignalServiceGroupV2.newBuilder(masterKey).withRevision(revision).build(); }
 
     public void delete() throws SQLException {
-      PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ROWID + " = ?");
-      statement.setInt(1, rowId);
-      Database.executeUpdate(TABLE_NAME + "_delete", statement);
+      var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ROWID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setInt(1, rowId);
+        Database.executeUpdate(TABLE_NAME + "_delete", statement);
+      }
     }
 
     public JsonGroupV2Info getJsonGroupV2Info() {
@@ -258,10 +267,12 @@ public class GroupsTable {
     public DistributionId getOrCreateDistributionId() throws SQLException {
       if (distributionId == null) {
         distributionId = DistributionId.create();
-        PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + DISTRIBUTION_ID + " = ? WHERE " + ROWID + " = ?");
-        statement.setString(1, distributionId.toString());
-        statement.setInt(2, rowId);
-        Database.executeUpdate(TABLE_NAME + "_create_distribution_id", statement);
+        var query = "UPDATE " + TABLE_NAME + " SET " + DISTRIBUTION_ID + " = ? WHERE " + ROWID + " = ?";
+        try (var statement = Database.getConn().prepareStatement(query)) {
+          statement.setString(1, distributionId.toString());
+          statement.setInt(2, rowId);
+          Database.executeUpdate(TABLE_NAME + "_create_distribution_id", statement);
+        }
       }
       return distributionId;
     }

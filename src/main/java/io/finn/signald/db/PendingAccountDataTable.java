@@ -7,8 +7,6 @@
 
 package io.finn.signald.db;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,77 +23,75 @@ public class PendingAccountDataTable {
   public enum Key { OWN_IDENTITY_KEY_PAIR, LOCAL_REGISTRATION_ID, SERVER_UUID, PASSWORD }
 
   public static byte[] getBytes(String username, Key key) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
-    statement.setString(1, key.name());
-    statement.setString(2, username);
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_bytes", statement);
-    if (!rows.next()) {
-      rows.close();
-      return null;
+    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, key.name());
+      statement.setString(2, username);
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_bytes", statement)) {
+        return rows.next() ? rows.getBytes(VALUE) : null;
+      }
     }
-    byte[] result = rows.getBytes(VALUE);
-    rows.close();
-    return result;
   }
 
   public static String getString(String username, Key key) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
-    statement.setString(1, key.name());
-    statement.setString(2, username);
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_string", statement);
-    if (!rows.next()) {
-      rows.close();
-      return null;
+    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, key.name());
+      statement.setString(2, username);
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_string", statement)) {
+        return rows.next() ? rows.getString(VALUE) : null;
+      }
     }
-    String result = rows.getString(VALUE);
-    rows.close();
-    return result;
   }
 
   public static int getInt(String username, Key key) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?");
-    statement.setString(1, key.name());
-    statement.setString(2, username);
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_int", statement);
-    if (!rows.next()) {
-      rows.close();
-      return -1;
+    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + USERNAME + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, key.name());
+      statement.setString(2, username);
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_int", statement)) {
+        return rows.next() ? rows.getInt(VALUE) : -1;
+      }
     }
-    int result = rows.getInt(VALUE);
-    rows.close();
-    return result;
   }
 
   public static void set(String username, Key key, byte[] value) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" +
-                                                                      USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, username);
-    statement.setString(2, key.name());
-    statement.setBytes(3, value);
-    Database.executeUpdate(TABLE_NAME + "_set_bytes", statement);
+    var query = "INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(query) DO UPDATE SET " + VALUE + " = excluded." + VALUE;
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, username);
+      statement.setString(2, key.name());
+      statement.setBytes(3, value);
+      Database.executeUpdate(TABLE_NAME + "_set_bytes", statement);
+    }
   }
 
   public static void set(String username, Key key, String value) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" +
-                                                                      USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, username);
-    statement.setString(2, key.name());
-    statement.setString(3, value);
-    Database.executeUpdate(TABLE_NAME + "_set_string", statement);
+    var query = "INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE +
+                " = excluded." + VALUE;
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, username);
+      statement.setString(2, key.name());
+      statement.setString(3, value);
+      Database.executeUpdate(TABLE_NAME + "_set_string", statement);
+    }
   }
 
   public static void set(String username, Key key, int value) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" +
-                                                                      USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE + " = excluded." + VALUE);
-    statement.setString(1, username);
-    statement.setString(2, key.name());
-    statement.setInt(3, value);
-    Database.executeUpdate(TABLE_NAME + "_set_int", statement);
+    var query = "INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE +
+                " = excluded." + VALUE;
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, username);
+      statement.setString(2, key.name());
+      statement.setInt(3, value);
+      Database.executeUpdate(TABLE_NAME + "_set_int", statement);
+    }
   }
 
   public static void clear(String username) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + USERNAME + " = ?");
-    statement.setString(1, username);
-    Database.executeUpdate(TABLE_NAME + "_clear", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + USERNAME + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, username);
+      Database.executeUpdate(TABLE_NAME + "_clear", statement);
+    }
   }
 }

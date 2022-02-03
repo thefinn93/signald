@@ -8,20 +8,14 @@
 package io.finn.signald.db;
 
 import io.finn.signald.Account;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import javax.xml.crypto.Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
-import org.whispersystems.signalservice.api.SignalServiceDataStore;
-import org.whispersystems.signalservice.api.SignalServiceSenderKeyStore;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
@@ -41,15 +35,17 @@ public class SenderKeySharedTable {
   public Set<SignalProtocolAddress> getSenderKeySharedWith(DistributionId distributionId) {
     Set<SignalProtocolAddress> addresses = new HashSet<>();
     try {
-      PreparedStatement statement =
-          Database.getConn().prepareStatement("SELECT " + ADDRESS + "," + DEVICE + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
-      statement.setString(1, aci.toString());
-      statement.setString(2, distributionId.toString());
+      var query = "SELECT " + ADDRESS + "," + DEVICE + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        statement.setString(1, aci.toString());
+        statement.setString(2, distributionId.toString());
 
-      ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_sender_key_shared_with", statement);
-      while (rows.next()) {
-        SignalProtocolAddress address = new SignalProtocolAddress(rows.getString(ADDRESS), rows.getInt(DEVICE));
-        addresses.add(address);
+        try (var rows = Database.executeQuery(TABLE_NAME + "_get_sender_key_shared_with", statement)) {
+          while (rows.next()) {
+            SignalProtocolAddress address = new SignalProtocolAddress(rows.getString(ADDRESS), rows.getInt(DEVICE));
+            addresses.add(address);
+          }
+        }
       }
     } catch (SQLException e) {
       logger.catching(e);
@@ -59,16 +55,17 @@ public class SenderKeySharedTable {
 
   public void markSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
     try {
-      PreparedStatement statement = Database.getConn().prepareStatement("INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ADDRESS + "," + DEVICE + "," +
-                                                                        DISTRIBUTION_ID + ") VALUES (?, ?, ?, ?)");
-      for (SignalProtocolAddress address : addresses) {
-        statement.setString(1, aci.toString());
-        statement.setString(2, address.getName());
-        statement.setInt(3, address.getDeviceId());
-        statement.setString(4, distributionId.toString());
-        statement.addBatch();
+      var query = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + ADDRESS + "," + DEVICE + "," + DISTRIBUTION_ID + ") VALUES (?, ?, ?, ?)";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        for (SignalProtocolAddress address : addresses) {
+          statement.setString(1, aci.toString());
+          statement.setString(2, address.getName());
+          statement.setInt(3, address.getDeviceId());
+          statement.setString(4, distributionId.toString());
+          statement.addBatch();
+        }
+        Database.executeBatch(TABLE_NAME + "_marK_sender_key_shared_with", statement);
       }
-      Database.executeBatch(TABLE_NAME + "_marK_sender_key_shared_with", statement);
     } catch (SQLException e) {
       logger.catching(e);
     }
@@ -76,16 +73,17 @@ public class SenderKeySharedTable {
 
   public void clearSenderKeySharedWith(DistributionId distributionId, Collection<SignalProtocolAddress> addresses) {
     try {
-      PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE +
-                                                                        " = ? AND " + DISTRIBUTION_ID + " = ?");
-      for (SignalProtocolAddress address : addresses) {
-        statement.setString(1, aci.toString());
-        statement.setString(2, distributionId.toString());
-        statement.setInt(3, address.getDeviceId());
-        statement.setString(4, distributionId.toString());
-        statement.addBatch();
+      var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE + " = ? AND " + DISTRIBUTION_ID + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        for (SignalProtocolAddress address : addresses) {
+          statement.setString(1, aci.toString());
+          statement.setString(2, distributionId.toString());
+          statement.setInt(3, address.getDeviceId());
+          statement.setString(4, distributionId.toString());
+          statement.addBatch();
+        }
+        Database.executeBatch(TABLE_NAME + "_clear_sender_key_shared_with", statement);
       }
-      Database.executeBatch(TABLE_NAME + "_clear_sender_key_shared_with", statement);
     } catch (SQLException e) {
       logger.catching(e);
     }
@@ -93,14 +91,15 @@ public class SenderKeySharedTable {
 
   public void clearSenderKeySharedWith(Collection<SignalProtocolAddress> addresses) {
     try {
-      PreparedStatement statement =
-          Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE + " = ?");
-      for (SignalProtocolAddress address : addresses) {
-        statement.setString(1, aci.toString());
-        statement.setInt(3, address.getDeviceId());
-        statement.addBatch();
+      var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE + " = ?";
+      try (var statement = Database.getConn().prepareStatement(query)) {
+        for (SignalProtocolAddress address : addresses) {
+          statement.setString(1, aci.toString());
+          statement.setInt(3, address.getDeviceId());
+          statement.addBatch();
+        }
+        Database.executeBatch(TABLE_NAME + "_clear_sender_key_shared_with", statement);
       }
-      Database.executeBatch(TABLE_NAME + "_clear_sender_key_shared_with", statement);
     } catch (SQLException e) {
       logger.catching(e);
     }
@@ -109,28 +108,36 @@ public class SenderKeySharedTable {
   public boolean isMultiDevice() { return new Account(aci).getMultiDevice(); }
 
   public void deleteAllFor(DistributionId distributionId) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?");
-    statement.setString(1, aci.toString());
-    statement.setString(2, distributionId.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_all_for_distributionid", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DISTRIBUTION_ID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, aci.toString());
+      statement.setString(2, distributionId.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_all_for_distributionid", statement);
+    }
   }
 
   public void deleteForAll(Recipient recipient) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?");
-    statement.setString(1, aci.toString());
-    statement.setString(2, recipient.getACI().toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_all_for_recipient", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, aci.toString());
+      statement.setString(2, recipient.getACI().toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_all_for_recipient", statement);
+    }
   }
   public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
   }
 
   public void deleteSharedWith(Recipient source) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?");
-    statement.setString(1, aci.toString());
-    statement.setString(2, source.getACI().toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_shared_with", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, aci.toString());
+      statement.setString(2, source.getACI().toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_shared_with", statement);
+    }
   }
 }

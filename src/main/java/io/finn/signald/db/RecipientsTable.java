@@ -18,8 +18,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
@@ -73,27 +71,28 @@ public class RecipientsTable {
   }
 
   public Recipient get(String e164, ACI aci) throws SQLException, IOException {
-    PreparedStatement statement = Database.getConn().prepareStatement("SELECT " + ROW_ID + "," + E164 + "," + UUID + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 +
-                                                                      " = ?) AND " + ACCOUNT_UUID + " = ?");
-    if (aci != null) {
-      statement.setString(1, aci.toString());
-    }
-
-    if (e164 != null) {
-      statement.setString(2, e164);
-    }
-
-    statement.setString(3, uuid.toString());
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get", statement);
     List<Recipient> results = new ArrayList<>();
-    while (rows.next()) {
-      int rowid = rows.getInt(ROW_ID);
-      String storedE164 = rows.getString(E164);
-      String storedUUID = rows.getString(UUID);
-      SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
-      results.add(new Recipient(uuid, rowid, a));
+    var query = "SELECT " + ROW_ID + "," + E164 + "," + UUID + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 + " = ?) AND " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      if (aci != null) {
+        statement.setString(1, aci.toString());
+      }
+
+      if (e164 != null) {
+        statement.setString(2, e164);
+      }
+
+      statement.setString(3, uuid.toString());
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
+        while (rows.next()) {
+          int rowid = rows.getInt(ROW_ID);
+          String storedE164 = rows.getString(E164);
+          String storedUUID = rows.getString(UUID);
+          SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
+          results.add(new Recipient(uuid, rowid, a));
+        }
+      }
     }
-    rows.close();
 
     int rowid = -1;
     ACI storedACI = null;
@@ -167,41 +166,50 @@ public class RecipientsTable {
 
   private int storeNew(ACI aci, String e164) throws SQLException {
     Connection connection = Database.getConn();
-    PreparedStatement statement = connection.prepareStatement("INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)");
-    statement.setString(1, uuid.toString());
-    statement.setString(2, aci.toString());
-    if (e164 != null) {
-      statement.setString(3, e164);
+    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)";
+    try (var statement = connection.prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      statement.setString(2, aci.toString());
+      if (e164 != null) {
+        statement.setString(3, e164);
+      }
+      Database.executeUpdate(TABLE_NAME + "_store_name", statement);
     }
-    Database.executeUpdate(TABLE_NAME + "_store_name", statement);
-    ResultSet rows = Database.executeQuery(TABLE_NAME + "_get_stored", connection.prepareStatement("SELECT last_insert_rowid()"));
-    if (!rows.next()) {
-      throw new AssertionError("error fetching ID of last row inserted while storing " + aci + "/" + e164);
+    try (var statement = connection.prepareStatement("SELECT last_insert_rowid()")) {
+      try (var rows = Database.executeQuery(TABLE_NAME + "_get_stored", statement)) {
+        if (!rows.next()) {
+          throw new AssertionError("error fetching ID of last row inserted while storing " + aci + "/" + e164);
+        }
+        return rows.getInt(1);
+      }
     }
-    int rowid = rows.getInt(1);
-    rows.close();
-    return rowid;
   }
 
   private void update(String column, String value, int row) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("UPDATE " + TABLE_NAME + " SET " + column + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + ROW_ID + " = ?");
-    statement.setString(1, value);
-    statement.setString(2, uuid.toString());
-    statement.setInt(3, row);
-    Database.executeUpdate(TABLE_NAME + "_update", statement);
+    var query = "UPDATE " + TABLE_NAME + " SET " + column + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + ROW_ID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, value);
+      statement.setString(2, uuid.toString());
+      statement.setInt(3, row);
+      Database.executeUpdate(TABLE_NAME + "_update", statement);
+    }
   }
 
   private void delete(int row)throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ROW_ID + " = ? AND " + ACCOUNT_UUID + " = ?");
-    statement.setInt(1, row);
-    statement.setString(2, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ROW_ID + " = ? AND " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setInt(1, row);
+      statement.setString(2, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete", statement);
+    }
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
-    PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
-    statement.setString(1, uuid.toString());
-    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
   }
 
   private ACI getRegisteredUser(final String number) throws IOException, SQLException {
