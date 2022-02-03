@@ -64,7 +64,7 @@ public class SenderKeySharedTable {
           statement.setString(4, distributionId.toString());
           statement.addBatch();
         }
-        Database.executeBatch(TABLE_NAME + "_marK_sender_key_shared_with", statement);
+        Database.executeBatch(TABLE_NAME + "_mark_sender_key_shared_with", statement);
       }
     } catch (SQLException e) {
       logger.catching(e);

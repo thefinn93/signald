@@ -205,13 +205,13 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       if (exception instanceof SelfSendException) {
         logger.debug("ignoring SelfSendException (see https://gitlab.com/signald/signald/-/issues/24)");
       } else if (exception instanceof DuplicateMessageException || exception.getCause() instanceof DuplicateMessageException) {
-        logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/signald/signald/-/issues/50): " + exception.toString());
+        logger.warn("ignoring DuplicateMessageException (see https://gitlab.com/signald/signald/-/issues/50)", exception);
       } else if (exception instanceof UntrustedIdentityException) {
-        logger.debug("UntrustedIdentityException: " + exception.toString());
+        logger.debug("UntrustedIdentityException", exception);
       } else if (exception instanceof InvalidMetadataMessageException) {
-        logger.warn("Received invalid metadata in incoming message: " + exception.toString());
+        logger.warn("Received invalid metadata in incoming message", exception);
       } else if (exception instanceof ProtocolException) {
-        logger.warn("ProtocolException thrown while receiving: " + exception.toString());
+        logger.warn("ProtocolException thrown while receiving", exception);
       } else if (exception instanceof InvalidMessageException) {
         logger.warn("InvalidMessageException thrown while receiving");
       } else {

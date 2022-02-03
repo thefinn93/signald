@@ -649,8 +649,7 @@ public class Manager {
               //              Optional.absent());
             } else {
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-                results.add(
-                    messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, new IndividualSendEventsLogger(recipient)));
+                results.add(messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, IndividualSendEventsLogger.INSTANCE));
               } finally {
                 logger.debug("send complete");
               }

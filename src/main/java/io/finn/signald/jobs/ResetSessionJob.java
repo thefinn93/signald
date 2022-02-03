@@ -27,6 +27,7 @@ public class ResetSessionJob implements Job {
 
   @Override
   public void run() throws SQLException, IOException, NoSuchAccountException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
+    logger.info("resetting session with {}", recipient.toRedactedString());
     logger.debug("archiving all sessions with {}", recipient.toRedactedString());
     account.getProtocolStore().archiveAllSessions(recipient);
     if (!recipient.equals(account.getSelf())) {

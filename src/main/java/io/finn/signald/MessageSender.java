@@ -143,7 +143,7 @@ public class MessageSender {
       logger.debug("sending group message to {} members via a distribution group", recipientAddresses.size());
       try {
         results.addAll(messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(),
-                                                          SignalServiceMessageSender.SenderKeyGroupEvents.EMPTY));
+                                                          SenderKeyGroupEventsLogger.INSTANCE));
       } catch (UntrustedIdentityException e) {
         account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       } catch (NoSessionException ignored) {

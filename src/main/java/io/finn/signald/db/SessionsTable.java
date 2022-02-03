@@ -270,7 +270,7 @@ public class SessionsTable implements SessionStore {
           storeStatement.setBytes(i++, record.second().serialize());
         }
         int updated = Database.executeUpdate(TABLE_NAME + "_archive_all_sessions", storeStatement);
-        logger.info("archived {} session(s) with {}", updated, recipient.toRedactedString());
+        logger.debug("archived {} session(s) with {}", updated, recipient.toRedactedString());
       }
     }
   }

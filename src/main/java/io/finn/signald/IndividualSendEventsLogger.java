@@ -14,9 +14,8 @@ import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 
 // a basic class that logs individual send events
 public class IndividualSendEventsLogger implements SignalServiceMessageSender.IndividualSendEvents {
-  private final Logger logger;
-
-  public IndividualSendEventsLogger(Recipient r) { logger = LogManager.getLogger("send-to-" + r.toRedactedString()); }
+  private final static Logger logger = LogManager.getLogger();
+  public final static IndividualSendEventsLogger INSTANCE = new IndividualSendEventsLogger();
 
   @Override
   public void onMessageEncrypted() {
