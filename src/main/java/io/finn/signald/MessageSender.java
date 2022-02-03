@@ -5,6 +5,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.db.SenderKeySharedTable;
 import io.finn.signald.db.SenderKeysTable;
 import io.finn.signald.exceptions.*;
+import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -89,22 +90,12 @@ public class MessageSender {
     ProfileAndCredentialEntry selfProfileAndCredentialEntry = m.getRecipientProfileKeyCredential(self);
     if (selfProfileAndCredentialEntry == null || !selfProfileAndCredentialEntry.getProfile().getCapabilities().senderKey) {
       logger.debug("not all linked devices support sender keys, using legacy send");
+      RefreshProfileJob.queueIfNeeded(m, selfProfileAndCredentialEntry);
       legacyTargets.addAll(members);
     } else {
       for (Recipient member : members) {
-        ProfileAndCredentialEntry profileAndCredentialEntry;
-        try {
-          profileAndCredentialEntry = m.getRecipientProfileKeyCredential(member);
-        } catch (ExecutionException e) {
-          if (e.getCause() instanceof AuthorizationFailedException) {
-            logger.debug("AuthorizationFailedException when trying to refresh profile for {}", member.toRedactedString());
-          } else {
-            logger.error("unexpected error while refreshing recipient profile key", e);
-          }
-          legacyTargets.add(member);
-          continue;
-        }
-
+        ProfileAndCredentialEntry profileAndCredentialEntry = m.getAccountData().profileCredentialStore.get(member);
+        RefreshProfileJob.queueIfNeeded(m, profileAndCredentialEntry);
         Optional<UnidentifiedAccessPair> accessPairs = m.getAccessPairFor(member);
         if (profileAndCredentialEntry == null) {
           legacyTargets.add(member);

@@ -733,7 +733,7 @@ public class Manager {
         sem.release();
       }
       double duration = timer.observeDuration();
-      logger.debug("message decrypted in " + duration + " seconds");
+      logger.debug("message decrypted in {} seconds", duration);
     }
   }
 
@@ -903,10 +903,7 @@ public class Manager {
         throw new AssertionError(e);
       }
       ProfileAndCredentialEntry entry = accountData.profileCredentialStore.storeProfileKey(source, profileKey);
-      RefreshProfileJob j = new RefreshProfileJob(this, entry);
-      if (j.needsRefresh()) {
-        jobs.add(j);
-      }
+      RefreshProfileJob.queueIfNeeded(this, entry);
     }
 
     if (message.getSticker().isPresent()) {
@@ -1560,13 +1557,8 @@ public class Manager {
     if (profileEntry == null) {
       return null;
     }
-    RefreshProfileJob action = new RefreshProfileJob(this, profileEntry);
-    if (action.needsRefresh()) {
-      action.run();
-      return accountData.profileCredentialStore.get(recipient);
-    } else {
-      return profileEntry;
-    }
+    RefreshProfileJob.queueIfNeeded(this, profileEntry);
+    return profileEntry;
   }
 
   public SignalProfile decryptProfile(final Recipient recipient, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) throws IOException {
