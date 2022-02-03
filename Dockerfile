@@ -27,6 +27,4 @@ RUN mkdir -p /root/.config/ && echo "socketpath: /signald/signald.sock" > /root/
 
 VOLUME /signald
 
-ENV SIGNALD_LOG_DB_TRANSACTIONS=true
-
 CMD ["/usr/local/bin/signald", "-d", "/signald", "-s", "/signald/signald.sock"]
