@@ -124,7 +124,11 @@ public class MessageSender {
 
     List<SendMessageResult> results = new ArrayList<>();
 
-    if (senderKeyTargets.size() > 0) {
+    // disable sender keys for groups of mixed targets until we can figure out how to avoid the duplicate sync messages
+    if (legacyTargets.size() > 0 && senderKeyTargets.size() > 0) {
+      logger.debug("mixed senderkey and legacy targets, falling back to legacy to avoid duplicate sync messages");
+      legacyTargets.addAll(senderKeyTargets);
+    } else if (senderKeyTargets.size() > 0) {
       DistributionId distributionId = group.getOrCreateDistributionId();
       long keyCreateTime = getCreateTimeForOurKey(distributionId);
       long keyAge = System.currentTimeMillis() - keyCreateTime;
