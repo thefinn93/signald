@@ -80,7 +80,7 @@ public class SignedPreKeysTable implements SignedPreKeyStore {
       statement.setString(1, aci.toString());
       statement.setInt(2, signedPreKeyId);
       statement.setBytes(3, record.serialize());
-      Database.executeQuery(TABLE_NAME + "_store_signed_prekey", statement);
+      Database.executeUpdate(TABLE_NAME + "_store_signed_prekey", statement);
     } catch (SQLException e) {
       logger.catching(e);
       throw new AssertionError(e);

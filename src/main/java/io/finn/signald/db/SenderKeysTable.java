@@ -98,12 +98,12 @@ public class SenderKeysTable implements SenderKeyStore {
     statement.setString(1, aci.toString());
     statement.setString(2, address);
     statement.setString(3, distributionId.toString());
-    Database.executeQuery(TABLE_NAME + "_delete_all_for", statement);
+    Database.executeUpdate(TABLE_NAME + "_delete_all_for", statement);
   }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
     PreparedStatement statement = Database.getConn().prepareStatement("DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?");
     statement.setString(1, uuid.toString());
-    Database.executeQuery(TABLE_NAME + "_delete_account", statement);
+    Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
   }
 }
