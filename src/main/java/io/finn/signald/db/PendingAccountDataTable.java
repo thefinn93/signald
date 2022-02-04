@@ -56,7 +56,8 @@ public class PendingAccountDataTable {
   }
 
   public static void set(String username, Key key, byte[] value) throws SQLException {
-    var query = "INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(query) DO UPDATE SET " + VALUE + " = excluded." + VALUE;
+    var query = "INSERT INTO " + TABLE_NAME + "(" + USERNAME + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + USERNAME + "," + KEY + ") DO UPDATE SET " + VALUE +
+                " = excluded." + VALUE;
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, username);
       statement.setString(2, key.name());
