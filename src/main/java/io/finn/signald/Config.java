@@ -21,6 +21,7 @@ public class Config {
   private static final String SYSTEM_SOCKET_PATH = "/var/run/signald/signald.sock";
 
   @CommandLine.Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting (env SIGNALD_VERBOSE_LOGGING)") private static boolean verbose = false;
+  @CommandLine.Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message") private static boolean usageHelpRequested;
   @CommandLine.Option(names = {"-s", "--socket"}, description = "The path to the socket file") private static String socketPath = null;
   @CommandLine.Option(names = {"-u", "--user-socket"},
                       description = "put the socket in the user runtime directory ($XDG_RUNTIME_DIR), the default unless --socket or --system-socket is specified")
@@ -52,6 +53,10 @@ public class Config {
   private static boolean logDatabaseTransactions;
 
   public static void init() throws IOException {
+    if (usageHelpRequested) {
+      CommandLine.usage(new Config(), System.out);
+      System.exit(2);
+    }
     if (System.getenv("SIGNALD_VERBOSE_LOGGING") != null) {
       verbose = Boolean.parseBoolean(System.getenv("SIGNALD_VERBOSE_LOGGING"));
     }

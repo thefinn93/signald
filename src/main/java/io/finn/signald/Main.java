@@ -42,13 +42,8 @@ public class Main {
   private static final Logger logger = LogManager.getLogger();
 
   public static void main(String[] args) {
+    CommandLine.populateCommand(new Config(), args);
     try {
-      try {
-        CommandLine.populateCommand(new Config(), args);
-      } catch (CommandLine.UnmatchedArgumentException e) {
-        logger.error(e.getMessage());
-        System.exit(1);
-      }
       Config.init();
 
       logger.debug("Starting {} {}", BuildConfig.NAME, BuildConfig.VERSION);
