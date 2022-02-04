@@ -88,7 +88,7 @@ public class MessageSender {
 
     // check our own profile first
     ProfileAndCredentialEntry selfProfileAndCredentialEntry = m.getRecipientProfileKeyCredential(self);
-    if (selfProfileAndCredentialEntry == null || !selfProfileAndCredentialEntry.getProfile().getCapabilities().senderKey) {
+    if (selfProfileAndCredentialEntry == null || selfProfileAndCredentialEntry.getProfile() == null || !selfProfileAndCredentialEntry.getProfile().getCapabilities().senderKey) {
       logger.debug("not all linked devices support sender keys, using legacy send");
       RefreshProfileJob.queueIfNeeded(m, selfProfileAndCredentialEntry);
       legacyTargets.addAll(members);
