@@ -229,6 +229,25 @@ public class IdentityKeysTable implements IdentityKeyStore {
     }
   }
 
+  public static void deleteAccount(UUID uuid) throws SQLException {
+    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, uuid.toString());
+      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
+    }
+  }
+
+  public static void trustAllKeys() throws SQLException {
+    logger.info("marking all currently UNTRUSTED keys in as TRUSTED_UNVERIFIED for all accounts");
+    var query = "UPDATE " + TABLE_NAME + " SET " + TRUST_LEVEL + " = ? WHERE " + TRUST_LEVEL + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setString(1, TrustLevel.TRUSTED_UNVERIFIED.name());
+      statement.setString(2, TrustLevel.UNTRUSTED.name());
+      var count = Database.executeUpdate(TABLE_NAME + "_trust_all_existing_keys", statement);
+      logger.info("marked {} key(s) as TRUSTED_UNVERIFIED", count);
+    }
+  }
+
   public static class IdentityKeyRow {
     SignalServiceAddress address;
     IdentityKey identityKey;
@@ -266,14 +285,6 @@ public class IdentityKeysTable implements IdentityKeyStore {
         return 0;
       }
       return added.getTime();
-    }
-  }
-
-  public static void deleteAccount(UUID uuid) throws SQLException {
-    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
-      Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
 }

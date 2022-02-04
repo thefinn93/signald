@@ -44,6 +44,7 @@ public class Config {
   private static int decryptionTimeout = 30;
   @CommandLine.Option(names = {"--trust-new-keys"}, description = "when a remote key changes, set trust level to TRUSTED_UNVERIFIED (instead of UNTRUSTED)")
   private static boolean trustNewKeys;
+  @CommandLine.Option(names = {"--trust-all-keys-on-start"}, description = "mark all known keys as trusted on startup") private static boolean trustAllKeys;
   @CommandLine.Option(names = {"--log-database-transactions"},
                       description = "log when DB transactions occur and how long they took. Note that db logs are at the debug level, so --verbose should also be used")
   private static boolean logDatabaseTransactions;
@@ -83,6 +84,10 @@ public class Config {
 
     if (trustNewKeys) {
       logger.info("new keys will be marked as TRUSTED_UNVERIFIED instead of UNTRUSTED");
+    }
+
+    if (System.getenv("SIGNALD_TRUST_ALL_KEYS") != null) {
+      trustAllKeys = Boolean.parseBoolean(System.getenv("SIGNALD_TRUST_ALL_KEYS"));
     }
 
     if (System.getenv("SIGNALD_ENABLE_METRICS") != null) {
@@ -141,4 +146,6 @@ public class Config {
   public static TrustLevel getNewKeyTrustLevel() { return trustNewKeys ? TrustLevel.TRUSTED_UNVERIFIED : TrustLevel.UNTRUSTED; }
 
   public static boolean getLogDatabaseTransactions() { return logDatabaseTransactions; }
+
+  public static boolean getTrustAllKeys() { return trustAllKeys; }
 }

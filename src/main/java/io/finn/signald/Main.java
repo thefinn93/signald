@@ -9,6 +9,7 @@ package io.finn.signald;
 
 import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import java.io.BufferedReader;
 import java.io.File;
@@ -42,7 +43,12 @@ public class Main {
 
   public static void main(String[] args) {
     try {
-      CommandLine.populateCommand(new Config(), args);
+      try {
+        CommandLine.populateCommand(new Config(), args);
+      } catch (CommandLine.UnmatchedArgumentException e) {
+        logger.error(e.getMessage());
+        System.exit(1);
+      }
       Config.init();
 
       logger.debug("Starting {} {}", BuildConfig.NAME, BuildConfig.VERSION);
@@ -68,6 +74,10 @@ public class Main {
         String message = "applied migration " + o.version + "/" + migrateResult.targetSchemaVersion + ": " + o.description + " [" + o.executionTime + " ms]";
         logger.info(message);
         sdnotify("STATUS=" + message);
+      }
+
+      if (Config.getTrustAllKeys()) {
+        IdentityKeysTable.trustAllKeys();
       }
 
       // Migrate data as supported from the JSON state files:
