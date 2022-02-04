@@ -20,7 +20,7 @@ public class Config {
   private static Logger logger = LogManager.getLogger();
   private static final String SYSTEM_SOCKET_PATH = "/var/run/signald/signald.sock";
 
-  @CommandLine.Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting.") private static boolean verbose = false;
+  @CommandLine.Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting (env SIGNALD_VERBOSE_LOGGING)") private static boolean verbose = false;
   @CommandLine.Option(names = {"-s", "--socket"}, description = "The path to the socket file") private static String socketPath = null;
   @CommandLine.Option(names = {"-u", "--user-socket"},
                       description = "put the socket in the user runtime directory ($XDG_RUNTIME_DIR), the default unless --socket or --system-socket is specified")
@@ -29,24 +29,26 @@ public class Config {
   @CommandLine.Option(names = {"-d", "--data"}, description = "Data storage location") private static String dataPath = System.getProperty("user.home") + "/.config/signald";
   @CommandLine.Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db. Only sqlite is supported at this time.")
   private static String db;
-  @CommandLine.Option(names = {"--dump-protocol"},
-                      description = "print a machine-readable description of the client protocol to stdout and exit (https://signald.org/articles/protocol/documentation/)")
+  @CommandLine.Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit "
+                                                                 + "(https://signald.org/articles/protocol/documentation/)")
   private static boolean dumpProtocol = false;
-  @CommandLine.Option(names = {"-m", "--metrics"}, description = "record and expose metrics in prometheus format") private static boolean metrics = false;
-  @CommandLine.Option(names = {"--metrics-http-port"}, description = "metrics http listener port", defaultValue = "9595", paramLabel = "port") private static int metricsHttpPort;
-  @CommandLine.Option(
-      names = {"--log-http-requests"},
-      description =
-          "log all requests send to the server. this is used for debugging but generally should not be used otherwise. Also can be enabled with environment variable SIGNALD_HTTP_LOGGING")
+  @CommandLine.Option(names = {"-m", "--metrics"}, description = "record and expose metrics in prometheus format (env SIGNALD_ENABLE_METRICS)")
+  private static boolean metrics = false;
+  @CommandLine.Option(names = {"--metrics-http-port"}, description = "metrics http listener port (env SIGNALD_METRICS_PORT)", defaultValue = "9595", paramLabel = "port")
+  private static int metricsHttpPort;
+  @CommandLine.Option(names = {"--log-http-requests"}, description = "log all requests send to the server. this is used for debugging but generally "
+                                                                     + "should not be used otherwise (env SIGNALD_HTTP_LOGGING=true)")
   private static boolean logHttpRequests = false;
-  @CommandLine.
-  Option(names = {"--decrypt-timeout"}, description = "decryption timeout (in seconds). if signald detects that decryption has taken longer than this, it will exit with code 101")
+  @CommandLine.Option(names = {"--decrypt-timeout"}, description = "decryption timeout (in seconds). if signald detects that decryption has taken longer than this, "
+                                                                   + "it will exit with code 101")
   private static int decryptionTimeout = 30;
-  @CommandLine.Option(names = {"--trust-new-keys"}, description = "when a remote key changes, set trust level to TRUSTED_UNVERIFIED (instead of UNTRUSTED)")
+  @CommandLine.Option(names = {"--trust-new-keys"}, description = "when a remote key changes, set trust level to TRUSTED_UNVERIFIED instead of UNTRUSTED "
+                                                                  + "(env SIGNALD_TRUST_NEW_KEYS=true)")
   private static boolean trustNewKeys;
-  @CommandLine.Option(names = {"--trust-all-keys-on-start"}, description = "mark all known keys as trusted on startup") private static boolean trustAllKeys;
-  @CommandLine.Option(names = {"--log-database-transactions"},
-                      description = "log when DB transactions occur and how long they took. Note that db logs are at the debug level, so --verbose should also be used")
+  @CommandLine.Option(names = {"--trust-all-keys-on-start"}, description = "mark all known keys as trusted on startup (env SIGNALD_TRUST_ALL_KEYS=true)")
+  private static boolean trustAllKeys;
+  @CommandLine.Option(names = {"--log-database-transactions"}, description = "log when DB transactions occur and how long they took. Note that db logs are at the debug "
+                                                                             + "level, so --verbose should also be used. (env SIGNALD_LOG_DB_TRANSACTIONS=true)")
   private static boolean logDatabaseTransactions;
 
   public static void init() throws IOException {
