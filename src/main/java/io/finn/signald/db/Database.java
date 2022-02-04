@@ -18,7 +18,7 @@ import org.apache.logging.log4j.Logger;
 public class Database {
   private static final Logger logger = LogManager.getLogger();
   private static final Histogram queryLatency =
-      Histogram.build().name(BuildConfig.NAME + "_sqlite_query_latency_seconds").help("sqlite latency in seconds.").labelNames("query").register();
+      Histogram.build().name(BuildConfig.NAME + "_sqlite_query_latency_seconds").help("sqlite latency in seconds.").labelNames("query", "write").register();
   private static Connection conn;
 
   private final UUID uuid;
@@ -44,7 +44,7 @@ public class Database {
   public MessageQueueTable getMessageQueueTable() { return new MessageQueueTable(uuid); }
 
   public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    Histogram.Timer timer = queryLatency.labels(name, "false").startTimer();
     try {
       return statement.executeQuery();
     } finally {
@@ -56,7 +56,7 @@ public class Database {
   }
 
   public static int executeUpdate(String name, PreparedStatement statement) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
     try {
       return statement.executeUpdate();
     } finally {
@@ -68,7 +68,7 @@ public class Database {
   }
 
   public static ResultSet getGeneratedKeys(String name, PreparedStatement statement) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
     try {
       return statement.getGeneratedKeys();
     } finally {
@@ -80,7 +80,7 @@ public class Database {
   }
 
   public static int[] executeBatch(String name, PreparedStatement statement) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name).startTimer();
+    Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
     try {
       return statement.executeBatch();
     } finally {
