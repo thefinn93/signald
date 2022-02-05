@@ -719,8 +719,8 @@ public class Manager {
       Recipient sender = getRecipientsTable().get(e.getSender());
       ProfileAndCredentialEntry senderProfile = accountData.profileCredentialStore.get(sender);
       ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
-      if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile().getCapabilities().senderKey && selfProfile != null &&
-          selfProfile.getProfile().getCapabilities().senderKey) {
+      if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile() != null && senderProfile.getProfile().getCapabilities().senderKey &&
+          selfProfile != null && selfProfile.getProfile().getCapabilities().senderKey) {
         logger.debug("Received invalid message, requesting message resend.");
         BackgroundJobRunnerThread.queue(new SendRetryMessageRequestJob(account, e, envelope));
       } else {
@@ -890,6 +890,21 @@ public class Manager {
             retrieveAttachment(attachment.asPointer());
           } catch (IOException | InvalidMessageException e) {
             logger.warn("Failed to retrieve attachment (" + attachment.asPointer().getRemoteId() + "): " + e.getMessage());
+          }
+        }
+      }
+    }
+
+    if (message.getPreviews().isPresent() && !ignoreAttachments) {
+      for (SignalServiceDataMessage.Preview preview : message.getPreviews().get()) {
+        if (preview.getImage().isPresent()) {
+          SignalServiceAttachment attachment = preview.getImage().get();
+          if (attachment.isPointer()) {
+            try {
+              retrieveAttachment(attachment.asPointer());
+            } catch (IOException | InvalidMessageException e) {
+              logger.warn("Failed to retrieve preview attachment ({}): {}", attachment.asPointer().getRemoteId(), e);
+            }
           }
         }
       }
