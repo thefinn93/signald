@@ -205,6 +205,9 @@ docker manifest:
           docker -l debug manifest create "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
           docker -l debug manifest push "docker.io/signald/signald:${VERSION}"
 
+          docker -l debug manifest create "docker.io/signald/signald:stable" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
+          docker -l debug manifest push "docker.io/signald/signald:stable"
+
           docker -l debug manifest create "docker.io/finn/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
           docker -l debug manifest push "docker.io/finn/signald:${VERSION}"
 
@@ -294,6 +297,19 @@ publish debian packages:
     DISTRIBUTION: unstable
   rules:
     - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_BRANCH'
+      when: on_success
+
+publish stable debian packages:
+  image: registry.gitlab.com/signald/infrastructure/signald-builder-x86:d5e68709
+  stage: publish
+  tags: [deb-signer]
+  needs: ["build deb x86_64-unknown-linux-gnu", "build deb aarch64-unknown-linux-gnu", "build deb armv7-unknown-linux-gnueabihf"]
+  script:
+    - tools/aptly-publish.sh
+  variables:
+    DISTRIBUTION: stable
+  rules:
+    - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_TAG'
       when: on_success
 
 validate protocol:
