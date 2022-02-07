@@ -151,6 +151,9 @@ public class MessageSender {
       } catch (NotFoundException ignored) {
         logger.debug("someone was unregistered, falling back to legacy send");
         legacyTargets.addAll(senderKeyTargets);
+      } catch (IllegalStateException ignored) {
+        logger.debug("illegal state exception while sending with sender keys, falling back to legacy send");
+        legacyTargets.addAll(senderKeyTargets);
       }
     }
 
