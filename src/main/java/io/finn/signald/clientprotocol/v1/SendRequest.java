@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {
@@ -43,7 +44,7 @@ public class SendRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError,
-                                                  InvalidRequestError, UnknownGroupError, RateLimitError, InvalidRecipientError {
+                                                  InvalidRequestError, UnknownGroupError, RateLimitError, InvalidRecipientError, AttachmentTooLargeError {
     Manager manager = Common.getManager(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
@@ -79,6 +80,12 @@ public class SendRequest implements RequestType<SendResponse> {
       for (JsonAttachment attachment : attachments) {
         try {
           signalServiceAttachments.add(sender.uploadAttachment(attachment.asStream()));
+        } catch (NonSuccessfulResponseCodeException e) {
+          if (e.getCode() == 400) {
+            throw new AttachmentTooLargeError(attachment.filename);
+          } else {
+            throw new InternalError("error uploading attachment", e);
+          }
         } catch (IOException e) {
           throw new InternalError("error uploading attachment", e);
         }
