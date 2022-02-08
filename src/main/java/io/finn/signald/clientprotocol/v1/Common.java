@@ -22,6 +22,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
+import io.prometheus.client.Histogram;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -36,7 +37,6 @@ import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidRegistrationIdException;
-import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
@@ -52,6 +52,9 @@ import org.whispersystems.util.Base64;
  * and convert their exceptions to documented v1 exceptions
  */
 public class Common {
+  private static final Histogram messageSendTime =
+      Histogram.build().name(BuildConfig.NAME + "_message_send_time").help("Time to send messages in seconds").labelNames("account_uuid").register();
+
   static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError { return getManager(identifier, false); }
 
   static Manager getManager(String identifier, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
@@ -139,6 +142,8 @@ public class Common {
         }
       }
     }
+
+    Histogram.Timer timer = messageSendTime.startTimer();
     try {
       if (recipientGroupId != null) {
         MessageSender messageSender = new MessageSender(manager.getAccount());
@@ -163,6 +168,8 @@ public class Common {
     } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | TimeoutException |
              ExecutionException | InterruptedException e) {
       throw new InternalError("error sending message", e);
+    } finally {
+      timer.observeDuration();
     }
   }
 
