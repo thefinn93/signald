@@ -143,7 +143,7 @@ public class Common {
       }
     }
 
-    Histogram.Timer timer = messageSendTime.startTimer();
+    Histogram.Timer timer = messageSendTime.labels(manager.getACI().toString()).startTimer();
     try {
       if (recipientGroupId != null) {
         MessageSender messageSender = new MessageSender(manager.getAccount());
