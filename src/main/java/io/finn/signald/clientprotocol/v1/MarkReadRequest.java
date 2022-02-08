@@ -53,18 +53,6 @@ public class MarkReadRequest implements RequestType<Empty> {
     Manager m = Common.getManager(account);
     Recipient recipient = Common.getRecipient(m.getRecipientsTable(), to);
     SignalServiceMessageSender sender = m.getMessageSender();
-    try {
-      sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
-    } catch (IOException e) {
-      throw new InternalError("error sending receipt", e);
-    } catch (UntrustedIdentityException e) {
-      throw new UntrustedIdentityError(m.getACI(), e);
-    }
-
-    List<ReadMessage> readMessages = new LinkedList<>();
-    for (Long ts : timestamps) {
-      readMessages.add(new ReadMessage(recipient.getAddress(), ts));
-    }
 
     SignalDependencies dependencies;
     try {
@@ -77,6 +65,19 @@ public class MarkReadRequest implements RequestType<Empty> {
       throw new InvalidProxyError(e);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
+    }
+
+    try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+      sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
+    } catch (IOException e) {
+      throw new InternalError("error sending receipt", e);
+    } catch (UntrustedIdentityException e) {
+      throw new UntrustedIdentityError(m.getACI(), e);
+    }
+
+    List<ReadMessage> readMessages = new LinkedList<>();
+    for (Long ts : timestamps) {
+      readMessages.add(new ReadMessage(recipient.getAddress(), ts));
     }
 
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
