@@ -114,7 +114,7 @@ public class RecipientsTable {
         }
       }
 
-      storedACI = result.getACI();
+      storedACI = result.getAddress() != null ? result.getACI() : null;
       storedE164 = result.getAddress() != null ? result.getAddress().getNumber().orNull() : null;
       rowid = result.getId();
     }
