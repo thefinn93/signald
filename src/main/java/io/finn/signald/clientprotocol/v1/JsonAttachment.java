@@ -18,16 +18,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.util.UUID;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
 
-@Doc("represents a file attached to a message. When seding, only `filename` is required.")
+@Doc("represents a file attached to a message. When sending, only `filename` is required.")
 public class JsonAttachment {
   public String contentType;
   public String id;
