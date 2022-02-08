@@ -133,6 +133,11 @@ public class SubscribeRequest implements RequestType<Empty> {
     }
 
     @Override
+    public void broadcastStorageChange(long version) throws IOException {
+      broadcast(new ClientMessageWrapper(account, new StorageChange(version)));
+    }
+
+    @Override
     public boolean isClosed() {
       return socket.isClosed();
     }

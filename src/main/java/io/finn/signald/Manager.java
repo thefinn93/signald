@@ -71,6 +71,7 @@ import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
+import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -521,12 +522,6 @@ public class Manager {
 
   public void requestSyncConfiguration() throws IOException, SQLException, UntrustedIdentityException {
     SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION).build();
-    SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
-    sendSyncMessage(message);
-  }
-
-  public void requestSyncBlocked() throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException, SQLException {
-    SignalServiceProtos.SyncMessage.Request r = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(SignalServiceProtos.SyncMessage.Request.Type.BLOCKED).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(r));
     sendSyncMessage(message);
   }
@@ -1203,11 +1198,30 @@ public class Manager {
       }
 
       if (syncMessage.getVerified().isPresent()) {
-        final VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
+        VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
         Recipient destination = getRecipientsTable().get(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
         account.getProtocolStore().saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
         logger.info("received verified state update from device " + content.getSenderDevice());
+      }
+
+      if (syncMessage.getKeys().isPresent()) {
+        KeysMessage keysMessage = syncMessage.getKeys().get();
+        if (keysMessage.getStorageService().isPresent()) {
+          StorageKey storageKey = keysMessage.getStorageService().get();
+          account.setStorageKey(storageKey);
+          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
+        }
+      }
+
+      if (syncMessage.getFetchType().isPresent()) {
+        switch (syncMessage.getFetchType().get()) {
+        case LOCAL_PROFILE:
+          ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
+          BackgroundJobRunnerThread.queue(new RefreshProfileJob(this, selfProfile));
+        case STORAGE_MANIFEST:
+          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
+        }
       }
     }
     for (Job job : jobs) {

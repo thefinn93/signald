@@ -19,7 +19,6 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.UserAlreadyExistsException;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;

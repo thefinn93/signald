@@ -15,6 +15,8 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UserAlreadyExistsException;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.SendSyncRequestJob;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
@@ -38,6 +40,7 @@ import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.api.util.SleepTimer;
 import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.util.Base64;
 
@@ -104,13 +107,16 @@ public class ProvisioningManager {
     AccountDataTable.set(aci, AccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
     Manager m = new Manager(newDeviceRegistration.getAci(), AccountData.createLinkedAccount(newDeviceRegistration, password, registrationId, deviceId, server));
-    m.getAccount().setDeviceName(deviceName);
+    Account account = m.getAccount();
+    account.setDeviceName(deviceName);
 
     m.refreshPreKeys();
-    m.requestSyncGroups();
-    m.requestSyncContacts();
-    // m.requestSyncBlocked(); // TODO: implement support for blocking
-    m.requestSyncConfiguration();
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS));
+
     return aci;
   }
 }

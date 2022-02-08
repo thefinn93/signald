@@ -14,6 +14,7 @@ import io.finn.signald.util.AddressUtil;
 import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
+import org.whispersystems.signalservice.api.storage.SignalContactRecord;
 import org.whispersystems.util.Base64;
 
 public class ContactStore {
@@ -125,6 +126,22 @@ public class ContactStore {
 
       if (c.getInboxPosition().isPresent()) {
         inboxPosition = c.getInboxPosition().get();
+      }
+    }
+
+    public void update(SignalContactRecord c) {
+      address = new JsonAddress(c.getAddress());
+
+      if (c.getFamilyName().isPresent() || c.getGivenName().isPresent()) {
+        if (c.getFamilyName().isPresent() && c.getGivenName().isPresent()) {
+          name = c.getFamilyName().get() + " " + c.getGivenName().get();
+        } else {
+          name = c.getFamilyName().or(c.getGivenName().or(""));
+        }
+      }
+
+      if (c.getProfileKey().isPresent()) {
+        profileKey = Base64.encodeBytes(c.getProfileKey().get());
       }
     }
 

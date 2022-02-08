@@ -19,6 +19,7 @@ public interface MessageEncoder {
   void broadcastListenStarted() throws IOException;
   void broadcastListenStopped(Throwable exception) throws IOException;
   void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) throws IOException;
+  void broadcastStorageChange(long version) throws IOException;
   boolean isClosed();
   boolean equals(Socket socket);
   boolean equals(MessageEncoder encoder);

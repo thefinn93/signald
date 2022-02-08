@@ -792,6 +792,9 @@ public class LegacySocketHandler {
     }
 
     @Override
+    public void broadcastStorageChange(long version) {}
+
+    @Override
     public boolean isClosed() {
       return socket.isClosed();
     }

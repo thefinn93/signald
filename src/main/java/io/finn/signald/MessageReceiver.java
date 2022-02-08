@@ -8,6 +8,7 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.MessageEncoder;
+import io.finn.signald.clientprotocol.v1.StorageChange;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -113,6 +114,16 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       }
 
       receiver.sockets.broadcastWebSocketConnectionStateChange(connectionState, unidentified);
+    }
+  }
+
+  public static void broadcastStorageStateChange(UUID accountUUID, long version) {
+    synchronized (receivers) {
+      MessageReceiver receiver = receivers.get(accountUUID.toString());
+      if (receiver == null) {
+        return;
+      }
+      receiver.sockets.broadcastStorageStateChange(version);
     }
   }
 
@@ -288,6 +299,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     public void broadcastListenStarted() { broadcast(MessageEncoder::broadcastListenStarted); }
 
     public void broadcastListenStopped(Throwable exception) { broadcast(r -> r.broadcastListenStopped(exception)); }
+
+    public void broadcastStorageStateChange(long version) { broadcast(r -> r.broadcastStorageChange(version)); }
 
     private interface broadcastMessage {
       void broadcast(MessageEncoder r) throws IOException;

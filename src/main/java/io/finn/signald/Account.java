@@ -11,6 +11,7 @@ import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.storage.AccountData;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -20,9 +21,12 @@ import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.storage.SignalAccountRecord;
+import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
@@ -148,4 +152,22 @@ public class Account {
   public SenderKeySharedTable getSenderKeysSharedWith() { return new SenderKeySharedTable(aci); }
 
   public Recipient getSelf() throws SQLException, IOException { return getRecipients().get(aci); }
+
+  public void setStorageKey(StorageKey storageKey) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.STORAGE_KEY, storageKey.serialize()); }
+
+  public StorageKey getStorageKey() throws SQLException {
+    byte[] bytes = AccountDataTable.getBytes(aci, AccountDataTable.Key.STORAGE_KEY);
+    if (bytes == null) {
+      return null;
+    }
+    return new StorageKey(bytes);
+  }
+
+  public void setStorageManifestVersion(long version) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.STORAGE_MANIFEST_VERSION, version); }
+
+  public long getStorageManifestVersion() throws SQLException { return AccountDataTable.getLong(aci, AccountDataTable.Key.STORAGE_MANIFEST_VERSION); }
+
+  public AccountData getAccountData() throws NoSuchAccountException, SQLException, IOException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
+    return Manager.get(aci).getAccountData();
+  }
 }

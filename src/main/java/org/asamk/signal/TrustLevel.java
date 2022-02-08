@@ -8,6 +8,7 @@
 package org.asamk.signal;
 
 import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
+import org.whispersystems.signalservice.internal.storage.protos.ContactRecord;
 
 public enum TrustLevel {
   UNTRUSTED,
@@ -21,6 +22,19 @@ public enum TrustLevel {
       TrustLevel.cachedValues = TrustLevel.values();
     }
     return TrustLevel.cachedValues[i];
+  }
+
+  public static TrustLevel fromIdentityState(ContactRecord.IdentityState identityState) {
+    switch (identityState) {
+    case DEFAULT:
+      return TRUSTED_UNVERIFIED;
+    case UNVERIFIED:
+      return UNTRUSTED;
+    case VERIFIED:
+      return TRUSTED_VERIFIED;
+    default:
+      return null;
+    }
   }
 
   public static TrustLevel fromVerifiedState(VerifiedMessage.VerifiedState verifiedState) {
