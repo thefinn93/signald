@@ -5,6 +5,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.db.SenderKeySharedTable;
 import io.finn.signald.db.SenderKeysTable;
 import io.finn.signald.exceptions.*;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.IOException;
@@ -99,8 +100,13 @@ public class MessageSender {
         if (profileAndCredentialEntry == null) {
           legacyTargets.add(member);
           logger.debug("cannot send to {} using sender keys: no profile available", member.toRedactedString());
+        } else if (profileAndCredentialEntry.getProfile() == null) {
+          legacyTargets.add(member);
+          BackgroundJobRunnerThread.queue(new RefreshProfileJob(m, profileAndCredentialEntry));
+          logger.debug("cannot send to {} using sender keys: profile not yet available", member.toRedactedString());
         } else if (!profileAndCredentialEntry.getProfile().getCapabilities().senderKey) {
           legacyTargets.add(member);
+          BackgroundJobRunnerThread.queue(new RefreshProfileJob(m, profileAndCredentialEntry));
           logger.debug("cannot send to {} using sender keys: profile indicates no support for sender key", member.toRedactedString());
         } else if (!accessPairs.isPresent()) {
           legacyTargets.add(member);

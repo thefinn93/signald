@@ -1219,8 +1219,10 @@ public class Manager {
         case LOCAL_PROFILE:
           ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
           BackgroundJobRunnerThread.queue(new RefreshProfileJob(this, selfProfile));
+          break;
         case STORAGE_MANIFEST:
           BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
+          break;
         }
       }
     }

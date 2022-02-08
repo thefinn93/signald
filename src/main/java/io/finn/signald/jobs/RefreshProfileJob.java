@@ -40,7 +40,7 @@ import org.whispersystems.util.Base64;
 public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();
   public static final long PROFILE_REFRESH_INTERVAL = TimeUnit.HOURS.toMillis(1);
-  public static final long MIN_REFRESH_INTERVAL = TimeUnit.MINUTES.toMillis(1);
+  public static final long MIN_REFRESH_INTERVAL = TimeUnit.MINUTES.toMillis(5);
 
   public ProfileAndCredentialEntry entry;
   public Manager m;
