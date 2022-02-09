@@ -4,7 +4,10 @@ import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.SenderKeySharedTable;
 import io.finn.signald.db.SenderKeysTable;
-import io.finn.signald.exceptions.*;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -21,7 +24,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
-import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -53,8 +55,8 @@ public class MessageSender {
   }
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
-      throws UnknownGroupException, NoSendPermissionException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException,
-             InvalidProxyException, InvalidKeyException, InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
+      throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
+             InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
     Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
     if (!groupOptional.isPresent()) {
       throw new UnknownGroupException();
@@ -62,11 +64,6 @@ public class MessageSender {
     GroupsTable.Group group = groupOptional.get();
     if (members == null) {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
-    }
-
-    if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
-      logger.warn("refusing to send to an announcement only group that we're not an admin in.");
-      throw new NoSendPermissionException();
     }
 
     DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();

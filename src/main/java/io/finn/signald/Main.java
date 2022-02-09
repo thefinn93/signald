@@ -95,7 +95,7 @@ public class Main {
         AccountRepair.repairAccountIfNeeded(new Account(accountUUID));
       }
 
-      new Thread(new BackgroundJobRunnerThread()).start();
+      BackgroundJobRunnerThread.start();
 
       // Spins up one thread per inbound connection to the control socket
       File socketFile = new File(Config.getSocketPath());

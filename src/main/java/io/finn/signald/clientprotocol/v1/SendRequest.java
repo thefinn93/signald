@@ -9,6 +9,8 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.*;
@@ -16,6 +18,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -25,12 +28,23 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.signal.storageservice.protos.groups.local.EnabledState;
+import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.groups.GroupIdentifier;
+import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
-import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.SendMessageResult;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
+import org.whispersystems.util.Base64;
 
 @ProtocolType("send")
 public class SendRequest implements RequestType<SendResponse> {
+  private static final Logger logger = LogManager.getLogger();
+
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
   @ExactlyOneOfRequired(RECIPIENT) public JsonAddress recipientAddress;
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
@@ -114,9 +128,40 @@ public class SendRequest implements RequestType<SendResponse> {
       messageBuilder.withPreviews(signalPreviews);
     }
 
-    List<SendMessageResult> results;
+    if (recipientGroupId != null) {
+      // check for announcement-only group
+      GroupIdentifier groupIdentifier;
+      try {
+        groupIdentifier = new GroupIdentifier(Base64.decode(recipientGroupId));
+      } catch (InvalidInputException | IOException e) {
+        throw new InvalidRequestError(e.getMessage());
+      }
 
-    results = Common.send(manager, messageBuilder, recipient, recipientGroupId, members);
+      Account account = manager.getAccount();
+
+      Optional<GroupsTable.Group> groupOptional;
+      try {
+        groupOptional = account.getGroupsTable().get(groupIdentifier);
+      } catch (SQLException | InvalidInputException | InvalidProtocolBufferException e) {
+        throw new InternalError("unexpected error looking up group to send to", e);
+      }
+
+      if (groupOptional.isPresent()) {
+        GroupsTable.Group group = groupOptional.get();
+        Recipient self;
+        try {
+          self = account.getSelf();
+        } catch (SQLException | IOException e) {
+          throw new InternalError("error verifying own capabilities before sending", e);
+        }
+        if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
+          logger.warn("refusing to send to an announcement only group that we're not an admin in.");
+          throw new NoSendPermissionError();
+        }
+      }
+    }
+
+    List<SendMessageResult> results = Common.send(manager, messageBuilder, recipient, recipientGroupId, members);
     return new SendResponse(results, timestamp);
   }
 }

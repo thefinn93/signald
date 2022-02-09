@@ -691,7 +691,7 @@ public class Manager {
         } catch (InterruptedException e) {
           logger.error("error in decryption watchdog thread", e);
         }
-      });
+      }, "DecryptWatchdogTimer");
 
       t.start();
     }

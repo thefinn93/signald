@@ -22,6 +22,8 @@ public class BackgroundJobRunnerThread implements Runnable {
 
   public static void queue(Job job) { queue.add(job); }
 
+  public static void start() { new Thread(new BackgroundJobRunnerThread(), BackgroundJobRunnerThread.class.getSimpleName()).start(); }
+
   @Override
   public void run() {
     while (true) {
