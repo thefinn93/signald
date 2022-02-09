@@ -7,6 +7,7 @@
 
 package io.finn.signald;
 
+import io.prometheus.client.Gauge;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.Arrays;
 import java.util.UUID;
@@ -21,7 +22,8 @@ import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 import org.whispersystems.signalservice.internal.websocket.WebSocketConnection;
 
 public final class SignalWebSocketHealthMonitor implements HealthMonitor {
-
+  static final Gauge connected =
+      Gauge.build().name(BuildConfig.NAME + "_upstream_websocket").help("1 if the upstream websocket is connected, 0 otherwise").labelNames("account_uuid", "socket").register();
   private final static Logger logger = LogManager.getLogger();
 
   private static final long KEEP_ALIVE_SEND_CADENCE = TimeUnit.SECONDS.toMillis(WebSocketConnection.KEEPALIVE_TIMEOUT_SECONDS);
@@ -63,12 +65,14 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
         .subscribe(s -> onStateChange(s, unidentified, true));
   }
 
-  private synchronized void onStateChange(WebSocketConnectionState connectionState, HealthState healthState, boolean unidentified) {
-    logger.debug((unidentified ? "unidentified" : "identified") + " websocket state: " + connectionState.name());
+  private synchronized void onStateChange(WebSocketConnectionState state, HealthState healthState, boolean unidentified) {
+    logger.debug((unidentified ? "unidentified" : "identified") + " websocket state: " + state.name());
 
-    MessageReceiver.handleWebSocketConnectionStateChange(accountUUID, connectionState, unidentified);
+    connected.labels(accountUUID.toString(), unidentified ? "unidentified" : "identified").set(state == WebSocketConnectionState.CONNECTED ? 1 : 0);
 
-    healthState.needsKeepAlive = connectionState == WebSocketConnectionState.CONNECTED;
+    MessageReceiver.handleWebSocketConnectionStateChange(accountUUID, state, unidentified);
+
+    healthState.needsKeepAlive = state == WebSocketConnectionState.CONNECTED;
 
     if (keepAliveSender == null && isKeepAliveNecessary()) {
       keepAliveSender = new KeepAliveSender();
