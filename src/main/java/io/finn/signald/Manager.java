@@ -672,63 +672,66 @@ public class Manager {
              ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
              UnsupportedDataMessageException, org.whispersystems.libsignal.UntrustedIdentityException, InvalidMessageStructureException, IOException, SQLException,
              InterruptedException {
-    CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
-    SignalServiceCipher cipher = new SignalServiceCipher(self.getAddress(), account.getDeviceId(), account.getProtocolStore(), dependencies.getSessionLock(), certificateValidator);
-    Semaphore sem = new Semaphore(1);
-    int watchdogTime = Config.getDecryptionTimeout();
-    if (watchdogTime > 0) {
-      sem.acquire();
-      Thread t = new Thread(() -> {
-        // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
-        // without this it just hangs and breaks in difficult to detect ways.
-        try {
-          boolean decryptFinished = sem.tryAcquire(watchdogTime, TimeUnit.SECONDS);
-          if (!decryptFinished) {
-            logger.error("took over {} seconds to decrypt, exiting", watchdogTime);
-            System.exit(101);
-          }
-          sem.release();
-        } catch (InterruptedException e) {
-          logger.error("error in decryption watchdog thread", e);
-        }
-      }, "DecryptWatchdogTimer");
-
-      t.start();
-    }
-
-    Histogram.Timer timer = messageDecryptionTime.labels(account.getUUID().toString()).startTimer();
-    try {
-      return cipher.decrypt(envelope);
-    } catch (ProtocolUntrustedIdentityException e) {
-      if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-        org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
-        account.getProtocolStore().saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), Config.getNewKeyTrustLevel());
-        throw identityException;
-      }
-      throw e;
-    } catch (SelfSendException e) {
-      logger.debug("Dropping UD message from self (because that's what Signal Android does)");
-      return null;
-    } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
-      logger.debug("Failed to decrypt incoming message", e);
-      Recipient sender = getRecipientsTable().get(e.getSender());
-      ProfileAndCredentialEntry senderProfile = accountData.profileCredentialStore.get(sender);
-      ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
-      if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile() != null && senderProfile.getProfile().getCapabilities().senderKey &&
-          selfProfile != null && selfProfile.getProfile().getCapabilities().senderKey) {
-        logger.debug("Received invalid message, requesting message resend.");
-        BackgroundJobRunnerThread.queue(new SendRetryMessageRequestJob(account, e, envelope));
-      } else {
-        logger.debug("Received invalid message, queuing reset session action.");
-        BackgroundJobRunnerThread.queue(new ResetSessionJob(account, sender));
-      }
-      throw e;
-    } finally {
+    try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
+      CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
+      SignalServiceCipher cipher =
+          new SignalServiceCipher(self.getAddress(), account.getDeviceId(), account.getProtocolStore(), dependencies.getSessionLock(), certificateValidator);
+      Semaphore sem = new Semaphore(1);
+      int watchdogTime = Config.getDecryptionTimeout();
       if (watchdogTime > 0) {
-        sem.release();
+        sem.acquire();
+        Thread t = new Thread(() -> {
+          // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
+          // without this it just hangs and breaks in difficult to detect ways.
+          try {
+            boolean decryptFinished = sem.tryAcquire(watchdogTime, TimeUnit.SECONDS);
+            if (!decryptFinished) {
+              logger.error("took over {} seconds to decrypt, exiting", watchdogTime);
+              System.exit(101);
+            }
+            sem.release();
+          } catch (InterruptedException e) {
+            logger.error("error in decryption watchdog thread", e);
+          }
+        }, "DecryptWatchdogTimer");
+
+        t.start();
       }
-      double duration = timer.observeDuration();
-      logger.debug("message decrypted in {} seconds", duration);
+
+      Histogram.Timer timer = messageDecryptionTime.labels(account.getUUID().toString()).startTimer();
+      try {
+        return cipher.decrypt(envelope);
+      } catch (ProtocolUntrustedIdentityException e) {
+        if (e.getCause() instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
+          org.whispersystems.libsignal.UntrustedIdentityException identityException = (org.whispersystems.libsignal.UntrustedIdentityException)e.getCause();
+          account.getProtocolStore().saveIdentity(identityException.getName(), identityException.getUntrustedIdentity(), Config.getNewKeyTrustLevel());
+          throw identityException;
+        }
+        throw e;
+      } catch (SelfSendException e) {
+        logger.debug("Dropping UD message from self (because that's what Signal Android does)");
+        return null;
+      } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
+        logger.debug("Failed to decrypt incoming message", e);
+        Recipient sender = getRecipientsTable().get(e.getSender());
+        ProfileAndCredentialEntry senderProfile = accountData.profileCredentialStore.get(sender);
+        ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
+        if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile() != null && senderProfile.getProfile().getCapabilities().senderKey &&
+            selfProfile != null && selfProfile.getProfile().getCapabilities().senderKey) {
+          logger.debug("Received invalid message, requesting message resend.");
+          BackgroundJobRunnerThread.queue(new SendRetryMessageRequestJob(account, e, envelope));
+        } else {
+          logger.debug("Received invalid message, queuing reset session action.");
+          BackgroundJobRunnerThread.queue(new ResetSessionJob(account, sender));
+        }
+        throw e;
+      } finally {
+        if (watchdogTime > 0) {
+          sem.release();
+        }
+        double duration = timer.observeDuration();
+        logger.debug("message decrypted in {} seconds", duration);
+      }
     }
   }
 

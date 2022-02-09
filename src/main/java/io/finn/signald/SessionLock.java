@@ -32,15 +32,12 @@ public class SessionLock implements SignalSessionLock {
         locks.put(key, lock);
       }
     }
-
-    Class<?> caller = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).getCallerClass();
-    logger.debug("acquiring session lock for {} (held by current thread: {}, held by {}, queue length {})", caller.getName(), lock.isHeldByCurrentThread(), lock.getHoldCount(),
-                 lock.getQueueLength());
+    logger.debug("acquiring session lock (held by current thread: {}, held by {}, queue length {})", lock.isHeldByCurrentThread(), lock.getHoldCount(), lock.getQueueLength());
     long start = System.currentTimeMillis();
     lock.lock();
     long acquireTime = System.currentTimeMillis() - start;
-    logger.debug("session lock acquired by {} for account {} in {} ms (held by {}, queue length {})", caller.getName(), Util.redact(account.getACI()), acquireTime,
-                 lock.getHoldCount(), lock.getQueueLength());
+    logger.debug("session lock acquired for account {} in {} ms (held by {}, queue length {})", Util.redact(account.getACI()), acquireTime, lock.getHoldCount(),
+                 lock.getQueueLength());
     return lock::unlock;
   }
 }
