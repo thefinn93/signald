@@ -38,10 +38,17 @@ public class SyncStorageDataJob implements Job {
   public void run() throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException, InvalidKeyException, InvalidInputException,
                            InvalidGroupStateException, VerificationFailedException {
     logger.debug("syncing data from storage service");
+
+    StorageKey storageKey = account.getStorageKey();
+    if (storageKey == null) {
+      logger.debug("skipping storage sync because storage keys not available");
+      return;
+    }
+
     SignalServiceAccountManager accountManager = account.getSignalDependencies().getAccountManager();
     Optional<SignalStorageManifest> manifestOptional;
     try {
-      manifestOptional = accountManager.getStorageManifestIfDifferentVersion(account.getStorageKey(), account.getStorageManifestVersion());
+      manifestOptional = accountManager.getStorageManifestIfDifferentVersion(storageKey, account.getStorageManifestVersion());
     } catch (InvalidKeyException e) {
       logger.warn("storage manifest could not be decrypted, ignoring");
       return;
