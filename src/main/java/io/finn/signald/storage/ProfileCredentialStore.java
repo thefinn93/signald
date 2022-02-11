@@ -20,7 +20,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class ProfileCredentialStore {
   private static boolean unsaved = false;
-  public List<ProfileAndCredentialEntry> profiles = new ArrayList<>();
+  public final List<ProfileAndCredentialEntry> profiles = new ArrayList<>();
 
   @JsonIgnore
   public ProfileKeyCredential getProfileKeyCredential(UUID uuid) {
@@ -39,21 +39,25 @@ public class ProfileCredentialStore {
   @JsonIgnore
   public ProfileAndCredentialEntry get(Recipient recipient) {
     SignalServiceAddress address = recipient.getAddress();
-    for (ProfileAndCredentialEntry entry : profiles) {
-      if (entry.getServiceAddress().matches(address)) {
-        return entry;
+    synchronized (profiles) {
+      for (ProfileAndCredentialEntry entry : profiles) {
+        if (entry.getServiceAddress().matches(address)) {
+          return entry;
+        }
       }
     }
     return null;
   }
   @JsonIgnore
   public ProfileAndCredentialEntry get(SignalServiceAddress address) {
-    for (ProfileAndCredentialEntry entry : profiles) {
-      if (entry.getServiceAddress() == null) {
-        continue;
-      }
-      if (entry.getServiceAddress().matches(address)) {
-        return entry;
+    synchronized (profiles) {
+      for (ProfileAndCredentialEntry entry : profiles) {
+        if (entry.getServiceAddress() == null) {
+          continue;
+        }
+        if (entry.getServiceAddress().matches(address)) {
+          return entry;
+        }
       }
     }
     return null;
@@ -68,16 +72,18 @@ public class ProfileCredentialStore {
 
   public ProfileAndCredentialEntry storeProfileKey(Recipient recipient, ProfileKey profileKey) {
     ProfileAndCredentialEntry newEntry = new ProfileAndCredentialEntry(recipient.getAddress(), profileKey, 0, null, null, ProfileAndCredentialEntry.UnidentifiedAccessMode.UNKNOWN);
-    for (int i = 0; i < profiles.size(); i++) {
-      if (profiles.get(i).getServiceAddress().matches(recipient.getAddress())) {
-        if (!profiles.get(i).getProfileKey().equals(profileKey)) {
-          profiles.set(i, newEntry);
-          unsaved = true;
+    synchronized (profiles) {
+      for (int i = 0; i < profiles.size(); i++) {
+        if (profiles.get(i).getServiceAddress().matches(recipient.getAddress())) {
+          if (!profiles.get(i).getProfileKey().equals(profileKey)) {
+            profiles.set(i, newEntry);
+            unsaved = true;
+          }
+          return newEntry;
         }
-        return newEntry;
       }
+      profiles.add(newEntry);
     }
-    profiles.add(newEntry);
     unsaved = true;
     return newEntry;
   }
@@ -85,16 +91,18 @@ public class ProfileCredentialStore {
   public ProfileAndCredentialEntry update(SignalServiceAddress address, ProfileKey profileKey, long now, SignalProfile profile, ProfileKeyCredential profileKeyCredential,
                                           ProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode) {
     ProfileAndCredentialEntry entry = new ProfileAndCredentialEntry(address, profileKey, now, profile, profileKeyCredential, unidentifiedAccessMode);
-    for (int i = 0; i < profiles.size(); i++) {
-      if (profiles.get(i).getServiceAddress().matches(address)) {
-        // TODO: announce profile change
-        profiles.set(i, entry);
-        unsaved = true;
-        return entry;
+    synchronized (profiles) {
+      for (int i = 0; i < profiles.size(); i++) {
+        if (profiles.get(i).getServiceAddress().matches(address)) {
+          // TODO: announce profile change
+          profiles.set(i, entry);
+          unsaved = true;
+          return entry;
+        }
       }
+      profiles.add(entry);
+      unsaved = true;
+      return entry;
     }
-    profiles.add(entry);
-    unsaved = true;
-    return entry;
   }
 }
