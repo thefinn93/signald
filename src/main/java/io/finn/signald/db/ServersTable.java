@@ -14,6 +14,7 @@ import io.finn.signald.Config;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.JSONUtil;
+import io.sentry.Sentry;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -376,6 +377,7 @@ public class ServersTable {
         }
       } catch (SQLException e) {
         logger.error("error getting server for keystore", e);
+        Sentry.captureException(e);
         return null;
       }
     }

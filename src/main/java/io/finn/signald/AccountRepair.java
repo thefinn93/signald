@@ -6,6 +6,7 @@ import io.finn.signald.db.SenderKeySharedTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -50,11 +51,13 @@ public class AccountRepair {
           groups.getGroup(group.getSecretParams(), -1);
         } catch (InvalidInputException | InvalidGroupStateException | IOException | VerificationFailedException | SQLException e) {
           logger.error("error refreshing group {}", group.getIdString());
+          Sentry.captureException(e);
         }
       }
       AccountDataTable.set(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS);
     } catch (NoSuchAccountException | ServerNotFoundException | IOException | InvalidProxyException | SQLException e) {
       logger.error("error repairing groups for account {}", account.getACI().toString());
+      Sentry.captureException(e);
     }
   }
 }

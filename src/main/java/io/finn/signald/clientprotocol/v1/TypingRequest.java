@@ -20,6 +20,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -79,6 +80,7 @@ public class TypingRequest implements RequestType<Empty> {
           Common.getAccount(account).getProtocolStore().handleUntrustedIdentityException(e);
         } catch (IOException | SQLException exception) {
           logger.error("internal error while saving new identity", exception);
+          Sentry.captureException(exception);
         }
         throw new UntrustedIdentityError(m.getACI(), e);
       } catch (IOException e) {

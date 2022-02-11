@@ -5,6 +5,7 @@ import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,6 +78,15 @@ public class Config {
       }
     }
 
+    if (System.getenv("SENTRY_DSN") != null) {
+      Sentry.init(options -> {
+        options.setDsn(System.getenv("SENTRY_DSN"));
+        options.setRelease(BuildConfig.NAME + "@" + BuildConfig.VERSION);
+        options.setDebug(verbose);
+      });
+      logger.info("exception reporting via Sentry enabled");
+    }
+
     if (System.getenv("SIGNALD_HTTP_LOGGING") != null) {
       logHttpRequests = Boolean.parseBoolean(System.getenv("SIGNALD_HTTP_LOGGING"));
     }
@@ -111,6 +121,7 @@ public class Config {
         new HTTPServer(metricsHttpPort);
       } catch (IOException e) {
         logger.error("error starting metrics server:", e);
+        Sentry.captureException(e);
       }
     }
 

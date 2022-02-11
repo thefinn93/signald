@@ -9,6 +9,7 @@ package io.finn.signald.db;
 
 import io.finn.signald.Account;
 import io.finn.signald.Config;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
@@ -79,6 +80,7 @@ public class IdentityKeysTable implements IdentityKeyStore {
       return saveIdentity(address.getName(), identityKey, null);
     } catch (IOException | SQLException e) {
       logger.error("error saving new identity to identity keys table", e);
+      Sentry.captureException(e);
     }
     return false;
   }

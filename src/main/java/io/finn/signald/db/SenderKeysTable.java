@@ -7,6 +7,7 @@
 
 package io.finn.signald.db;
 
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -67,6 +68,7 @@ public class SenderKeysTable implements SenderKeyStore {
       }
     } catch (SQLException | IOException e) {
       logger.error("unexpected error while trying to load sender key", e);
+      Sentry.captureException(e);
       return null;
     }
   }

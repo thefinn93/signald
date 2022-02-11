@@ -9,6 +9,7 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.BuildConfig;
 import io.prometheus.client.Counter;
+import io.sentry.Sentry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.logging.log4j.LogManager;
@@ -39,10 +40,11 @@ public class BackgroundJobRunnerThread implements Runnable {
       try {
         job.run();
         jobsCompleted.labels(job.getClass().getSimpleName(), "").inc();
-      } catch (Throwable t) {
+      } catch (Throwable e) {
         logger.warn("error running {}", job.getClass().getName());
-        logger.debug("background job error: ", t);
-        jobsCompleted.labels(job.getClass().getSimpleName(), t.getClass().getCanonicalName()).inc();
+        logger.debug("background job error: ", e);
+        jobsCompleted.labels(job.getClass().getSimpleName(), e.getClass().getCanonicalName()).inc();
+        Sentry.captureException(e);
       }
     }
   }

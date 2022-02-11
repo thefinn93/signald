@@ -19,6 +19,7 @@ import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
 import io.prometheus.client.Histogram;
+import io.sentry.Sentry;
 import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -602,6 +603,7 @@ public class Manager {
                 account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
               } catch (SQLException e) {
                 logger.error("error storing new identity", e);
+                Sentry.captureException(e);
               }
             }
           }
@@ -692,6 +694,7 @@ public class Manager {
             sem.release();
           } catch (InterruptedException e) {
             logger.error("error in decryption watchdog thread", e);
+            Sentry.captureException(e);
           }
         }, "DecryptWatchdogTimer");
 
@@ -926,6 +929,7 @@ public class Manager {
           job.run();
         } catch (NoSuchAccountException | InvalidMessageException e) {
           logger.error("Sticker failed to download");
+          Sentry.captureException(e);
         }
       }
     }
@@ -1082,6 +1086,7 @@ public class Manager {
           }
         } catch (SQLException e) {
           logger.error("failed to remove cached message from database");
+          Sentry.captureException(e);
         }
       }
     } finally {

@@ -27,6 +27,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.ExceptionWrapper;
 import io.finn.signald.clientprotocol.v1.exceptions.RequestProcessingError;
 import io.finn.signald.util.JSONUtil;
 import io.finn.signald.util.RequestUtil;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -154,10 +155,12 @@ public class Request {
       error(e);
       if (e.isUnexpected()) {
         logger.error("error while handling request", e);
+        Sentry.captureException(e);
       }
     } catch (Throwable throwable) {
       error(new RequestProcessingError(throwable));
       logger.error("error while handling request", throwable);
+      Sentry.captureException(throwable);
     }
   }
 

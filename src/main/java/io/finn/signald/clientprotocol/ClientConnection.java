@@ -16,6 +16,7 @@ import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Summary;
+import io.sentry.Sentry;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -86,6 +87,7 @@ public class ClientConnection implements Runnable {
       logger.warn("failed to send to an address that is not on Signal (UnregisteredUserException)");
     } else {
       logger.error("error while handling client connection", error);
+      Sentry.captureException(error);
     }
     String requestID = "";
     if (request != null) {

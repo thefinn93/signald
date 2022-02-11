@@ -12,6 +12,7 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -222,6 +223,7 @@ public class RecipientsTable {
       throw new UnregisteredUserException(number, e);
     } catch (InvalidProxyException | ServerNotFoundException | NoSuchAccountException e) {
       logger.error("error resolving UUIDs: ", e);
+      Sentry.captureException(e);
       throw new IOException(e);
     }
     ACI aci = aciMap.get(number);

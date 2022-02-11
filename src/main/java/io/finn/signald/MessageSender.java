@@ -11,6 +11,7 @@ import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -171,6 +172,7 @@ public class MessageSender {
           account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
         } catch (SQLException e) {
           logger.error("error storing new identity", e);
+          Sentry.captureException(e);
         }
       }
     }

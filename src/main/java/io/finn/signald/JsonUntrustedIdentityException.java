@@ -14,6 +14,7 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.SafetyNumberHelper;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
@@ -55,6 +56,7 @@ class JsonUntrustedIdentityException {
       }
     } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {
       logger.error("error preparing untrusted identity exception", e);
+      Sentry.captureException(e);
     }
   }
 }

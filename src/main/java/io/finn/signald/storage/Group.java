@@ -21,6 +21,7 @@ import io.finn.signald.ServiceConfig;
 import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.util.GroupsUtil;
+import io.sentry.Sentry;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -261,6 +262,7 @@ public class Group {
         return new Group(masterKey, revision, group, distributionId, lastAvatarFetch);
       } catch (InvalidInputException e) {
         logger.error("error deserializing group from legacy storage", e);
+        Sentry.captureException(e);
         throw new IOException(e.getMessage());
       }
     }

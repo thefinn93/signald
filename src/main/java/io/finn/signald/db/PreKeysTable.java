@@ -7,6 +7,7 @@
 
 package io.finn.signald.db;
 
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -58,8 +59,9 @@ public class PreKeysTable implements PreKeyStore {
         statement.setBytes(3, record.serialize());
         Database.executeUpdate(TABLE_NAME + "_store_pre_key", statement);
       }
-    } catch (SQLException t) {
-      logger.error("failed to store prekey", t);
+    } catch (SQLException e) {
+      logger.error("failed to store prekey", e);
+      Sentry.captureException(e);
     }
   }
 
@@ -74,8 +76,9 @@ public class PreKeysTable implements PreKeyStore {
           return rows.next();
         }
       }
-    } catch (SQLException t) {
-      logger.error("failed to check if prekey exists", t);
+    } catch (SQLException e) {
+      logger.error("failed to check if prekey exists", e);
+      Sentry.captureException(e);
       return false;
     }
   }
@@ -89,8 +92,9 @@ public class PreKeysTable implements PreKeyStore {
         statement.setInt(2, preKeyId);
         Database.executeUpdate(TABLE_NAME + "_remove_pre_key", statement);
       }
-    } catch (SQLException t) {
-      logger.error("failed to delete prekey", t);
+    } catch (SQLException e) {
+      logger.error("failed to delete prekey", e);
+      Sentry.captureException(e);
     }
   }
 

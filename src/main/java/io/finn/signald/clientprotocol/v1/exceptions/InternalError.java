@@ -9,6 +9,7 @@ package io.finn.signald.clientprotocol.v1.exceptions;
 
 import io.finn.signald.BuildConfig;
 import io.finn.signald.annotations.Doc;
+import io.sentry.Sentry;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
@@ -31,5 +32,6 @@ public class InternalError extends ExceptionWrapper {
       cause = cause.getCause();
     }
     logger.error(message, exception);
+    Sentry.captureException(exception);
   }
 }

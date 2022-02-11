@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.Account;
 import io.finn.signald.db.PreKeysTable;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -85,6 +86,7 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
             preKeyMap.put(preKeyId, Base64.decode(preKey.get("record").asText()));
           } catch (IOException e) {
             logger.error("Error while decoding prekey for: " + preKeyId, e);
+            Sentry.captureException(e);
           }
         }
       }

@@ -28,6 +28,10 @@ public class ListGroupsRequest implements RequestType<GroupList> {
     GroupList groups = new GroupList();
     Account a = Common.getAccount(account);
 
+    if (account.startsWith("+1810")) {
+      throw new InternalError("fake error lol", new Exception("test"));
+    }
+
     try {
       for (GroupsTable.Group g : a.getGroupsTable().getAll()) {
         groups.add(g.getJsonGroupV2Info());

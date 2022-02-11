@@ -16,6 +16,7 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
+import io.sentry.Sentry;
 import java.io.*;
 import java.nio.file.Files;
 import java.sql.ResultSet;
@@ -87,6 +88,7 @@ public class GroupsTable {
             allGroups.add(new Group(rows));
           } catch (InvalidInputException | InvalidProtocolBufferException e) {
             logger.error("error parsing group " + rows.getString(GROUP_ID) + " from database", e);
+            Sentry.captureException(e);
           }
         }
         return allGroups;

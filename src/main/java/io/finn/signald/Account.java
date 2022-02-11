@@ -12,6 +12,7 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.AccountData;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -83,6 +84,7 @@ public class Account {
       return isMultidevice;
     } catch (SQLException e) {
       logger.error("error fetching multidevice status from db", e);
+      Sentry.captureException(e);
       return false;
     }
   }

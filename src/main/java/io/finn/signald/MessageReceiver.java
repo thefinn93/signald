@@ -15,6 +15,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.net.Socket;
 import java.sql.SQLException;
@@ -206,6 +207,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       logger.debug("shutting down message receiver for " + Util.redact(aci));
     } catch (Exception e) {
       logger.error("shutting down message receiver for " + Util.redact(aci), e);
+      Sentry.captureException(e);
       sockets.broadcastListenStopped(e);
     }
   }
@@ -227,6 +229,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         logger.warn("InvalidMessageException thrown while receiving");
       } else {
         logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
+        Sentry.captureException(exception);
       }
       this.sockets.broadcastReceiveFailure(envelope, exception);
     } else {

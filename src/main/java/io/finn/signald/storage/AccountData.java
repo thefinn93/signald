@@ -23,6 +23,7 @@ import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Histogram;
+import io.sentry.Sentry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -160,6 +161,7 @@ public class AccountData {
         getMigratedGroupId(Base64.encodeBytes(g.groupId)); // Delete v1 groups that have been migrated to a v2 group
       } catch (InvalidInputException e) {
         logger.error("error migrating v1 group to v2", e);
+        Sentry.captureException(e);
       }
     }
 
