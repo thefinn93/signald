@@ -18,7 +18,7 @@ import org.whispersystems.signalservice.api.storage.SignalContactRecord;
 import org.whispersystems.util.Base64;
 
 public class ContactStore {
-  public List<ContactInfo> contacts = new ArrayList<>();
+  public final List<ContactInfo> contacts = new ArrayList<>();
 
   public ContactInfo updateContact(ContactInfo contact) {
     synchronized (contacts) {
@@ -45,7 +45,7 @@ public class ContactStore {
   }
 
   public List<ContactInfo> getContacts() {
-    synchronized (contacts) { return contacts; }
+    synchronized (contacts) { return new ArrayList<>(contacts); }
   }
 
   public void clear() {
