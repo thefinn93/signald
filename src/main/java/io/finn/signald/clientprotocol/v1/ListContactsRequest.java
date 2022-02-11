@@ -32,6 +32,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 
 @ProtocolType("list_contacts")
 public class ListContactsRequest implements RequestType<ProfileList> {
@@ -60,7 +62,7 @@ public class ListContactsRequest implements RequestType<ProfileList> {
       } else {
         try {
           action.run();
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        } catch (InterruptedException | ExecutionException | TimeoutException | NotFoundException | AuthorizationFailedException e) {
           logger.warn("error refreshing profile:", e);
         } catch (SQLException | IOException e) {
           throw new InternalError("error refreshing profile", e);
