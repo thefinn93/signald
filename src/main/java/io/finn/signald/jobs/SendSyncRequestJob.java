@@ -15,6 +15,8 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -26,6 +28,7 @@ import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSy
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class SendSyncRequestJob implements Job {
+  private static final Logger logger = LogManager.getLogger();
   private final Account account;
   private final SignalServiceProtos.SyncMessage.Request.Type type;
 
@@ -36,6 +39,7 @@ public class SendSyncRequestJob implements Job {
 
   @Override
   public void run() throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException, UntrustedIdentityException, InvalidKeyException {
+    logger.debug("requesting sync of type {}", type.name());
     SignalDependencies dependencies = account.getSignalDependencies();
     SignalServiceProtos.SyncMessage.Request request = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(type).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(request));

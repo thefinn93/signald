@@ -26,6 +26,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.*;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.storage.protos.ManifestRecord;
 
 public class SyncStorageDataJob implements Job {
@@ -42,6 +43,10 @@ public class SyncStorageDataJob implements Job {
     StorageKey storageKey = account.getStorageKey();
     if (storageKey == null) {
       logger.debug("skipping storage sync because storage keys not available");
+      if (account.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
+        logger.debug("queuing job to request storage keys from primary device");
+        BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS));
+      }
       return;
     }
 
