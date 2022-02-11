@@ -39,7 +39,8 @@ public class FinishLinkRequest implements RequestType<Account> {
   private boolean overwrite = false;
 
   @Override
-  public Account run(Request request) throws NoSuchSessionError, ServerNotFoundError, InvalidProxyError, InternalError, NoSuchAccountError, UserAlreadyExistsError {
+  public Account run(Request request)
+      throws NoSuchSessionError, ServerNotFoundError, InvalidProxyError, InternalError, NoSuchAccountError, UserAlreadyExistsError, ScanTimeoutError {
     ProvisioningManager pm = ProvisioningManager.get(sessionID);
     if (pm == null) {
       throw new NoSuchSessionError();
@@ -52,7 +53,9 @@ public class FinishLinkRequest implements RequestType<Account> {
       throw new ServerNotFoundError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyError(e);
-    } catch (IOException | SQLException | TimeoutException | InvalidInputException | InvalidKeyException | UntrustedIdentityException | NoSuchAccountException e) {
+    } catch (IOException | TimeoutException e) {
+      throw new ScanTimeoutError(e);
+    } catch (SQLException | InvalidInputException | InvalidKeyException | UntrustedIdentityException | NoSuchAccountException e) {
       throw new InternalError("error finishing linking", e);
     } catch (UserAlreadyExistsException e) {
       throw new UserAlreadyExistsError(e);

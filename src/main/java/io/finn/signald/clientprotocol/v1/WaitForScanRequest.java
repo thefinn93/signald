@@ -24,9 +24,7 @@ public class WaitForScanRequest implements RequestType<Empty> {
     }
     try {
       pm.waitForScan();
-    } catch (IOException e) {
-      throw new InternalError("unexpected error while waiting for QR code scan", e);
-    } catch (TimeoutException e) {
+    } catch (TimeoutException | IOException e) {
       throw new ScanTimeoutError(e);
     }
 
