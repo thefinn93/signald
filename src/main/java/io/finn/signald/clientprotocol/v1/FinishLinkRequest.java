@@ -20,6 +20,8 @@ import io.finn.signald.exceptions.UserAlreadyExistsException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
@@ -29,6 +31,7 @@ import org.whispersystems.signalservice.api.push.ACI;
      + "it will return information about the new account once the linking process is completed by the other device.")
 @ProtocolType("finish_link")
 public class FinishLinkRequest implements RequestType<Account> {
+  private static final Logger logger = LogManager.getLogger();
   @JsonProperty("device_name") public String deviceName = "signald";
   @JsonProperty("session_id") public String sessionID;
 
@@ -54,6 +57,7 @@ public class FinishLinkRequest implements RequestType<Account> {
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyError(e);
     } catch (IOException | TimeoutException e) {
+      logger.debug("scan timeout waiting for qr code scan");
       throw new ScanTimeoutError(e);
     } catch (SQLException | InvalidInputException | InvalidKeyException | UntrustedIdentityException | NoSuchAccountException e) {
       throw new InternalError("error finishing linking", e);

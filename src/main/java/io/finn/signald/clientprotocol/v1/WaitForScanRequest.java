@@ -11,9 +11,12 @@ import io.finn.signald.clientprotocol.v1.exceptions.NoSuchSessionError;
 import io.finn.signald.clientprotocol.v1.exceptions.ScanTimeoutError;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @ProtocolType("wait_for_scan")
 public class WaitForScanRequest implements RequestType<Empty> {
+  private static final Logger logger = LogManager.getLogger();
   @JsonProperty("session_id") public String sessionID;
 
   @Override
@@ -25,6 +28,7 @@ public class WaitForScanRequest implements RequestType<Empty> {
     try {
       pm.waitForScan();
     } catch (TimeoutException | IOException e) {
+      logger.debug("scan timeout waiting for qr code scan");
       throw new ScanTimeoutError(e);
     }
 
