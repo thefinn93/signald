@@ -1053,8 +1053,9 @@ public class Manager {
             continue;
           }
         } catch (TimeoutException e) {
-          if (returnOnTimeout)
+          if (returnOnTimeout) {
             return;
+          }
           continue;
         }
 
