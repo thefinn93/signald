@@ -33,6 +33,7 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.util.Base64;
@@ -71,9 +72,14 @@ public class RefreshProfileJob implements Job {
     Locale locale = Locale.getDefault();
 
     ProfileService profileService = SignalDependencies.get(m.getACI()).getProfileService();
-    Single<ServiceResponse<ProfileAndCredential>> profileServiceResponse = profileService.getProfile(address, profileKeyOptional, unidentifiedAccess, requestType, locale);
-    ProfileAndCredential profileAndCredential = new ProfileService.ProfileResponseProcessor(profileServiceResponse.blockingGet()).getResultOrThrow();
-
+    ProfileAndCredential profileAndCredential;
+    try {
+      Single<ServiceResponse<ProfileAndCredential>> profileServiceResponse = profileService.getProfile(address, profileKeyOptional, unidentifiedAccess, requestType, locale);
+      profileAndCredential = new ProfileService.ProfileResponseProcessor(profileServiceResponse.blockingGet()).getResultOrThrow();
+    } catch (RateLimitException e) {
+      logger.warn("rate limited trying to update profile");
+      return;
+    }
     long now = System.currentTimeMillis();
     ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
     Recipient recipient = m.getRecipientsTable().get(entry.getServiceAddress());
