@@ -81,7 +81,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
   @Override
   public GroupInfo run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
     Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
     RecipientsTable recipientsTable = a.getRecipients();

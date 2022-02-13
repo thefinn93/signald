@@ -40,7 +40,7 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError, InvalidRequestError {
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError, InvalidRequestError, AuthorizationFailedError {
     Account a = Common.getAccount(account);
 
     GroupsTable.Group group = Common.getGroup(a, groupID);

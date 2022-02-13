@@ -44,7 +44,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
 
   @Override
   public GroupInfo run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UnknownGroupError, GroupVerificationError, InvalidRequestError {
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
     Account a = Common.getAccount(account);
 
     GroupsTable.Group group = Common.getGroup(a, groupID);

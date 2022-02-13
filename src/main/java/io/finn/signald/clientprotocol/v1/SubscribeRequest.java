@@ -39,6 +39,7 @@ import org.whispersystems.libsignal.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 
 @ProtocolType("subscribe")
 @Doc("receive incoming messages. After making a subscribe request, incoming messages will be sent to the client encoded "
@@ -47,7 +48,7 @@ public class SubscribeRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to subscribe to incoming message for") @Required public String account;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     ACI aci;
     try {
       aci = AccountsTable.getACI(account);
@@ -65,6 +66,8 @@ public class SubscribeRequest implements RequestType<Empty> {
       throw new InvalidProxyError(e);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
       throw new ServerNotFoundError(e);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (IOException | SQLException | InvalidKeyException e) {
       throw new InternalError("error subscribing", e);
     }

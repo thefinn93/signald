@@ -45,6 +45,7 @@ import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.util.Base64;
 
@@ -229,12 +230,12 @@ public class Common {
   }
 
   public static GroupsTable.Group getGroup(Account account, String groupId)
-      throws UnknownGroupError, NoSuchAccountError, ServerNotFoundError, InvalidRequestError, InternalError, InvalidProxyError {
+      throws UnknownGroupError, NoSuchAccountError, ServerNotFoundError, InvalidRequestError, InternalError, InvalidProxyError, AuthorizationFailedError {
     return getGroup(account, groupId, -1);
   }
 
   public static GroupsTable.Group getGroup(Account account, String groupId, int revision)
-      throws UnknownGroupError, InvalidRequestError, InternalError, NoSuchAccountError, InvalidProxyError, ServerNotFoundError {
+      throws UnknownGroupError, InvalidRequestError, InternalError, NoSuchAccountError, InvalidProxyError, ServerNotFoundError, AuthorizationFailedError {
     Groups groups = getGroups(account);
 
     GroupIdentifier groupIdentifier;
@@ -257,6 +258,8 @@ public class Common {
     Optional<GroupsTable.Group> groupOptional;
     try {
       groupOptional = groups.getGroup(g.get(), revision);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (InvalidGroupStateException | VerificationFailedException | IOException | InvalidInputException | SQLException e) {
       throw new InternalError("error fetching group state", e);
     }

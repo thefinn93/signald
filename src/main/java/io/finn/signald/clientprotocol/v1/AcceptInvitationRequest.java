@@ -38,8 +38,8 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws NoSuchAccountError, OwnProfileKeyDoesNotExistError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError, InvalidRequestError {
+  public JsonGroupV2Info run(Request request) throws NoSuchAccountError, OwnProfileKeyDoesNotExistError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError,
+                                                     InvalidRequestError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

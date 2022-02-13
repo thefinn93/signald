@@ -13,9 +13,13 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class SendDeliveryReceiptJob implements Job {
+  private static final Logger logger = LogManager.getLogger();
 
   private final Recipient recipient;
   private final List<Long> timestamps = new ArrayList<>();
@@ -36,6 +40,10 @@ public class SendDeliveryReceiptJob implements Job {
   @Override
   public void run() throws IOException, SQLException {
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, timestamps, System.currentTimeMillis());
-    m.sendReceipt(message, recipient);
+    try {
+      m.sendReceipt(message, recipient);
+    } catch (UnregisteredUserException e) {
+      logger.debug("tried to send a receipt to an unregistered user {}", recipient.toRedactedString());
+    }
   }
 }

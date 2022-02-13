@@ -27,8 +27,8 @@ public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the latest known revision, default value (-1) forces fetch from server") public int revision = -1;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError, InvalidGroupStateError, InvalidRequestError {
+  public JsonGroupV2Info run(Request request) throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError,
+                                                     InvalidGroupStateError, InvalidRequestError, AuthorizationFailedError {
     return Common.getGroup(Common.getAccount(account), groupID, revision).getJsonGroupV2Info();
   }
 }

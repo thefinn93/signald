@@ -41,7 +41,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
     List<SendMessageResult> results;
 
     if (group != null) {
