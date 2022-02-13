@@ -33,6 +33,7 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.internal.ServiceResponse;
@@ -78,6 +79,9 @@ public class RefreshProfileJob implements Job {
       profileAndCredential = new ProfileService.ProfileResponseProcessor(profileServiceResponse.blockingGet()).getResultOrThrow();
     } catch (RateLimitException e) {
       logger.warn("rate limited trying to update profile");
+      return;
+    } catch (NotFoundException e) {
+      logger.debug("NotFoundException when trying to refresh profile");
       return;
     }
     long now = System.currentTimeMillis();
