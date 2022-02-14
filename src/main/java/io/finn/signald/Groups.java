@@ -72,14 +72,9 @@ public class Groups {
     groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
   }
 
-  public Optional<GroupsTable.Group> getGroup(GroupsTable.Group group)
-      throws VerificationFailedException, InvalidGroupStateException, IOException, InvalidInputException, SQLException {
-    return getGroup(group, -1);
-  }
-
-  public Optional<GroupsTable.Group> getGroup(GroupsTable.Group group, int revision)
-      throws VerificationFailedException, InvalidGroupStateException, IOException, InvalidInputException, SQLException {
-    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+  public Optional<GroupsTable.Group> getGroup(GroupMasterKey masterKey, int revision)
+      throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
+    GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
     return getGroup(groupSecretParams, revision);
   }
 

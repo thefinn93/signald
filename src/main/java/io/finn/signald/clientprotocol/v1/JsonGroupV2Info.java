@@ -9,27 +9,37 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.InvalidProtocolBufferException;
+import io.finn.signald.Account;
 import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.db.GroupsTable;
 import io.finn.signald.util.GroupsUtil;
+import io.sentry.Sentry;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
+import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
 
 @Doc("Information about a Signal group")
 public class JsonGroupV2Info {
+  private static final Logger logger = LogManager.getLogger();
+
   @ExampleValue(ExampleValue.GROUP_ID) public String id;
   public String masterKey;
   @ExampleValue("5") public int revision;
@@ -51,15 +61,36 @@ public class JsonGroupV2Info {
   @Doc("indicates if the group is an announcements group. Only admins are allowed to send messages to announcements groups. Options are UNKNOWN, ENABLED or DISABLED")
   public String announcements;
 
+  @Doc("will be set to true for incoming messages to indicate the user has been removed from the group") public boolean removed;
+
   public JsonGroupV2Info() {}
 
   public JsonGroupV2Info(JsonGroupV2Info o) {
     id = o.id;
     masterKey = o.masterKey;
+    removed = o.removed;
     update(o);
   }
 
   public JsonGroupV2Info(GroupsTable.Group g) { this(g.getSignalServiceGroupV2(), g.getDecryptedGroup()); }
+
+  // format a group for an incoming message
+  public JsonGroupV2Info(SignalServiceGroupV2 group, ACI aci) {
+    masterKey = Base64.encodeBytes(group.getMasterKey().serialize());
+    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
+    revision = group.getRevision();
+
+    Optional<GroupsTable.Group> localState;
+    try {
+      localState = new Account(aci).getGroupsTable().get(group);
+    } catch (InvalidProtocolBufferException | InvalidInputException | SQLException e) {
+      logger.error("error fetching group state from local db");
+      Sentry.captureException(e);
+      return;
+    }
+
+    removed = !localState.isPresent();
+  }
 
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
     masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());

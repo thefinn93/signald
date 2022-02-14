@@ -8,6 +8,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.InvalidProtocolBufferException;
+import io.finn.signald.Account;
 import io.finn.signald.JsonSticker;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -15,8 +17,13 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
+import io.sentry.Sentry;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
@@ -88,7 +95,7 @@ public class JsonDataMessage {
         group = new JsonGroupInfo(groupContext.getGroupV1().get(), aci);
       }
       if (groupContext.getGroupV2().isPresent()) {
-        groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanitized();
+        groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), aci).sanitized();
       }
     }
 

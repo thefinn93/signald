@@ -257,7 +257,7 @@ public class Common {
 
     Optional<GroupsTable.Group> groupOptional;
     try {
-      groupOptional = groups.getGroup(g.get(), revision);
+      groupOptional = groups.getGroup(g.get().getMasterKey(), revision);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
     } catch (InvalidGroupStateException | VerificationFailedException | IOException | InvalidInputException | SQLException e) {
