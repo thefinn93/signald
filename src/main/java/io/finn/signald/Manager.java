@@ -23,6 +23,7 @@ import io.sentry.Sentry;
 import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -110,7 +111,6 @@ public class Manager {
   }
   public static Manager get(ACI aci, boolean offline)
       throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Logger logger = LogManager.getLogger("manager");
     AccountData accountData;
     Manager m;
     synchronized (managers) {
@@ -213,13 +213,9 @@ public class Manager {
     String[] params = query.split("&");
     Map<String, String> map = new HashMap<>();
     for (String param : params) {
-      try {
-        String name = URLDecoder.decode(param.split("=")[0], "UTF-8");
-        String value = URLDecoder.decode(param.split("=")[1], "UTF-8");
-        map.put(name, value);
-      } catch (UnsupportedEncodingException e) {
-        LogManager.getLogger().error("error preparing device link URL", e);
-      }
+      String name = URLDecoder.decode(param.split("=")[0], StandardCharsets.UTF_8);
+      String value = URLDecoder.decode(param.split("=")[1], StandardCharsets.UTF_8);
+      map.put(name, value);
     }
     return map;
   }
@@ -286,21 +282,19 @@ public class Manager {
   public void refreshPreKeys() throws IOException, SQLException {
     List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
     SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey();
-    dependencies.getAccountManager().setPreKeys(account.getIdentityKeyPair().getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
+    IdentityKeyPair identityKeyPair = account.getIdentityKeyPair();
+    dependencies.getAccountManager().setPreKeys(identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
 
-  private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException { return createAttachment(attachmentFile, Optional.absent()); }
-
-  private static SignalServiceAttachmentStream createAttachment(File attachmentFile, Optional<String> caption) throws IOException {
+  private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException {
     InputStream attachmentStream = new FileInputStream(attachmentFile);
     final long attachmentSize = attachmentFile.length();
     String mime = Files.probeContentType(attachmentFile.toPath());
     if (mime == null) {
       mime = "application/octet-stream";
     }
-    // TODO mabybe add a parameter to set the voiceNote, preview, and caption option
     return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.absent(), 0, 0,
-                                             System.currentTimeMillis(), caption, Optional.absent(), null, null, Optional.absent());
+                                             System.currentTimeMillis(), Optional.absent(), Optional.absent(), null, null, Optional.absent());
   }
 
   public Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
