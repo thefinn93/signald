@@ -119,10 +119,7 @@ public class MessageSender {
     List<SendMessageResult> results = new ArrayList<>();
 
     // disable sender keys for groups of mixed targets until we can figure out how to avoid the duplicate sync messages
-    if (legacyTargets.size() > 0 && senderKeyTargets.size() > 0) {
-      logger.debug("mixed senderkey and legacy targets, falling back to legacy to avoid duplicate sync messages");
-      legacyTargets.addAll(senderKeyTargets);
-    } else if (senderKeyTargets.size() > 0) {
+    if (senderKeyTargets.size() > 0) {
       DistributionId distributionId = group.getOrCreateDistributionId();
       long keyCreateTime = getCreateTimeForOurKey(distributionId);
       long keyAge = System.currentTimeMillis() - keyCreateTime;
@@ -162,7 +159,14 @@ public class MessageSender {
 
     if (legacyTargets.size() > 0) {
       logger.debug("sending group message to {} members without sender keys", legacyTargets.size());
-      results.addAll(m.sendMessage(message, legacyTargets));
+      List<SignalServiceAddress> recipientAddresses = legacyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
+      try {
+        results.addAll(messageSender.sendDataMessage(recipientAddresses, m.getAccessPairFor(legacyTargets), isRecipientUpdate || results.size() > 0, ContentHint.DEFAULT,
+                                                     message.build(), SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
+                                                     sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false));
+      } catch (UntrustedIdentityException e) {
+        account.getProtocolStore().handleUntrustedIdentityException(e);
+      }
     }
 
     for (SendMessageResult r : results) {
