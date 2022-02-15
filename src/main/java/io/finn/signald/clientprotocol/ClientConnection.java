@@ -51,8 +51,6 @@ public class ClientConnection implements Runnable {
 
   @Override
   public void run() {
-    logger.info("Client connected");
-
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
       try (PrintWriter w = new PrintWriter(socket.getOutputStream(), true)) {
         try {
@@ -118,28 +116,28 @@ public class ClientConnection implements Runnable {
     @Override
     public void run() {
       JsonRequest request = null;
-      String id = " ";
       try {
         JsonNode rawRequest = mapper.readTree(line);
+        String type = rawRequest.get("type").asText();
         if (rawRequest.has("id")) {
-          id = " (request ID: " + rawRequest.get("id").asText() + ") ";
-          logger.debug("handling request with ID: " + rawRequest.get("id").asText());
+          String id = rawRequest.get("id").asText();
+          Thread.currentThread().setName(id + "-" + type);
+          logger.debug("handling {} request with ID {}", type, id);
+        } else {
+          Thread.currentThread().setName(type);
+          logger.debug("handling {} request", type);
         }
         String version = "v0";
-        String type = rawRequest.get("type").asText();
         if (rawRequest.has("version")) {
           version = rawRequest.get("version").asText();
         } else if (rawRequest.has("type") && Request.defaultVersions.containsKey(rawRequest.get("type").asText())) {
           version = Request.defaultVersions.get(type);
         }
-        if (rawRequest.has("id")) {
-          logger.debug("request " + rawRequest.get("id").asText() + " has version " + version);
-        }
 
         Summary.Timer timer = requestProcessingTime.labels(type, version).startTimer();
         try {
           if (!rawRequest.has("version")) {
-            logger.info("signald received a request" + id + "with no version. This will stop working in a future version of signald. "
+            logger.info("signald received a request with no version. This will stop working in a future version of signald. "
                         + "Please update your client. Client authors, see https://signald.org/articles/protocol-versioning/");
           }
 

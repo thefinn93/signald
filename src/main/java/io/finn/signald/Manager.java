@@ -130,7 +130,6 @@ public class Manager {
       } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
       }
     }
-    logger.info("created a manager for " + m.self.toRedactedString());
     return m;
   }
 

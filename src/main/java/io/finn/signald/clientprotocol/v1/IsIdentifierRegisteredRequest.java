@@ -23,7 +23,7 @@ import org.whispersystems.signalservice.api.push.ACI;
 @ProtocolType("is_identifier_registered")
 @Doc("Determine whether an account identifier is registered on the Signal service.")
 public class IsIdentifierRegisteredRequest implements RequestType<BooleanMessage> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use to retrieve the remote config") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use to use") @Required public String account;
 
   @ExampleValue(ExampleValue.REMOTE_UUID)
   @Doc("The UUID of an identifier to check if it is registered on Signal. This UUID is either a Phone Number Identity (PNI) or an Account Identity (ACI).")

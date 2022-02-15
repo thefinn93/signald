@@ -104,8 +104,6 @@ public class Request {
 
     type = request.get("type").asText();
 
-    Thread.currentThread().setName(id != null ? id + "-" + type : type);
-
     if (request.has("version")) {
       version = request.get("version").asText();
     } else if (defaultVersions.containsKey(type)) {
