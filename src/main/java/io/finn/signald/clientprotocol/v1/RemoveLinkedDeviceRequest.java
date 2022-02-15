@@ -26,7 +26,7 @@ import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedE
 public class RemoveLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
-  @ExampleValue("3") @Doc("the ID of the device to unlink") @Required public long deviceId;
+  @ExampleValue("3") @Doc("the ID of the device to unlink") @Required public int deviceId;
 
   @Override
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError {

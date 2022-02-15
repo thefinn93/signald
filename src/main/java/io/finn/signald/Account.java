@@ -15,18 +15,13 @@ import io.finn.signald.storage.AccountData;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.storage.SignalAccountRecord;
 import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -55,7 +50,9 @@ public class Account {
     return SignalDependencies.get(aci);
   }
 
-  public DatabaseProtocolStore getProtocolStore() { return new DatabaseProtocolStore(aci); }
+  public DatabaseAccountDataStore getProtocolStore() { return new DatabaseAccountDataStore(aci); }
+
+  public DatabaseDataStore getDataStore() { return new DatabaseDataStore(aci); }
 
   public GroupsTable getGroupsTable() { return new GroupsTable(aci); }
 

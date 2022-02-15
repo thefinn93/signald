@@ -10,7 +10,7 @@ package io.finn.signald.jobs;
 import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
-import io.finn.signald.db.DatabaseProtocolStore;
+import io.finn.signald.db.DatabaseAccountDataStore;
 import io.finn.signald.db.IdentityKeysTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidAddressException;
@@ -42,7 +42,7 @@ public class SendContactsSyncJob implements Job {
     AccountData accountData = m.getAccountData();
     Account account = m.getAccount();
     RecipientsTable recipientsTable = account.getRecipients();
-    DatabaseProtocolStore protocolStore = account.getProtocolStore();
+    DatabaseAccountDataStore protocolStore = account.getProtocolStore();
 
     try {
       try (OutputStream fos = new FileOutputStream(contactsFile)) {

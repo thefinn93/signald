@@ -248,7 +248,7 @@ public class Manager {
   private List<PreKeyRecord> generatePreKeys() throws IOException, SQLException {
     List<PreKeyRecord> records = new LinkedList<>();
 
-    DatabaseProtocolStore protocolStore = account.getProtocolStore();
+    DatabaseAccountDataStore protocolStore = account.getProtocolStore();
     for (int i = 0; i < ServiceConfig.PREKEY_BATCH_SIZE; i++) {
       int preKeyId = (account.getPreKeyIdOffset() + i) % Medium.MAX_VALUE;
       ECKeyPair keyPair = Curve.generateKeyPair();
@@ -1571,8 +1571,8 @@ public class Manager {
     }
     deviceName = DeviceNameUtil.encryptDeviceName(deviceName, account.getProtocolStore().getIdentityKeyPair().getPrivateKey());
     int localRegistrationId = account.getLocalRegistrationId();
-    dependencies.getAccountManager().setAccountAttributes(deviceName, null, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true,
-                                                          ServiceConfig.CAPABILITIES, true);
+    dependencies.getAccountManager().setAccountAttributes(null, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true, ServiceConfig.CAPABILITIES,
+                                                          true, Base64.decode(deviceName));
     account.setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
   }
 

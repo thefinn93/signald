@@ -7,9 +7,8 @@
 
 package io.finn.signald;
 
-import io.finn.signald.clientprotocol.v1.Profile;
 import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.DatabaseProtocolStore;
+import io.finn.signald.db.DatabaseDataStore;
 import io.finn.signald.db.ServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -40,7 +39,7 @@ public class SignalDependencies {
   private final static Map<String, SignalDependencies> instances = new HashMap<>();
 
   private final ServersTable.Server server;
-  private final DatabaseProtocolStore dataStore;
+  private final DatabaseDataStore dataStore;
   private final DynamicCredentialsProvider credentialsProvider;
 
   private final SessionLock sessionLock;
@@ -101,7 +100,7 @@ public class SignalDependencies {
   }
 
   private SignalDependencies(Account account, ServersTable.Server server) throws SQLException, NoSuchAccountException {
-    dataStore = account.getProtocolStore();
+    dataStore = account.getDataStore();
     credentialsProvider = account.getCredentialsProvider();
     this.server = server;
     accountUUID = account.getUUID();

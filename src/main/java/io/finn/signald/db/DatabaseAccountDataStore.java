@@ -22,11 +22,11 @@ import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
-import org.whispersystems.signalservice.api.SignalServiceDataStore;
+import org.whispersystems.signalservice.api.SignalServiceAccountDataStore;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
-public class DatabaseProtocolStore implements SignalServiceDataStore {
+public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
   private final PreKeysTable preKeys;
   private final SessionsTable sessions;
   private final SignedPreKeysTable signedPrekeys;
@@ -35,7 +35,7 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   private final SenderKeySharedTable senderKeyShared;
   private final Account account;
 
-  public DatabaseProtocolStore(ACI aci) {
+  public DatabaseAccountDataStore(ACI aci) {
     preKeys = new PreKeysTable(aci);
     sessions = new SessionsTable(aci);
     signedPrekeys = new SignedPreKeysTable(aci);
@@ -43,17 +43,6 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
     senderKeys = new SenderKeysTable(aci);
     senderKeyShared = new SenderKeySharedTable(aci);
     account = new Account(aci);
-  }
-
-  public DatabaseProtocolStore(String identifier) {
-    identityKeys = new IdentityKeysTable(identifier);
-
-    preKeys = new PreKeysTable(null);
-    sessions = new SessionsTable(null);
-    signedPrekeys = new SignedPreKeysTable(null);
-    senderKeys = new SenderKeysTable(null);
-    senderKeyShared = new SenderKeySharedTable(null);
-    account = null;
   }
 
   @Override
@@ -228,11 +217,6 @@ public class DatabaseProtocolStore implements SignalServiceDataStore {
   }
 
   public SenderKeySharedTable getSenderKeyShared() { return senderKeyShared; }
-
-  @Override
-  public Transaction beginTransaction() {
-    return null;
-  }
 
   public boolean isCurrentRatchetKey(Recipient source, int sourceDeviceId, ECPublicKey key) {
     SessionRecord session = sessions.loadSession(new SignalProtocolAddress(source.getAddress().getIdentifier(), sourceDeviceId));
