@@ -7,6 +7,7 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.storage.ContactStore;
+import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -162,7 +163,14 @@ public class SyncStorageDataJob implements Job {
     SignalContactRecord contactRecord = record.getContact().get();
     SignalServiceAddress address = contactRecord.getAddress();
 
-    Recipient recipient = account.getRecipients().get(address);
+    Recipient recipient;
+    try {
+      recipient = account.getRecipients().get(address);
+    } catch (SQLException e) {
+      logger.error("error getting recipient for storage sync", e);
+      Sentry.captureException(e);
+      return;
+    }
     ContactStore contactStore = account.getAccountData().contactStore;
     ContactStore.ContactInfo contact = contactStore.getContact(recipient);
 
