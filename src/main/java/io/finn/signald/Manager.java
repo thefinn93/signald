@@ -721,6 +721,9 @@ public class Manager {
           BackgroundJobRunnerThread.queue(new ResetSessionJob(account, sender));
         }
         throw e;
+      } catch (ProtocolDuplicateMessageException e) {
+        logger.debug("dropping duplicate message");
+        return null;
       } finally {
         if (watchdogTime > 0) {
           sem.release();
