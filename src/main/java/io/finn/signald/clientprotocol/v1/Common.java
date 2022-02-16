@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.zkgroup.InvalidInputException;
@@ -47,12 +49,14 @@ import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
+import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.util.Base64;
 
 /* Common is a collection of wrapper functions that call common functions
  * and convert their exceptions to documented v1 exceptions
  */
 public class Common {
+  private static final Logger logger = LogManager.getLogger();
   private static final Histogram messageSendTime =
       Histogram.build().name(BuildConfig.NAME + "_message_send_time").help("Time to send messages in seconds").labelNames("account_uuid").register();
 
@@ -108,9 +112,11 @@ public class Common {
     }
   }
 
-  static Recipient getRecipient(RecipientsTable table, JsonAddress address) throws InternalError {
+  static Recipient getRecipient(RecipientsTable table, JsonAddress address) throws InternalError, UnregisteredUserError {
     try {
       return table.get(address);
+    } catch (UnregisteredUserException e) {
+      throw new UnregisteredUserError(e);
     } catch (SQLException | IOException e) {
       throw new InternalError("error looking up recipient", e);
     }
@@ -139,7 +145,11 @@ public class Common {
         memberRecipients = new ArrayList<>();
         RecipientsTable recipientsTable = manager.getRecipientsTable();
         for (JsonAddress member : members) {
-          memberRecipients.add(getRecipient(recipientsTable, member));
+          try {
+            memberRecipients.add(getRecipient(recipientsTable, member));
+          } catch (UnregisteredUserError e) {
+            logger.debug("ignoring unknown user in group while sending");
+          }
         }
       }
     }

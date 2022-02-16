@@ -56,7 +56,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError,
-                                                     InvalidRequestError, GroupVerificationError, InvalidGroupStateError, UnknownGroupError {
+                                                     InvalidRequestError, GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError {
     Manager m = Common.getManager(account);
     RecipientsTable recipientsTable = m.getRecipientsTable();
     List<Recipient> recipients = new ArrayList<>();

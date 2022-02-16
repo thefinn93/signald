@@ -10,7 +10,6 @@ package io.finn.signald.clientprotocol.v1;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 import io.finn.signald.Account;
-import io.finn.signald.Config;
 import io.finn.signald.Empty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
@@ -47,7 +45,7 @@ public class TypingRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, InvalidGroupError,
-                                           UntrustedIdentityError, UnknownGroupError, InvalidRequestError {
+                                           UntrustedIdentityError, UnknownGroupError, InvalidRequestError, UnregisteredUserError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

@@ -80,8 +80,8 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   @Doc("ENABLED to only allow admins to post messages, DISABLED to allow anyone to post") @ExactlyOneOfRequired(GROUP_MODIFICATION) public String announcements;
 
   @Override
-  public GroupInfo run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
+  public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
+                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
     Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
     RecipientsTable recipientsTable = a.getRecipients();

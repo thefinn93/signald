@@ -15,6 +15,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -30,7 +31,7 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public JsonAddress run(Request request) throws InternalError, NoSuchAccountError {
+  public JsonAddress run(Request request) throws InternalError, NoSuchAccountError, UnregisteredUserError {
     UUID accountUUID;
     try {
       accountUUID = AccountsTable.getUUID(account);

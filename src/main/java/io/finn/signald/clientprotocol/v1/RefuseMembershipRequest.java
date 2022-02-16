@@ -39,8 +39,8 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
   @Required @Doc("list of requesting members to refuse") public List<JsonAddress> members;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError, InvalidRequestError, AuthorizationFailedError {
+  public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError,
+                                                     InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
     Account a = Common.getAccount(account);
 
     GroupsTable.Group group = Common.getGroup(a, groupID);

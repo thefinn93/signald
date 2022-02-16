@@ -48,7 +48,7 @@ public class TrustRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws InvalidRequestError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, FingerprintVersionMismatchError,
-                                           InvalidBase64Error, UnknownIdentityKeyError, InvalidFingerprintError {
+                                           InvalidBase64Error, UnknownIdentityKeyError, InvalidFingerprintError, UnregisteredUserError {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());

@@ -40,8 +40,8 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
   @ExampleValue("604800") @Required public int expiration;
 
   @Override
-  public SendResponse run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
+  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
+                                                  InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
     List<SendMessageResult> results;
 
     if (group != null) {

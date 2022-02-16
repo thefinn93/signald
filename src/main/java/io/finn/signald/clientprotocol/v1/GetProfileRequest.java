@@ -42,7 +42,7 @@ public class GetProfileRequest implements RequestType<Profile> {
   public boolean async;
 
   @Override
-  public Profile run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError {
+  public Profile run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError {
     Manager m = Common.getManager(account);
     Recipient recipient = Common.getRecipient(m.getRecipientsTable(), requestedAddress);
     ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);

@@ -13,10 +13,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
@@ -75,10 +73,15 @@ public class ListContactsRequest implements RequestType<ProfileList> {
         }
       }
 
-      Recipient recipient = Common.getRecipient(recipientsTable, c.address);
-      Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
-      profile.populateAvatar(m);
-      list.profiles.add(profile);
+      try {
+        Recipient recipient = Common.getRecipient(recipientsTable, c.address);
+        Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
+        profile.populateAvatar(m);
+        list.profiles.add(profile);
+      } catch (UnregisteredUserError e) {
+        logger.debug("ignoring unregistered user in contact list");
+        continue;
+      }
     }
     return list;
   }
