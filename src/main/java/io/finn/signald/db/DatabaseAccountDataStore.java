@@ -11,10 +11,7 @@ import io.finn.signald.Account;
 import io.finn.signald.Config;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -176,6 +173,7 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
   public void archiveSession(SignalProtocolAddress address) {
     SessionRecord session = loadSession(address);
     session.archiveCurrentState();
+    senderKeyShared.clearSenderKeySharedWith(Collections.singleton(address));
     storeSession(address, session);
   }
 
