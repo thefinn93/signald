@@ -1,3 +1,32 @@
+signald (0.17.0) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.17.0
+  * A huge shout out to @sumner for fixing the memory leak (https://gitlab.com/signald/signald/-/merge_requests/114)
+  * Messages sent to groups will now try to use the sender keys feature, which should improve group send speed especially
+     in larger groups
+  * New request type wait_for_scan is available to allow faster user feedback when linking
+  * Some new options for dealing with remote key rotation have been introduced:
+    * --trust-new-keys (or environment variable SIGNALD_TRUST_NEW_KEYS=true) will cause new keys to be marked as
+        TRUSTED_UNVERIFIED instead of UNTRUSTED, which is more in line with most user expectations.
+    * --trust-all-keys-on-start (or environment variable SIGNALD_TRUST_ALL_KEYS=true) will update the trust store to
+        mark all UNTRUSTED keys as TRUSTED_UNVERIFIED, which should help fix issues caused by lack of --trust-new-keys
+        option earlier.
+    * Eventually --trust-new-keys may become the default, if you have feelings on this topic file an issue, drop by the
+        chat room or send me an email
+  * Several improvements around session locking have been fixed. This may result in slightly slower send/receive times,
+      but significantly better deliverability
+  * Message resend requests are now automatically sent on message decryption failures (in line with first party clients)
+  * Several new metrics are available, including timing around all SQL queries
+  * Read support for the storage service has been implemented. This should fix most of the contact and group syncing
+      issues people have been experiencing.
+  * Sentry support has been added to report exceptions. This is disabled by default and there isn't really a way to turn
+      it on without signing up for [Sentry](https://sentry.io) or hosting your own server. Set environment variable
+      SENTRY_DSN to use.
+    * after enabling Sentry support, many exceptions that were previously uncaught have been caught and handled better
+    * some of these resulted in new error types from in the protocol
+
+ -- Finn <finn@janky.solutions>  Wed, 16 Feb 2022 13:48:20 -0500
+
 signald (0.16.1) unstable; urgency=medium
 
   * A bug fix release. Details at https://gitlab.com/signald/signald/-/issues/271
