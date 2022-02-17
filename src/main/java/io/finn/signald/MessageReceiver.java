@@ -128,7 +128,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     }
   }
 
-  // must be called from within a sychronized(receivers) block
+  // must be called from within a synchronized(receivers) block
   private static boolean synchronizedUnsubscribe(ACI aci, Socket s) {
     if (!receivers.containsKey(aci.toString())) {
       return false;

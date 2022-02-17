@@ -3,7 +3,7 @@
 a daemon that facilitates communication over Signal. It is unofficial, unapproved, and [not nearly as secure as the real Signal clients](https://gitlab.com/signald/signald/-/issues/101)
 
 Signal does not offer any sort of official API. Unlike traditional messaging applications, the Signal server expects the
-client software to preform encryption and key management. signald handles all of these client-side requirements and
+client software to perform encryption and key management. signald handles all of these client-side requirements and
 exposes a plain-text API which can be easily used by developers to build custom Signal clients.
 
 Documentation is available on [signald.org](https://signald.org)

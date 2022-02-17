@@ -633,7 +633,7 @@ public class LegacySocketHandler {
   public void updateContact(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
     if (request.contact == null) {
-      this.reply("update_contact_error", new JsonStatusMessage(0, "No contact specificed!", request), request.id);
+      this.reply("update_contact_error", new JsonStatusMessage(0, "No contact specified!", request), request.id);
       return;
     }
 

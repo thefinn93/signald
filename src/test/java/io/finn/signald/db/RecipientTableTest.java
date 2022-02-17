@@ -70,7 +70,7 @@ public class RecipientTableTest {
   }
 
   @Test
-  @DisplayName("get non-existant recipient by uuid")
+  @DisplayName("get non-existent recipient by uuid")
   void get_nonExistentByUUID() throws IOException, SQLException {
     Recipient r = recipientsTable.get(ADDRESS_B.getAci());
     assertEquals(r.getACI(), ADDRESS_B.getAci());

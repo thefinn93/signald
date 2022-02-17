@@ -141,7 +141,7 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
             }
           }
         } catch (Throwable e) {
-          logger.warn("Error occured in KeepAliveSender, ignoring ...", e);
+          logger.warn("Error occurred in KeepAliveSender, ignoring ...", e);
         }
       }
     }
