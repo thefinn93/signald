@@ -134,7 +134,7 @@ public class ContactStore {
 
       if (c.getFamilyName().isPresent() || c.getGivenName().isPresent()) {
         if (c.getFamilyName().isPresent() && c.getGivenName().isPresent()) {
-          name = c.getFamilyName().get() + " " + c.getGivenName().get();
+          name = c.getGivenName().get() + " " + c.getFamilyName().get();
         } else {
           name = c.getFamilyName().or(c.getGivenName().or(""));
         }
