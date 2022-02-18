@@ -361,8 +361,7 @@ signald.org-branch:
     expose_as: signald dot org preview
     expire_in: 1 month
   rules:
-    - if: '$CI_COMMIT_REF_PROTECTED == "false"'
-      when: manual
+    - if: '$CI_COMMIT_REF_PROTECTED == "false" && $CI_PROJECT_PATH == "signald/signald"'
   needs:
     - "build java11 x86_64-unknown-linux-gnu"
     - project: signald/signald-go
