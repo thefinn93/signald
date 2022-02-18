@@ -59,12 +59,9 @@ public class ProtocolRequest implements RequestType<JsonNode> {
     uncheckedTypes.add(io.finn.signald.clientprotocol.v0.JsonMessageEnvelope.class);
 
     // v1 incoming protocol, which does not
-    uncheckedTypes.add(ListenerState.class);
-    uncheckedTypes.add(IncomingMessage.class);
-    uncheckedTypes.add(WebSocketConnectionState.class);
-    uncheckedTypes.add(JsonMessageEnvelope.class);
     uncheckedTypes.add(ClientMessageWrapper.class);
     uncheckedTypes.addAll(SubscribeRequest.IncomingMessageEncoder.getExceptions().values()); // errors thrown when processing an incoming message
+    uncheckedTypes.addAll(SubscribeRequest.IncomingMessageEncoder.getIncomingTypes());
 
     for (Class<? extends io.finn.signald.clientprotocol.RequestType<?>> r : REQUEST_TYPES) {
       if (r == ProtocolRequest.class) {

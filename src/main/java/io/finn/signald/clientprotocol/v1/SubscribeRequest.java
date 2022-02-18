@@ -28,7 +28,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -89,7 +91,17 @@ public class SubscribeRequest implements RequestType<Empty> {
       exceptions.put(UntrustedIdentityException.class, UntrustedIdentityError.class);
     }
 
+    private static final List<Class<?>> incomingTypes = new ArrayList<>();
+    static {
+      incomingTypes.add(IncomingMessage.class);
+      incomingTypes.add(ListenerState.class);
+      incomingTypes.add(WebSocketConnectionState.class);
+      incomingTypes.add(StorageChange.class);
+    }
+
     public static HashMap<Class<? extends Exception>, Class<? extends ExceptionWrapper>> getExceptions() { return exceptions; }
+
+    public static List<Class<?>> getIncomingTypes() { return incomingTypes; }
 
     IncomingMessageEncoder(Socket socket, ACI aci, String account) {
       this.socket = socket;
