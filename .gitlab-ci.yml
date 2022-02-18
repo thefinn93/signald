@@ -362,6 +362,7 @@ signald.org-branch:
     expire_in: 1 month
   rules:
     - if: '$CI_COMMIT_REF_PROTECTED == "false"'
+      when: manual
   needs:
     - "build java11 x86_64-unknown-linux-gnu"
     - project: signald/signald-go
