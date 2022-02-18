@@ -175,23 +175,32 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
           }
           change = groupOperations.createChangeMemberRole(uuid, role);
         } else if (updateAccessControl != null) {
-          AccessControl.AccessRequired access;
           if (updateAccessControl.attributes != null) {
             if (updateAccessControl.members != null || updateAccessControl.link != null) {
               throw new InvalidRequestError("only one access control may be updated at once");
             }
-            access = getAccessRequired(updateAccessControl.attributes);
+            change = groupOperations.createChangeAttributesRights(getAccessRequired(updateAccessControl.attributes));
           } else if (updateAccessControl.members != null) {
             if (updateAccessControl.link != null) {
               throw new InvalidRequestError("only one access control may be updated at once");
             }
-            access = getAccessRequired(updateAccessControl.members);
+            change = groupOperations.createChangeMembershipRights(getAccessRequired(updateAccessControl.members));
           } else if (updateAccessControl.link != null) {
-            access = getAccessRequired(updateAccessControl.link);
+            final AccessControl.AccessRequired access = getAccessRequired(updateAccessControl.link);
+            if (access != AccessControl.AccessRequired.ADMINISTRATOR && access != AccessControl.AccessRequired.ANY && access != AccessControl.AccessRequired.UNSATISFIABLE) {
+              throw new InvalidRequestError("unexpected value for key updateAccessControl.link: must be ADMINISTRATOR, ANY, or UNSATISFIABLE");
+            }
+
+            change = groupOperations.createChangeJoinByLinkRights(access);
+            if (access != AccessControl.AccessRequired.UNSATISFIABLE) {
+              if (group.getDecryptedGroup().getInviteLinkPassword().isEmpty()) {
+                logger.debug("First time enabling group links for group and password empty, generating");
+                change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
+              }
+            }
           } else {
             throw new InvalidRequestError("no known access control requested");
           }
-          change = groupOperations.createChangeMembershipRights(access);
         } else if (resetLink) {
           change = groupOperations.createModifyGroupLinkPasswordChange(GroupLinkPassword.createNew().serialize());
         } else if (updateTimer > -1) {
