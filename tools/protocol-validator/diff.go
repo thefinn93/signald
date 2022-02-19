@@ -131,7 +131,7 @@ func checkDiff() (response checkOutputs, err error) {
 		for typeName, t := range types {
 			oldType, ok := v[typeName]
 			if !ok {
-				if version == "v0" {
+				if version == "v0" || (version == "v1" && typeName == "JsonMessageEnvelope"){ // JsonMessageEnvelope shouldn't have been added in the first place and is never used
 					response.warnings = append(response.warnings, checkOutput{id: "RemovedType", String: "removed type: " + version + "." + typeName})
 				} else {
 					response.failures = append(response.failures, checkOutput{id: "RemovedType", String: "removed type: " + version + "." + typeName})
