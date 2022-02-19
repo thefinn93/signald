@@ -7,6 +7,7 @@
 
 package io.finn.signald;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.GroupCredentialsTable;
@@ -205,5 +206,11 @@ public class Groups {
     AuthCredentialResponse authCredentialResponse = credentials.getCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredentialResponse);
     return groupsV2Api.patchGroup(changeActions, authString, Optional.fromNullable(password));
+  }
+
+  public Optional<DecryptedGroupChange> decryptChange(GroupsTable.Group group, GroupChange groupChange, boolean verifySignature)
+      throws InvalidGroupStateException, InvalidProtocolBufferException, VerificationFailedException {
+    final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(group.getSecretParams());
+    return groupOperations.decryptChange(groupChange, verifySignature);
   }
 }

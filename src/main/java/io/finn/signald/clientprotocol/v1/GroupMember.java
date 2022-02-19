@@ -10,7 +10,9 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import org.signal.storageservice.protos.groups.local.DecryptedApproveMember;
 import org.signal.storageservice.protos.groups.local.DecryptedMember;
+import org.signal.storageservice.protos.groups.local.DecryptedModifyMemberRole;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -31,6 +33,16 @@ public class GroupMember {
   }
 
   public GroupMember(DecryptedPendingMember d) {
+    uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
+    role = d.getRole().name();
+  }
+
+  public GroupMember(DecryptedModifyMemberRole d) {
+    uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
+    role = d.getRole().name();
+  }
+
+  public GroupMember(DecryptedApproveMember d) {
     uuid = UuidUtil.fromByteStringOrUnknown(d.getUuid()).toString();
     role = d.getRole().name();
   }

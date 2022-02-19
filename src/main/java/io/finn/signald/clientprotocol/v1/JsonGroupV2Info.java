@@ -14,6 +14,10 @@ import io.finn.signald.Account;
 import io.finn.signald.GroupInviteLinkUrl;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.GroupsTable;
 import io.finn.signald.util.GroupsUtil;
 import io.sentry.Sentry;
@@ -27,9 +31,11 @@ import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.InvalidInputException;
+import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -63,6 +69,11 @@ public class JsonGroupV2Info {
 
   @Doc("will be set to true for incoming messages to indicate the user has been removed from the group") public boolean removed;
 
+  @JsonProperty("group_change")
+  @Doc("Represents a peer-to-peer group change done by a user. Will not be set if the group change signature fails "
+       + "verification. This is usually only set inside of incoming messages.")
+  public GroupChange groupChange;
+
   public JsonGroupV2Info() {}
 
   public JsonGroupV2Info(JsonGroupV2Info o) {
@@ -81,12 +92,25 @@ public class JsonGroupV2Info {
     revision = group.getRevision();
 
     Optional<GroupsTable.Group> localState;
+    final Account account = new Account(aci);
     try {
-      localState = new Account(aci).getGroupsTable().get(group);
+      localState = account.getGroupsTable().get(group);
     } catch (InvalidProtocolBufferException | InvalidInputException | SQLException e) {
       logger.error("error fetching group state from local db");
       Sentry.captureException(e);
       return;
+    }
+
+    if (localState.isPresent() && group.hasSignedGroupChange()) {
+      try {
+        groupChange = new GroupChange(Common.getGroups(account), localState.get(), group.getSignedGroupChange());
+      } catch (InvalidGroupStateException | InternalError | ServerNotFoundError | NoSuchAccountError | InvalidProxyError | IOException e) {
+        logger.error("error decrypting and serializing signed group change");
+        Sentry.captureException(e);
+      } catch (VerificationFailedException e) {
+        logger.warn("unable to verify supplied group change");
+        Sentry.captureException(e);
+      }
     }
 
     removed = !localState.isPresent();
@@ -155,6 +179,9 @@ public class JsonGroupV2Info {
     } else {
       requestingMembers = null;
     }
+
+    // note: this doesn't make a copy
+    groupChange = other.groupChange;
   }
 
   public JsonGroupV2Info sanitized() {
