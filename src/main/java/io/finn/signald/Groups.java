@@ -213,4 +213,15 @@ public class Groups {
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(group.getSecretParams());
     return groupOperations.decryptChange(groupChange, verifySignature);
   }
+
+  public GroupHistoryPage getGroupHistoryPage(GroupsTable.Group group, int fromRevision, boolean includeFirstState)
+      throws InvalidGroupStateException, IOException, VerificationFailedException, InvalidInputException, SQLException {
+    final GroupSecretParams groupSecretParams = group.getSecretParams();
+
+    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
+    AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
+
+    return groupsV2Api.getGroupHistoryPage(groupSecretParams, fromRevision, authString, includeFirstState);
+  }
 }

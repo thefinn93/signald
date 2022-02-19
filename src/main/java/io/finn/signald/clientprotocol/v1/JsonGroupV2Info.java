@@ -103,7 +103,7 @@ public class JsonGroupV2Info {
 
     if (localState.isPresent() && group.hasSignedGroupChange()) {
       try {
-        groupChange = new GroupChange(Common.getGroups(account), localState.get(), group.getSignedGroupChange());
+        groupChange = GroupChange.fromBytes(Common.getGroups(account), localState.get(), group.getSignedGroupChange());
       } catch (InvalidGroupStateException | InternalError | ServerNotFoundError | NoSuchAccountError | InvalidProxyError | IOException e) {
         logger.error("error decrypting and serializing signed group change");
         Sentry.captureException(e);

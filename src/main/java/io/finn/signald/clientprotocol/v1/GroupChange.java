@@ -58,15 +58,18 @@ public class GroupChange {
   @Doc("Whether this change affected the announcement group setting. Possible values are UNKNOWN, ENABLED or DISABLED")
   public String newIsAnnouncementGroup;
 
-  public GroupChange(Groups groups, GroupsTable.Group group, byte[] signedGroupChange) throws InvalidGroupStateException, IOException, VerificationFailedException {
+  public static GroupChange fromBytes(Groups groups, GroupsTable.Group group, byte[] signedGroupChange)
+      throws InvalidGroupStateException, IOException, VerificationFailedException {
     final org.signal.storageservice.protos.groups.GroupChange protoGroupChange = org.signal.storageservice.protos.groups.GroupChange.parseFrom(signedGroupChange);
 
     final Optional<DecryptedGroupChange> changeOptional = groups.decryptChange(group, protoGroupChange, true);
     if (!changeOptional.isPresent()) {
       throw new IOException("failed to get decrypted group change");
     }
-    final DecryptedGroupChange change = changeOptional.get();
+    return new GroupChange(changeOptional.get());
+  }
 
+  public GroupChange(DecryptedGroupChange change) {
     // The order of these fields correspond to the upstream protobuf order for DecryptedGroupChange.
     editor = new JsonAddress(UuidUtil.fromByteStringOrUnknown(change.getEditor()));
     revision = change.getRevision();

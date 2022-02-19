@@ -63,7 +63,8 @@ public class RequestUtil {
       RefuseMembershipRequest.class,                                                                                      // v1        refuse_membership
       SubmitChallengeRequest.class,                                                                                       // v1        submit_challenge
       IsIdentifierRegisteredRequest.class,                                                                                // v1        is_identifier_registered
-      WaitForScanRequest.class                                                                                            // v1        wait_for_scan
+      WaitForScanRequest.class,                                                                                           // v1        wait_for_scan
+      GetGroupRevisionPagesRequest.class                                                                                  // v1        get_group_revision_pages
   );
 
   public static String getVersion(Class<?> t) {
