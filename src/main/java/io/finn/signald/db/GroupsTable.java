@@ -16,8 +16,13 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
+import io.finn.signald.util.SenderKeyUtil;
 import io.sentry.Sentry;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,6 +33,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
+import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedMember;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.signal.storageservice.protos.groups.local.DecryptedRequestingMember;
@@ -36,6 +42,8 @@ import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.groupsv2.GroupChangeReconstruct;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -66,6 +74,7 @@ public class GroupsTable {
   public Optional<Group> get(SignalServiceGroupV2 group) throws InvalidProtocolBufferException, InvalidInputException, SQLException {
     return get(GroupSecretParams.deriveFromMasterKey(group.getMasterKey()).getPublicParams().getGroupIdentifier());
   }
+
   public Optional<Group> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
     var query = "SELECT " + ROWID + ", * FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + GROUP_ID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
@@ -96,19 +105,62 @@ public class GroupsTable {
     }
   }
 
-  public void upsert(GroupMasterKey masterKey, int revision, DecryptedGroup decryptedGroup) throws SQLException { upsert(masterKey, revision, decryptedGroup, null, -1); }
+  public void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+    upsert(masterKey, decryptedGroup, null, -1);
+  }
 
-  public void upsert(GroupMasterKey masterKey, int revision, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch) throws SQLException {
+  public void upsert(io.finn.signald.storage.Group groupFromLegacyStorage) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+    upsert(groupFromLegacyStorage.getMasterKey(), groupFromLegacyStorage.getGroup(), groupFromLegacyStorage.getDistributionId(), groupFromLegacyStorage.getLastAvatarFetch());
+  }
+
+  private void upsert(GroupMasterKey masterKey, DecryptedGroup decryptedGroup, DistributionId distributionId, int lastAvatarFetch)
+      throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+    final GroupIdentifier groupId = GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier();
+
+    Optional<Group> existingGroup;
+    try {
+      existingGroup = get(groupId);
+    } catch (InvalidInputException | InvalidProtocolBufferException e) {
+      logger.error("error parsing group " + Base64.encodeBytes(groupId.serialize()) + " from database", e);
+      Sentry.captureException(e);
+      throw e;
+    }
+
+    // There doesn't seem to be a use case for changing a group's distributionId (Android app doesn't do it).
+    // Always preserve the existing one if available, or create a new one. We don't use getOrCreateDistributionId,
+    // because that results in a db insert; we're going to do a db update very soon anyway.
+    final DistributionId distributionIdToSave;
+    if (existingGroup.isPresent() && existingGroup.get().getDistributionId() != null) {
+      distributionIdToSave = existingGroup.get().getDistributionId();
+    } else {
+      distributionIdToSave = distributionId != null ? distributionId : DistributionId.create();
+    }
+
+    if (existingGroup.isPresent()) {
+      DecryptedGroupChange change = GroupChangeReconstruct.reconstructGroupChange(existingGroup.get().getDecryptedGroup(), decryptedGroup);
+      List<UUID> removed = DecryptedGroupUtil.removedMembersUuidList(change);
+
+      if (removed.size() > 0) {
+        logger.info(removed.size() + " members were removed from group " + groupId + ". Rotating the DistributionId " + distributionIdToSave);
+        try {
+          SenderKeyUtil.rotateOurKey(new Account(aci), distributionIdToSave);
+        } catch (NoSuchAccountException | ServerNotFoundException | IOException | InvalidProxyException e) {
+          logger.error("error rotating sender key for DistributionId " + distributionIdToSave, e);
+          Sentry.captureException(e);
+        }
+      }
+    }
+
     var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + GROUP_ID + "," + MASTER_KEY + "," + REVISION + "," + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "," +
                 GROUP_INFO + ") VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (" + ACCOUNT_UUID + "," + GROUP_ID + ") DO UPDATE SET " + REVISION + "=excluded." + REVISION + "," +
                 DISTRIBUTION_ID + "=excluded." + DISTRIBUTION_ID + "," + LAST_AVATAR_FETCH + "=excluded." + LAST_AVATAR_FETCH + "," + GROUP_INFO + "=excluded." + GROUP_INFO;
     try (var statement = Database.getConn().prepareStatement(query)) {
       int i = 1;
       statement.setString(i++, aci.toString());
-      statement.setBytes(i++, GroupSecretParams.deriveFromMasterKey(masterKey).getPublicParams().getGroupIdentifier().serialize());
+      statement.setBytes(i++, groupId.serialize());
       statement.setBytes(i++, masterKey.serialize());
-      statement.setInt(i++, revision);
-      statement.setString(i++, distributionId == null ? null : distributionId.toString());
+      statement.setInt(i++, decryptedGroup.getRevision());
+      statement.setString(i++, distributionIdToSave.toString());
       statement.setInt(i++, lastAvatarFetch);
       statement.setBytes(i++, decryptedGroup.toByteArray());
       Database.executeUpdate(TABLE_NAME + "_upsert", statement);
@@ -278,5 +330,7 @@ public class GroupsTable {
       }
       return distributionId;
     }
+
+    public DistributionId getDistributionId() { return distributionId; }
   }
 }

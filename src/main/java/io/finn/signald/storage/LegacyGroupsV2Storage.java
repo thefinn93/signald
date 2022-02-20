@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.Account;
 import io.finn.signald.db.GroupCredentialsTable;
 import io.finn.signald.db.GroupsTable;
@@ -41,7 +42,7 @@ public class LegacyGroupsV2Storage {
     groups = new ArrayList<>();
   }
 
-  public boolean migrateToDB(Account account) throws SQLException {
+  public boolean migrateToDB(Account account) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
     boolean needsSave = false;
 
     if (credentials != null) {
@@ -58,7 +59,7 @@ public class LegacyGroupsV2Storage {
     if (groups != null) {
       GroupsTable groupsTable = account.getGroupsTable();
       for (Group g : groups) {
-        groupsTable.upsert(g.getMasterKey(), g.revision, g.getGroup(), g.getDistributionId(), g.getLastAvatarFetch());
+        groupsTable.upsert(g);
       }
       groups = null;
       needsSave = true;

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -74,7 +75,7 @@ public class AccountsTable {
     }
   }
 
-  public static void importFromJSON(File f) throws IOException, SQLException {
+  public static void importFromJSON(File f) throws IOException, SQLException, InvalidInputException {
     AccountData accountData = AccountData.load(f);
     if (accountData.getUUID() == null) {
       logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());

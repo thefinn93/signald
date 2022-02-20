@@ -89,7 +89,7 @@ public class Groups {
       GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
       try {
         DecryptedGroup decryptedGroup = groupsV2Api.getGroup(groupSecretParams, authorization);
-        groupsTable.upsert(groupSecretParams.getMasterKey(), decryptedGroup.getRevision(), decryptedGroup);
+        groupsTable.upsert(groupSecretParams.getMasterKey(), decryptedGroup);
         group = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
       } catch (NotInGroupException e) {
         if (group.isPresent()) {

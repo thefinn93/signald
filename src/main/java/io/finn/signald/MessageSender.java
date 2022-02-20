@@ -11,6 +11,7 @@ import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.util.SenderKeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -126,7 +127,7 @@ public class MessageSender {
 
       if (keyCreateTime != -1 && keyAge > TimeUnit.DAYS.toMillis(BuildConfig.SENDER_KEY_MAX_AGE_DAYS)) {
         logger.debug("DistributionId {} was created at {} and is {} ms old (~{} days). Rotating.", distributionId, keyCreateTime, keyAge, TimeUnit.MILLISECONDS.toDays(keyAge));
-        rotateOurKey(distributionId);
+        SenderKeyUtil.rotateOurKey(account, distributionId);
       }
 
       List<SignalServiceAddress> recipientAddresses = senderKeyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
@@ -139,11 +140,11 @@ public class MessageSender {
         account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       } catch (NoSessionException ignored) {
         logger.debug("no session, falling back to legacy send");
-        rotateOurKey(distributionId);
+        SenderKeyUtil.rotateOurKey(account, distributionId);
         legacyTargets.addAll(senderKeyTargets);
       } catch (InvalidKeyException ignored) {
         logger.debug("invalid key. Falling back to legacy sends");
-        rotateOurKey(distributionId);
+        SenderKeyUtil.rotateOurKey(account, distributionId);
         legacyTargets.addAll(senderKeyTargets);
       } catch (InvalidUnidentifiedAccessHeaderException ignored) {
         logger.debug("Someone had a bad UD header. Falling back to legacy sends.");
@@ -181,16 +182,6 @@ public class MessageSender {
       }
     }
     return results;
-  }
-
-  private void rotateOurKey(DistributionId distributionId) throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException {
-    SessionLock lock = account.getSignalDependencies().getSessionLock();
-    SenderKeysTable senderKeysTable = account.getProtocolStore().getSenderKeys();
-    SenderKeySharedTable senderKeySharedTable = account.getProtocolStore().getSenderKeyShared();
-    try (SignalSessionLock.Lock ignored = lock.acquire()) {
-      senderKeysTable.deleteAllFor(account.getACI().toString(), distributionId);
-      senderKeySharedTable.deleteAllFor(distributionId);
-    }
   }
 
   private long getCreateTimeForOurKey(DistributionId distributionId) throws SQLException {
