@@ -214,10 +214,8 @@ public class Groups {
     return groupOperations.decryptChange(groupChange, verifySignature);
   }
 
-  public GroupHistoryPage getGroupHistoryPage(GroupsTable.Group group, int fromRevision, boolean includeFirstState)
+  public GroupHistoryPage getGroupHistoryPage(GroupSecretParams groupSecretParams, int fromRevision, boolean includeFirstState)
       throws InvalidGroupStateException, IOException, VerificationFailedException, InvalidInputException, SQLException {
-    final GroupSecretParams groupSecretParams = group.getSecretParams();
-
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);

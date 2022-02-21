@@ -102,6 +102,7 @@ public class AccountData {
   private void initialize() throws IOException, SQLException {
     if (address != null && address.uuid != null) {
       self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      profileCredentialStore.initialize(self);
     }
   }
 
@@ -142,6 +143,7 @@ public class AccountData {
       address = new JsonAddress(legacyUsername);
     } else if (address.uuid != null && self == null) {
       self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      profileCredentialStore.initialize(self);
       ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
       if (profileKeyEntry != null) {
         if (profileKeyEntry.getServiceAddress().getAci() == null && address.uuid != null) {
@@ -256,6 +258,7 @@ public class AccountData {
     if (address != null && address.uuid != null) {
       if (self == null) {
         self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+        profileCredentialStore.initialize(self);
       }
       ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
       if (profileKeyEntry == null) {

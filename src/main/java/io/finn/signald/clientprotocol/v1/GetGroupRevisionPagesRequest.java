@@ -42,7 +42,7 @@ public class GetGroupRevisionPagesRequest implements RequestType<GroupHistoryPag
     final Groups groups = Common.getGroups(acc);
     final org.whispersystems.signalservice.api.groupsv2.GroupHistoryPage page;
     try {
-      page = groups.getGroupHistoryPage(group, fromRevision, includeFirstRevision);
+      page = groups.getGroupHistoryPage(group.getSecretParams(), fromRevision, includeFirstRevision);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
     } catch (RateLimitException e) {
