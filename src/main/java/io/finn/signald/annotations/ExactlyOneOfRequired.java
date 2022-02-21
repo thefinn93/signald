@@ -17,4 +17,5 @@ public @interface ExactlyOneOfRequired {
 
   String RECIPIENT = "recipient";
   String GROUP_MODIFICATION = "group-modification";
+  String SYNC_REQUEST = "sync-request";
 }

@@ -14,8 +14,12 @@ public class JsonViewOnceOpenMessage {
   public JsonAddress sender;
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
 
+  private JsonViewOnceOpenMessage() {}
+
   public JsonViewOnceOpenMessage(ViewOnceOpenMessage message) {
     sender = new JsonAddress(message.getSender());
     timestamp = message.getTimestamp();
   }
+
+  public ViewOnceOpenMessage toLibSignalClass() { return new ViewOnceOpenMessage(sender.getSignalServiceAddress(), timestamp); }
 }

@@ -64,7 +64,8 @@ public class RequestUtil {
       SubmitChallengeRequest.class,                                                                                       // v1        submit_challenge
       IsIdentifierRegisteredRequest.class,                                                                                // v1        is_identifier_registered
       WaitForScanRequest.class,                                                                                           // v1        wait_for_scan
-      GetGroupRevisionPagesRequest.class                                                                                  // v1        get_group_revision_pages
+      GetGroupRevisionPagesRequest.class,                                                                                 // v1        get_group_revision_pages
+      SendSyncMessageRequest.class                                                                                        // v1        send_sync_message
   );
 
   public static String getVersion(Class<?> t) {
