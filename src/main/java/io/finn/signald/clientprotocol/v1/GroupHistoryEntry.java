@@ -8,7 +8,7 @@ public class GroupHistoryEntry {
   public GroupChange change;
 
   public GroupHistoryEntry(GroupsTable.Group dbGroup, DecryptedGroupHistoryEntry entry) {
-    group = entry.getGroup().transform((protoGroup) -> new JsonGroupV2Info(dbGroup.getSignalServiceGroupV2(), protoGroup).sanitized()).orNull();
+    group = entry.getGroup().transform((protoGroup) -> new JsonGroupV2Info(dbGroup.getMasterKey(), protoGroup).sanitized()).orNull();
     change = entry.getChange().transform(GroupChange::new).orNull();
   }
 }

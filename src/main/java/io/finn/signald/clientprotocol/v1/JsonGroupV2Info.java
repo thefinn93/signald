@@ -20,6 +20,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.GroupsTable;
 import io.finn.signald.util.GroupsUtil;
+import io.reactivex.rxjava3.annotations.NonNull;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -116,31 +117,48 @@ public class JsonGroupV2Info {
     removed = !localState.isPresent();
   }
 
+  public JsonGroupV2Info(GroupMasterKey masterKey, @NonNull DecryptedGroup decryptedGroup) {
+    this.masterKey = Base64.encodeBytes(masterKey.serialize());
+    id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize());
+    revision = decryptedGroup.getRevision();
+    initializeWithDecryptedGroup(masterKey, decryptedGroup);
+  }
+
   public JsonGroupV2Info(SignalServiceGroupV2 signalServiceGroupV2, DecryptedGroup decryptedGroup) {
     masterKey = Base64.encodeBytes(signalServiceGroupV2.getMasterKey().serialize());
     id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(signalServiceGroupV2.getMasterKey()).serialize());
     revision = signalServiceGroupV2.getRevision();
 
     if (decryptedGroup != null) {
-      title = decryptedGroup.getTitle();
-      description = decryptedGroup.getDescription();
-      timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
-      members = new ArrayList<>();
-      members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-      pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
-      requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
-
-      AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
-      if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
-        inviteLink = GroupInviteLinkUrl.forGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup).getUrl();
+      if (signalServiceGroupV2.getRevision() != decryptedGroup.getRevision()) {
+        logger.warn("group revision mismatch for group " + id + "("
+                    + "signalServiceGroupV2: " + signalServiceGroupV2.getRevision() + ", "
+                    + "decryptedGroup: " + decryptedGroup.getRevision());
       }
 
-      accessControl = new GroupAccessControl(decryptedGroup.getAccessControl());
-
-      memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
-      pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
-      announcements = decryptedGroup.getIsAnnouncementGroup().name();
+      initializeWithDecryptedGroup(signalServiceGroupV2.getMasterKey(), decryptedGroup);
     }
+  }
+
+  private void initializeWithDecryptedGroup(@NonNull GroupMasterKey masterKey, @NonNull DecryptedGroup decryptedGroup) {
+    title = decryptedGroup.getTitle();
+    description = decryptedGroup.getDescription();
+    timer = decryptedGroup.getDisappearingMessagesTimer().getDuration();
+    members = new ArrayList<>();
+    members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
+    pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
+    requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
+
+    AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
+    if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
+      inviteLink = GroupInviteLinkUrl.forGroup(masterKey, decryptedGroup).getUrl();
+    }
+
+    accessControl = new GroupAccessControl(decryptedGroup.getAccessControl());
+
+    memberDetail = decryptedGroup.getMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+    pendingMemberDetail = decryptedGroup.getPendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+    announcements = decryptedGroup.getIsAnnouncementGroup().name();
   }
 
   public void update(JsonGroupV2Info other) {
