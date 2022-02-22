@@ -141,7 +141,7 @@ public class GroupsTable {
       List<UUID> removed = DecryptedGroupUtil.removedMembersUuidList(change);
 
       if (removed.size() > 0) {
-        logger.info(removed.size() + " members were removed from group " + groupId + ". Rotating the DistributionId " + distributionIdToSave);
+        logger.info(removed.size() + " members were removed from group " + existingGroup.get().getIdString() + ". Rotating the DistributionId " + distributionIdToSave);
         try {
           SenderKeyUtil.rotateOurKey(new Account(aci), distributionIdToSave);
         } catch (NoSuchAccountException | ServerNotFoundException | IOException | InvalidProxyException e) {
