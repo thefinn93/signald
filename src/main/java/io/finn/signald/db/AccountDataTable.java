@@ -7,6 +7,7 @@
 
 package io.finn.signald.db;
 
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
@@ -52,47 +53,23 @@ public class AccountDataTable {
   }
 
   public static int getInt(ACI aci, Key key) throws SQLException {
-    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?";
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, key.name());
-      statement.setString(2, aci.toString());
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_int", statement)) {
-        return rows.next() ? rows.getInt(VALUE) : -1;
-      }
-    }
+    var bytes = getBytes(aci, key);
+    return bytes != null ? ByteBuffer.wrap(bytes).getInt() : -1;
   }
 
   public static long getLong(ACI aci, Key key) throws SQLException {
-    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?";
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, key.name());
-      statement.setString(2, aci.toString());
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_long", statement)) {
-        return rows.next() ? rows.getLong(VALUE) : -1;
-      }
-    }
+    var bytes = getBytes(aci, key);
+    return bytes != null ? ByteBuffer.wrap(bytes).getLong() : -1;
   }
 
   public static String getString(ACI aci, Key key) throws SQLException {
-    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?";
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, key.name());
-      statement.setString(2, aci.toString());
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_string", statement)) {
-        return rows.next() ? rows.getString(VALUE) : null;
-      }
-    }
+    var bytes = getBytes(aci, key);
+    return bytes != null ? new String(bytes) : null;
   }
 
   public static Boolean getBoolean(ACI aci, Key key) throws SQLException {
-    var query = "SELECT " + VALUE + " FROM " + TABLE_NAME + " WHERE " + KEY + " = ? AND " + ACCOUNT_UUID + " = ?";
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, key.name());
-      statement.setString(2, aci.toString());
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_boolean", statement)) {
-        return (rows.next()) ? rows.getBoolean(VALUE) : null;
-      }
-    }
+    var val = getInt(aci, key);
+    return val > -1 ? (val == 1) : null;
   }
 
   public static void set(ACI aci, Key key, byte[] value) throws SQLException {
@@ -106,49 +83,13 @@ public class AccountDataTable {
     }
   }
 
-  public static void set(ACI aci, Key key, int value) throws SQLException {
-    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," + KEY + ") DO UPDATE SET " +
-                VALUE + " = excluded." + VALUE;
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, aci.toString());
-      statement.setString(2, key.name());
-      statement.setInt(3, value);
-      Database.executeUpdate(TABLE_NAME + "_set_int", statement);
-    }
-  }
+  public static void set(ACI aci, Key key, int value) throws SQLException { set(aci, key, ByteBuffer.allocate(4).putInt(value).array()); }
 
-  public static void set(ACI aci, Key key, long value) throws SQLException {
-    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," + KEY + ") DO UPDATE SET " +
-                VALUE + " = excluded." + VALUE;
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, aci.toString());
-      statement.setString(2, key.name());
-      statement.setLong(3, value);
-      Database.executeUpdate(TABLE_NAME + "_set_long", statement);
-    }
-  }
+  public static void set(ACI aci, Key key, long value) throws SQLException { set(aci, key, ByteBuffer.allocate(8).putLong(value).array()); }
 
-  public static void set(ACI aci, Key key, String value) throws SQLException {
-    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," + KEY + ") DO UPDATE SET " +
-                VALUE + " = excluded." + VALUE;
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, aci.toString());
-      statement.setString(2, key.name());
-      statement.setString(3, value);
-      Database.executeUpdate(TABLE_NAME + "_set_string", statement);
-    }
-  }
+  public static void set(ACI aci, Key key, String value) throws SQLException { set(aci, key, value != null ? value.getBytes() : new byte[] {}); }
 
-  public static void set(ACI aci, Key key, boolean value) throws SQLException {
-    var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + KEY + "," + VALUE + ") VALUES (?, ?, ?) ON CONFLICT(" + ACCOUNT_UUID + "," + KEY + ") DO UPDATE SET " +
-                VALUE + " = excluded." + VALUE;
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, aci.toString());
-      statement.setString(2, key.name());
-      statement.setBoolean(3, value);
-      Database.executeUpdate(TABLE_NAME + "_set_boolean", statement);
-    }
-  }
+  public static void set(ACI aci, Key key, boolean value) throws SQLException { set(aci, key, value ? 1 : 0); }
 
   public static void deleteAccount(UUID uuid) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
