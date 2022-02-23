@@ -120,8 +120,8 @@ public class GroupChange {
     if (!change.getNewRequestingMembersList().isEmpty()) {
       newRequestingMembers = change.getNewRequestingMembersList().stream().map(GroupRequestingMember::new).collect(Collectors.toList());
     }
-    if (!change.getDeleteMembersList().isEmpty()) {
-      deleteRequestingMembers = change.getDeleteMembersList().stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
+    if (!change.getDeleteRequestingMembersList().isEmpty()) {
+      deleteRequestingMembers = change.getDeleteRequestingMembersList().stream().map(UuidUtil::fromByteStringOrUnknown).map(JsonAddress::new).collect(Collectors.toList());
     }
     if (!change.getPromoteRequestingMembersList().isEmpty()) {
       promoteRequestingMembers = change.getPromoteRequestingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
