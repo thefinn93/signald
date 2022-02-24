@@ -32,7 +32,7 @@ public class ReactRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InternalError, InvalidRecipientError,
-                                                  UnknownGroupError, InvalidRequestError, RateLimitError, UnregisteredUserError {
+                                                  UnknownGroupError, InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(username);
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();

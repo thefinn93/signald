@@ -55,8 +55,9 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   @Doc("the message expiration timer") public int timer;
 
   @Override
-  public JsonGroupV2Info run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError,
-                                                     InvalidRequestError, GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError {
+  public JsonGroupV2Info run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
+             GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     RecipientsTable recipientsTable = m.getRecipientsTable();
     List<Recipient> recipients = new ArrayList<>();

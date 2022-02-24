@@ -45,7 +45,8 @@ public class MarkReadRequest implements RequestType<Empty> {
   public Long when;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError, UnregisteredUserError {
+  public Empty run(Request request)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError, UnregisteredUserError, AuthorizationFailedError {
     if (when == null) {
       when = System.currentTimeMillis();
     }

@@ -45,7 +45,7 @@ public class TypingRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, InvalidGroupError,
-                                           UntrustedIdentityError, UnknownGroupError, InvalidRequestError, UnregisteredUserError {
+                                           UntrustedIdentityError, UnknownGroupError, InvalidRequestError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

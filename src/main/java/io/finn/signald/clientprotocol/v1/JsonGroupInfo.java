@@ -8,14 +8,11 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.storage.GroupInfo;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -29,7 +26,7 @@ public class JsonGroupInfo {
   public String type;
   public long avatarId;
 
-  JsonGroupInfo(SignalServiceGroup groupInfo, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  JsonGroupInfo(SignalServiceGroup groupInfo, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     this.groupId = Base64.encodeBytes(groupInfo.getGroupId());
     if (groupInfo.getMembers().isPresent()) {
       this.members = new ArrayList<>();

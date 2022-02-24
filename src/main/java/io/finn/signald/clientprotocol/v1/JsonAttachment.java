@@ -9,10 +9,8 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -85,7 +83,7 @@ public class JsonAttachment {
     }
   }
 
-  public JsonAttachment(SignalServiceAttachment attachment, ACI aci) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+  public JsonAttachment(SignalServiceAttachment attachment, ACI aci) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
     this(attachment);
     if (attachment.isPointer()) {
       File file = Common.getManager(aci).getAttachmentFile(id);

@@ -119,7 +119,7 @@ public class SubscribeRequest implements RequestType<Empty> {
       try {
         IncomingMessage message = new IncomingMessage(envelope, content, aci);
         broadcast(new ClientMessageWrapper(account, message));
-      } catch (NoSuchAccountError | ServerNotFoundError | InvalidProxyError | InternalError e) {
+      } catch (NoSuchAccountError | ServerNotFoundError | InvalidProxyError | InternalError | AuthorizationFailedError e) {
         logger.warn("Exception while broadcasting incoming message: " + e);
       }
     }

@@ -24,7 +24,7 @@ public class ListGroupsRequest implements RequestType<GroupList> {
   @Required public String account;
 
   @Override
-  public GroupList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError {
+  public GroupList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError {
     GroupList groups = new GroupList();
     Account a = Common.getAccount(account);
 

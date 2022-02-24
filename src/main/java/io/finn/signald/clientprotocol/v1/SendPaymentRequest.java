@@ -34,7 +34,7 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError,
-                                                  UnknownGroupError, NoSendPermissionError, InvalidRequestError, RateLimitError, UnregisteredUserError {
+                                                  UnknownGroupError, NoSendPermissionError, InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
 
     Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);

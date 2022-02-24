@@ -29,7 +29,7 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LINKING_URI) @Doc("the sgnl://linkdevice uri provided (typically in qr code form) by the new device") @Required public String uri;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InvalidRequestError, InternalError {
+  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InvalidRequestError, InternalError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     try {
       m.addDeviceLink(new URI(uri));

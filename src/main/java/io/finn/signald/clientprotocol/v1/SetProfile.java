@@ -58,7 +58,8 @@ public class SetProfile implements RequestType<Empty> {
   private static final Logger logger = LogManager.getLogger();
 
   @Override
-  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRequestError {
+  public Empty run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRequestError, AuthorizationFailedError {
 
     Manager m = Common.getManager(account);
 

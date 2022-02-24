@@ -14,10 +14,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.storage.ContactStore;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -32,7 +30,7 @@ public class UpdateContactRequest implements RequestType<Profile> {
   @JsonProperty("inbox_position") public Integer inboxPosition;
 
   @Override
-  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     ContactStore.ContactInfo c = new ContactStore.ContactInfo();
     c.address = address;
     c.name = name;

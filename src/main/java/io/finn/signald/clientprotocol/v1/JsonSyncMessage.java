@@ -8,13 +8,10 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.JsonStickerPackOperationMessage;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.push.ACI;
 
@@ -33,7 +30,7 @@ public class JsonSyncMessage {
   public String fetchType;
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
-  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
+  public JsonSyncMessage(SignalServiceSyncMessage syncMessage, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
     if (syncMessage.getSent().isPresent()) {
       this.sent = new JsonSentTranscriptMessage(syncMessage.getSent().get(), aci);
     }

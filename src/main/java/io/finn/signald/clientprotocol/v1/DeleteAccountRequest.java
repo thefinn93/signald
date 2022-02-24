@@ -15,10 +15,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.IOException;
 import java.sql.SQLException;
 
@@ -31,7 +29,7 @@ public class DeleteAccountRequest implements RequestType<Empty> {
   @Doc("delete account information from the server as well (default false)") public boolean server = false;
 
   @Override
-  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
     Manager m = Common.getManager(account, !server);
     try {
       m.deleteAccount(server);

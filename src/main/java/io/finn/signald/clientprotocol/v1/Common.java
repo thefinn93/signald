@@ -60,9 +60,11 @@ public class Common {
   private static final Histogram messageSendTime =
       Histogram.build().name(BuildConfig.NAME + "_message_send_time").help("Time to send messages in seconds").labelNames("account_uuid").register();
 
-  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError { return getManager(identifier, false); }
+  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+    return getManager(identifier, false);
+  }
 
-  static Manager getManager(String identifier, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  static Manager getManager(String identifier, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     if (identifier.startsWith("+")) {
       ACI aci;
       try {
@@ -78,9 +80,11 @@ public class Common {
     }
   }
 
-  public static Manager getManager(ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError { return getManager(aci, false); }
+  public static Manager getManager(ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+    return getManager(aci, false);
+  }
 
-  public static Manager getManager(ACI aci, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  public static Manager getManager(ACI aci, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     Manager m;
     try {
       m = Manager.get(aci, offline);
@@ -90,6 +94,8 @@ public class Common {
       throw new InvalidProxyError(e);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
       throw new ServerNotFoundError(e);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (IOException | SQLException | InvalidKeyException e) {
       throw new InternalError("error getting manager", e);
     }
@@ -294,7 +300,7 @@ public class Common {
   }
 
   public static List<SendMessageResult> updateGroup(Account account, GroupsTable.Group group, GroupChange.Actions.Builder change)
-      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError {
+      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError {
     try {
       return updateGroup(account, group, change, group.getMembers());
     } catch (IOException | SQLException e) {
@@ -303,7 +309,7 @@ public class Common {
   }
 
   public static List<SendMessageResult> updateGroup(Account account, GroupsTable.Group group, GroupChange.Actions.Builder change, List<Recipient> recipients)
-      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError {
+      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError {
     Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> updateOutput;
     try {
       updateOutput = getGroups(account).updateGroup(group, change);

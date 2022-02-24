@@ -52,8 +52,9 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("The signal.group URL") @Required public String uri;
 
   @Override
-  public JsonGroupJoinInfo run(Request request) throws InvalidRequestError, InvalidInviteURIError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError,
-                                                       OwnProfileKeyDoesNotExistError, GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError {
+  public JsonGroupJoinInfo run(Request request)
+      throws InvalidRequestError, InvalidInviteURIError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError,
+             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError {
     Account a = Common.getAccount(account);
     Groups groups = Common.getGroups(a);
 

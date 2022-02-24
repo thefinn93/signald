@@ -30,7 +30,7 @@ public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
   @Doc("address to get keys for") @Required public JsonAddress address;
 
   @Override
-  public IdentityKeyList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnregisteredUserError {
+  public IdentityKeyList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
     List<IdentityKeysTable.IdentityKeyRow> identities = null;

@@ -8,13 +8,10 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -27,7 +24,7 @@ public class JsonSentTranscriptMessage {
   public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }

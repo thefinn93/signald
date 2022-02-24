@@ -9,15 +9,12 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.AccountsTable;
 import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -41,7 +38,8 @@ public class IncomingMessage {
   @JsonProperty("typing_message") public TypingMessage typingMessage;
   @JsonProperty("server_guid") public String serverGuid;
 
-  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci) throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError {
+  public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci)
+      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
     try {
       account = AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {
