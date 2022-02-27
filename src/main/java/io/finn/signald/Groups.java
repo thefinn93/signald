@@ -159,6 +159,10 @@ public class Groups {
         logger.error("failed to verify incoming P2P group change");
         Sentry.captureException(e);
         signedGroupChange = Optional.absent();
+      } catch (InvalidProtocolBufferException e) {
+        logger.error("failed to parse incoming P2P group change");
+        Sentry.captureException(e);
+        signedGroupChange = Optional.absent();
       }
     } else {
       signedGroupChange = Optional.absent();
@@ -189,7 +193,7 @@ public class Groups {
       inputGroupState = getFullMemberHistoryPage(groupSecretParams, localState, logsNeededFrom, includeFirstState);
     }
 
-    ProfileKeySet profileKeys = new ProfileKeySet();
+    final ProfileKeySet profileKeys = new ProfileKeySet();
     boolean hasMore = true;
     while (hasMore) {
       for (ServerGroupLogEntry entry : inputGroupState.getServerHistory()) {
