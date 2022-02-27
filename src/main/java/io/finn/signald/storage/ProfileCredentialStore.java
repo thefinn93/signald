@@ -122,6 +122,13 @@ public class ProfileCredentialStore {
     return newEntry;
   }
 
+  /**
+   * Persists the given profile key set into the credential store. This method respects authoritative profile keys.
+   *
+   * @param profileKeySet A set of profile keys to persist, typically from an incoming group update.
+   * @return The profile entries that were actually updated. Only authoritative profile keys can be used to update
+   * profile keys for users that we already have, so this may be less than the actual number of keys in the input.
+   */
   public Set<ProfileAndCredentialEntry> persistProfileKeySet(ProfileKeySet profileKeySet) {
     final Map<ACI, ProfileKey> profileKeys = profileKeySet.getProfileKeys();
     final Map<ACI, ProfileKey> authoritativeProfileKeys = profileKeySet.getAuthoritativeProfileKeys();

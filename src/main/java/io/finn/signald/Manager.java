@@ -6,23 +6,62 @@
  */
 package io.finn.signald;
 
-import static java.nio.file.attribute.PosixFilePermission.*;
+import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE;
+import static java.nio.file.attribute.PosixFilePermission.GROUP_READ;
+import static java.nio.file.attribute.PosixFilePermission.GROUP_WRITE;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.db.*;
-import io.finn.signald.exceptions.*;
-import io.finn.signald.jobs.*;
-import io.finn.signald.storage.*;
+import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.DatabaseAccountDataStore;
+import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.MessageQueueTable;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.StoredEnvelope;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.InvalidRecipientException;
+import io.finn.signald.exceptions.NoSendPermissionException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.DownloadStickerJob;
+import io.finn.signald.jobs.Job;
+import io.finn.signald.jobs.RefreshPreKeysJob;
+import io.finn.signald.jobs.RefreshProfileJob;
+import io.finn.signald.jobs.ResetSessionJob;
+import io.finn.signald.jobs.SendContactsSyncJob;
+import io.finn.signald.jobs.SendDeliveryReceiptJob;
+import io.finn.signald.jobs.SendGroupSyncJob;
+import io.finn.signald.jobs.SendLegacyGroupUpdateJob;
+import io.finn.signald.jobs.SendRetryMessageRequestJob;
+import io.finn.signald.jobs.SyncStorageDataJob;
+import io.finn.signald.storage.AccountData;
+import io.finn.signald.storage.ContactStore;
+import io.finn.signald.storage.GroupInfo;
+import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.storage.SignalProfile;
 import io.finn.signald.util.AttachmentUtil;
-import io.finn.signald.util.GroupProtoUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
 import io.prometheus.client.Histogram;
-import io.reactivex.rxjava3.annotations.NonNull;
 import io.sentry.Sentry;
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -33,20 +72,42 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
-import org.signal.libsignal.metadata.*;
+import org.signal.libsignal.metadata.InvalidMetadataMessageException;
+import org.signal.libsignal.metadata.InvalidMetadataVersionException;
+import org.signal.libsignal.metadata.ProtocolDuplicateMessageException;
+import org.signal.libsignal.metadata.ProtocolInvalidKeyException;
+import org.signal.libsignal.metadata.ProtocolInvalidKeyIdException;
+import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
+import org.signal.libsignal.metadata.ProtocolInvalidVersionException;
+import org.signal.libsignal.metadata.ProtocolLegacyMessageException;
+import org.signal.libsignal.metadata.ProtocolNoSessionException;
+import org.signal.libsignal.metadata.ProtocolUntrustedIdentityException;
+import org.signal.libsignal.metadata.SelfSendException;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
-import org.signal.storageservice.protos.groups.GroupChange;
-import org.signal.storageservice.protos.groups.local.DecryptedGroup;
-import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.signal.zkgroup.InvalidInputException;
@@ -55,7 +116,11 @@ import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.libsignal.*;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -67,14 +132,41 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.*;
-import org.whispersystems.signalservice.api.crypto.*;
+import org.whispersystems.signalservice.api.InvalidMessageStructureException;
+import org.whispersystems.signalservice.api.SignalServiceAccountManager;
+import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
+import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.SignalSessionLock;
+import org.whispersystems.signalservice.api.SignalWebSocket;
+import org.whispersystems.signalservice.api.crypto.ContentHint;
+import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
+import org.whispersystems.signalservice.api.crypto.ProfileCipher;
+import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
-import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupHistoryEntry;
-import org.whispersystems.signalservice.api.groupsv2.GroupHistoryPage;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
-import org.whispersystems.signalservice.api.messages.*;
-import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.messages.SendMessageResult;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
+import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
+import org.whispersystems.signalservice.api.messages.SignalServiceContent;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
+import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
+import org.whispersystems.signalservice.api.messages.multidevice.DeviceContactsInputStream;
+import org.whispersystems.signalservice.api.messages.multidevice.KeysMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.RequestMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -796,24 +888,10 @@ public class Manager {
         Optional<GroupsTable.Group> localState = account.getGroupsTable().get(group);
 
         if (!localState.isPresent() || localState.get().getRevision() < group.getRevision()) {
-          GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-
-          GroupsTable.Group mostRecentGroup;
           try {
-            // this updates the group in the DB
-            mostRecentGroup = account.getGroups().getGroup(groupSecretParams, group.getRevision()).orNull();
+            account.getGroups().getGroup(group);
           } catch (InvalidGroupStateException | InvalidProxyException | NoSuchAccountException | ServerNotFoundException e) {
             logger.warn("error fetching state of incoming group", e);
-            mostRecentGroup = null;
-          }
-
-          if (mostRecentGroup != null) {
-            try {
-              persistNewProfileKeysFromGroupChanges(group, localState, groupSecretParams, mostRecentGroup);
-            } catch (InvalidGroupStateException | ServerNotFoundException | NoSuchAccountException | InvalidProxyException e) {
-              logger.error("failed to update profile keys from group");
-              Sentry.captureException(e);
-            }
           }
         }
       }
@@ -951,114 +1029,6 @@ public class Manager {
     }
 
     return jobs;
-  }
-
-  private void persistNewProfileKeysFromGroupChanges(SignalServiceGroupV2 group, Optional<GroupsTable.Group> localState, GroupSecretParams groupSecretParams,
-                                                     GroupsTable.Group mostRecentGroup) throws InvalidGroupStateException, SQLException, ServerNotFoundException,
-                                                                                               NoSuchAccountException, InvalidProxyException, IOException, InvalidInputException,
-                                                                                               VerificationFailedException {
-    Optional<DecryptedGroupChange> signedGroupChange;
-    if (group.hasSignedGroupChange()) {
-      try {
-        signedGroupChange = account.getGroups().decryptChange(mostRecentGroup, GroupChange.parseFrom(group.getSignedGroupChange()), true);
-      } catch (VerificationFailedException e) {
-        logger.error("failed to verify incoming P2P group change");
-        Sentry.captureException(e);
-        signedGroupChange = Optional.absent();
-      }
-    } else {
-      signedGroupChange = Optional.absent();
-    }
-
-    if (signedGroupChange.isPresent() && localState.isPresent() && localState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
-        mostRecentGroup.getRevision() == signedGroupChange.get().getRevision()) {
-      // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
-      logger.info("Getting profile keys from P2P group change");
-      final GlobalGroupState inputGroupState = new GlobalGroupState(
-          localState.get().getDecryptedGroup(), Collections.singletonList(new ServerGroupLogEntry(mostRecentGroup.getDecryptedGroup(), signedGroupChange.get())));
-      persistLearnedProfileKeys(inputGroupState);
-      return;
-    }
-
-    final DecryptedGroup localStateNullable = localState.isPresent() ? localState.get().getDecryptedGroup() : null;
-    GlobalGroupState inputGroupState;
-    if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroup.getDecryptedGroup().getMembersList())) {
-      logger.info("Not a member, use latest only");
-      inputGroupState = new GlobalGroupState(localStateNullable, Collections.singletonList(new ServerGroupLogEntry(mostRecentGroup.getDecryptedGroup(), null)));
-    } else {
-      int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroup.getDecryptedGroup(), aci.uuid());
-      int logsNeededFrom = localState.isPresent() ? Math.max(localState.get().getRevision(), revisionWeWereAdded) : revisionWeWereAdded;
-      boolean includeFirstState = !localState.isPresent();
-      logger.info("Requesting from server currentRevision: " + (localStateNullable != null ? localStateNullable.getRevision() : "null") + " logsNeededFrom: " + logsNeededFrom +
-                  " includeFirstState: " + includeFirstState);
-      inputGroupState = getFullMemberHistoryPage(groupSecretParams, localState, logsNeededFrom, includeFirstState);
-    }
-
-    ProfileKeySet profileKeys = new ProfileKeySet();
-    boolean hasMore = true;
-    while (hasMore) {
-      for (ServerGroupLogEntry entry : inputGroupState.getServerHistory()) {
-        if (entry.getGroup() != null) {
-          profileKeys.addKeysFromGroupState(entry.getGroup());
-        }
-        if (entry.getChange() != null) {
-          profileKeys.addKeysFromGroupChange(entry.getChange());
-        }
-      }
-
-      hasMore = inputGroupState.hasMore();
-      if (hasMore) {
-        logger.info("Request next page from server revision: nextPageRevision: " + inputGroupState.getNextPageRevision());
-        inputGroupState = getFullMemberHistoryPage(groupSecretParams, localState, inputGroupState.getNextPageRevision(), false);
-      }
-    }
-    persistLearnedProfileKeys(profileKeys);
-  }
-
-  void persistLearnedProfileKeys(@NonNull GlobalGroupState globalGroupState) {
-    final ProfileKeySet profileKeys = new ProfileKeySet();
-
-    for (ServerGroupLogEntry entry : globalGroupState.getServerHistory()) {
-      if (entry.getGroup() != null) {
-        profileKeys.addKeysFromGroupState(entry.getGroup());
-      }
-      if (entry.getChange() != null) {
-        profileKeys.addKeysFromGroupChange(entry.getChange());
-      }
-    }
-
-    persistLearnedProfileKeys(profileKeys);
-  }
-
-  void persistLearnedProfileKeys(@NonNull ProfileKeySet profileKeys) {
-    final var updated = accountData.profileCredentialStore.persistProfileKeySet(profileKeys);
-
-    if (!updated.isEmpty()) {
-      logger.info("Learned " + updated.size() + " new profile keys, fetching profiles");
-      for (ProfileAndCredentialEntry updatedEntry : updated) {
-        // since the key was updated, the check in queueIfNeeded will check against a lastUpdateTimestamp of 0
-        RefreshProfileJob.queueIfNeeded(this, updatedEntry);
-      }
-    }
-  }
-
-  private GlobalGroupState getFullMemberHistoryPage(GroupSecretParams groupSecretParams, Optional<GroupsTable.Group> localState, int logsNeededFromRevision,
-                                                    boolean includeFirstState) throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException,
-                                                                                      InvalidProxyException, InvalidGroupStateException, InvalidInputException,
-                                                                                      VerificationFailedException {
-    final GroupHistoryPage groupHistoryPage = account.getGroups().getGroupHistoryPage(groupSecretParams, logsNeededFromRevision, includeFirstState);
-    final ArrayList<ServerGroupLogEntry> history = new ArrayList<>(groupHistoryPage.getResults().size());
-
-    for (DecryptedGroupHistoryEntry entry : groupHistoryPage.getResults()) {
-      DecryptedGroup group = entry.getGroup().orNull();
-      DecryptedGroupChange change = entry.getChange().orNull();
-      if (group != null || change != null) {
-        history.add(new ServerGroupLogEntry(group, change));
-      }
-    }
-
-    final DecryptedGroup localGroup = localState.isPresent() ? localState.get().getDecryptedGroup() : null;
-    return new GlobalGroupState(localGroup, history, groupHistoryPage.getPagingData());
   }
 
   public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments)
