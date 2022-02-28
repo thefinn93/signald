@@ -166,33 +166,36 @@ public class Groups {
              VerificationFailedException, InvalidKeyException {
     final GroupSecretParams groupSecretParams = mostRecentGroup.getSecretParams();
     final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
-    Optional<DecryptedGroupChange> signedGroupChange;
-    if (signedGroupChangeBytes != null) {
-      try {
-        signedGroupChange = decryptChange(mostRecentGroup, GroupChange.parseFrom(signedGroupChangeBytes), true);
-      } catch (VerificationFailedException e) {
-        logger.error("failed to verify incoming P2P group change for " + groupId);
-        Sentry.captureException(e);
-        signedGroupChange = Optional.absent();
-      } catch (InvalidProtocolBufferException e) {
-        logger.error("failed to parse incoming P2P group change for " + groupId);
-        Sentry.captureException(e);
+
+    if (localState.isPresent()) {
+      Optional<DecryptedGroupChange> signedGroupChange;
+      if (signedGroupChangeBytes != null) {
+        try {
+          signedGroupChange = decryptChange(mostRecentGroup, GroupChange.parseFrom(signedGroupChangeBytes), true);
+        } catch (VerificationFailedException e) {
+          logger.error("failed to verify incoming P2P group change for " + groupId);
+          Sentry.captureException(e);
+          signedGroupChange = Optional.absent();
+        } catch (InvalidProtocolBufferException e) {
+          logger.error("failed to parse incoming P2P group change for " + groupId);
+          Sentry.captureException(e);
+          signedGroupChange = Optional.absent();
+        }
+      } else {
         signedGroupChange = Optional.absent();
       }
-    } else {
-      signedGroupChange = Optional.absent();
-    }
 
-    if (signedGroupChange.isPresent() && localState.isPresent() && localState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
-        mostRecentGroup.getRevision() == signedGroupChange.get().getRevision()) {
-      // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
-      logger.info("Getting profile keys from P2P group change for " + groupId);
-      final ProfileKeySet profileKeys = new ProfileKeySet();
-      profileKeys.addKeysFromGroupChange(signedGroupChange.get());
-      // note: Android app also adds keys from the entire new group state
-      profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
-      persistLearnedGroupProfileKeys(profileKeys);
-      return;
+      if (signedGroupChange.isPresent() && localState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
+          mostRecentGroup.getRevision() == signedGroupChange.get().getRevision()) {
+        // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
+        logger.info("Getting profile keys from P2P group change for " + groupId);
+        final ProfileKeySet profileKeys = new ProfileKeySet();
+        profileKeys.addKeysFromGroupChange(signedGroupChange.get());
+        // note: Android app also adds keys from the entire new group state
+        profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
+        persistLearnedGroupProfileKeys(profileKeys);
+        return;
+      }
     }
 
     final GroupHistoryPage firstGroupHistoryPage;
@@ -216,8 +219,8 @@ public class Groups {
         return;
       }
 
-      logger.info("Paging group " + groupId + " for authoritative profile keys. currentRevision: " + (localState.transform(GroupsTable.Group::getRevision).orNull()) +
-                  " logsNeededFrom: " + logsNeededFrom);
+      logger.info("Paging group " + groupId + " for authoritative profile keys. localState revision: " + (localState.transform(GroupsTable.Group::getRevision).orNull()) +
+                  ", most recent revision: " + mostRecentGroup.getRevision() + ", logsNeededFrom: " + logsNeededFrom);
       firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, false);
     }
     // only include all profile keys if new group we haven't seen before <=> !localState.isPresent()
