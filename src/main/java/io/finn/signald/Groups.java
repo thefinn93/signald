@@ -143,7 +143,7 @@ public class Groups {
 
   /**
    * Variant of {@link Groups#maybePersistNewProfileKeysOrThrow(Optional, GroupsTable.Group, byte[])} where all
-   * typed exceptions are caught.Fills in missing profile keys from the mostRecentGroupState, and uses either the
+   * typed exceptions are caught. Fills in missing profile keys from the mostRecentGroupState, and uses either the
    * signedGroupChangeBytes or paging from the server with the previousGroupState as the starting revision to do authoritative
    * profile key updates.
    *
