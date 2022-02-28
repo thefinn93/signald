@@ -2,8 +2,7 @@ package io.finn.signald;
 
 import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.SenderKeySharedTable;
-import io.finn.signald.db.SenderKeysTable;
+import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -34,7 +33,6 @@ import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
-import org.whispersystems.signalservice.api.SignalSessionLock;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
@@ -77,7 +75,7 @@ public class MessageSender {
 
     SignalServiceMessageSender messageSender = account.getSignalDependencies().getMessageSender();
 
-    final boolean isRecipientUpdate = false;
+    boolean isRecipientUpdate = false;
     List<Recipient> senderKeyTargets = new LinkedList<>();
     List<Recipient> legacyTargets = new LinkedList<>();
 
@@ -117,8 +115,6 @@ public class MessageSender {
       }
     }
 
-    List<SendMessageResult> results = new ArrayList<>();
-
     // disable sender keys for groups of mixed targets until we can figure out how to avoid the duplicate sync messages
     if (senderKeyTargets.size() > 0) {
       DistributionId distributionId = group.getOrCreateDistributionId();
@@ -134,8 +130,20 @@ public class MessageSender {
 
       logger.debug("sending group message to {} members via a distribution group", recipientAddresses.size());
       try {
-        results.addAll(messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(),
-                                                          SenderKeyGroupEventsLogger.INSTANCE));
+        List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
+                                                                                 message.build(), SenderKeyGroupEventsLogger.INSTANCE);
+        RecipientsTable recipientsTable = account.getRecipients();
+        for (var result : skdmResults) {
+          if (result.isSuccess()) {
+            if (self.getAddress().equals(result.getAddress())) {
+              isRecipientUpdate = true; // prevent duplicate sync messages from being sent
+            }
+          } else if (result.isNetworkFailure()) {
+            legacyTargets.add(recipientsTable.get(result.getAddress()));
+          } else if (result.isUnregisteredFailure()) {
+            // TODO: prevent this recipient from being included in future SKDMs (https://gitlab.com/signald/signald/-/issues/299)
+          }
+        }
       } catch (UntrustedIdentityException e) {
         account.getProtocolStore().saveIdentity(e.getIdentifier(), e.getIdentityKey(), Config.getNewKeyTrustLevel());
       } catch (NoSessionException ignored) {
@@ -158,12 +166,13 @@ public class MessageSender {
       }
     }
 
+    List<SendMessageResult> results = new ArrayList<>();
     if (legacyTargets.size() > 0) {
       logger.debug("sending group message to {} members without sender keys", legacyTargets.size());
       List<SignalServiceAddress> recipientAddresses = legacyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
       try {
-        results.addAll(messageSender.sendDataMessage(recipientAddresses, m.getAccessPairFor(legacyTargets), isRecipientUpdate || results.size() > 0, ContentHint.DEFAULT,
-                                                     message.build(), SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
+        results.addAll(messageSender.sendDataMessage(recipientAddresses, m.getAccessPairFor(legacyTargets), isRecipientUpdate, ContentHint.DEFAULT, message.build(),
+                                                     SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
                                                      sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false));
       } catch (UntrustedIdentityException e) {
         account.getProtocolStore().handleUntrustedIdentityException(e);
