@@ -143,21 +143,22 @@ public class Groups {
 
   /**
    * Variant of {@link Groups#maybePersistNewProfileKeysOrThrow(Optional, GroupsTable.Group, byte[])} where all
-   * typed exceptions are caught.Fills in missing profile keys from the mostRecentGroup, and uses either the
-   * signedGroupChangeBytes or paging from the server with the localState as the starting revision to do authoritative
+   * typed exceptions are caught.Fills in missing profile keys from the mostRecentGroupState, and uses either the
+   * signedGroupChangeBytes or paging from the server with the previousGroupState as the starting revision to do authoritative
    * profile key updates.
    *
    * Rationale for creating this catching version: If we inlined this above, these errors would just get propagated and
    * halt any other code from running (this can be run in a message receiver). Since all this is just opportunistic, we
    * shouldn't just hard fail everything else if we can't get profile keys.
    *
-   * @param localState The local group state if present to use for paging if signedGroupChangeBytes is not applicable.
-   * @param mostRecentGroup The most recent group state from the server. This is already stored in the signald database.
+   * @param previousGroupState The local group state if present to use for paging if signedGroupChangeBytes is not applicable.
+   * @param mostRecentGroupState The most recent group state from the server. This is already stored in the signald database.
    * @param signedGroupChangeBytes Incoming bytes for a group changed signed by the GV2 server / storage service.
    */
-  private void maybePersistNewProfileKeys(Optional<GroupsTable.Group> localState, @NonNull GroupsTable.Group mostRecentGroup, @Nullable byte[] signedGroupChangeBytes) {
+  private void maybePersistNewProfileKeys(Optional<GroupsTable.Group> previousGroupState, @NonNull GroupsTable.Group mostRecentGroupState,
+                                          @Nullable byte[] signedGroupChangeBytes) {
     try {
-      maybePersistNewProfileKeysOrThrow(localState, mostRecentGroup, signedGroupChangeBytes);
+      maybePersistNewProfileKeysOrThrow(previousGroupState, mostRecentGroupState, signedGroupChangeBytes);
     } catch (InvalidGroupStateException | SQLException | ServerNotFoundException | NoSuchAccountException | InvalidProxyException | IOException | InvalidInputException |
              VerificationFailedException | InvalidKeyException e) {
       logger.error("failed to update profile keys from group");
@@ -165,17 +166,23 @@ public class Groups {
     }
   }
 
-  private void maybePersistNewProfileKeysOrThrow(Optional<GroupsTable.Group> localState, @NonNull GroupsTable.Group mostRecentGroup, @Nullable byte[] signedGroupChangeBytes)
-      throws InvalidGroupStateException, SQLException, ServerNotFoundException, NoSuchAccountException, InvalidProxyException, IOException, InvalidInputException,
-             VerificationFailedException, InvalidKeyException {
-    final GroupSecretParams groupSecretParams = mostRecentGroup.getSecretParams();
+  private void maybePersistNewProfileKeysOrThrow(Optional<GroupsTable.Group> previousGroupState, @NonNull GroupsTable.Group mostRecentGroupState,
+                                                 @Nullable byte[] signedGroupChangeBytes) throws InvalidGroupStateException, SQLException, ServerNotFoundException,
+                                                                                                 NoSuchAccountException, InvalidProxyException, IOException, InvalidInputException,
+                                                                                                 VerificationFailedException, InvalidKeyException {
+    final GroupSecretParams groupSecretParams = mostRecentGroupState.getSecretParams();
     final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
 
-    if (localState.isPresent()) {
+    if (previousGroupState.isPresent()) {
+      if (previousGroupState.get().getRevision() >= mostRecentGroupState.getRevision()) {
+        logger.info("Group revision for " + groupId + " already up-to-date; skipping persisting of profile keys");
+        return;
+      }
+
       Optional<DecryptedGroupChange> signedGroupChange;
       if (signedGroupChangeBytes != null) {
         try {
-          signedGroupChange = decryptChange(mostRecentGroup, GroupChange.parseFrom(signedGroupChangeBytes), true);
+          signedGroupChange = decryptChange(mostRecentGroupState, GroupChange.parseFrom(signedGroupChangeBytes), true);
         } catch (VerificationFailedException e) {
           logger.error("failed to verify incoming P2P group change for " + groupId);
           Sentry.captureException(e);
@@ -189,26 +196,27 @@ public class Groups {
         signedGroupChange = Optional.absent();
       }
 
-      if (signedGroupChange.isPresent() && localState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
-          mostRecentGroup.getRevision() == signedGroupChange.get().getRevision()) {
+      if (signedGroupChange.isPresent() && previousGroupState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
+          mostRecentGroupState.getRevision() == signedGroupChange.get().getRevision()) {
         // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
         logger.info("Getting profile keys from P2P group change for " + groupId);
         final ProfileKeySet profileKeys = new ProfileKeySet();
         profileKeys.addKeysFromGroupChange(signedGroupChange.get());
-        // note: Android app also adds keys from the entire new group state
-        profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
+        // note: Android app ALWAYS adds keys from the entire new group state, but probably just a left over from trying
+        // to reuse code and using group states to perform local updates. We don't need to do that, since P2P group
+        // changes we only apply if we have previous state, and P2P changes are relatively small.
         persistLearnedGroupProfileKeys(profileKeys);
         return;
       }
     }
 
     final GroupHistoryPage firstGroupHistoryPage;
-    if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroup.getDecryptedGroup().getMembersList())) {
+    if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroupState.getDecryptedGroup().getMembersList())) {
       logger.info("Not a member, use latest only for " + groupId);
-      firstGroupHistoryPage = new GroupHistoryPage(Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroup.getDecryptedGroup()), Optional.absent())),
-                                                   GroupHistoryPage.PagingData.NONE);
-    } else if (!localState.isPresent()) {
-      // When we connect signald as a new linked device, we can have !localState.isPresent() with a large number of
+      firstGroupHistoryPage = new GroupHistoryPage(
+          Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.absent())), GroupHistoryPage.PagingData.NONE);
+    } else if (!previousGroupState.isPresent()) {
+      // When we connect signald as a new linked device, we can have !previousGroupState.isPresent() with a large number of
       // group pages to go through for profile keys, especially if we have groups that we've joined from other devices
       // that have gotten many group updates before we started to link signald. However, if we read the group history
       // pages for some of these groups, we can run into cases where signald is stuck with an outdated profile key.
@@ -246,30 +254,32 @@ public class Groups {
       // We can't do something like filter out profile keys from members that are not in the group in the latest state,
       // because that would mess with users that request to join groups.
       logger.info("New group " + groupId + "; use only latest state");
-      firstGroupHistoryPage = new GroupHistoryPage(Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroup.getDecryptedGroup()), Optional.absent())),
-                                                   GroupHistoryPage.PagingData.NONE);
+      firstGroupHistoryPage = new GroupHistoryPage(
+          Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.absent())), GroupHistoryPage.PagingData.NONE);
     } else {
-      int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroup.getDecryptedGroup(), aci.uuid());
-      int logsNeededFrom = Math.max(localState.get().getRevision(), revisionWeWereAdded);
+      int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroupState.getDecryptedGroup(), aci.uuid());
+      int logsNeededFrom = Math.max(previousGroupState.get().getRevision(), revisionWeWereAdded);
 
-      if (mostRecentGroup.getRevision() - logsNeededFrom > MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS) {
+      if (mostRecentGroupState.getRevision() - logsNeededFrom > MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS) {
         // If there are too many pages, do paging for keys in a background thread. This should rarely happen, but it
         // could happen if a signald instance is offline for too long and the group revision has progressed much further
         // than what we have stored. The upcoming paging code can run inside a message receiver and other
         // performance-critical areas; we don't want to eat up too much time paging for profile keys for groups.
         logger.info("Too many group history pages for " + groupId + " (limit: " + MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS +
-                    "); enqueuing job to persist profile keys from pages starting from revision " + logsNeededFrom + " (mostRecentGroup revision " + mostRecentGroup.getRevision() +
-                    ")");
-        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(aci, groupSecretParams, logsNeededFrom, mostRecentGroup.getRevision()));
+                    "); enqueuing job to persist profile keys from pages starting from revision " + logsNeededFrom + " (mostRecentGroupState revision " +
+                    mostRecentGroupState.getRevision() + ")");
+        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(aci, groupSecretParams, logsNeededFrom, mostRecentGroupState.getRevision()));
         return;
       }
 
-      logger.info("Paging group " + groupId + " for authoritative profile keys. localState revision: " + (localState.transform(GroupsTable.Group::getRevision).orNull()) +
-                  ", most recent revision: " + mostRecentGroup.getRevision() + ", logsNeededFrom: " + logsNeededFrom);
+      logger.info("Paging group " + groupId +
+                  " for authoritative profile keys. previousGroupState revision: " + (previousGroupState.transform(GroupsTable.Group::getRevision).orNull()) +
+                  ", most recent revision: " + mostRecentGroupState.getRevision() + ", logsNeededFrom: " + logsNeededFrom);
       firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, false);
     }
-    // only include all profile keys if new group we haven't seen before <=> !localState.isPresent()
-    persistProfileKeysFromServerGroupHistory(groupSecretParams, firstGroupHistoryPage, !localState.isPresent() ? mostRecentGroup : null);
+    // only include all (non-authoritative) profile keys if
+    // this is a new group we haven't seen before <=> !previousGroupState.isPresent()
+    persistProfileKeysFromServerGroupHistory(groupSecretParams, firstGroupHistoryPage, !previousGroupState.isPresent() ? mostRecentGroupState : null);
   }
 
   /**
