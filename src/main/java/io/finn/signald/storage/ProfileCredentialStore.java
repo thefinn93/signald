@@ -10,6 +10,7 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.Account;
 import io.finn.signald.ProfileKeySet;
+import io.finn.signald.Util;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.SyncStorageDataJob;
@@ -144,7 +145,7 @@ public class ProfileCredentialStore {
     for (Map.Entry<ACI, ProfileKey> entry : profileKeys.entrySet()) {
       final ProfileAndCredentialEntry maybeNewEntry = storeProfileKeyIfAbsent(new SignalServiceAddress(entry.getKey()), entry.getValue());
       if (maybeNewEntry != null) {
-        logger.info("Learned new profile key");
+        logger.debug("Learned new profile key for " + Util.redact(entry.getKey()));
         updated.add(maybeNewEntry);
       }
     }
@@ -159,7 +160,7 @@ public class ProfileCredentialStore {
           BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account(self.getACI())));
         }
       } else {
-        logger.info("Profile key from owner");
+        logger.debug("Profile key from owner for " + Util.redact(entry.getKey()));
         updated.add(storeProfileKey(thisAddress, entry.getValue()));
       }
     }

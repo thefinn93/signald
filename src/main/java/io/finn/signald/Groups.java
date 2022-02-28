@@ -175,7 +175,7 @@ public class Groups {
 
     if (previousGroupState.isPresent()) {
       if (previousGroupState.get().getRevision() >= mostRecentGroupState.getRevision()) {
-        logger.info("Group revision for " + groupId + " already up-to-date; skipping persisting of profile keys");
+        logger.debug("Group revision for " + groupId + " already up-to-date; skipping persisting of profile keys");
         return;
       }
 
