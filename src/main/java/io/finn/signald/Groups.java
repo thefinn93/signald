@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -174,41 +173,55 @@ public class Groups {
       logger.info("Getting profile keys from P2P group change");
       final ProfileKeySet profileKeys = new ProfileKeySet();
       profileKeys.addKeysFromGroupChange(signedGroupChange.get());
+      // note: Android app also adds keys from the entire new group state
       profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
       persistLearnedProfileKeys(profileKeys);
       return;
     }
 
-    final DecryptedGroup localStateNullable = localState.isPresent() ? localState.get().getDecryptedGroup() : null;
-    GlobalGroupState inputGroupState;
+    final GroupHistoryPage firstGroupHistoryPage;
     if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroup.getDecryptedGroup().getMembersList())) {
       logger.info("Not a member, use latest only");
-      inputGroupState = new GlobalGroupState(localStateNullable, Collections.singletonList(new ServerGroupLogEntry(mostRecentGroup.getDecryptedGroup(), null)));
+      firstGroupHistoryPage = new GroupHistoryPage(Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroup.getDecryptedGroup()), Optional.absent())),
+                                                     GroupHistoryPage.PagingData.NONE);
     } else {
       int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroup.getDecryptedGroup(), aci.uuid());
       int logsNeededFrom = localState.isPresent() ? Math.max(localState.get().getRevision(), revisionWeWereAdded) : revisionWeWereAdded;
       boolean includeFirstState = !localState.isPresent();
-      logger.info("Requesting from server currentRevision: " + (localStateNullable != null ? localStateNullable.getRevision() : "null") + " logsNeededFrom: " + logsNeededFrom +
+      logger.info("Requesting from server currentRevision: " + (localState.transform(GroupsTable.Group::getRevision).orNull()) + " logsNeededFrom: " + logsNeededFrom +
                   " includeFirstState: " + includeFirstState);
-      inputGroupState = getFullMemberHistoryPage(groupSecretParams, localState, logsNeededFrom, includeFirstState);
+      firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, includeFirstState);
     }
 
     final ProfileKeySet profileKeys = new ProfileKeySet();
+    if (!localState.isPresent()) {
+      logger.info("Missing local state; adding profile keys from current state");
+      profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
+    }
+    persistProfileKeyFromServerGroupHistory(profileKeys, groupSecretParams, firstGroupHistoryPage);
+  }
+
+  private void persistProfileKeyFromServerGroupHistory(@NonNull final ProfileKeySet profileKeys, @NonNull final GroupSecretParams groupSecretParams,
+                                                       @NonNull final GroupHistoryPage firstPage) throws InvalidGroupStateException, IOException, VerificationFailedException,
+                                                                                                   InvalidInputException, SQLException, NoSuchAccountException,
+                                                                                                   ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     boolean hasMore = true;
+    GroupHistoryPage currentPage = firstPage;
     while (hasMore) {
-      for (ServerGroupLogEntry entry : inputGroupState.getServerHistory()) {
-        if (entry.getGroup() != null) {
-          profileKeys.addKeysFromGroupState(entry.getGroup());
+      for (DecryptedGroupHistoryEntry entry : currentPage.getResults()) {
+        if (entry.getGroup().isPresent()) {
+          profileKeys.addKeysFromGroupState(entry.getGroup().get());
         }
-        if (entry.getChange() != null) {
-          profileKeys.addKeysFromGroupChange(entry.getChange());
+        if (entry.getChange().isPresent()) {
+          profileKeys.addKeysFromGroupChange(entry.getChange().get());
         }
       }
 
-      hasMore = inputGroupState.hasMore();
+      hasMore = currentPage.getPagingData().hasMorePages();
       if (hasMore) {
-        logger.info("Request next page from server revision: nextPageRevision: " + inputGroupState.getNextPageRevision());
-        inputGroupState = getFullMemberHistoryPage(groupSecretParams, localState, inputGroupState.getNextPageRevision(), false);
+        final int nextPageRevision = currentPage.getPagingData().getNextPageRevision();
+        logger.info("Request next page from server revision: nextPageRevision: " + nextPageRevision);
+        currentPage = getGroupHistoryPage(groupSecretParams, nextPageRevision, false);
       }
     }
     persistLearnedProfileKeys(profileKeys);
@@ -226,24 +239,6 @@ public class Groups {
         RefreshProfileJob.queueIfNeeded(Manager.get(aci), updatedEntry);
       }
     }
-  }
-
-  private GlobalGroupState getFullMemberHistoryPage(GroupSecretParams groupSecretParams, Optional<GroupsTable.Group> localState, int logsNeededFromRevision,
-                                                    boolean includeFirstState)
-      throws IOException, SQLException, InvalidGroupStateException, InvalidInputException, VerificationFailedException {
-    final GroupHistoryPage groupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFromRevision, includeFirstState);
-    final ArrayList<ServerGroupLogEntry> history = new ArrayList<>(groupHistoryPage.getResults().size());
-
-    for (DecryptedGroupHistoryEntry entry : groupHistoryPage.getResults()) {
-      DecryptedGroup group = entry.getGroup().orNull();
-      DecryptedGroupChange change = entry.getChange().orNull();
-      if (group != null || change != null) {
-        history.add(new ServerGroupLogEntry(group, change));
-      }
-    }
-
-    final DecryptedGroup localGroup = localState.isPresent() ? localState.get().getDecryptedGroup() : null;
-    return new GlobalGroupState(localGroup, history, groupHistoryPage.getPagingData());
   }
 
   public JsonGroupJoinInfo getGroupJoinInfo(URI uri) throws IOException, InvalidInputException, VerificationFailedException, GroupLinkNotActiveException, SQLException {
