@@ -16,6 +16,8 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.GetProfileKeysFromGroupHistoryJob;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.storage.ProfileCredentialStore;
@@ -35,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
@@ -57,10 +60,22 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
+import org.whispersystems.util.Base64;
 import org.whispersystems.util.Base64UrlSafe;
 
 public class Groups {
   private final static Logger logger = LogManager.getLogger();
+  /**
+   * Corresponds to LOG_VERSION_LIMIT at
+   * https://github.com/signalapp/storage-service/blob/master/src/main/java/org/signal/storageservice/controllers/GroupsController.java#L69
+   */
+  private final static int MAX_GROUP_CHANGES_PER_PAGE = 64;
+  /**
+   * From signald logs, it can take around 16s to get 45 pages of group history (~2.8125 pages per second), where each
+   * page has at most 64 group changes each. Let's limit this to at most ~3 seconds to help with message processing
+   * speeds.
+   */
+  private final static int MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS = MAX_GROUP_CHANGES_PER_PAGE * 6;
 
   private final GroupsV2Api groupsV2Api;
   private final GroupCredentialsTable credentials;
@@ -150,16 +165,17 @@ public class Groups {
       throws InvalidGroupStateException, SQLException, ServerNotFoundException, NoSuchAccountException, InvalidProxyException, IOException, InvalidInputException,
              VerificationFailedException, InvalidKeyException {
     final GroupSecretParams groupSecretParams = mostRecentGroup.getSecretParams();
+    final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
     Optional<DecryptedGroupChange> signedGroupChange;
     if (signedGroupChangeBytes != null) {
       try {
         signedGroupChange = decryptChange(mostRecentGroup, GroupChange.parseFrom(signedGroupChangeBytes), true);
       } catch (VerificationFailedException e) {
-        logger.error("failed to verify incoming P2P group change");
+        logger.error("failed to verify incoming P2P group change for " + groupId);
         Sentry.captureException(e);
         signedGroupChange = Optional.absent();
       } catch (InvalidProtocolBufferException e) {
-        logger.error("failed to parse incoming P2P group change");
+        logger.error("failed to parse incoming P2P group change for " + groupId);
         Sentry.captureException(e);
         signedGroupChange = Optional.absent();
       }
@@ -170,44 +186,59 @@ public class Groups {
     if (signedGroupChange.isPresent() && localState.isPresent() && localState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
         mostRecentGroup.getRevision() == signedGroupChange.get().getRevision()) {
       // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
-      logger.info("Getting profile keys from P2P group change");
+      logger.info("Getting profile keys from P2P group change for " + groupId);
       final ProfileKeySet profileKeys = new ProfileKeySet();
       profileKeys.addKeysFromGroupChange(signedGroupChange.get());
       // note: Android app also adds keys from the entire new group state
       profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
-      persistLearnedProfileKeys(profileKeys);
+      persistLearnedGroupProfileKeys(profileKeys);
       return;
     }
 
     final GroupHistoryPage firstGroupHistoryPage;
     if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroup.getDecryptedGroup().getMembersList())) {
-      logger.info("Not a member, use latest only");
+      logger.info("Not a member, use latest only for " + groupId);
       firstGroupHistoryPage = new GroupHistoryPage(Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroup.getDecryptedGroup()), Optional.absent())),
-                                                     GroupHistoryPage.PagingData.NONE);
+                                                   GroupHistoryPage.PagingData.NONE);
     } else {
       int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroup.getDecryptedGroup(), aci.uuid());
       int logsNeededFrom = localState.isPresent() ? Math.max(localState.get().getRevision(), revisionWeWereAdded) : revisionWeWereAdded;
-      boolean includeFirstState = !localState.isPresent();
-      logger.info("Requesting from server currentRevision: " + (localState.transform(GroupsTable.Group::getRevision).orNull()) + " logsNeededFrom: " + logsNeededFrom +
-                  " includeFirstState: " + includeFirstState);
-      firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, includeFirstState);
-    }
 
-    final ProfileKeySet profileKeys = new ProfileKeySet();
-    if (!localState.isPresent()) {
-      logger.info("Missing local state; adding profile keys from current state");
-      profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
+      if (mostRecentGroup.getRevision() - logsNeededFrom > MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS) {
+        // If there are too many pages, do paging for keys in a background thread. This should rarely happen, but it
+        // could happen if a signald instance is offline for too long and the group revision has progressed much further
+        // than what we have stored. The paging can be done inside a message receiver and other performance-critical
+        // areas; we don't want to eat up too much time paging for profile keys for every group.
+        logger.info("Too many group history pages for " + groupId + " (limit: " + MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS +
+                    "); enqueuing job to persist profile keys from pages starting from revision " + logsNeededFrom + " (mostRecentGroup revision " + mostRecentGroup.getRevision() +
+                    ")");
+        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(aci, groupSecretParams, logsNeededFrom, mostRecentGroup.getRevision(), !localState.isPresent()));
+        return;
+      }
+
+      logger.info("Paging group " + groupId + " for authoritative profile keys. currentRevision: " + (localState.transform(GroupsTable.Group::getRevision).orNull()) +
+                  " logsNeededFrom: " + logsNeededFrom);
+      firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, false);
     }
-    persistProfileKeyFromServerGroupHistory(profileKeys, groupSecretParams, firstGroupHistoryPage);
+    // only include all profile keys if new group we haven't seen before <=> !localState.isPresent()
+    persistProfileKeysFromServerGroupHistory(groupSecretParams, firstGroupHistoryPage, !localState.isPresent() ? mostRecentGroup : null);
   }
 
-  private void persistProfileKeyFromServerGroupHistory(@NonNull final ProfileKeySet profileKeys, @NonNull final GroupSecretParams groupSecretParams,
-                                                       @NonNull final GroupHistoryPage firstPage) throws InvalidGroupStateException, IOException, VerificationFailedException,
-                                                                                                   InvalidInputException, SQLException, NoSuchAccountException,
-                                                                                                   ServerNotFoundException, InvalidKeyException, InvalidProxyException {
-    boolean hasMore = true;
+  /**
+   * Uses the group logs from the GV2 server to get profile keys to persist, and then persists them in the profile
+   * credential store.
+   *
+   * @param groupSecretParams Params for the group
+   * @param firstPage First page to use; typically can get it by calling {@link #getGroupHistoryPage(GroupSecretParams, int, boolean)}
+   * @param mostRecentGroup The most recent group to use to fill in missing profile keys, if available.
+   */
+  public void persistProfileKeysFromServerGroupHistory(@NonNull final GroupSecretParams groupSecretParams, @NonNull final GroupHistoryPage firstPage,
+                                                       @Nullable GroupsTable.Group mostRecentGroup) throws InvalidGroupStateException, IOException, VerificationFailedException,
+                                                                                                           InvalidInputException, SQLException, NoSuchAccountException,
+                                                                                                           ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     GroupHistoryPage currentPage = firstPage;
-    while (hasMore) {
+    final ProfileKeySet profileKeys = new ProfileKeySet();
+    while (currentPage.getPagingData().hasMorePages()) {
       for (DecryptedGroupHistoryEntry entry : currentPage.getResults()) {
         if (entry.getGroup().isPresent()) {
           profileKeys.addKeysFromGroupState(entry.getGroup().get());
@@ -216,18 +247,21 @@ public class Groups {
           profileKeys.addKeysFromGroupChange(entry.getChange().get());
         }
       }
-
-      hasMore = currentPage.getPagingData().hasMorePages();
-      if (hasMore) {
+      if (currentPage.getPagingData().hasMorePages()) {
         final int nextPageRevision = currentPage.getPagingData().getNextPageRevision();
         logger.info("Request next page from server revision: nextPageRevision: " + nextPageRevision);
         currentPage = getGroupHistoryPage(groupSecretParams, nextPageRevision, false);
       }
     }
-    persistLearnedProfileKeys(profileKeys);
+
+    if (mostRecentGroup != null) {
+      profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
+    }
+
+    persistLearnedGroupProfileKeys(profileKeys);
   }
 
-  void persistLearnedProfileKeys(@NonNull ProfileKeySet profileKeys)
+  private void persistLearnedGroupProfileKeys(@NonNull ProfileKeySet profileKeys)
       throws NoSuchAccountException, SQLException, IOException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     final ProfileCredentialStore profileCredentialStore = Manager.get(aci).getAccountData().profileCredentialStore;
     final var updated = profileCredentialStore.persistProfileKeySet(profileKeys);
