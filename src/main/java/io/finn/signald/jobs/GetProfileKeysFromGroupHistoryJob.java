@@ -27,16 +27,12 @@ public class GetProfileKeysFromGroupHistoryJob implements Job {
   private final GroupSecretParams groupSecretParams;
   private final int logsNeededFromRevision;
   private final int mostRecentGroupRevision;
-  /** Whether this group is new to signald */
-  private final boolean isNewGroup;
 
-  public GetProfileKeysFromGroupHistoryJob(@NotNull ACI aci, @NotNull GroupSecretParams groupSecretParams, int logsNeededFromRevision, int mostRecentGroupRevision,
-                                           boolean isNewGroup) {
+  public GetProfileKeysFromGroupHistoryJob(@NotNull ACI aci, @NotNull GroupSecretParams groupSecretParams, int logsNeededFromRevision, int mostRecentGroupRevision) {
     this.aci = aci;
     this.groupSecretParams = groupSecretParams;
     this.logsNeededFromRevision = logsNeededFromRevision;
     this.mostRecentGroupRevision = mostRecentGroupRevision;
-    this.isNewGroup = isNewGroup;
   }
 
   @Override

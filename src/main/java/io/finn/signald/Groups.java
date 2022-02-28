@@ -143,9 +143,13 @@ public class Groups {
 
   /**
    * Variant of {@link Groups#maybePersistNewProfileKeysOrThrow(Optional, GroupsTable.Group, byte[])} where all
-   * typed exceptions are caught. Fills in missing profile keys from the mostRecentGroup, and uses either the
+   * typed exceptions are caught.Fills in missing profile keys from the mostRecentGroup, and uses either the
    * signedGroupChangeBytes or paging from the server with the localState as the starting revision to do authoritative
    * profile key updates.
+   *
+   * Rationale for creating this catching version: If we inlined this above, these errors would just get propagated and
+   * halt any other code from running (this can be run in a message receiver). Since all this is just opportunistic, we
+   * shouldn't just hard fail everything else if we can't get profile keys.
    *
    * @param localState The local group state if present to use for paging if signedGroupChangeBytes is not applicable.
    * @param mostRecentGroup The most recent group state from the server. This is already stored in the signald database.
@@ -203,19 +207,60 @@ public class Groups {
       logger.info("Not a member, use latest only for " + groupId);
       firstGroupHistoryPage = new GroupHistoryPage(Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroup.getDecryptedGroup()), Optional.absent())),
                                                    GroupHistoryPage.PagingData.NONE);
+    } else if (!localState.isPresent()) {
+      // When we connect signald as a new linked device, we can have !localState.isPresent() with a large number of
+      // group pages to go through for profile keys, especially if we have groups that we've joined from other devices
+      // that have gotten many group updates before we started to link signald. However, if we read the group history
+      // pages for some of these groups, we can run into cases where signald is stuck with an outdated profile key.
+      //
+      // Suppose we are in groups A and B, and consider the following ordered events. Suppose Alice has a profile key
+      // with version "1" (profile key versions don't seem to be comparable numbers; this is just for demonstration
+      // purposes).
+      //   1. Alice joins groups A. This adds an authoritative profile key update/addition in the group logs of group A
+      //      with her profile key version at "1".
+      //   2. Alice leaves group A.
+      //   3. Alice joins groups B. This adds an authoritative profile key update/addition in the group logs of group B
+      //      with her profile key version at "1".
+      //   4. Alice blocks someone. Her app rotates the profile key to version "2". She updates her profile key inside
+      //      of group B to this new version, but not inside of group A, because she left it.
+      // Suppose now we connect signald as a linked device, and suppose signald receives from the main device or the
+      // storage service groups B and A in that order. When signald processes the profile keys from group B, it will
+      // see her version "2" profile key as an authoritative profile key update, and signald stores that. But, when
+      // signald goes next to process profile keys from group A, it will see her version "1" profile key as an
+      // authoritative profile key update, so it will store that version instead, replacing version "2" in the
+      // ProfileCredentialStore with version "1".
+      //
+      // In the end, signald is left with an outdated profile key for Alice. Since profile key versions are not
+      // comparable (seems to be based on HMAC-SHA256 of profile key bytes || UID bytes in a "stateful hash object"
+      // construction), signald doesn't really know that the profile key in group A is outdated. All we can really do is
+      // ensure we're not just replacing the same profile key. And Alice is not just one user; if there are multiple
+      // users for which this situation applies, there will be a large number of outdated profiles.
+      //
+      // An easy workaround is to just not take profile keys from group logs for groups we haven't seen before, thus
+      // not paging group history from the server for these new groups. This is tolerable, because signald doesn't use
+      // group changes to advance its local copy of the group state. Also, members for which we share multiple groups
+      // will send their new profile key as group changes for the other groups anyway. (Of course, there are edge cases
+      // for when a user only updates a certain number of their groups with a new profile key because the server started
+      // rate limiting them, they ran into network errors, etc.)
+      //
+      // We can't do something like filter out profile keys from members that are not in the group in the latest state,
+      // because that would mess with users that request to join groups.
+      logger.info("New group " + groupId + "; use only latest state");
+      firstGroupHistoryPage = new GroupHistoryPage(Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroup.getDecryptedGroup()), Optional.absent())),
+                                                   GroupHistoryPage.PagingData.NONE);
     } else {
       int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroup.getDecryptedGroup(), aci.uuid());
-      int logsNeededFrom = localState.isPresent() ? Math.max(localState.get().getRevision(), revisionWeWereAdded) : revisionWeWereAdded;
+      int logsNeededFrom = Math.max(localState.get().getRevision(), revisionWeWereAdded);
 
       if (mostRecentGroup.getRevision() - logsNeededFrom > MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS) {
         // If there are too many pages, do paging for keys in a background thread. This should rarely happen, but it
         // could happen if a signald instance is offline for too long and the group revision has progressed much further
-        // than what we have stored. The paging can be done inside a message receiver and other performance-critical
-        // areas; we don't want to eat up too much time paging for profile keys for every group.
+        // than what we have stored. The upcoming paging code can run inside a message receiver and other
+        // performance-critical areas; we don't want to eat up too much time paging for profile keys for groups.
         logger.info("Too many group history pages for " + groupId + " (limit: " + MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS +
                     "); enqueuing job to persist profile keys from pages starting from revision " + logsNeededFrom + " (mostRecentGroup revision " + mostRecentGroup.getRevision() +
                     ")");
-        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(aci, groupSecretParams, logsNeededFrom, mostRecentGroup.getRevision(), !localState.isPresent()));
+        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(aci, groupSecretParams, logsNeededFrom, mostRecentGroup.getRevision()));
         return;
       }
 
@@ -272,7 +317,10 @@ public class Groups {
     if (!updated.isEmpty()) {
       logger.info("Learned " + updated.size() + " new profile keys, fetching profiles");
       for (ProfileAndCredentialEntry updatedEntry : updated) {
-        // since the key was updated, the check in queueIfNeeded will check against a lastUpdateTimestamp of 0
+        // Since the key was updated, the check in queueIfNeeded will check against a lastUpdateTimestamp of 0.
+        // Note: Android app does this refresh synchronously. This will slow down message processing perf, so we don't
+        // do it (plus we already use RefreshProfileJob for individual profile key updates anyway). However, not running
+        // this job synchronously means profile keys can be out of date for a time.
         RefreshProfileJob.queueIfNeeded(Manager.get(aci), updatedEntry);
       }
     }
