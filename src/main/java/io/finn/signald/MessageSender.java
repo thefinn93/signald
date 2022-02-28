@@ -115,6 +115,8 @@ public class MessageSender {
       }
     }
 
+    List<SendMessageResult> results = new ArrayList<>();
+
     // disable sender keys for groups of mixed targets until we can figure out how to avoid the duplicate sync messages
     if (senderKeyTargets.size() > 0) {
       DistributionId distributionId = group.getOrCreateDistributionId();
@@ -138,10 +140,12 @@ public class MessageSender {
             if (self.getAddress().equals(result.getAddress())) {
               isRecipientUpdate = true; // prevent duplicate sync messages from being sent
             }
+            results.add(result);
           } else if (result.isNetworkFailure()) {
             legacyTargets.add(recipientsTable.get(result.getAddress()));
           } else if (result.isUnregisteredFailure()) {
             // TODO: prevent this recipient from being included in future SKDMs (https://gitlab.com/signald/signald/-/issues/299)
+            results.add(result);
           }
         }
       } catch (UntrustedIdentityException e) {
@@ -166,7 +170,6 @@ public class MessageSender {
       }
     }
 
-    List<SendMessageResult> results = new ArrayList<>();
     if (legacyTargets.size() > 0) {
       logger.debug("sending group message to {} members without sender keys", legacyTargets.size());
       List<SignalServiceAddress> recipientAddresses = legacyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
