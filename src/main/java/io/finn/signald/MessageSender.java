@@ -15,8 +15,10 @@ import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -31,6 +33,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidRegistrationIdException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.util.guava.Function;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
@@ -39,6 +42,7 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
@@ -134,7 +138,7 @@ public class MessageSender {
       try {
         List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
                                                                                  message.build(), SenderKeyGroupEventsLogger.INSTANCE);
-        RecipientsTable recipientsTable = account.getRecipients();
+        Set<ACI> networkFailAddressesForRetry = new HashSet<>();
         for (var result : skdmResults) {
           if (result.isSuccess()) {
             if (self.getAddress().equals(result.getAddress())) {
@@ -142,10 +146,55 @@ public class MessageSender {
             }
             results.add(result);
           } else if (result.isNetworkFailure()) {
-            legacyTargets.add(recipientsTable.get(result.getAddress()));
+            // always guaranteed to have an ACI; don't use address for HashSet because of ambiguity with e164 in server
+            // responses
+            networkFailAddressesForRetry.add(result.getAddress().getAci());
           } else if (result.isUnregisteredFailure()) {
-            // TODO: prevent this recipient from being included in future SKDMs (https://gitlab.com/signald/signald/-/issues/299)
+            handleUnregisteredFailure(result);
             results.add(result);
+          }
+        }
+
+        if (!networkFailAddressesForRetry.isEmpty()) {
+          // Retry sender key for all network failures. The `sendGroupDataMessage` method creates a fake network failure
+          // if an SKDM send failed (creates fake network failures for users that the SKDM succeeded for or
+          // didn't need an SKDM). Reasonable to retry with sender key to these network failures, although note that we
+          // are unable to distinguish between a genuine network failure or a fake one. We're leaving out unregistered
+          // users this time (see to-do message in the handleUnregisteredFailure method for proper handling)
+          //
+          // Iterate mutably over senderKeyTargets (and accessIterator) so that we can reuse this whole try-catch for
+          // the retry and reuse the unidentified access info.
+          final var senderKeyTargetIterator = senderKeyTargets.listIterator();
+          final var accessIterator = access.listIterator();
+          while (senderKeyTargetIterator.hasNext()) {
+            var currentTarget = senderKeyTargetIterator.next();
+            accessIterator.next();
+            if (!networkFailAddressesForRetry.contains(currentTarget.getAddress().getAci())) {
+              senderKeyTargetIterator.remove();
+              accessIterator.remove();
+            }
+          }
+          logger.debug("detected network failures during sender key send; retrying sender key send to {} recipients", senderKeyTargets.size());
+
+          List<SignalServiceAddress> retryRecipientAddresses = senderKeyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
+
+          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
+                                                                                             ContentHint.DEFAULT, message.build(), SenderKeyGroupEventsLogger.INSTANCE);
+
+          RecipientsTable recipientsTable = account.getRecipients();
+          for (var result : senderKeyRetryResults) {
+            if (result.isSuccess()) {
+              if (self.getAddress().equals(result.getAddress())) {
+                isRecipientUpdate = true; // prevent duplicate sync messages from being sent
+              }
+              results.add(result);
+            } else if (result.isNetworkFailure()) {
+              // don't retry with sender key again
+              legacyTargets.add(recipientsTable.get(result.getAddress()));
+            } else if (result.isUnregisteredFailure()) {
+              handleUnregisteredFailure(result);
+              results.add(result);
+            }
           }
         }
       } catch (UntrustedIdentityException e) {
@@ -169,6 +218,7 @@ public class MessageSender {
         legacyTargets.addAll(senderKeyTargets);
       }
     }
+    // note: senderKeyTargets and access may have been mutated from the original beyond this point
 
     if (legacyTargets.size() > 0) {
       logger.debug("sending group message to {} members without sender keys", legacyTargets.size());
@@ -194,6 +244,10 @@ public class MessageSender {
       }
     }
     return results;
+  }
+
+  private void handleUnregisteredFailure(SendMessageResult unregisteredFailureResult) {
+    // TODO: prevent this recipient from being included in future SKDMs (https://gitlab.com/signald/signald/-/issues/299)
   }
 
   private long getCreateTimeForOurKey(DistributionId distributionId) throws SQLException {
