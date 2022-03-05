@@ -33,8 +33,6 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   public JsonAddress run(Request request) throws InternalError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError {
     try {
       return new JsonAddress(Common.getRecipient(Database.Get().AccountsTable.getACI(account), partial));
-    } catch (SQLException e) {
-      throw new InternalError("error getting account UUID", e);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     }

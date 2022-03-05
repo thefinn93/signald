@@ -46,8 +46,6 @@ public class IncomingMessage {
       account = Database.Get().AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
-    } catch (SQLException e) {
-      throw new InternalError("error getting local account for incoming message", e);
     }
 
     if (envelope.hasServerGuid()) {

@@ -448,15 +448,12 @@ public class Manager {
 
   // set expiration for a 1-to-1 conversation
   public List<SendMessageResult> setExpiration(Recipient recipient, int expiresInSeconds) throws IOException, SQLException {
-    ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
-    contact.messageExpirationTime = expiresInSeconds;
-    accountData.contactStore.updateContact(contact);
+    Database.Get(aci).ContactsTable.update(recipient, null, null, null, expiresInSeconds, null);
+
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate().withExpiration(expiresInSeconds);
-    List<Recipient> recipients = new ArrayList<>(1);
+    var recipients = new ArrayList<Recipient>(1);
     recipients.add(recipient);
-    List<SendMessageResult> result = sendMessage(messageBuilder, recipients);
-    accountData.save();
-    return result;
+    return sendMessage(messageBuilder, recipients);
   }
 
   private List<SendMessageResult> sendGroupInfoRequest(byte[] groupId, Recipient recipient) throws IOException, SQLException {
@@ -472,14 +469,6 @@ public class Manager {
     final List<Recipient> membersSend = new ArrayList<>();
     membersSend.add(recipient);
     return sendMessage(messageBuilder, membersSend);
-  }
-
-  public ContactStore.ContactInfo updateContact(ContactStore.ContactInfo contact) throws IOException, SQLException {
-    if (contact.address.uuid == null) {
-      var recipient = Database.Get(aci).RecipientsTable.get(contact.address.number, null);
-      contact.address = new JsonAddress(recipient.getAddress());
-    }
-    return accountData.contactStore.updateContact(contact);
   }
 
   public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar)
@@ -621,8 +610,7 @@ public class Manager {
         // Send to all individually, so sync messages are sent correctly
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
         for (Recipient recipient : recipients) {
-          ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
-          messageBuilder.withExpiration(contact.messageExpirationTime);
+          messageBuilder.withExpiration(Database.Get(aci).ContactsTable.get(recipient).messageExpirationTime);
           message = messageBuilder.build();
           try {
             if (self.equals(recipient)) { // sending to ourself
@@ -866,12 +854,7 @@ public class Manager {
         }
       }
     } else {
-      ContactStore.ContactInfo c = accountData.contactStore.getContact(isSync ? destination : source);
-      if (c.messageExpirationTime != message.getExpiresInSeconds()) {
-        c.messageExpirationTime = message.getExpiresInSeconds();
-        accountData.contactStore.updateContact(c);
-        accountData.save();
-      }
+      Database.Get(aci).ContactsTable.update(isSync ? destination : source, null, null, null, message.getExpiresInSeconds(), null);
     }
 
     if (message.isEndSession()) {
@@ -1168,14 +1151,12 @@ public class Manager {
           try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
             if (contactsMessage.isComplete()) {
-              accountData.contactStore.clear();
+              Database.Get(aci).ContactsTable.clear();
             }
             DeviceContact c;
             while ((c = s.read()) != null) {
               Recipient recipient = Database.Get(aci).RecipientsTable.get(c.getAddress());
-              ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
-              contact.update(c);
-              updateContact(contact);
+              Database.Get(aci).ContactsTable.update(c);
               if (c.getAvatar().isPresent()) {
                 retrieveContactAvatarAttachment(c.getAvatar().get(), recipient);
               }
@@ -1395,13 +1376,6 @@ public class Manager {
       throws IOException, org.whispersystems.signalservice.api.crypto.UntrustedIdentityException, SQLException {
     VerifiedMessage verifiedMessage = new VerifiedMessage(destination.getAddress(), identityKey, trustLevel.toVerifiedState(), System.currentTimeMillis());
     sendSyncMessage(SignalServiceSyncMessage.forVerified(verifiedMessage));
-  }
-
-  public List<ContactStore.ContactInfo> getContacts() {
-    if (accountData.contactStore == null) {
-      return Collections.emptyList();
-    }
-    return this.accountData.contactStore.getContacts();
   }
 
   public GroupInfo getGroup(byte[] groupId) { return accountData.groupStore.getGroup(groupId); }

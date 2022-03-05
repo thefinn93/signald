@@ -34,8 +34,6 @@ public class UnsubscribeRequest implements RequestType<Empty> {
       aci = Database.Get().AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
-    } catch (SQLException e) {
-      throw new InternalError("error getting account UUID", e);
     }
 
     MessageReceiver.unsubscribe(aci, request.getSocket());

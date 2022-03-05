@@ -14,7 +14,6 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.storage.AccountData;
-import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.*;
 import java.nio.file.Files;
@@ -44,9 +43,9 @@ public class SendContactsSyncJob implements Job {
     try {
       try (OutputStream fos = new FileOutputStream(contactsFile)) {
         DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
-        for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
+        for (var record : Database.Get(m.getACI()).ContactsTable.getAll()) {
           VerifiedMessage verifiedMessage = null;
-          var identities = protocolStore.getIdentities(Database.Get(record.address.getACI()).RecipientsTable.get(record.address));
+          var identities = protocolStore.getIdentities(record.recipient);
           if (identities.size() == 0) {
             continue;
           }
@@ -58,16 +57,16 @@ public class SendContactsSyncJob implements Job {
           }
 
           if (currentIdentity != null) {
-            verifiedMessage = new VerifiedMessage(record.address.getSignalServiceAddress(), currentIdentity.getKey(), currentIdentity.getTrustLevel().toVerifiedState(),
+            verifiedMessage = new VerifiedMessage(record.recipient.getAddress(), currentIdentity.getKey(), currentIdentity.getTrustLevel().toVerifiedState(),
                                                   currentIdentity.getDateAdded().getTime());
           }
 
           // TODO: Don't hard code `false` value for blocked argument
           Optional<Integer> expirationTimer = Optional.absent();
-          ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.address.getSignalServiceAddress());
+          ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.recipient);
           ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
-          out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
-                                      m.createContactAvatarAttachment(Database.Get(record.address.getACI()).RecipientsTable.get(record.address)),
+          out.write(new DeviceContact(record.recipient.getAddress(), Optional.fromNullable(record.name),
+                                      m.createContactAvatarAttachment(Database.Get(m.getACI()).RecipientsTable.get(record.recipient.getAddress())),
                                       Optional.fromNullable(record.color), Optional.fromNullable(verifiedMessage), Optional.fromNullable(profileKey), false, expirationTimer,
                                       Optional.absent(), false));
         }

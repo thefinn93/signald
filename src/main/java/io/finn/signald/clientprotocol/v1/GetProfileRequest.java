@@ -16,13 +16,14 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IContactsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -46,16 +47,20 @@ public class GetProfileRequest implements RequestType<Profile> {
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     Recipient recipient = Common.getRecipient(m.getACI(), requestedAddress);
-    ContactStore.ContactInfo contact = m.getAccountData().contactStore.getContact(recipient);
     ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
+    IContactsTable.ContactInfo contact;
+    try {
+      contact = Database.Get(m.getACI()).ContactsTable.get(recipient);
+    } catch (SQLException e) {
+      throw new InternalError("an error occurred fetching the contact", e);
+    }
     if (profileEntry == null) {
       if (contact == null) {
         throw new ProfileUnavailableError();
-      } else {
-        Profile p = new Profile(contact);
-        p.populateAvatar(m);
-        return p;
       }
+      Profile p = new Profile(contact);
+      p.populateAvatar(m);
+      return p;
     }
 
     RefreshProfileJob action = new RefreshProfileJob(m, profileEntry);

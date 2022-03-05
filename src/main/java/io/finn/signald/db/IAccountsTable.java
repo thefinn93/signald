@@ -10,6 +10,8 @@ package io.finn.signald.db;
 import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -38,8 +40,8 @@ public interface IAccountsTable {
   void add(String e164, ACI aci, String filename, UUID server) throws SQLException;
   void DeleteAccount(ACI aci, UUID uuid, String legacyUsername) throws SQLException;
   void setUUID(JsonAddress address) throws SQLException;
-  ACI getACI(String e164) throws SQLException, NoSuchAccountException;
-  String getE164(ACI aci) throws SQLException, NoSuchAccountException;
+  ACI getACI(String e164) throws NoSuchAccountException;
+  String getE164(ACI aci) throws NoSuchAccountException;
   IServersTable.AbstractServer getServer(ACI aci) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException;
   void setServer(ACI aci, String server) throws SQLException;
   DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException;
@@ -48,12 +50,12 @@ public interface IAccountsTable {
 
   // Default implementations
   default boolean exists(UUID uuid) throws SQLException { return exists(ACI.from(uuid)); }
-  default UUID getUUID(String e164) throws SQLException, NoSuchAccountException { return getACI(e164).uuid(); }
+  default UUID getUUID(String e164) throws NoSuchAccountException { return getACI(e164).uuid(); }
   default IServersTable.AbstractServer getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     return getServer(ACI.from(uuid));
   }
 
-  default void importFromJSON(File f) throws IOException, SQLException, InvalidInputException {
+  default void importFromJSON(File f) throws IOException, SQLException, InvalidInputException, UnregisteredUserError, InternalError {
     AccountData accountData = AccountData.load(f);
     if (accountData.getUUID() == null) {
       logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
@@ -83,6 +85,11 @@ public interface IAccountsTable {
 
       if (accountData.legacyGroupsV2 != null) {
         needsSave = accountData.legacyGroupsV2.migrateToDB(account) || needsSave;
+      }
+
+      if (accountData.legacyContactStore != null) {
+        needsSave |= accountData.legacyContactStore.migrateToDB(account);
+        accountData.legacyContactStore = null;
       }
 
       needsSave = accountData.migrateToDB(account) || needsSave;

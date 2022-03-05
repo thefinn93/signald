@@ -43,10 +43,9 @@ public class Database {
 
   public enum Type { SQLITE, POSTGRESQL }
 
-  private final ACI aci;
-  private final Type type;
   public final IAccountDataTable AccountDataTable;
   public final IAccountsTable AccountsTable;
+  public final IContactsTable ContactsTable;
   public final IGroupCredentialsTable GroupCredentialsTable;
   public final IGroupsTable GroupsTable;
   public final IIdentityKeysTable IdentityKeysTable;
@@ -60,12 +59,11 @@ public class Database {
   public final ISessionsTable SessionsTable;
   public final ISignedPreKeysTable SignedPreKeysTable;
   private Database(ACI aci, Type databaseType) {
-    this.aci = aci;
-    this.type = databaseType;
     switch (databaseType) {
     case SQLITE:
       this.AccountDataTable = new io.finn.signald.db.sqlite.AccountDataTable();
       this.AccountsTable = new io.finn.signald.db.sqlite.AccountsTable();
+      this.ContactsTable = new io.finn.signald.db.sqlite.ContactsTable(aci);
       this.GroupCredentialsTable = new io.finn.signald.db.sqlite.GroupCredentialsTable(aci);
       this.GroupsTable = new io.finn.signald.db.sqlite.GroupsTable(aci);
       this.IdentityKeysTable = new io.finn.signald.db.sqlite.IdentityKeysTable(aci);
@@ -82,6 +80,7 @@ public class Database {
     case POSTGRESQL:
       this.AccountDataTable = new io.finn.signald.db.postgresql.AccountDataTable();
       this.AccountsTable = new io.finn.signald.db.postgresql.AccountsTable();
+      this.ContactsTable = new io.finn.signald.db.postgresql.ContactsTable(aci);
       this.GroupCredentialsTable = new io.finn.signald.db.postgresql.GroupCredentialsTable(aci);
       this.GroupsTable = new io.finn.signald.db.postgresql.GroupsTable(aci);
       this.IdentityKeysTable = new io.finn.signald.db.postgresql.IdentityKeysTable(aci);
@@ -136,10 +135,13 @@ public class Database {
 
   public static void close() {
     try {
-      conn.close();
+      if (conn != null) {
+        conn.close();
+      }
     } catch (SQLException e) {
       logger.warn("Failed to close database connection", e);
     }
+    connectionType = Optional.empty();
     conn = null;
   }
 

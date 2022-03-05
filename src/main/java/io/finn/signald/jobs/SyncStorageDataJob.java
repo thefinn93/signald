@@ -172,11 +172,9 @@ public class SyncStorageDataJob implements Job {
       Sentry.captureException(e);
       return;
     }
-    ContactStore contactStore = account.getAccountData().contactStore;
-    ContactStore.ContactInfo contact = contactStore.getContact(recipient);
 
     if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
-      contact.update(contactRecord);
+      Database.Get(account.getACI()).ContactsTable.update(contactRecord);
     }
 
     if (contactRecord.getProfileKey().isPresent()) {

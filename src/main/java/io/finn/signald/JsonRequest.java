@@ -12,6 +12,7 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonQuote;
 import io.finn.signald.clientprotocol.v1.JsonReaction;
+import io.finn.signald.db.IContactsTable;
 import io.finn.signald.storage.ContactStore;
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class JsonRequest {
   public int expiresInSeconds;
   @Doc("override the expiration time of the message. If left blank signald will use the correct expiration time for the thread") public String fingerprint;
   public String trustLevel;
-  public ContactStore.ContactInfo contact;
+  public IContactsTable.JsonContactInfo contact;
   public String captcha;
   public String name;
   public List<Long> timestamps;

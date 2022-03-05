@@ -26,27 +26,4 @@ public class AddressUtil {
       return new SignalServiceAddress(null, identifier);
     }
   }
-
-  public static JsonAddress update(JsonAddress old, JsonAddress update) {
-    if (!old.matches(update)) {
-      throw new IllegalArgumentException("Old does not match new");
-    }
-    JsonAddress result = new JsonAddress(old.getSignalServiceAddress());
-    if (update.number != null) {
-      result.number = update.number;
-    }
-    if (update.uuid != null) {
-      result.uuid = update.uuid;
-    }
-    return result;
-  }
-
-  public SignalServiceAddress resolve(SignalServiceAddress partial) {
-    for (SignalServiceAddress k : knownAddresses) {
-      if (k.matches(partial)) {
-        return k;
-      }
-    }
-    return partial;
-  }
 }

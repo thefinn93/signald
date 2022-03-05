@@ -59,10 +59,10 @@ public class AccountData {
   @JsonProperty("axolotlStore") public SignalProtocolStore legacyProtocolStore;
   @JsonProperty("recipientStore") public RecipientStore legacyRecipientStore = new RecipientStore();
   @JsonProperty("groupsV2") public LegacyGroupsV2Storage legacyGroupsV2;
+  @JsonProperty("contactStore") public ContactStore legacyContactStore;
 
   public boolean registered;
   public GroupStore groupStore;
-  public ContactStore contactStore;
   public ProfileCredentialStore profileCredentialStore = new ProfileCredentialStore();
   public int version;
 
@@ -149,8 +149,8 @@ public class AccountData {
     if (legacyGroupsV2 == null) {
       legacyGroupsV2 = new LegacyGroupsV2Storage();
     }
-    if (contactStore == null) {
-      contactStore = new ContactStore();
+    if (legacyContactStore == null) {
+      legacyContactStore = new ContactStore();
     }
 
     for (GroupInfo g : groupStore.getGroups()) {
@@ -164,13 +164,13 @@ public class AccountData {
 
     if (version < VERSION_IMPORT_CONTACT_PROFILES) {
       // migrate profile keys from contacts to profileCredentialStore
-      for (ContactStore.ContactInfo c : contactStore.getContacts()) {
+      for (var c : Database.Get(address.getACI()).ContactsTable.getAll()) {
         if (c.profileKey == null) {
           continue;
         }
         try {
           ProfileKey p = new ProfileKey(Base64.decode(c.profileKey));
-          Recipient recipient = Database.Get(self.getACI()).RecipientsTable.get(c.address);
+          Recipient recipient = Database.Get(self.getACI()).RecipientsTable.get(c.recipient.getACI());
           profileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
@@ -246,8 +246,8 @@ public class AccountData {
       legacyGroupsV2 = new LegacyGroupsV2Storage();
     }
 
-    if (contactStore == null) {
-      contactStore = new ContactStore();
+    if (legacyContactStore == null) {
+      legacyContactStore = new ContactStore();
     }
 
     if (address != null && address.uuid != null) {
@@ -355,9 +355,7 @@ public class AccountData {
         // thread ID does not match a known group. Assume it's a PM
         try {
           Recipient recipient = Database.Get(address.getACI()).RecipientsTable.get(t.id);
-          ContactStore.ContactInfo c = contactStore.getContact(recipient);
-          c.messageExpirationTime = t.messageExpirationTime;
-          contactStore.updateContact(c);
+          Database.Get(address.getACI()).ContactsTable.update(recipient, null, null, null, t.messageExpirationTime, null);
         } catch (IOException | SQLException e) {
           logger.warn("exception while importing contact: ", e);
         }

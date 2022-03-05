@@ -13,8 +13,8 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
+import io.finn.signald.db.IContactsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.SignalProfile;
 import java.io.File;
 import java.io.IOException;
@@ -46,17 +46,17 @@ public class Profile {
 
   @Doc("currently unclear how these work, as they are not available in the production Signal apps") @JsonProperty("visible_badge_ids") public List<String> visibleBadgeIds;
 
-  public Profile(ContactStore.ContactInfo contact) {
+  public Profile(IContactsTable.ContactInfo contact) {
     if (contact != null) {
       name = contact.name;
       color = contact.color;
       inboxPosition = contact.inboxPosition;
       expirationTime = contact.messageExpirationTime;
-      address = contact.address;
+      address = new JsonAddress(contact.recipient);
     }
   }
 
-  public Profile(SignalProfile profile, Recipient recipient, ContactStore.ContactInfo contact) {
+  public Profile(SignalProfile profile, Recipient recipient, IContactsTable.ContactInfo contact) {
     this(contact);
 
     if (profile != null) {

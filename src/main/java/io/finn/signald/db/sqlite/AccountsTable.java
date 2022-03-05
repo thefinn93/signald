@@ -111,7 +111,7 @@ public class AccountsTable implements IAccountsTable {
   }
 
   @Override
-  public ACI getACI(String e164) throws SQLException, NoSuchAccountException {
+  public ACI getACI(String e164) throws NoSuchAccountException {
     var query = "SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, e164);
@@ -121,11 +121,13 @@ public class AccountsTable implements IAccountsTable {
         }
         return ACI.from(java.util.UUID.fromString(rows.getString(UUID)));
       }
+    } catch (SQLException e) {
+      throw new NoSuchAccountException(e164);
     }
   }
 
   @Override
-  public String getE164(ACI aci) throws SQLException, NoSuchAccountException {
+  public String getE164(ACI aci) throws NoSuchAccountException {
     var query = "SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -135,6 +137,8 @@ public class AccountsTable implements IAccountsTable {
         }
         return rows.getString(E164);
       }
+    } catch (SQLException e) {
+      throw new NoSuchAccountException(aci.toString());
     }
   }
 

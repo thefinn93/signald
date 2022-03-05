@@ -629,11 +629,11 @@ public class LegacySocketHandler {
 
   private void listContacts(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
-    this.reply("contact_list", m.getContacts(), request.id);
+    this.reply("contact_list", Database.Get(m.getACI()).ContactsTable.getAll(), request.id);
   }
 
-  public void updateContact(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(request.username);
+  public void updateContact(JsonRequest request)
+      throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, UnregisteredUserError, InternalError {
     if (request.contact == null) {
       this.reply("update_contact_error", new JsonStatusMessage(0, "No contact specified!", request), request.id);
       return;
@@ -644,8 +644,8 @@ public class LegacySocketHandler {
       return;
     }
 
-    m.updateContact(request.contact);
-    m.getAccountData().save();
+    Manager m = Manager.get(request.username);
+    Database.Get(m.getACI()).ContactsTable.update(request.contact);
     this.reply("contact_updated", null, request.id);
   }
 

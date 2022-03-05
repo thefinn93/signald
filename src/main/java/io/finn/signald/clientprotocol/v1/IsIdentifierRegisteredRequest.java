@@ -35,8 +35,6 @@ public class IsIdentifierRegisteredRequest implements RequestType<BooleanMessage
     final UUID accountUUID;
     try {
       accountUUID = Database.Get().AccountsTable.getUUID(account);
-    } catch (SQLException e) {
-      throw new InternalError("error getting local account UUID", e);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     }

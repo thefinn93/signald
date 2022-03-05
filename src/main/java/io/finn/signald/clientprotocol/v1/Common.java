@@ -71,8 +71,6 @@ public class Common {
         aci = Database.Get().AccountsTable.getACI(identifier);
       } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
-      } catch (SQLException e) {
-        throw new InternalError("error getting manager", e);
       }
       return getManager(aci, offline);
     } else {
@@ -206,8 +204,6 @@ public class Common {
     if (identifier.startsWith("+")) {
       try {
         accountUUID = Database.Get().AccountsTable.getUUID(identifier);
-      } catch (SQLException e) {
-        throw new InternalError("error looking up local account", e);
       } catch (NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
       }

@@ -16,16 +16,16 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Database;
-import io.finn.signald.db.Recipient;
+import io.finn.signald.db.IContactsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.storage.ContactStore;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
@@ -46,8 +46,16 @@ public class ListContactsRequest implements RequestType<ProfileList> {
   public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
     ProfileList list = new ProfileList();
-    for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
-      ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.address.getSignalServiceAddress());
+
+    ArrayList<IContactsTable.ContactInfo> contacts;
+    try {
+      contacts = Database.Get(m.getACI()).ContactsTable.getAll();
+    } catch (SQLException e) {
+      throw new InternalError("failed to get all contacts", e);
+    }
+
+    for (var c : contacts) {
+      ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.recipient);
       if (profileEntry == null) {
         list.profiles.add(new Profile(c));
         continue;
@@ -73,13 +81,12 @@ public class ListContactsRequest implements RequestType<ProfileList> {
       }
 
       try {
-        var recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, c.address);
+        var recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, c.recipient.getAddress());
         Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
         profile.populateAvatar(m);
         list.profiles.add(profile);
       } catch (UnregisteredUserError e) {
         logger.debug("ignoring unregistered user in contact list");
-        continue;
       }
     }
     return list;
