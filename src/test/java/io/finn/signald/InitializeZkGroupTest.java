@@ -13,6 +13,7 @@ import io.finn.signald.util.GroupsUtil;
 import java.io.File;
 import java.io.IOException;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,14 @@ public class InitializeZkGroupTest {
     flyway.migrate();
 
     Config.testInit(db);
+  }
+
+  @AfterEach
+  void tearDown() {
+    Database.close();
+    if (!databaseFile.delete()) {
+      System.err.println("Test database file couldn't be deleted: " + databaseFile.getAbsolutePath());
+    }
   }
 
   @Test

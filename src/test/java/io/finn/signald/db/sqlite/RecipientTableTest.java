@@ -5,17 +5,19 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.sqlite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import io.finn.signald.Config;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IRecipientsTable;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.db.TestUtil;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,15 +36,7 @@ public class RecipientTableTest {
 
   @BeforeEach
   void setUp() throws IOException, SQLException {
-    File tmpDirectory = new File(System.getProperty("java.io.tmpdir"));
-    databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
-    String db = "sqlite:" + databaseFile.getAbsolutePath();
-
-    Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource("jdbc:" + db, null, null).load();
-    flyway.migrate();
-
-    Config.testInit(db);
-
+    databaseFile = TestUtil.createAndConfigureTestSQLiteDatabase();
     recipientsTable = Database.Get(SELF_ADDRESS.getAci()).RecipientsTable;
     recipientsTable.get(SELF_ADDRESS);
     recipientsTable.get(ADDRESS_A);
