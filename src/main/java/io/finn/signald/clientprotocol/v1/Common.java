@@ -111,7 +111,9 @@ public class Common {
   }
 
   static Recipient getRecipient(ACI aci, SignalServiceAddress address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
-  static Recipient getRecipient(ACI aci, JsonAddress address) throws InternalError, UnregisteredUserError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
+  static Recipient getRecipient(ACI aci, JsonAddress address) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
+    return getRecipient(Database.Get(aci).RecipientsTable, address);
+  }
   public static Recipient getRecipient(ACI aci, String address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
 
   static Recipient getRecipient(IRecipientsTable table, SignalServiceAddress address) throws InternalError {
@@ -122,11 +124,13 @@ public class Common {
     }
   }
 
-  static Recipient getRecipient(IRecipientsTable table, JsonAddress address) throws InternalError, UnregisteredUserError {
+  static Recipient getRecipient(IRecipientsTable table, JsonAddress address) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
     try {
       return table.get(address);
     } catch (UnregisteredUserException e) {
       throw new UnregisteredUserError(e);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (SQLException | IOException e) {
       throw new InternalError("error looking up recipient", e);
     }
@@ -142,7 +146,8 @@ public class Common {
 
   public static List<SendMessageResult> send(Manager manager, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
                                              List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError, RateLimitError,
-                                                                               InvalidRequestError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError {
+                                                                               InvalidRequestError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError,
+                                                                               AuthorizationFailedError {
     GroupIdentifier groupIdentifier = null;
     List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
@@ -186,6 +191,8 @@ public class Common {
       throw new ServerNotFoundError(e);
     } catch (InvalidProxyException e) {
       throw new InvalidProxyError(e);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | TimeoutException |
              ExecutionException | InterruptedException e) {
       throw new InternalError("error sending message", e);

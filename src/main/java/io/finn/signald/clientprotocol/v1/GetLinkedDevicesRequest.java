@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 
 @ProtocolType("get_linked_devices")
 @Doc("list all linked devices on a Signal account")
@@ -33,7 +34,7 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public LinkedDevices run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError {
+  public LinkedDevices run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError {
     Account a = Common.getAccount(account);
     List<DeviceInfo> devices;
     try {
@@ -43,10 +44,12 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
       throw new InvalidProxyError(e);
     } catch (io.finn.signald.exceptions.ServerNotFoundException e) {
       throw new ServerNotFoundError(e);
-    } catch (SQLException | IOException e) {
-      throw new InternalError("error getting linked devices", e);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
+    } catch (SQLException | IOException e) {
+      throw new InternalError("error getting linked devices", e);
     }
     return new LinkedDevices(devices);
   }

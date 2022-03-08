@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import io.finn.signald.db.Recipient;
@@ -87,7 +88,7 @@ public class Profile {
     }
   }
 
-  public void populateAvatar(Manager m) throws InternalError, UnregisteredUserError {
+  public void populateAvatar(Manager m) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
     Recipient recipient = Common.getRecipient(m.getACI(), address);
     File f = m.getProfileAvatarFile(recipient);
     if (f == null || !f.exists()) {

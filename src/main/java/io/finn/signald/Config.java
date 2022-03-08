@@ -88,7 +88,6 @@ public class Config {
       Sentry.init(options -> {
         options.setDsn(System.getenv("SENTRY_DSN"));
         options.setRelease(BuildConfig.NAME + "@" + BuildConfig.VERSION);
-        options.setDebug(verbose);
       });
       logger.info("exception reporting via Sentry enabled");
     }

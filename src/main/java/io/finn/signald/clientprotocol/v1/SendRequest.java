@@ -39,6 +39,7 @@ import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.util.Base64;
 
@@ -95,6 +96,8 @@ public class SendRequest implements RequestType<SendResponse> {
       for (JsonAttachment attachment : attachments) {
         try {
           signalServiceAttachments.add(sender.uploadAttachment(attachment.asStream()));
+        } catch (AuthorizationFailedException e) {
+          throw new AuthorizationFailedError(e);
         } catch (NonSuccessfulResponseCodeException e) {
           if (e.getCode() == 400) {
             throw new AttachmentTooLargeError(attachment.filename);

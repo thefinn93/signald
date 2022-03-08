@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 
 public class AccountRepair {
   private final static Logger logger = LogManager.getLogger();
@@ -47,6 +48,8 @@ public class AccountRepair {
         try {
           logger.debug("refreshing group {}", group.getIdString());
           groups.getGroup(group.getSecretParams(), -1);
+        } catch (AuthorizationFailedException e) {
+          logger.error("authorization failed while refreshing groups. Should probably delete this account");
         } catch (InvalidInputException | InvalidGroupStateException | IOException | VerificationFailedException | SQLException e) {
           logger.error("error refreshing group {}", group.getIdString());
           Sentry.captureException(e);

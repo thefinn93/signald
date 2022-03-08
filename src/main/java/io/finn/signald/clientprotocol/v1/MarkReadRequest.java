@@ -33,6 +33,7 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 
 @ProtocolType("mark_read")
 public class MarkReadRequest implements RequestType<Empty> {
@@ -71,6 +72,8 @@ public class MarkReadRequest implements RequestType<Empty> {
 
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (IOException e) {
       throw new InternalError("error sending receipt", e);
     } catch (UntrustedIdentityException e) {
@@ -84,6 +87,8 @@ public class MarkReadRequest implements RequestType<Empty> {
 
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnRecipient()));
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (IOException e) {
       throw new InternalError("error sending sync message", e);
     } catch (UntrustedIdentityException e) {

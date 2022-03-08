@@ -13,6 +13,7 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
@@ -29,7 +30,7 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
-  public JsonAddress run(Request request) throws InternalError, NoSuchAccountError, UnregisteredUserError {
+  public JsonAddress run(Request request) throws InternalError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError {
     try {
       return new JsonAddress(Common.getRecipient(Database.Get().AccountsTable.getACI(account), partial));
     } catch (SQLException e) {
