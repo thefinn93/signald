@@ -28,7 +28,7 @@ public class ContactsTable implements IContactsTable {
   public ACI getACI() { return aci; }
 
   private ContactInfo infoFromRow(ResultSet row) throws SQLException {
-    var serviceAddress = new SignalServiceAddress(ACI.from(UUID.fromString(row.getString(RECIPIENT_ACI))), row.getString(RECIPIENT_E164));
+    var serviceAddress = new SignalServiceAddress(ACI.from(row.getObject(RECIPIENT_ACI, UUID.class)), row.getString(RECIPIENT_E164));
     return new ContactInfo(row.getString(NAME), new Recipient(aci.uuid(), row.getInt(RECIPIENT), serviceAddress), row.getString(COLOR), row.getBytes(PROFILE_KEY),
                            row.getInt(MESSAGE_EXPIRATION_TIME), row.getInt(INBOX_POSITION));
   }

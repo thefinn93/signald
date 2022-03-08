@@ -122,6 +122,7 @@ public class AccountsTable implements IAccountsTable {
         return ACI.from(java.util.UUID.fromString(rows.getString(UUID)));
       }
     } catch (SQLException e) {
+      logger.catching(e);
       throw new NoSuchAccountException(e164);
     }
   }
