@@ -40,7 +40,7 @@ public class RequestSyncRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UntrustedIdentityError, InvalidRequestError, AuthorizationFailedError {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UntrustedIdentityError, InvalidRequestError, AuthorizationFailedError, SQLError {
     Account account = Common.getAccount(accountIdentifier);
 
     if (groups) {

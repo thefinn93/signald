@@ -34,7 +34,7 @@ public class GetGroupRevisionPagesRequest implements RequestType<GroupHistoryPag
 
   @Override
   public GroupHistoryPage run(Request request) throws NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError, InternalError, GroupVerificationError,
-                                                      InvalidGroupStateError, InvalidRequestError, AuthorizationFailedError, RateLimitError {
+                                                      InvalidGroupStateError, InvalidRequestError, AuthorizationFailedError, RateLimitError, SQLError {
     final Account acc = Common.getAccount(account);
     // use revision == 0 to avoid unnecessarily fetching from the server
     final IGroupsTable.IGroup group = Common.getGroup(acc, groupId, 0);

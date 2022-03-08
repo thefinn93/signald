@@ -13,6 +13,7 @@ import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,7 +41,7 @@ class SocketManager {
     out.println(JSONMessage);
   }
 
-  public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) {
+  public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws SQLException {
     for (MessageEncoder l : this.listeners) {
       if (l.isClosed()) {
         this.remove(l);

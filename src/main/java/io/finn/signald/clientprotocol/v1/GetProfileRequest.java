@@ -44,7 +44,7 @@ public class GetProfileRequest implements RequestType<Profile> {
 
   @Override
   public Profile run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError, AuthorizationFailedError {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account);
     Recipient recipient = Common.getRecipient(m.getACI(), requestedAddress);
     ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
@@ -52,7 +52,7 @@ public class GetProfileRequest implements RequestType<Profile> {
     try {
       contact = Database.Get(m.getACI()).ContactsTable.get(recipient);
     } catch (SQLException e) {
-      throw new InternalError("an error occurred fetching the contact", e);
+      throw new SQLError(e);
     }
     if (profileEntry == null) {
       if (contact == null) {

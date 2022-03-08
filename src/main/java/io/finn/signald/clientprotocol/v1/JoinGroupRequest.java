@@ -54,7 +54,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
   @Override
   public JsonGroupJoinInfo run(Request request)
       throws InvalidRequestError, InvalidInviteURIError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError,
-             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError {
+             GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError, SQLError {
     Account a = Common.getAccount(account);
     Groups groups = Common.getGroups(a);
 

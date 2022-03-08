@@ -38,7 +38,7 @@ public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
 
   @Override
   public JsonGroupJoinInfo run(Request request)
-      throws GroupLinkNotActiveError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, GroupVerificationError {
+      throws GroupLinkNotActiveError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, GroupVerificationError, SQLError {
     URI parsedURI;
     try {
       parsedURI = new URI(uri);

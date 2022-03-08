@@ -31,7 +31,7 @@ public class UpdateContactRequest implements RequestType<Profile> {
   @JsonProperty("inbox_position") public Integer inboxPosition;
 
   @Override
-  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
     try {
       Manager m = Common.getManager(account);
       var c = new IContactsTable.ContactInfo();
@@ -40,8 +40,10 @@ public class UpdateContactRequest implements RequestType<Profile> {
       c.color = color;
       c.inboxPosition = inboxPosition;
       return new Profile(Database.Get(m.getACI()).ContactsTable.update(c));
-    } catch (IOException | SQLException e) {
+    } catch (IOException e) {
       throw new InternalError("error updating contact", e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
   }
 }

@@ -29,12 +29,14 @@ public class DeleteAccountRequest implements RequestType<Empty> {
   @Doc("delete account information from the server as well (default false)") public boolean server = false;
 
   @Override
-  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account, !server);
     try {
       m.deleteAccount(server);
-    } catch (IOException | SQLException e) {
+    } catch (IOException e) {
       throw new InternalError("error deleting account", e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
     return new Empty();
   }

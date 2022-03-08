@@ -60,17 +60,20 @@ public class Common {
   private static final Histogram messageSendTime =
       Histogram.build().name(BuildConfig.NAME + "_message_send_time").help("Time to send messages in seconds").labelNames("account_uuid").register();
 
-  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
     return getManager(identifier, false);
   }
 
-  static Manager getManager(String identifier, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  static Manager getManager(String identifier, boolean offline)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
     if (identifier.startsWith("+")) {
       ACI aci;
       try {
         aci = Database.Get().AccountsTable.getACI(identifier);
       } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
+      } catch (SQLException e) {
+        throw new SQLError(e);
       }
       return getManager(aci, offline);
     } else {
@@ -199,13 +202,15 @@ public class Common {
     }
   }
 
-  public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, InvalidRequestError {
+  public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, InvalidRequestError, SQLError {
     UUID accountUUID;
     if (identifier.startsWith("+")) {
       try {
         accountUUID = Database.Get().AccountsTable.getUUID(identifier);
       } catch (NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
+      } catch (SQLException e) {
+        throw new SQLError(e);
       }
     } else {
       try {

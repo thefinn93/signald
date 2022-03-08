@@ -7,10 +7,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -31,12 +29,14 @@ public class IsIdentifierRegisteredRequest implements RequestType<BooleanMessage
   public String identifier;
 
   @Override
-  public BooleanMessage run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
+  public BooleanMessage run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, SQLError {
     final UUID accountUUID;
     try {
       accountUUID = Database.Get().AccountsTable.getUUID(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
 
     // We don't distinguish between an ACI and a PNI here, as they're both just strongly typed UUIDs. We just choose one

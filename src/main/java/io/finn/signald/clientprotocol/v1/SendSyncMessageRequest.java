@@ -11,14 +11,8 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.RateLimitError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
-import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,8 +50,8 @@ public class SendSyncMessageRequest implements RequestType<JsonSendMessageResult
   public JsonMessageRequestResponseMessage messageRequestResponse;
 
   @Override
-  public JsonSendMessageResult run(Request request)
-      throws InvalidRequestError, RateLimitError, InternalError, UnregisteredUserError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
+  public JsonSendMessageResult run(Request request) throws InvalidRequestError, RateLimitError, InternalError, UnregisteredUserError, NoSuchAccountError, ServerNotFoundError,
+                                                           InvalidProxyError, AuthorizationFailedError, SQLError {
     Manager manager = Common.getManager(account);
 
     final SignalServiceSyncMessage syncMessage;

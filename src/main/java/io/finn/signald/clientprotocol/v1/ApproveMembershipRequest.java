@@ -39,8 +39,8 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @Required @Doc("list of requesting members to approve") public List<JsonAddress> members;
 
   @Override
-  public JsonGroupV2Info run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
+  public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError, GroupVerificationError,
+                                                     InvalidRequestError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

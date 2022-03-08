@@ -9,6 +9,7 @@ package io.finn.signald;
 
 import io.prometheus.client.Gauge;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -65,7 +66,7 @@ public final class SignalWebSocketHealthMonitor implements HealthMonitor {
         .subscribe(s -> onStateChange(s, unidentified, true));
   }
 
-  private synchronized void onStateChange(WebSocketConnectionState state, HealthState healthState, boolean unidentified) {
+  private synchronized void onStateChange(WebSocketConnectionState state, HealthState healthState, boolean unidentified) throws SQLException {
     logger.debug((unidentified ? "unidentified" : "identified") + " websocket state: " + state.name());
 
     connected.labels(accountUUID.toString(), unidentified ? "unidentified" : "identified").set(state == WebSocketConnectionState.CONNECTED ? 1 : 0);

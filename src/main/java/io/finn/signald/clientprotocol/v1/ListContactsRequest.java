@@ -43,7 +43,7 @@ public class ListContactsRequest implements RequestType<ProfileList> {
   public boolean async;
 
   @Override
-  public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
+  public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account);
     ProfileList list = new ProfileList();
 

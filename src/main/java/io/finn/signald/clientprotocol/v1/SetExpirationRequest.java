@@ -41,7 +41,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                                  InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
+                                                  InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError {
     List<SendMessageResult> results;
 
     if (group != null) {
@@ -60,10 +60,12 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
         }
         try {
           results = Common.getManager(account).setExpiration(groupId, expiration);
-        } catch (IOException | SQLException e) {
+        } catch (IOException e) {
           throw new InternalError("error setting expiration", e);
         } catch (GroupNotFoundException | NotAGroupMemberException e) {
           throw new UnknownGroupError();
+        } catch (SQLException e) {
+          throw new SQLError(e);
         }
       }
     } else {

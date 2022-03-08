@@ -59,8 +59,7 @@ public class SetProfile implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRequestError, AuthorizationFailedError {
-
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRequestError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account);
 
     SignalProfile existing = m.getAccountData().profileCredentialStore.get(m.getOwnRecipient()).getProfile();

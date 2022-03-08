@@ -759,7 +759,7 @@ public class Manager {
   public SignalServiceMessageSender getMessageSender() { return dependencies.getMessageSender(); }
 
   public interface ReceiveMessageHandler {
-    void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e);
+    void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent decryptedContent, Throwable e) throws SQLException;
   }
 
   private List<Job> handleSignalServiceDataMessage(SignalServiceDataMessage message, boolean isSync, Recipient source, Recipient destination, boolean ignoreAttachments)

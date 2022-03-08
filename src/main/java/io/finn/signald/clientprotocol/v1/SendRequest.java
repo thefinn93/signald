@@ -59,8 +59,9 @@ public class SendRequest implements RequestType<SendResponse> {
   @Doc("Optionally set to a sub-set of group members. Ignored if recipientGroupId isn't specified") public List<JsonAddress> members;
 
   @Override
-  public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError,
-                                                  InvalidRequestError, UnknownGroupError, RateLimitError, InvalidRecipientError, AttachmentTooLargeError, AuthorizationFailedError {
+  public SendResponse run(Request request)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError, InvalidRequestError, UnknownGroupError,
+             RateLimitError, InvalidRecipientError, AttachmentTooLargeError, AuthorizationFailedError, SQLError {
     Manager manager = Common.getManager(username);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

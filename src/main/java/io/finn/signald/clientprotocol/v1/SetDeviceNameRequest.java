@@ -28,7 +28,7 @@ public class SetDeviceNameRequest implements RequestType<Empty> {
 
   @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override
-  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account);
 
     try {

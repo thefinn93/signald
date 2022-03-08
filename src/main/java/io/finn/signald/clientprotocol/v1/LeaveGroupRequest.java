@@ -43,8 +43,8 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("The group to leave") @Required public String groupID;
 
   @Override
-  public GroupInfo run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
+  public GroupInfo run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UnknownGroupError, GroupVerificationError,
+                                               InvalidRequestError, AuthorizationFailedError, SQLError {
     Account a = Common.getAccount(account);
     var group = Common.getGroup(a, groupID);
 
@@ -83,8 +83,10 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
 
     try {
       Common.getManager(account).sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), recipients);
-    } catch (IOException | SQLException e) {
+    } catch (IOException e) {
       throw new InternalError("error sending group update", e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
 
     try {

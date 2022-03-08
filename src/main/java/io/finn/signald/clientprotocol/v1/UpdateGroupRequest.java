@@ -80,7 +80,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
   @Override
   public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
+                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError {
     Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
     var recipientsTable = Database.Get(m.getACI()).RecipientsTable;

@@ -34,7 +34,8 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public LinkedDevices run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError {
+  public LinkedDevices run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError, SQLError {
     Account a = Common.getAccount(account);
     List<DeviceInfo> devices;
     try {

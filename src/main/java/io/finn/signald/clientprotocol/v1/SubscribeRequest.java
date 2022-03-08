@@ -51,12 +51,14 @@ public class SubscribeRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to subscribe to incoming message for") @Required public String account;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
     ACI aci;
     try {
       aci = Database.Get().AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
 
     try {
@@ -122,7 +124,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     }
 
     @Override
-    public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException {
+    public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws IOException, SQLException {
       try {
         IncomingMessage message = new IncomingMessage(envelope, content, aci);
         broadcast(new ClientMessageWrapper(account, message));

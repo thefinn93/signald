@@ -40,8 +40,8 @@ public interface IAccountsTable {
   void add(String e164, ACI aci, String filename, UUID server) throws SQLException;
   void DeleteAccount(ACI aci, UUID uuid, String legacyUsername) throws SQLException;
   void setUUID(JsonAddress address) throws SQLException;
-  ACI getACI(String e164) throws NoSuchAccountException;
-  String getE164(ACI aci) throws NoSuchAccountException;
+  ACI getACI(String e164) throws NoSuchAccountException, SQLException;
+  String getE164(ACI aci) throws NoSuchAccountException, SQLException;
   IServersTable.AbstractServer getServer(ACI aci) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException;
   void setServer(ACI aci, String server) throws SQLException;
   DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException;
@@ -50,7 +50,7 @@ public interface IAccountsTable {
 
   // Default implementations
   default boolean exists(UUID uuid) throws SQLException { return exists(ACI.from(uuid)); }
-  default UUID getUUID(String e164) throws NoSuchAccountException { return getACI(e164).uuid(); }
+  default UUID getUUID(String e164) throws NoSuchAccountException, SQLException { return getACI(e164).uuid(); }
   default IServersTable.AbstractServer getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     return getServer(ACI.from(uuid));
   }

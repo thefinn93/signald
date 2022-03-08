@@ -29,11 +29,11 @@ public class SubmitChallengeRequest implements RequestType<Empty> {
   @JsonProperty("captcha_token") public String captchaToken;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, InvalidRequestError, ServerNotFoundError, InvalidProxyError, InternalError {
+  public Empty run(Request request) throws NoSuchAccountError, InvalidRequestError, ServerNotFoundError, InvalidProxyError, InternalError, SQLError {
     SignalServiceAccountManager accountManager;
     try {
       accountManager = Common.getAccount(account).getSignalDependencies().getAccountManager();
-    } catch (SQLException | IOException e) {
+    } catch (IOException e) {
       throw new InternalError("error getting signal dependencies", e);
     } catch (ServerNotFoundException e) {
       throw new ServerNotFoundError(e);
@@ -41,6 +41,8 @@ public class SubmitChallengeRequest implements RequestType<Empty> {
       throw new InvalidProxyError(e);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
 
     try {

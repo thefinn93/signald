@@ -90,7 +90,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     }
   }
 
-  public static void handleWebSocketConnectionStateChange(UUID accountUUID, WebSocketConnectionState connectionState, boolean unidentified) {
+  public static void handleWebSocketConnectionStateChange(UUID accountUUID, WebSocketConnectionState connectionState, boolean unidentified) throws SQLException {
     synchronized (receivers) {
       MessageReceiver receiver = receivers.get(accountUUID.toString());
       if (receiver == null) {
@@ -114,7 +114,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     }
   }
 
-  public static void broadcastStorageStateChange(UUID accountUUID, long version) {
+  public static void broadcastStorageStateChange(UUID accountUUID, long version) throws SQLException {
     synchronized (receivers) {
       MessageReceiver receiver = receivers.get(accountUUID.toString());
       if (receiver == null) {
@@ -204,12 +204,17 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     } catch (Exception e) {
       logger.error("shutting down message receiver for " + Util.redact(aci), e);
       Sentry.captureException(e);
-      sockets.broadcastListenStopped(e);
+      try {
+        sockets.broadcastListenStopped(e);
+      } catch (SQLException ex) {
+        logger.error("SQL exception occurred stopping listener");
+        Sentry.captureException(e);
+      }
     }
   }
 
   @Override
-  public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) {
+  public void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, Throwable exception) throws SQLException {
     if (exception != null) {
       if (exception instanceof SelfSendException) {
         logger.debug("ignoring SelfSendException (see https://gitlab.com/signald/signald/-/issues/24)");
@@ -273,7 +278,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
     public synchronized int size() { return listeners.size(); }
 
-    private void broadcast(broadcastMessage b) {
+    private void broadcast(broadcastMessage b) throws SQLException {
       synchronized (listeners) {
         for (MessageEncoder l : this.listeners) {
           if (l.isClosed()) {
@@ -289,22 +294,24 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
       }
     }
 
-    public void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) {
+    public void broadcastWebSocketConnectionStateChange(WebSocketConnectionState state, boolean unidentified) throws SQLException {
       broadcast(r -> r.broadcastWebSocketConnectionStateChange(state, unidentified));
     }
 
-    public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) { broadcast(r -> r.broadcastIncomingMessage(envelope, content)); }
+    public void broadcastIncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content) throws SQLException {
+      broadcast(r -> r.broadcastIncomingMessage(envelope, content));
+    }
 
-    public void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) { broadcast(r -> r.broadcastReceiveFailure(envelope, exception)); }
+    public void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) throws SQLException { broadcast(r -> r.broadcastReceiveFailure(envelope, exception)); }
 
-    public void broadcastListenStarted() { broadcast(MessageEncoder::broadcastListenStarted); }
+    public void broadcastListenStarted() throws SQLException { broadcast(MessageEncoder::broadcastListenStarted); }
 
-    public void broadcastListenStopped(Throwable exception) { broadcast(r -> r.broadcastListenStopped(exception)); }
+    public void broadcastListenStopped(Throwable exception) throws SQLException { broadcast(r -> r.broadcastListenStopped(exception)); }
 
-    public void broadcastStorageStateChange(long version) { broadcast(r -> r.broadcastStorageChange(version)); }
+    public void broadcastStorageStateChange(long version) throws SQLException { broadcast(r -> r.broadcastStorageChange(version)); }
 
     private interface broadcastMessage {
-      void broadcast(MessageEncoder r) throws IOException;
+      void broadcast(MessageEncoder r) throws IOException, SQLException;
     }
   }
 }

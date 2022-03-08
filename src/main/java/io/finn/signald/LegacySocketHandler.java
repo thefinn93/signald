@@ -708,8 +708,8 @@ public class LegacySocketHandler {
     this.reply("account_refreshed", null, request.id);
   }
 
-  private void groupLinkInfo(JsonRequest request)
-      throws IOException, InvalidRequestError, GroupVerificationError, NoSuchAccountError, GroupLinkNotActiveError, ServerNotFoundError, InternalError, InvalidProxyError {
+  private void groupLinkInfo(JsonRequest request) throws IOException, InvalidRequestError, GroupVerificationError, NoSuchAccountError, GroupLinkNotActiveError, ServerNotFoundError,
+                                                         InternalError, InvalidProxyError, SQLError {
     GroupLinkInfoRequest runner = new GroupLinkInfoRequest();
     runner.account = request.username;
     runner.uri = request.uri;

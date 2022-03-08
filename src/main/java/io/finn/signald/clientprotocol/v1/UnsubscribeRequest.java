@@ -17,6 +17,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.SQLError;
 import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
@@ -28,12 +29,14 @@ public class UnsubscribeRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to unsubscribe from") @Required public String account;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, InternalError {
+  public Empty run(Request request) throws NoSuchAccountError, InternalError, SQLError {
     ACI aci;
     try {
       aci = Database.Get().AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
 
     MessageReceiver.unsubscribe(aci, request.getSocket());

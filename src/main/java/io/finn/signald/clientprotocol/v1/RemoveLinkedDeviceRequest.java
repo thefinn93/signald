@@ -29,7 +29,7 @@ public class RemoveLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue("3") @Doc("the ID of the device to unlink") @Required public long deviceId;
 
   @Override
-  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError {
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError, SQLError {
     Account a = Common.getAccount(account);
     SignalServiceAccountManager accountManager = Common.getDependencies(a.getUUID()).getAccountManager();
     try {
