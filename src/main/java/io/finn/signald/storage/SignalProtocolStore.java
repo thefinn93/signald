@@ -10,19 +10,18 @@ package io.finn.signald.storage;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Account;
-import io.finn.signald.db.IdentityKeysTable;
-import io.finn.signald.db.PreKeysTable;
-import io.finn.signald.db.SessionsTable;
-import io.finn.signald.db.SignedPreKeysTable;
+import io.finn.signald.db.IIdentityKeysTable;
+import io.finn.signald.db.IPreKeysTable;
+import io.finn.signald.db.ISessionsTable;
+import io.finn.signald.db.ISignedPreKeysTable;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.UUID;
 
 public class SignalProtocolStore {
-  @JsonIgnore public PreKeysTable preKeys;
-  @JsonIgnore public SessionsTable sessionStore;
-  @JsonIgnore public SignedPreKeysTable signedPreKeyStore;
-  @JsonIgnore public IdentityKeysTable identityKeyStore;
+  @JsonIgnore public IPreKeysTable preKeys;
+  @JsonIgnore public ISessionsTable sessionStore;
+  @JsonIgnore public ISignedPreKeysTable signedPreKeyStore;
+  @JsonIgnore public IIdentityKeysTable identityKeyStore;
 
   @JsonProperty("preKeys") public PreKeyStore legacyPreKeys;
   @JsonProperty("sessionStore") public SessionStore legacySessionStore;

@@ -8,14 +8,14 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.ClientConnection;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.SocketException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
@@ -28,12 +28,12 @@ import org.asamk.signal.util.SecurityProvider;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.output.MigrateOutput;
-import org.flywaydb.core.api.output.MigrateResult;
 import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.newsclub.net.unix.AFUNIXSocketCredentials;
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
+import org.whispersystems.signalservice.api.push.ACI;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -60,8 +60,16 @@ public class Main {
       Manager.createPrivateDirectories(Config.getDataPath());
 
       sdnotify("STATUS=migrating database " + Config.getDb());
-      Flyway flyway = Flyway.configure().dataSource(Config.getDb(), null, null).load();
-      MigrateResult migrateResult = flyway.migrate();
+      var flyway = Flyway.configure().baselineOnMigrate(true).baselineVersion("0.0");
+      switch (Database.GetConnectionType()) {
+      case SQLITE:
+        flyway.locations("db/migration/sqlite");
+        break;
+      case POSTGRESQL:
+        flyway.locations("db/migration/postgresql");
+        break;
+      }
+      var migrateResult = flyway.dataSource(Config.getDb(), Config.getDbUser(), Config.getDbPassword()).load().migrate();
       for (String w : migrateResult.warnings) {
         logger.warn("db migration warning: " + w);
       }
@@ -72,7 +80,7 @@ public class Main {
       }
 
       if (Config.getTrustAllKeys()) {
-        IdentityKeysTable.trustAllKeys();
+        Database.Get().IdentityKeysTable.trustAllKeys();
       }
 
       // Migrate data as supported from the JSON state files:
@@ -84,14 +92,14 @@ public class Main {
             continue;
           }
           if (e164Pattern.matcher(f.getName()).matches()) {
-            AccountsTable.importFromJSON(f);
+            Database.Get().AccountsTable.importFromJSON(f);
           } else {
             logger.warn("account file {} does NOT appear to have a valid phone number in the filename!", f.getAbsolutePath());
           }
         }
       }
 
-      for (UUID accountUUID : AccountsTable.getAll()) {
+      for (UUID accountUUID : Database.Get().AccountsTable.getAll()) {
         AccountRepair.repairAccountIfNeeded(new Account(accountUUID));
       }
 

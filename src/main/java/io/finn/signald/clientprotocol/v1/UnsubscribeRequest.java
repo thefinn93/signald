@@ -17,10 +17,9 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.push.ACI;
 
 @ProtocolType("unsubscribe")
@@ -32,7 +31,7 @@ public class UnsubscribeRequest implements RequestType<Empty> {
   public Empty run(Request request) throws NoSuchAccountError, InternalError {
     ACI aci;
     try {
-      aci = AccountsTable.getACI(account);
+      aci = Database.Get().AccountsTable.getACI(account);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {

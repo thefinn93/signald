@@ -39,10 +39,10 @@ public class ReactRequest implements RequestType<SendResponse> {
     }
     Recipient recipient = null;
     if (recipientAddress != null) {
-      recipient = Common.getRecipient(m.getRecipientsTable(), recipientAddress);
+      recipient = Common.getRecipient(m.getACI(), recipientAddress);
     }
 
-    Recipient reactionTarget = Common.getRecipient(m.getRecipientsTable(), reaction.targetAuthor);
+    Recipient reactionTarget = Common.getRecipient(m.getACI(), reaction.targetAuthor);
     reaction.targetAuthor = new JsonAddress(reactionTarget);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();

@@ -6,62 +6,21 @@
  */
 package io.finn.signald;
 
-import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE;
-import static java.nio.file.attribute.PosixFilePermission.GROUP_READ;
-import static java.nio.file.attribute.PosixFilePermission.GROUP_WRITE;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
-import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
+import static java.nio.file.attribute.PosixFilePermission.*;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.Database;
-import io.finn.signald.db.DatabaseAccountDataStore;
-import io.finn.signald.db.GroupsTable;
-import io.finn.signald.db.IdentityKeysTable;
-import io.finn.signald.db.MessageQueueTable;
-import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
-import io.finn.signald.db.ServersTable;
-import io.finn.signald.db.StoredEnvelope;
-import io.finn.signald.exceptions.InvalidProxyException;
-import io.finn.signald.exceptions.InvalidRecipientException;
-import io.finn.signald.exceptions.NoSendPermissionException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.UnknownGroupException;
-import io.finn.signald.jobs.BackgroundJobRunnerThread;
-import io.finn.signald.jobs.DownloadStickerJob;
-import io.finn.signald.jobs.Job;
-import io.finn.signald.jobs.RefreshPreKeysJob;
-import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.jobs.ResetSessionJob;
-import io.finn.signald.jobs.SendContactsSyncJob;
-import io.finn.signald.jobs.SendDeliveryReceiptJob;
-import io.finn.signald.jobs.SendGroupSyncJob;
-import io.finn.signald.jobs.SendLegacyGroupUpdateJob;
-import io.finn.signald.jobs.SendRetryMessageRequestJob;
-import io.finn.signald.jobs.SyncStorageDataJob;
-import io.finn.signald.storage.AccountData;
-import io.finn.signald.storage.ContactStore;
-import io.finn.signald.storage.GroupInfo;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
-import io.finn.signald.storage.SignalProfile;
+import io.finn.signald.db.*;
+import io.finn.signald.exceptions.*;
+import io.finn.signald.jobs.*;
+import io.finn.signald.storage.*;
 import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
 import io.prometheus.client.Histogram;
 import io.sentry.Sentry;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -72,40 +31,15 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
-import org.signal.libsignal.metadata.InvalidMetadataMessageException;
-import org.signal.libsignal.metadata.InvalidMetadataVersionException;
-import org.signal.libsignal.metadata.ProtocolDuplicateMessageException;
-import org.signal.libsignal.metadata.ProtocolInvalidKeyException;
-import org.signal.libsignal.metadata.ProtocolInvalidKeyIdException;
-import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
-import org.signal.libsignal.metadata.ProtocolInvalidVersionException;
-import org.signal.libsignal.metadata.ProtocolLegacyMessageException;
-import org.signal.libsignal.metadata.ProtocolNoSessionException;
-import org.signal.libsignal.metadata.ProtocolUntrustedIdentityException;
-import org.signal.libsignal.metadata.SelfSendException;
+import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
@@ -113,14 +47,9 @@ import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupIdentifier;
-import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.util.Hex;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -132,41 +61,12 @@ import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.InvalidMessageStructureException;
-import org.whispersystems.signalservice.api.SignalServiceAccountManager;
-import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
-import org.whispersystems.signalservice.api.SignalServiceMessageSender;
-import org.whispersystems.signalservice.api.SignalSessionLock;
-import org.whispersystems.signalservice.api.SignalWebSocket;
-import org.whispersystems.signalservice.api.crypto.ContentHint;
-import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
-import org.whispersystems.signalservice.api.crypto.ProfileCipher;
-import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
-import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
-import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
+import org.whispersystems.signalservice.api.*;
+import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
-import org.whispersystems.signalservice.api.messages.SendMessageResult;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
-import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
-import org.whispersystems.signalservice.api.messages.SignalServiceContent;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
-import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
-import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.ContactsMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
-import org.whispersystems.signalservice.api.messages.multidevice.DeviceContactsInputStream;
-import org.whispersystems.signalservice.api.messages.multidevice.KeysMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.RequestMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
-import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
+import org.whispersystems.signalservice.api.messages.*;
+import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -216,7 +116,7 @@ public class Manager {
       if (managers.containsKey(aci.toString())) {
         return managers.get(aci.toString());
       }
-      accountData = AccountData.load(AccountsTable.getFile(aci));
+      accountData = AccountData.load(Database.Get().AccountsTable.getFile(aci));
       m = new Manager(aci, accountData);
       managers.put(aci.toString(), m);
     }
@@ -233,7 +133,7 @@ public class Manager {
   }
 
   public static Manager get(String e164) throws NoSuchAccountException, SQLException, InvalidProxyException, ServerNotFoundException, InvalidKeyException, IOException {
-    UUID uuid = AccountsTable.getUUID(e164);
+    UUID uuid = Database.Get().AccountsTable.getUUID(e164);
     return Manager.get(uuid);
   }
 
@@ -261,9 +161,9 @@ public class Manager {
     this.aci = aci;
     account = new Account(aci);
     this.accountData = accountData;
-    self = new RecipientsTable(aci).get(aci);
+    self = Database.Get(aci).RecipientsTable.get(aci);
     logger = LogManager.getLogger("manager-" + Util.redact(aci.toString()));
-    ServersTable.Server server = AccountsTable.getServer(aci);
+    var server = Database.Get().AccountsTable.getServer(aci);
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
     dependencies = SignalDependencies.get(aci);
@@ -278,7 +178,7 @@ public class Manager {
     attachmentsPath = Config.getDataPath() + "/attachments";
     avatarsPath = Config.getDataPath() + "/avatars";
     stickersPath = Config.getDataPath() + "/stickers";
-    GroupsTable.setGroupAvatarPath(avatarsPath);
+    Database.Get().GroupsTable.setGroupAvatarPath(avatarsPath);
     createPrivateDirectories(dataPath);
   }
 
@@ -371,7 +271,6 @@ public class Manager {
       SignedPreKeyRecord record = new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
       account.getProtocolStore().storeSignedPreKey(signedPreKeyId, record);
       account.setNextSignedPreKeyId((signedPreKeyId + 1) % Medium.MAX_VALUE);
-
       return record;
     } catch (InvalidKeyException e) {
       throw new AssertionError(e);
@@ -431,13 +330,13 @@ public class Manager {
 
   public List<JsonGroupV2Info> getGroupsV2Info() throws SQLException {
     List<JsonGroupV2Info> groups = new ArrayList<>();
-    for (GroupsTable.Group g : account.getGroupsTable().getAll()) {
+    for (var g : Database.Get(account.getACI()).GroupsTable.getAll()) {
       groups.add(g.getJsonGroupV2Info());
     }
     return groups;
   }
 
-  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, GroupsTable.Group group) throws IOException, SQLException {
+  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group) throws IOException, SQLException {
 
     DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
 
@@ -470,7 +369,7 @@ public class Manager {
     g.members.remove(accountData.address);
     accountData.groupStore.updateGroup(g);
 
-    List<Recipient> members = getRecipientsTable().get(g.getMembers());
+    List<Recipient> members = Database.Get(aci).RecipientsTable.get(g.getMembers());
     return sendMessage(messageBuilder, members);
   }
 
@@ -511,7 +410,7 @@ public class Manager {
     SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
 
     // Don't send group message to ourself
-    final List<Recipient> membersSend = getRecipientsTable().get(g.getMembers());
+    final List<Recipient> membersSend = Database.Get(aci).RecipientsTable.get(g.getMembers());
     membersSend.remove(self);
     sendMessage(messageBuilder, membersSend);
     return g;
@@ -543,7 +442,7 @@ public class Manager {
     accountData.save();
     SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
     messageBuilder.asExpirationUpdate().withExpiration(expiresInSeconds);
-    List<Recipient> members = getRecipientsTable().get(g.getMembers());
+    List<Recipient> members = Database.Get(aci).RecipientsTable.get(g.getMembers());
     return sendMessage(messageBuilder, members);
   }
 
@@ -577,7 +476,7 @@ public class Manager {
 
   public ContactStore.ContactInfo updateContact(ContactStore.ContactInfo contact) throws IOException, SQLException {
     if (contact.address.uuid == null) {
-      Recipient recipient = new RecipientsTable(aci.uuid()).get(contact.address.number, null);
+      var recipient = Database.Get(aci).RecipientsTable.get(contact.address.number, null);
       contact.address = new JsonAddress(recipient.getAddress());
     }
     return accountData.contactStore.updateContact(contact);
@@ -596,7 +495,7 @@ public class Manager {
     }
     List<Recipient> members = new ArrayList<>();
     for (String stringMember : stringMembers) {
-      members.add(getRecipientsTable().get(stringMember));
+      members.add(Database.Get(aci).RecipientsTable.get(stringMember));
     }
     return sendUpdateGroupMessage(groupId, name, members, avatar);
   }
@@ -691,7 +590,7 @@ public class Manager {
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               try {
-                Recipient recipient = getRecipientsTable().get(r.getAddress());
+                Recipient recipient = Database.Get(aci).RecipientsTable.get(r.getAddress());
                 account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
               } catch (SQLException e) {
                 logger.error("error storing new identity", e);
@@ -807,8 +706,8 @@ public class Manager {
         logger.debug("Dropping UD message from self (because that's what Signal Android does)");
         return null;
       } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
-        logger.debug("Failed to decrypt incoming message", e);
-        Recipient sender = getRecipientsTable().get(e.getSender());
+        logger.debug("Failed to decrypt incoming message: {}", e.getMessage());
+        Recipient sender = Database.Get(aci).RecipientsTable.get(e.getSender());
         ProfileAndCredentialEntry senderProfile = accountData.profileCredentialStore.get(sender);
         ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
         if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile() != null && senderProfile.getProfile().getCapabilities().senderKey &&
@@ -838,11 +737,11 @@ public class Manager {
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder message, Recipient recipient, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws IOException, InvalidRecipientException, UnknownGroupException, SQLException, NoSendPermissionException, InvalidInputException {
     if (recipientGroupId != null && recipient == null) {
-      Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
+      var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
       if (!groupOptional.isPresent()) {
         throw new UnknownGroupException();
       }
-      GroupsTable.Group group = groupOptional.get();
+      var group = groupOptional.get();
       if (members == null) {
         members = group.getMembers();
       }
@@ -885,7 +784,7 @@ public class Manager {
 
       if (groupContext.getGroupV2().isPresent()) {
         SignalServiceGroupV2 group = message.getGroupContext().get().getGroupV2().get();
-        Optional<GroupsTable.Group> localState = account.getGroupsTable().get(group);
+        var localState = Database.Get(account.getACI()).GroupsTable.get(group);
 
         if (!localState.isPresent() || localState.get().getRevision() < group.getRevision()) {
           try {
@@ -931,7 +830,8 @@ public class Manager {
           }
 
           if (groupInfo.getMembers().isPresent()) {
-            List<SignalServiceAddress> members = getRecipientsTable().get(groupInfo.getMembers().get()).stream().map(Recipient::getAddress).collect(Collectors.toList());
+            List<SignalServiceAddress> members =
+                Database.Get(aci).RecipientsTable.get(groupInfo.getMembers().get()).stream().map(Recipient::getAddress).collect(Collectors.toList());
             group.addMembers(members);
           }
 
@@ -1087,7 +987,7 @@ public class Manager {
     }
 
     while (true) {
-      StoredEnvelope storedEnvelope = accountData.getDatabase().getMessageQueueTable().nextEnvelope();
+      var storedEnvelope = Database.Get(accountData.address.getACI()).MessageQueueTable.nextEnvelope();
       if (storedEnvelope == null) {
         break;
       }
@@ -1114,7 +1014,7 @@ public class Manager {
           handler.handleMessage(envelope, content, exception);
         }
       } finally {
-        accountData.getDatabase().getMessageQueueTable().deleteEnvelope(storedEnvelope.databaseId);
+        Database.Get(accountData.address.getACI()).MessageQueueTable.deleteEnvelope(storedEnvelope.databaseId);
       }
     }
   }
@@ -1129,7 +1029,7 @@ public class Manager {
     logger.debug("connecting to websocket");
     websocket.connect();
 
-    MessageQueueTable messageQueueTable = new Database(aci.uuid()).getMessageQueueTable();
+    var messageQueueTable = Database.Get(aci).MessageQueueTable;
 
     try {
       while (true) {
@@ -1142,7 +1042,7 @@ public class Manager {
               long id = messageQueueTable.storeEnvelope(encryptedEnvelope);
               databaseId.setValue(id);
             } catch (SQLException e) {
-              logger.warn("Failed to store encrypted message in sqlite cache, ignoring: " + e.getMessage());
+              logger.warn("Failed to store encrypted message in database, ignoring: " + e.getMessage());
             }
           });
           if (result.isPresent()) {
@@ -1196,8 +1096,7 @@ public class Manager {
       return;
     }
 
-    RecipientsTable recipientsTable = getRecipientsTable();
-    Recipient source = recipientsTable.get((envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender());
+    var source = Database.Get(aci).RecipientsTable.get((envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender());
     if (content.getSenderKeyDistributionMessage().isPresent()) {
       logger.debug("handling sender key distribution message from {}", content.getSender().getIdentifier());
       getMessageSender().processSenderKeyDistributionMessage(new SignalProtocolAddress(content.getSender().getIdentifier(), content.getSenderDevice()),
@@ -1215,7 +1114,7 @@ public class Manager {
         }
       } else {
         logger.debug("Reset shared sender keys with this recipient");
-        account.getSenderKeysSharedWith().deleteSharedWith(source);
+        Database.Get(account.getACI()).SenderKeySharedTable.deleteSharedWith(source);
       }
     }
 
@@ -1241,7 +1140,7 @@ public class Manager {
 
         Recipient sendMessageRecipient = null;
         if (syncMessage.getSent().get().getDestination().isPresent()) {
-          sendMessageRecipient = recipientsTable.get(syncMessage.getSent().get().getDestination().get());
+          sendMessageRecipient = Database.Get(aci).RecipientsTable.get(syncMessage.getSent().get().getDestination().get());
         }
         jobs.addAll(handleSignalServiceDataMessage(message, true, source, sendMessageRecipient, ignoreAttachments));
       }
@@ -1273,7 +1172,7 @@ public class Manager {
             }
             DeviceContact c;
             while ((c = s.read()) != null) {
-              Recipient recipient = recipientsTable.get(c.getAddress());
+              Recipient recipient = Database.Get(aci).RecipientsTable.get(c.getAddress());
               ContactStore.ContactInfo contact = accountData.contactStore.getContact(recipient);
               contact.update(c);
               updateContact(contact);
@@ -1302,7 +1201,7 @@ public class Manager {
 
       if (syncMessage.getVerified().isPresent()) {
         VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
-        Recipient destination = getRecipientsTable().get(verifiedMessage.getDestination());
+        Recipient destination = Database.Get(aci).RecipientsTable.get(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
         account.getProtocolStore().saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
         logger.info("received verified state update from device " + content.getSenderDevice());
@@ -1507,18 +1406,18 @@ public class Manager {
 
   public GroupInfo getGroup(byte[] groupId) { return accountData.groupStore.getGroup(groupId); }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return account.getProtocolStore().getIdentities(); }
+  public List<IIdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return account.getProtocolStore().getIdentities(); }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException {
+  public List<IIdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException {
     return account.getProtocolStore().getIdentities(recipient);
   }
 
   public boolean trustIdentity(Recipient recipient, byte[] fingerprint, TrustLevel level) throws SQLException, InvalidKeyException {
-    List<IdentityKeysTable.IdentityKeyRow> ids = account.getProtocolStore().getIdentities(recipient);
+    var ids = account.getProtocolStore().getIdentities(recipient);
     if (ids == null) {
       return false;
     }
-    for (IdentityKeysTable.IdentityKeyRow id : ids) {
+    for (var id : ids) {
       if (!Arrays.equals(id.getKey().serialize(), fingerprint)) {
         continue;
       }
@@ -1535,11 +1434,11 @@ public class Manager {
   }
 
   public boolean trustIdentitySafetyNumber(Recipient recipient, String safetyNumber, TrustLevel level) throws SQLException, InvalidKeyException {
-    List<IdentityKeysTable.IdentityKeyRow> ids = account.getProtocolStore().getIdentities(recipient);
+    var ids = account.getProtocolStore().getIdentities(recipient);
     if (ids == null) {
       return false;
     }
-    for (IdentityKeysTable.IdentityKeyRow id : ids) {
+    for (var id : ids) {
       if (!safetyNumber.equals(SafetyNumberHelper.computeSafetyNumber(self, getIdentity(), recipient, id.getKey()))) {
         continue;
       }
@@ -1557,13 +1456,15 @@ public class Manager {
 
   public boolean trustIdentitySafetyNumber(Recipient recipient, byte[] scannedFingerprintData, TrustLevel level)
       throws FingerprintVersionMismatchException, FingerprintParsingException, SQLException, InvalidKeyException {
-    List<IdentityKeysTable.IdentityKeyRow> ids = account.getProtocolStore().getIdentities(recipient);
+    var ids = account.getProtocolStore().getIdentities(recipient);
     if (ids == null) {
       return false;
     }
-    for (IdentityKeysTable.IdentityKeyRow id : ids) {
+    for (var id : ids) {
       Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(self, getIdentity(), recipient, id.getKey());
-      assert fingerprint != null;
+      if (fingerprint == null) {
+        throw new IllegalArgumentException("Fingerprint is null");
+      }
       if (!fingerprint.getScannableFingerprint().compareTo(scannedFingerprintData)) {
         continue;
       }
@@ -1661,8 +1562,6 @@ public class Manager {
         messageReceiver.retrieveProfile(recipient.getAddress(), Optional.of(profileKey), getUnidentifiedAccess(), SignalServiceProfile.RequestType.PROFILE, Locale.getDefault());
     return profile.get(10, TimeUnit.SECONDS).getProfile();
   }
-
-  public RecipientsTable getRecipientsTable() { return new RecipientsTable(aci.uuid()); }
 
   public void refreshAccount() throws IOException, SQLException {
     String deviceName = account.getDeviceName();

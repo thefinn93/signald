@@ -11,8 +11,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
+import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
@@ -41,7 +43,7 @@ public class IncomingMessage {
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci)
       throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
     try {
-      account = AccountsTable.getE164(aci);
+      account = Database.Get().AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (SQLException e) {
@@ -53,9 +55,9 @@ public class IncomingMessage {
     }
 
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(Common.getRecipient(new RecipientsTable(aci), envelope.getSourceAddress()));
+      source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceAddress()));
     } else if (content != null) {
-      source = new JsonAddress(Common.getRecipient(new RecipientsTable(aci), content.getSender()));
+      source = new JsonAddress(Common.getRecipient(aci, content.getSender()));
     }
 
     if (envelope.hasSourceDevice()) {

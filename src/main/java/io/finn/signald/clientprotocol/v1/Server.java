@@ -10,7 +10,8 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -39,7 +40,7 @@ public class Server {
 
   public Server() {}
 
-  public Server(ServersTable.Server server) {
+  public Server(IServersTable.AbstractServer server) {
     serviceURL = server.getServiceURL();
     cdnURLs = server.getCdnURLs().entrySet().stream().map(ServerCDN::new).collect(Collectors.toList());
     contactDiscoveryURL = server.getContactDiscoveryURL();
@@ -56,12 +57,12 @@ public class Server {
   }
 
   @JsonIgnore
-  public ServersTable.Server getServer() throws IOException, InvalidProxyException {
-    HashMap<Integer, String> cdns = new HashMap<>();
+  public IServersTable.AbstractServer getServer() throws IOException, InvalidProxyException {
+    var cdns = new HashMap<Integer, String>();
     for (ServerCDN cdn : cdnURLs) {
       cdns.put(cdn.number, cdn.url);
     }
-    return new ServersTable.Server(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, Base64.decode(zkParams), Base64.decode(unidentifiedSenderRoot), proxy,
-                                   Base64.decode(ca), keyBackupServiceName, Base64.decode(keyBackupServiceId), keyBackupMrenclave, cdsMrenclave, Base64.decode(iasCa), "");
+    return Database.NewServer(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, Base64.decode(zkParams), Base64.decode(unidentifiedSenderRoot), proxy,
+                              Base64.decode(ca), keyBackupServiceName, Base64.decode(keyBackupServiceId), keyBackupMrenclave, cdsMrenclave, Base64.decode(iasCa));
   }
 }

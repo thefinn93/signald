@@ -13,7 +13,7 @@ public class StoredEnvelope {
   public final long databaseId;
   public final SignalServiceEnvelope envelope;
 
-  StoredEnvelope(long databaseId, SignalServiceEnvelope envelope) {
+  public StoredEnvelope(long databaseId, SignalServiceEnvelope envelope) {
     this.databaseId = databaseId;
     this.envelope = envelope;
   }

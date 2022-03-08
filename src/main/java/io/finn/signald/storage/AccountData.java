@@ -17,7 +17,8 @@ import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.Manager;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.*;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidStorageFileException;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
@@ -36,7 +37,6 @@ import org.asamk.signal.util.RandomUtils;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.profiles.ProfileKey;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -101,7 +101,7 @@ public class AccountData {
 
   private void initialize() throws IOException, SQLException {
     if (address != null && address.uuid != null) {
-      self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      self = Database.Get(address.getACI()).RecipientsTable.get(address.getUUID());
       profileCredentialStore.initialize(self);
     }
   }
@@ -109,6 +109,13 @@ public class AccountData {
   public static AccountData createLinkedAccount(SignalServiceAccountManager.NewDeviceRegistrationReturn registration, String password, int registrationId, int deviceId,
                                                 UUID server) throws InvalidInputException, IOException, SQLException {
     logger.debug("Creating new local account by linking");
+    Database.Get().AccountsTable.add(registration.getNumber(), registration.getAci(), Manager.getFileName(registration.getNumber()), server);
+    Account account = new Account(registration.getAci());
+    account.setDeviceId(deviceId);
+    account.setPassword(password);
+    account.setIdentityKeyPair(registration.getIdentity());
+    account.setLocalRegistrationId(registrationId);
+
     AccountData a = new AccountData();
     a.address = new JsonAddress(registration.getNumber(), registration.getAci());
     a.initialize();
@@ -123,26 +130,14 @@ public class AccountData {
     a.init();
     a.save();
 
-    AccountsTable.add(registration.getNumber(), registration.getAci(), Manager.getFileName(registration.getNumber()), server);
-    Account account = new Account(registration.getAci());
-    account.setDeviceId(deviceId);
-    account.setPassword(password);
-    account.setIdentityKeyPair(registration.getIdentity());
-    account.setLocalRegistrationId(registrationId);
-
     return a;
-  }
-
-  @JsonIgnore
-  public RecipientsTable getResolver() {
-    return new RecipientsTable(getUUID());
   }
 
   private void update() throws IOException, SQLException {
     if (address == null) {
       address = new JsonAddress(legacyUsername);
     } else if (address.uuid != null && self == null) {
-      self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+      self = Database.Get(address.getACI()).RecipientsTable.get(address.getUUID());
       profileCredentialStore.initialize(self);
       ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
       if (profileKeyEntry != null) {
@@ -175,7 +170,7 @@ public class AccountData {
         }
         try {
           ProfileKey p = new ProfileKey(Base64.decode(c.profileKey));
-          Recipient recipient = new RecipientsTable(getUUID()).get(c.address);
+          Recipient recipient = Database.Get(self.getACI()).RecipientsTable.get(c.address);
           profileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
@@ -257,7 +252,7 @@ public class AccountData {
 
     if (address != null && address.uuid != null) {
       if (self == null) {
-        self = new RecipientsTable(address.getUUID()).get(address.getUUID());
+        self = Database.Get(address.getACI()).RecipientsTable.get(address.getUUID());
         profileCredentialStore.initialize(self);
       }
       ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
@@ -285,18 +280,7 @@ public class AccountData {
   public boolean isDeleted() { return deleted; }
 
   public void delete() throws SQLException, IOException {
-    AccountDataTable.deleteAccount(getUUID());
-    AccountsTable.deleteAccount(getUUID());
-    GroupCredentialsTable.deleteAccount(getUUID());
-    GroupsTable.deleteAccount(getUUID());
-    IdentityKeysTable.deleteAccount(getUUID());
-    MessageQueueTable.deleteAccount(legacyUsername);
-    PreKeysTable.deleteAccount(getUUID());
-    SessionsTable.deleteAccount(getUUID());
-    RecipientsTable.deleteAccount(getUUID());
-    SenderKeySharedTable.deleteAccount(getUUID());
-    SenderKeysTable.deleteAccount(getUUID());
-    SignedPreKeysTable.deleteAccount(getUUID());
+    Database.DeleteAccount(self.getACI(), getUUID(), legacyUsername);
     try {
       Files.delete(new File(dataPath + "/" + legacyUsername).toPath());
     } catch (NoSuchFileException ignored) {
@@ -332,8 +316,8 @@ public class AccountData {
 
   public GroupIdentifier getMigratedGroupId(String groupV1Id) throws IOException, InvalidInputException, SQLException {
     GroupIdentifier groupV2Id = new GroupIdentifier(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
-    GroupsTable groupsTable = new GroupsTable(ACI.from(getUUID()));
-    Optional<GroupsTable.Group> groupOptional = groupsTable.get(groupV2Id);
+    var groupsTable = Database.Get(ACI.from(getUUID())).GroupsTable;
+    var groupOptional = groupsTable.get(groupV2Id);
     if (groupOptional.isPresent()) {
       groupStore.deleteGroup(groupV1Id);
       return groupOptional.get().getId();
@@ -370,7 +354,7 @@ public class AccountData {
       } else {
         // thread ID does not match a known group. Assume it's a PM
         try {
-          Recipient recipient = new RecipientsTable(address.getUUID()).get(t.id);
+          Recipient recipient = Database.Get(address.getACI()).RecipientsTable.get(t.id);
           ContactStore.ContactInfo c = contactStore.getContact(recipient);
           c.messageExpirationTime = t.messageExpirationTime;
           contactStore.updateContact(c);
@@ -379,11 +363,6 @@ public class AccountData {
         }
       }
     }
-  }
-
-  @JsonIgnore
-  public Database getDatabase() {
-    return new Database(getUUID());
   }
 
   @JsonIgnore

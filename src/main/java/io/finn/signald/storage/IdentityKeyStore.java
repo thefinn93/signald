@@ -12,8 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.IdentityKeysTable;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -96,16 +95,15 @@ public class IdentityKeyStore {
   public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
 
   public void migrateToDB(Account account) throws SQLException, IOException {
-    IdentityKeysTable table = new IdentityKeysTable(account.getACI());
+    var table = Database.Get(account.getACI()).IdentityKeysTable;
     logger.info("migrating " + trustedKeys.size() + " identity keys to the database");
     Iterator<Identity> iterator = trustedKeys.iterator();
-    RecipientsTable recipientsTable = account.getRecipients();
     while (iterator.hasNext()) {
       Identity entry = iterator.next();
       if (entry.identityKey == null) {
         continue;
       }
-      table.saveIdentity(recipientsTable.get(entry.address), entry.identityKey, entry.trustLevel, entry.added);
+      table.saveIdentity(Database.Get(account.getACI()).RecipientsTable.get(entry.address), entry.identityKey, entry.trustLevel, entry.added);
       iterator.remove();
     }
 

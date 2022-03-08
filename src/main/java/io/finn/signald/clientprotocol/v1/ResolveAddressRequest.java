@@ -16,11 +16,9 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
-import java.util.UUID;
 
 @Doc("Resolve a partial JsonAddress with only a number or UUID to one with both. Anywhere that signald accepts a JsonAddress will except a partial, this is a convenience "
      + "function for client authors, mostly because signald doesn't resolve all the partials it returns.")
@@ -32,14 +30,12 @@ public class ResolveAddressRequest implements RequestType<JsonAddress> {
 
   @Override
   public JsonAddress run(Request request) throws InternalError, NoSuchAccountError, UnregisteredUserError {
-    UUID accountUUID;
     try {
-      accountUUID = AccountsTable.getUUID(account);
+      return new JsonAddress(Common.getRecipient(Database.Get().AccountsTable.getACI(account), partial));
     } catch (SQLException e) {
       throw new InternalError("error getting account UUID", e);
     } catch (NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     }
-    return new JsonAddress(Common.getRecipient(new RecipientsTable(accountUUID), partial));
   }
 }

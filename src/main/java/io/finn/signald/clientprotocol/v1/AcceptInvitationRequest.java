@@ -17,7 +17,6 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -60,7 +59,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
       throw new OwnProfileKeyDoesNotExistError();
     }
 
-    GroupsTable.Group group = Common.getGroup(a, groupID);
+    var group = Common.getGroup(a, groupID);
 
     GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
     GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownProfileKeyCredential);

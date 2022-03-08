@@ -18,7 +18,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.PendingAccountDataTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IPendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -46,7 +47,7 @@ public class VerifyRequest implements RequestType<Account> {
 
     String server;
     try {
-      server = PendingAccountDataTable.getString(account, PendingAccountDataTable.Key.SERVER_UUID);
+      server = Database.Get().PendingAccountDataTable.getString(account, IPendingAccountDataTable.Key.SERVER_UUID);
     } catch (SQLException e) {
       throw new InternalError("error reading from local database", e);
     }

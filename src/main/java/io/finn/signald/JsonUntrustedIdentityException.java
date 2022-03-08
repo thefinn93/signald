@@ -9,6 +9,7 @@ package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -51,7 +52,7 @@ class JsonUntrustedIdentityException {
       Manager m = Manager.get(username);
       this.local_address = new JsonAddress(m.getOwnRecipient());
       if (exception.getUntrustedIdentity() != null) {
-        Recipient recipient = m.getRecipientsTable().get(this.remote_address);
+        Recipient recipient = Database.Get(m.getACI()).RecipientsTable.get(this.remote_address);
         this.safety_number = SafetyNumberHelper.computeSafetyNumber(m.getOwnRecipient(), m.getIdentity(), recipient, exception.getUntrustedIdentity());
       }
     } catch (IOException | NoSuchAccountException | SQLException | InvalidKeyException | ServerNotFoundException | InvalidProxyException e) {

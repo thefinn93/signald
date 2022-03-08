@@ -3,7 +3,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Groups;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.IGroupsTable;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -58,7 +58,7 @@ public class GroupChange {
   @Doc("Whether this change affected the announcement group setting. Possible values are UNKNOWN, ENABLED or DISABLED")
   public String newIsAnnouncementGroup;
 
-  public static GroupChange fromBytes(Groups groups, GroupsTable.Group group, byte[] signedGroupChange)
+  public static GroupChange fromBytes(Groups groups, IGroupsTable.IGroup group, byte[] signedGroupChange)
       throws InvalidGroupStateException, IOException, VerificationFailedException {
     final org.signal.storageservice.protos.groups.GroupChange protoGroupChange = org.signal.storageservice.protos.groups.GroupChange.parseFrom(signedGroupChange);
 

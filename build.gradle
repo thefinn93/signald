@@ -95,6 +95,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-nop:1.8.0-beta4'
     implementation 'info.picocli:picocli:4.6.2'
     implementation 'org.xerial:sqlite-jdbc:3.36.0.2'
+    implementation 'org.postgresql:postgresql:42.3.3'
     implementation 'org.flywaydb:flyway-core:8.4.1'
     implementation 'com.google.protobuf:protobuf-javalite:3.10.0'
     implementation 'io.prometheus:simpleclient:0.14.1'

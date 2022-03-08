@@ -21,25 +21,27 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 class MessageQueueTableTest {
-  private static final UUID ACCOUNT_UUID = UUID.fromString("00000000-0000-4000-0000-000000000000");
+  private static final ACI ACCOUNT_ACI = ACI.from(UUID.fromString("00000000-0000-4000-0000-000000000000"));
   private static final int TYPE_UNIDENTIFIED_SENDER = 6;
 
-  private final MessageQueueTable messageQueue = new MessageQueueTable(ACCOUNT_UUID);
+  private IMessageQueueTable messageQueue;
   private File databaseFile;
 
   @BeforeEach
   void setUp() throws IOException {
     File tmpDirectory = new File(System.getProperty("java.io.tmpdir"));
     databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
-    String db = "jdbc:sqlite:" + databaseFile.getAbsolutePath();
+    String db = "sqlite:" + databaseFile.getAbsolutePath();
 
-    Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
+    Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource("jdbc:" + db, null, null).load();
     flyway.migrate();
 
     Config.testInit(db);
+    messageQueue = Database.Get(ACCOUNT_ACI).MessageQueueTable;
   }
 
   @AfterEach

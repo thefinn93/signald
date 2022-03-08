@@ -16,7 +16,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.db.Recipient;
 import java.sql.SQLException;
 import java.util.List;
@@ -32,8 +32,8 @@ public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
   @Override
   public IdentityKeyList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
-    List<IdentityKeysTable.IdentityKeyRow> identities = null;
+    Recipient recipient = Common.getRecipient(m.getACI(), address);
+    List<IIdentityKeysTable.IdentityKeyRow> identities = null;
     try {
       identities = m.getIdentities(recipient);
     } catch (SQLException | InvalidKeyException e) {

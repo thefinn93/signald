@@ -1,8 +1,8 @@
 package io.finn.signald;
 
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -14,11 +14,7 @@ import io.finn.signald.util.SenderKeyUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -33,7 +29,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidRegistrationIdException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.util.guava.Function;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
@@ -55,17 +50,17 @@ public class MessageSender {
 
   public MessageSender(Account account) throws SQLException, IOException {
     this.account = account;
-    self = account.getRecipients().get(account.getACI());
+    self = Database.Get(account.getACI()).RecipientsTable.get(account.getACI());
   }
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
              InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
-    Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(recipientGroupId);
+    var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
     if (!groupOptional.isPresent()) {
       throw new UnknownGroupException();
     }
-    GroupsTable.Group group = groupOptional.get();
+    var group = groupOptional.get();
     if (members == null) {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
     }
@@ -144,6 +139,7 @@ public class MessageSender {
             if (self.getAddress().equals(result.getAddress())) {
               isRecipientUpdate = true; // prevent duplicate sync messages from being sent
             }
+
             results.add(result);
           } else if (result.isNetworkFailure()) {
             // always guaranteed to have an ACI; don't use address for HashSet because of ambiguity with e164 in server
@@ -181,7 +177,7 @@ public class MessageSender {
           List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
                                                                                              ContentHint.DEFAULT, message.build(), SenderKeyGroupEventsLogger.INSTANCE);
 
-          RecipientsTable recipientsTable = account.getRecipients();
+          IRecipientsTable recipientsTable = Database.Get(account.getACI()).RecipientsTable;
           for (var result : senderKeyRetryResults) {
             if (result.isSuccess()) {
               if (self.getAddress().equals(result.getAddress())) {
@@ -235,7 +231,7 @@ public class MessageSender {
     for (SendMessageResult r : results) {
       if (r.getIdentityFailure() != null) {
         try {
-          Recipient recipient = account.getRecipients().get(r.getAddress());
+          Recipient recipient = Database.Get(account.getACI()).RecipientsTable.get(r.getAddress());
           account.getProtocolStore().saveIdentity(recipient, r.getIdentityFailure().getIdentityKey(), Config.getNewKeyTrustLevel());
         } catch (SQLException e) {
           logger.error("error storing new identity", e);
@@ -248,10 +244,11 @@ public class MessageSender {
 
   private void handleUnregisteredFailure(SendMessageResult unregisteredFailureResult) {
     // TODO: prevent this recipient from being included in future SKDMs (https://gitlab.com/signald/signald/-/issues/299)
+    logger.debug("found an unregistered recipient");
   }
 
   private long getCreateTimeForOurKey(DistributionId distributionId) throws SQLException {
     SignalProtocolAddress address = new SignalProtocolAddress(account.getACI().toString(), account.getDeviceId());
-    return account.getProtocolStore().getSenderKeys().getCreatedTime(address, distributionId.asUuid());
+    return Database.Get(account.getACI()).SenderKeysTable.getCreatedTime(address, distributionId.asUuid());
   }
 }

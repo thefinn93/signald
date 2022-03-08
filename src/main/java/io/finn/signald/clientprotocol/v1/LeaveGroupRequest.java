@@ -16,7 +16,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -46,8 +46,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
   public GroupInfo run(Request request)
       throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError {
     Account a = Common.getAccount(account);
-
-    GroupsTable.Group group = Common.getGroup(a, groupID);
+    var group = Common.getGroup(a, groupID);
 
     List<Recipient> recipients;
     try {
@@ -75,7 +74,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
       change = groupOperations.createRemoveMembersChange(uuidsToRemove);
     }
 
-    Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> updateOutput;
+    Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateOutput;
     try {
       updateOutput = Common.getGroups(a).updateGroup(group, change);
     } catch (IOException | VerificationFailedException | SQLException | InvalidInputException e) {

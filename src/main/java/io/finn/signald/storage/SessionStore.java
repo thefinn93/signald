@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.SessionsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,7 +40,6 @@ public class SessionStore {
   public synchronized List<SessionInfo> getSessions() { return sessions; }
 
   public void migrateToDB(Account account) {
-    SessionsTable table = new SessionsTable(account.getACI());
     logger.info("migrating " + sessions.size() + " sessions to the database");
     Iterator<SessionInfo> iterator = sessions.iterator();
     while (iterator.hasNext()) {
@@ -49,7 +48,7 @@ public class SessionStore {
         if (entry.record == null) {
           continue;
         }
-        table.storeSession(new SignalProtocolAddress(entry.address.getIdentifier(), entry.deviceId), new SessionRecord(entry.record));
+        Database.Get(account.getACI()).SessionsTable.storeSession(new SignalProtocolAddress(entry.address.getIdentifier(), entry.deviceId), new SessionRecord(entry.record));
         iterator.remove();
       } catch (IOException e) {
         logger.warn("failed to migrate session record", e);

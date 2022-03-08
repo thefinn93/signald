@@ -18,9 +18,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -84,7 +83,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
                                                InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
     Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
-    RecipientsTable recipientsTable = a.getRecipients();
+    var recipientsTable = Database.Get(m.getACI()).RecipientsTable;
 
     if (groupID.length() == 24) { // v1 group
       logger.warn("v1 group support is being removed https://gitlab.com/signald/signald/-/issues/224");
@@ -113,7 +112,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
       return new GroupInfo(g);
     } else {
       Groups groups = Common.getGroups(a);
-      GroupsTable.Group group = Common.getGroup(a, groupID);
+      var group = Common.getGroup(a, groupID);
 
       List<Recipient> recipients;
       try {

@@ -23,9 +23,9 @@ public class AccountsTableTest {
   void setUp() throws IOException {
     File tmpDirectory = new File(System.getProperty("java.io.tmpdir"));
     databaseFile = File.createTempFile("test", "sqlite", tmpDirectory);
-    String db = "jdbc:sqlite:" + databaseFile.getAbsolutePath();
+    String db = "sqlite:" + databaseFile.getAbsolutePath();
 
-    Flyway flyway = Flyway.configure().dataSource(db, null, null).load();
+    Flyway flyway = Flyway.configure().locations("db/migration/sqlite").dataSource("jdbc:" + db, null, null).load();
     flyway.migrate();
 
     Config.testInit(db);
@@ -42,12 +42,12 @@ public class AccountsTableTest {
   @Test
   @DisplayName("try to get e164 of non-existent account")
   void getE164_NoSuchAccountException() {
-    Assertions.assertThrows(NoSuchAccountException.class, () -> { AccountsTable.getE164(ACI.from(UUID.randomUUID())); });
+    Assertions.assertThrows(NoSuchAccountException.class, () -> Database.Get().AccountsTable.getE164(ACI.from(UUID.randomUUID())));
   }
 
   @Test
   @DisplayName("try to get UUID of non-existent account")
   void getUUID_NoSuchAccountException() {
-    Assertions.assertThrows(NoSuchAccountException.class, () -> { AccountsTable.getUUID("+12025551212"); });
+    Assertions.assertThrows(NoSuchAccountException.class, () -> Database.Get().AccountsTable.getUUID("+12025551212"));
   }
 }

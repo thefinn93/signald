@@ -2,8 +2,7 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Groups;
 import io.finn.signald.Manager;
-import io.finn.signald.ProfileKeySet;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -41,7 +40,7 @@ public class GetProfileKeysFromGroupHistoryJob implements Job {
     final Manager m = Manager.get(aci);
     final Groups groups = m.getAccount().getGroups();
     // don't refresh group from server, and ensure we're still in the group
-    final Optional<GroupsTable.Group> localGroup = groups.getGroup(groupSecretParams, mostRecentGroupRevision);
+    final Optional<IGroupsTable.IGroup> localGroup = groups.getGroup(groupSecretParams, mostRecentGroupRevision);
     final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
     if (!localGroup.isPresent()) {
       logger.warn("Missing group " + groupId + "; might've left the group");

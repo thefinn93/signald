@@ -15,7 +15,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import java.sql.SQLException;
 
 @ProtocolType("list_groups")
@@ -29,7 +29,7 @@ public class ListGroupsRequest implements RequestType<GroupList> {
     Account a = Common.getAccount(account);
 
     try {
-      for (GroupsTable.Group g : a.getGroupsTable().getAll()) {
+      for (var g : Database.Get(a.getACI()).GroupsTable.getAll()) {
         groups.add(g.getJsonGroupV2Info());
       }
     } catch (SQLException e) {

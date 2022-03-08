@@ -16,7 +16,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -47,7 +47,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
     if (group != null) {
       if (group.length() == 44) {
         Account a = Common.getAccount(account);
-        GroupsTable.Group storedGroup = Common.getGroup(a, group);
+        var storedGroup = Common.getGroup(a, group);
         GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, storedGroup);
         results = Common.updateGroup(a, storedGroup, groupOperations.createModifyGroupTimerChange(expiration));
       } else {
@@ -68,7 +68,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
       }
     } else {
       Manager m = Common.getManager(account);
-      Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+      Recipient recipient = Common.getRecipient(m.getACI(), address);
       try {
         results = m.setExpiration(recipient, expiration);
       } catch (IOException | SQLException e) {

@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;

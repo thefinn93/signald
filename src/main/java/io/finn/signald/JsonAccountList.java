@@ -9,7 +9,7 @@ package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,7 @@ public class JsonAccountList {
   public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
   JsonAccountList() throws SQLException, NoSuchAccountError {
-    for (UUID account : AccountsTable.getAll()) {
+    for (UUID account : Database.Get().AccountsTable.getAll()) {
       if (account != null) {
         accounts.add(new JsonAccount(new Account(account)));
       }

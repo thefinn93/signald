@@ -1,15 +1,13 @@
 package io.finn.signald;
 
-import io.finn.signald.db.AccountDataTable;
-import io.finn.signald.db.GroupsTable;
-import io.finn.signald.db.SenderKeySharedTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
@@ -22,7 +20,7 @@ public class AccountRepair {
   public final static int ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED = 2;
 
   public static void repairAccountIfNeeded(Account account) throws SQLException {
-    int lastAccountRepair = AccountDataTable.getInt(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR);
+    int lastAccountRepair = Database.Get().AccountDataTable.getInt(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR);
 
     if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS) {
       refreshAllGroups(account);
@@ -35,17 +33,17 @@ public class AccountRepair {
 
   private static void clearSenderKeyShared(Account account) throws SQLException {
     logger.info("clearing all sender key shared state to make sure they get re-shared");
-    SenderKeySharedTable.deleteAccount(account.getUUID());
-    AccountDataTable.set(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
+    Database.Get(account.getACI()).SenderKeySharedTable.deleteAccount(account.getUUID());
+    Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
   }
 
   private static void refreshAllGroups(Account account) {
     logger.info("refreshing all groups for account {} (info at https://gitlab.com/signald/signald/-/issues/271)", Util.redact(account.getACI()));
     try {
       Groups groups = account.getGroups();
-      List<GroupsTable.Group> allGroups = account.getGroupsTable().getAll();
+      var allGroups = Database.Get(account.getACI()).GroupsTable.getAll();
       logger.debug("refreshing {} groups", allGroups.size());
-      for (GroupsTable.Group group : allGroups) {
+      for (var group : allGroups) {
         try {
           logger.debug("refreshing group {}", group.getIdString());
           groups.getGroup(group.getSecretParams(), -1);
@@ -54,7 +52,7 @@ public class AccountRepair {
           Sentry.captureException(e);
         }
       }
-      AccountDataTable.set(account.getACI(), AccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS);
+      Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS);
     } catch (NoSuchAccountException | ServerNotFoundException | IOException | InvalidProxyException | SQLException e) {
       logger.error("error repairing groups for account {}", account.getACI().toString());
       Sentry.captureException(e);

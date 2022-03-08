@@ -5,37 +5,33 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.sqlite;
 
 import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IAccountsTable;
+import io.finn.signald.db.IServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.AddressUtil;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
-public class AccountsTable {
-  private static final Logger logger = LogManager.getLogger();
+public class AccountsTable implements IAccountsTable {
   private static final String TABLE_NAME = "accounts";
-  private static final String UUID = "uuid";
-  private static final String E164 = "e164";
-  private static final String FILENAME = "filename";
-  private static final String SERVER = "server";
 
-  public static File getFile(ACI aci) throws SQLException, NoSuchAccountException {
+  @Override
+  public File getFile(ACI aci) throws SQLException, NoSuchAccountException {
     var query = "SELECT " + FILENAME + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -48,7 +44,8 @@ public class AccountsTable {
     }
   }
 
-  public static File getFile(String e164) throws SQLException, NoSuchAccountException {
+  @Override
+  public File getFile(String e164) throws SQLException, NoSuchAccountException {
     var query = "SELECT " + FILENAME + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, e164);
@@ -61,7 +58,8 @@ public class AccountsTable {
     }
   }
 
-  public static void add(String e164, ACI aci, String filename, java.util.UUID server) throws SQLException {
+  @Override
+  public void add(String e164, ACI aci, String filename, java.util.UUID server) throws SQLException {
     var query = "INSERT OR IGNORE INTO " + TABLE_NAME + " (" + UUID + "," + E164 + "," + FILENAME + "," + SERVER + ") VALUES (?, ?, ?, ?)";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -75,57 +73,35 @@ public class AccountsTable {
     }
   }
 
-  public static void importFromJSON(File f) throws IOException, SQLException, InvalidInputException {
-    AccountData accountData = AccountData.load(f);
-    if (accountData.getUUID() == null) {
-      logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
-      return;
-    }
-    logger.info("migrating account if needed: " + accountData.address.toRedactedString());
-    add(accountData.getLegacyUsername(), accountData.address.getACI(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
-    boolean needsSave = false;
-    Account account = new Account(accountData.getUUID());
-    try {
-      if (accountData.legacyProtocolStore != null) {
-        accountData.legacyProtocolStore.migrateToDB(account);
-        accountData.legacyProtocolStore = null;
-        needsSave = true;
-      }
-      if (accountData.legacyRecipientStore != null) {
-        accountData.legacyRecipientStore.migrateToDB(account);
-        accountData.legacyRecipientStore = null;
-        needsSave = true;
-      }
-
-      if (accountData.legacyBackgroundActionsLastRun != null) {
-        accountData.legacyBackgroundActionsLastRun.migrateToDB(account);
-        accountData.legacyBackgroundActionsLastRun = null;
-        needsSave = true;
-      }
-
-      if (accountData.legacyGroupsV2 != null) {
-        needsSave = accountData.legacyGroupsV2.migrateToDB(account) || needsSave;
-      }
-
-      needsSave = accountData.migrateToDB(account) || needsSave;
-    } finally {
-      if (needsSave) {
-        accountData.save();
-      }
-    }
-  }
-
-  public static void deleteAccount(java.util.UUID uuid) throws SQLException {
+  @Override
+  public void DeleteAccount(ACI aci, java.util.UUID uuid, String legacyUsername) throws SQLException {
+    Database.getConn().setAutoCommit(false);
+    // TODO we should use ON DELETE CASCADE for SQLite as well eventually
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, uuid.toString());
       Database.executeUpdate(TABLE_NAME + "_delete", statement);
     }
+    Database.Get().AccountDataTable.deleteAccount(uuid);
+    Database.Get(aci).GroupCredentialsTable.deleteAccount(uuid);
+    Database.Get(aci).GroupsTable.deleteAccount(uuid);
+    Database.Get(aci).IdentityKeysTable.deleteAccount(uuid);
+    Database.Get(aci).MessageQueueTable.deleteAccount(legacyUsername);
+    Database.Get(aci).PreKeysTable.deleteAccount(uuid);
+    Database.Get(aci).SessionsTable.deleteAccount(uuid);
+    Database.Get(aci).RecipientsTable.deleteAccount(uuid);
+    Database.Get(aci).SenderKeySharedTable.deleteAccount(uuid);
+    Database.Get(aci).SenderKeysTable.deleteAccount(uuid);
+    Database.Get(aci).SignedPreKeysTable.deleteAccount(uuid);
+    Database.getConn().commit();
+    Database.getConn().setAutoCommit(true);
   }
 
-  public static void setUUID(JsonAddress address) throws SQLException {
-    assert address.uuid != null;
-    assert address.number != null;
+  @Override
+  public void setUUID(JsonAddress address) throws SQLException {
+    if (address.uuid == null || address.number == null) {
+      throw new IllegalArgumentException("UUID or number is null");
+    }
     var query = "UPDATE " + TABLE_NAME + " SET " + UUID + " = ? WHERE " + E164 + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, address.uuid);
@@ -134,9 +110,8 @@ public class AccountsTable {
     }
   }
 
-  public static java.util.UUID getUUID(String e164) throws SQLException, NoSuchAccountException { return getACI(e164).uuid(); }
-
-  public static ACI getACI(String e164) throws SQLException, NoSuchAccountException {
+  @Override
+  public ACI getACI(String e164) throws SQLException, NoSuchAccountException {
     var query = "SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + E164 + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, e164);
@@ -149,7 +124,8 @@ public class AccountsTable {
     }
   }
 
-  public static String getE164(ACI aci) throws SQLException, NoSuchAccountException {
+  @Override
+  public String getE164(ACI aci) throws SQLException, NoSuchAccountException {
     var query = "SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -162,11 +138,8 @@ public class AccountsTable {
     }
   }
 
-  public static ServersTable.Server getServer(java.util.UUID uuid) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
-    return getServer(ACI.from(uuid));
-  }
-
-  public static ServersTable.Server getServer(ACI aci) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
+  @Override
+  public IServersTable.AbstractServer getServer(ACI aci) throws SQLException, IOException, ServerNotFoundException, InvalidProxyException {
     var query = "SELECT " + SERVER + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -179,12 +152,13 @@ public class AccountsTable {
           serverUUID = BuildConfig.DEFAULT_SERVER_UUID;
           setServer(aci, serverUUID);
         }
-        return ServersTable.getServer(java.util.UUID.fromString(serverUUID));
+        return Database.Get().ServersTable.getServer(java.util.UUID.fromString(serverUUID));
       }
     }
   }
 
-  private static void setServer(ACI aci, String server) throws SQLException {
+  @Override
+  public void setServer(ACI aci, String server) throws SQLException {
     var query = "UPDATE " + TABLE_NAME + " SET " + SERVER + " = ? WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, server);
@@ -193,7 +167,8 @@ public class AccountsTable {
     }
   }
 
-  public static DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException {
+  @Override
+  public DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException {
     var query = "SELECT " + E164 + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -208,9 +183,8 @@ public class AccountsTable {
     }
   }
 
-  public static boolean exists(java.util.UUID uuid) throws SQLException { return exists(ACI.from(uuid)); }
-
-  public static boolean exists(ACI aci) throws SQLException {
+  @Override
+  public boolean exists(ACI aci) throws SQLException {
     var query = "SELECT " + UUID + " FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
@@ -220,7 +194,8 @@ public class AccountsTable {
     }
   }
 
-  public static List<java.util.UUID> getAll() throws SQLException {
+  @Override
+  public List<java.util.UUID> getAll() throws SQLException {
     var query = "SELECT " + UUID + " FROM " + TABLE_NAME;
     try (var statement = Database.getConn().prepareStatement(query)) {
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_all", statement)) {

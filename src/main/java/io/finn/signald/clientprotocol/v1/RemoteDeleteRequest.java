@@ -15,6 +15,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
@@ -47,7 +48,7 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
     messageBuilder.withRemoteDelete(new SignalServiceDataMessage.RemoteDelete(timestamp));
     Recipient recipient = null;
     if (address != null) {
-      recipient = Common.getRecipient(m.getRecipientsTable(), address);
+      recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, address);
     }
     List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, group, members);
     return new SendResponse(results, timestamp);

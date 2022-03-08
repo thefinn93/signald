@@ -30,21 +30,18 @@ public class Account {
   private static final Logger logger = LogManager.getLogger();
   private final ACI aci;
 
-  public Account(UUID accountUUID) { this.aci = ACI.from(accountUUID); }
-
+  public Account(UUID accountUUID) { this(ACI.from(accountUUID)); }
   public Account(ACI aci) { this.aci = aci; }
 
-  public String getE164() throws SQLException, NoSuchAccountException { return AccountsTable.getE164(aci); }
+  public String getE164() throws SQLException, NoSuchAccountException { return Database.Get().AccountsTable.getE164(aci); }
 
   public UUID getUUID() { return aci.uuid(); }
 
   public ACI getACI() { return aci; }
 
   public SignalServiceConfiguration getServiceConfiguration() throws SQLException, ServerNotFoundException, InvalidProxyException, IOException {
-    return AccountsTable.getServer(aci).getSignalServiceConfiguration();
+    return Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
   }
-
-  public RecipientsTable getRecipients() { return new RecipientsTable(aci); }
 
   public SignalDependencies getSignalDependencies() throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
     return SignalDependencies.get(aci);
@@ -54,28 +51,28 @@ public class Account {
 
   public DatabaseDataStore getDataStore() { return new DatabaseDataStore(aci); }
 
-  public GroupsTable getGroupsTable() { return new GroupsTable(aci); }
-
   public Groups getGroups() throws SQLException, ServerNotFoundException, NoSuchAccountException, InvalidProxyException, IOException { return new Groups(aci); }
 
   public DynamicCredentialsProvider getCredentialsProvider() throws SQLException, NoSuchAccountException {
     return new DynamicCredentialsProvider(aci, getE164(), getPassword(), getDeviceId());
   }
 
-  public int getLocalRegistrationId() throws SQLException { return AccountDataTable.getInt(aci, AccountDataTable.Key.LOCAL_REGISTRATION_ID); }
+  public int getLocalRegistrationId() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.LOCAL_REGISTRATION_ID); }
 
-  public void setLocalRegistrationId(int localRegistrationId) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.LOCAL_REGISTRATION_ID, localRegistrationId); }
+  public void setLocalRegistrationId(int localRegistrationId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LOCAL_REGISTRATION_ID, localRegistrationId);
+  }
 
-  public int getDeviceId() throws SQLException { return AccountDataTable.getInt(aci, AccountDataTable.Key.DEVICE_ID); }
+  public int getDeviceId() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.DEVICE_ID); }
 
-  public void setDeviceId(int deviceId) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.DEVICE_ID, deviceId); }
+  public void setDeviceId(int deviceId) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.DEVICE_ID, deviceId); }
 
   public boolean getMultiDevice() {
     try {
-      Boolean isMultidevice = AccountDataTable.getBoolean(aci, AccountDataTable.Key.MULTI_DEVICE);
+      Boolean isMultidevice = Database.Get().AccountDataTable.getBoolean(aci, IAccountDataTable.Key.MULTI_DEVICE);
       if (isMultidevice == null) {
         isMultidevice = getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID;
-        AccountDataTable.set(aci, AccountDataTable.Key.MULTI_DEVICE, isMultidevice);
+        Database.Get(aci).AccountDataTable.set(aci, IAccountDataTable.Key.MULTI_DEVICE, isMultidevice);
         return false;
       }
       return isMultidevice;
@@ -86,14 +83,14 @@ public class Account {
     }
   }
 
-  public void setMultiDevice(boolean multidevice) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.MULTI_DEVICE, multidevice); }
+  public void setMultiDevice(boolean multidevice) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.MULTI_DEVICE, multidevice); }
 
-  public String getPassword() throws SQLException { return AccountDataTable.getString(aci, AccountDataTable.Key.PASSWORD); }
+  public String getPassword() throws SQLException { return Database.Get().AccountDataTable.getString(aci, IAccountDataTable.Key.PASSWORD); }
 
-  public void setPassword(String password) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.PASSWORD, password); }
+  public void setPassword(String password) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PASSWORD, password); }
 
   public IdentityKeyPair getIdentityKeyPair() throws SQLException {
-    byte[] serialized = AccountDataTable.getBytes(aci, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
+    byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
     if (serialized == null) {
       return null;
     }
@@ -101,70 +98,76 @@ public class Account {
   }
 
   public void setIdentityKeyPair(IdentityKeyPair identityKeyPair) throws SQLException {
-    AccountDataTable.set(aci, AccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
   }
 
-  public long getLastPreKeyRefresh() throws SQLException { return AccountDataTable.getLong(aci, AccountDataTable.Key.LAST_PRE_KEY_REFRESH); }
+  public long getLastPreKeyRefresh() throws SQLException { return Database.Get().AccountDataTable.getLong(aci, IAccountDataTable.Key.LAST_PRE_KEY_REFRESH); }
 
-  public void setLastPreKeyRefreshNow() throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.LAST_PRE_KEY_REFRESH, System.currentTimeMillis()); }
+  public void setLastPreKeyRefreshNow() throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_PRE_KEY_REFRESH, System.currentTimeMillis()); }
 
-  public void setLastPreKeyRefresh(long timestamp) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.LAST_PRE_KEY_REFRESH, timestamp); }
+  public void setLastPreKeyRefresh(long timestamp) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_PRE_KEY_REFRESH, timestamp); }
 
-  public String getDeviceName() throws SQLException { return AccountDataTable.getString(aci, AccountDataTable.Key.DEVICE_NAME); }
+  public String getDeviceName() throws SQLException { return Database.Get().AccountDataTable.getString(aci, IAccountDataTable.Key.DEVICE_NAME); }
 
-  public void setDeviceName(String deviceName) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.DEVICE_NAME, deviceName); }
+  public void setDeviceName(String deviceName) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.DEVICE_NAME, deviceName); }
 
-  public int getLastAccountRefresh() throws SQLException { return AccountDataTable.getInt(aci, AccountDataTable.Key.LAST_ACCOUNT_REFRESH); }
+  public int getLastAccountRefresh() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.LAST_ACCOUNT_REFRESH); }
 
-  public void setLastAccountRefresh(int accountRefreshVersion) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.LAST_ACCOUNT_REFRESH, accountRefreshVersion); }
+  public void setLastAccountRefresh(int accountRefreshVersion) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REFRESH, accountRefreshVersion);
+  }
 
-  public byte[] getSenderCertificate() throws SQLException { return AccountDataTable.getBytes(aci, AccountDataTable.Key.SENDER_CERTIFICATE); }
+  public byte[] getSenderCertificate() throws SQLException { return Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.SENDER_CERTIFICATE); }
 
-  public void setSenderCertificate(byte[] senderCertificate) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.SENDER_CERTIFICATE, senderCertificate); }
+  public void setSenderCertificate(byte[] senderCertificate) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.SENDER_CERTIFICATE, senderCertificate);
+  }
 
-  public long getLastSenderCertificateRefreshTime() throws SQLException { return AccountDataTable.getLong(aci, AccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME); }
+  public long getLastSenderCertificateRefreshTime() throws SQLException {
+    return Database.Get().AccountDataTable.getLong(aci, IAccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME);
+  }
 
   public void setSenderCertificateRefreshTimeNow() throws SQLException {
-    AccountDataTable.set(aci, AccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME, System.currentTimeMillis());
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.SENDER_CERTIFICATE_REFRESH_TIME, System.currentTimeMillis());
   }
 
   public int getPreKeyIdOffset() throws SQLException {
-    int offset = AccountDataTable.getInt(aci, AccountDataTable.Key.PRE_KEY_ID_OFFSET);
+    int offset = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.PRE_KEY_ID_OFFSET);
     if (offset == -1) {
       return 0;
     }
     return offset;
   }
 
-  public void setPreKeyIdOffset(int preKeyIdOffset) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.PRE_KEY_ID_OFFSET, preKeyIdOffset); }
+  public void setPreKeyIdOffset(int preKeyIdOffset) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PRE_KEY_ID_OFFSET, preKeyIdOffset); }
 
   public int getNextSignedPreKeyId() throws SQLException {
-    int id = AccountDataTable.getInt(aci, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID);
+    int id = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID);
     if (id == -1) {
       return 0;
     }
     return id;
   }
 
-  public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId); }
+  public void setNextSignedPreKeyId(int nextSignedPreKeyId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
+  }
 
-  public SenderKeySharedTable getSenderKeysSharedWith() { return new SenderKeySharedTable(aci); }
+  public Recipient getSelf() throws SQLException, IOException { return Database.Get(aci).RecipientsTable.get(aci); }
 
-  public Recipient getSelf() throws SQLException, IOException { return getRecipients().get(aci); }
-
-  public void setStorageKey(StorageKey storageKey) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.STORAGE_KEY, storageKey.serialize()); }
+  public void setStorageKey(StorageKey storageKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.STORAGE_KEY, storageKey.serialize()); }
 
   public StorageKey getStorageKey() throws SQLException {
-    byte[] bytes = AccountDataTable.getBytes(aci, AccountDataTable.Key.STORAGE_KEY);
+    byte[] bytes = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.STORAGE_KEY);
     if (bytes == null) {
       return null;
     }
     return new StorageKey(bytes);
   }
 
-  public void setStorageManifestVersion(long version) throws SQLException { AccountDataTable.set(aci, AccountDataTable.Key.STORAGE_MANIFEST_VERSION, version); }
+  public void setStorageManifestVersion(long version) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.STORAGE_MANIFEST_VERSION, version); }
 
-  public long getStorageManifestVersion() throws SQLException { return AccountDataTable.getLong(aci, AccountDataTable.Key.STORAGE_MANIFEST_VERSION); }
+  public long getStorageManifestVersion() throws SQLException { return Database.Get().AccountDataTable.getLong(aci, IAccountDataTable.Key.STORAGE_MANIFEST_VERSION); }
 
   public AccountData getAccountData() throws NoSuchAccountException, SQLException, IOException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     return Manager.get(aci).getAccountData();

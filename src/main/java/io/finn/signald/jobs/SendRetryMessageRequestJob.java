@@ -2,6 +2,7 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
 import io.finn.signald.Manager;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -35,7 +36,7 @@ public class SendRetryMessageRequestJob implements Job {
 
   @Override
   public void run() throws SQLException, IOException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException {
-    Recipient sender = account.getRecipients().get(protocolException.getSender());
+    Recipient sender = Database.Get(account.getACI()).RecipientsTable.get(protocolException.getSender());
     account.getProtocolStore().archiveAllSessions(sender);
 
     int senderDevice = protocolException.getSenderDevice();

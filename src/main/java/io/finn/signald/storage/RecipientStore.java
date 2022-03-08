@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -34,14 +34,13 @@ public class RecipientStore {
   public RecipientStore() {}
 
   public void migrateToDB(Account account) throws SQLException {
-    RecipientsTable table = account.getRecipients();
     logger.info("migrating " + addresses.size() + " recipients to the database");
 
     Iterator<JsonAddress> iterator = addresses.iterator();
     while (iterator.hasNext()) {
       JsonAddress entry = iterator.next();
       try {
-        table.get(entry.number, entry.getACI());
+        Database.Get(account.getACI()).RecipientsTable.get(entry.number, entry.getACI());
       } catch (IOException e) {
         logger.warn("error migrating recipient to db: ", e);
       }

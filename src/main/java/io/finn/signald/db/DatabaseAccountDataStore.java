@@ -24,21 +24,21 @@ import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
-  private final PreKeysTable preKeys;
-  private final SessionsTable sessions;
-  private final SignedPreKeysTable signedPrekeys;
-  private final IdentityKeysTable identityKeys;
-  private final SenderKeysTable senderKeys;
-  private final SenderKeySharedTable senderKeyShared;
+  private final IPreKeysTable preKeys;
+  private final ISessionsTable sessions;
+  private final ISignedPreKeysTable signedPrekeys;
+  private final IIdentityKeysTable identityKeys;
+  private final ISenderKeysTable senderKeys;
+  private final ISenderKeySharedTable senderKeyShared;
   private final Account account;
 
   public DatabaseAccountDataStore(ACI aci) {
-    preKeys = new PreKeysTable(aci);
-    sessions = new SessionsTable(aci);
-    signedPrekeys = new SignedPreKeysTable(aci);
-    identityKeys = new IdentityKeysTable(aci);
-    senderKeys = new SenderKeysTable(aci);
-    senderKeyShared = new SenderKeySharedTable(aci);
+    preKeys = Database.Get(aci).PreKeysTable;
+    sessions = Database.Get(aci).SessionsTable;
+    signedPrekeys = Database.Get(aci).SignedPreKeysTable;
+    identityKeys = Database.Get(aci).IdentityKeysTable;
+    senderKeys = Database.Get(aci).SenderKeysTable;
+    senderKeyShared = Database.Get(aci).SenderKeySharedTable;
     account = new Account(aci);
   }
 
@@ -62,7 +62,7 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
     if (account == null) {
       return;
     }
-    Recipient recipient = account.getRecipients().get(e.getIdentifier());
+    Recipient recipient = Database.Get(account.getACI()).RecipientsTable.get(e.getIdentifier());
     sessions.archiveAllSessions(recipient);
     senderKeyShared.deleteForAll(recipient);
   }
@@ -83,9 +83,9 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
     return identityKeys.getIdentity(address);
   }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException { return identityKeys.getIdentities(recipient); }
+  public List<IIdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException { return identityKeys.getIdentities(recipient); }
 
-  public List<IdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return identityKeys.getIdentities(); }
+  public List<IIdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return identityKeys.getIdentities(); }
 
   @Override
   public PreKeyRecord loadPreKey(int preKeyId) throws InvalidKeyIdException {
@@ -192,8 +192,6 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
     return senderKeys.loadSenderKey(signalProtocolAddress, distributionId);
   }
 
-  public SenderKeysTable getSenderKeys() { return senderKeys; }
-
   @Override
   public Set<SignalProtocolAddress> getSenderKeySharedWith(DistributionId distributionId) {
     return senderKeyShared.getSenderKeySharedWith(distributionId);
@@ -213,8 +211,6 @@ public class DatabaseAccountDataStore implements SignalServiceAccountDataStore {
   public boolean isMultiDevice() {
     return senderKeyShared.isMultiDevice();
   }
-
-  public SenderKeySharedTable getSenderKeyShared() { return senderKeyShared; }
 
   public boolean isCurrentRatchetKey(Recipient source, int sourceDeviceId, ECPublicKey key) {
     SessionRecord session = sessions.loadSession(new SignalProtocolAddress(source.getAddress().getIdentifier(), sourceDeviceId));

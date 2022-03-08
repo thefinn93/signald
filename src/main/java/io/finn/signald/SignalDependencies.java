@@ -7,9 +7,9 @@
 
 package io.finn.signald;
 
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.DatabaseDataStore;
-import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.IServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -38,7 +38,7 @@ import org.whispersystems.signalservice.internal.websocket.WebSocketConnection;
 public class SignalDependencies {
   private final static Map<String, SignalDependencies> instances = new HashMap<>();
 
-  private final ServersTable.Server server;
+  private final IServersTable.AbstractServer server;
   private final DatabaseDataStore dataStore;
   private final DynamicCredentialsProvider credentialsProvider;
 
@@ -73,7 +73,7 @@ public class SignalDependencies {
     synchronized (instances) {
       SignalDependencies d = instances.get(aci.toString());
       if (d == null) {
-        ServersTable.Server server = AccountsTable.getServer(aci);
+        var server = Database.Get().AccountsTable.getServer(aci);
         Account account = new Account(aci);
         d = new SignalDependencies(account, server);
         instances.put(aci.toString(), d);
@@ -99,7 +99,7 @@ public class SignalDependencies {
     }
   }
 
-  private SignalDependencies(Account account, ServersTable.Server server) throws SQLException, NoSuchAccountException {
+  private SignalDependencies(Account account, IServersTable.AbstractServer server) throws SQLException, NoSuchAccountException {
     dataStore = account.getDataStore();
     credentialsProvider = account.getCredentialsProvider();
     this.server = server;

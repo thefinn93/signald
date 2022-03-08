@@ -8,8 +8,7 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.MessageEncoder;
-import io.finn.signald.clientprotocol.v1.StorageChange;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -162,7 +161,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         boolean returnOnTimeout = true;
         boolean ignoreAttachments = false;
 
-        if (!AccountsTable.exists(aci)) {
+        if (!Database.Get().AccountsTable.exists(aci)) {
           logger.info("account no longer exists, not (re)-connecting");
           break;
         }

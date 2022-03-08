@@ -15,8 +15,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -45,7 +45,6 @@ public class ListContactsRequest implements RequestType<ProfileList> {
   @Override
   public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
-    RecipientsTable recipientsTable = m.getRecipientsTable();
     ProfileList list = new ProfileList();
     for (ContactStore.ContactInfo c : m.getAccountData().contactStore.getContacts()) {
       ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.address.getSignalServiceAddress());
@@ -74,7 +73,7 @@ public class ListContactsRequest implements RequestType<ProfileList> {
       }
 
       try {
-        Recipient recipient = Common.getRecipient(recipientsTable, c.address);
+        var recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, c.address);
         Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
         profile.populateAvatar(m);
         list.profiles.add(profile);

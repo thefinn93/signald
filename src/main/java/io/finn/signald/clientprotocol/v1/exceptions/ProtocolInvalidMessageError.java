@@ -9,8 +9,6 @@ package io.finn.signald.clientprotocol.v1.exceptions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
-import org.signal.libsignal.metadata.protocol.UnidentifiedSenderMessageContent;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.util.Base64;
 

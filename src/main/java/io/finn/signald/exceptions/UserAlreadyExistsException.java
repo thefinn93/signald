@@ -7,7 +7,6 @@
 
 package io.finn.signald.exceptions;
 
-import java.util.UUID;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class UserAlreadyExistsException extends Exception {

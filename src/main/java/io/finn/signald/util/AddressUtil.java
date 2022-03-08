@@ -28,7 +28,9 @@ public class AddressUtil {
   }
 
   public static JsonAddress update(JsonAddress old, JsonAddress update) {
-    assert old.matches(update);
+    if (!old.matches(update)) {
+      throw new IllegalArgumentException("Old does not match new");
+    }
     JsonAddress result = new JsonAddress(old.getSignalServiceAddress());
     if (update.number != null) {
       result.number = update.number;
@@ -36,7 +38,7 @@ public class AddressUtil {
     if (update.uuid != null) {
       result.uuid = update.uuid;
     }
-    return old;
+    return result;
   }
 
   public SignalServiceAddress resolve(SignalServiceAddress partial) {

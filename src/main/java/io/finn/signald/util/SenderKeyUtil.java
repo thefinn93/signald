@@ -2,8 +2,7 @@ package io.finn.signald.util;
 
 import io.finn.signald.Account;
 import io.finn.signald.SessionLock;
-import io.finn.signald.db.SenderKeySharedTable;
-import io.finn.signald.db.SenderKeysTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -20,11 +19,9 @@ public class SenderKeyUtil {
   public static void rotateOurKey(Account account, DistributionId distributionId)
       throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException {
     SessionLock lock = account.getSignalDependencies().getSessionLock();
-    SenderKeysTable senderKeysTable = account.getProtocolStore().getSenderKeys();
-    SenderKeySharedTable senderKeySharedTable = account.getProtocolStore().getSenderKeyShared();
     try (SignalSessionLock.Lock ignored = lock.acquire()) {
-      senderKeysTable.deleteAllFor(account.getACI().toString(), distributionId);
-      senderKeySharedTable.deleteAllFor(distributionId);
+      Database.Get(account.getACI()).SenderKeysTable.deleteAllFor(account.getACI().toString(), distributionId);
+      Database.Get(account.getACI()).SenderKeySharedTable.deleteAllFor(distributionId);
     }
   }
 }

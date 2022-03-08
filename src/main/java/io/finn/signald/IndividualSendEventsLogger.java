@@ -7,7 +7,6 @@
 
 package io.finn.signald;
 
-import io.finn.signald.db.Recipient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;

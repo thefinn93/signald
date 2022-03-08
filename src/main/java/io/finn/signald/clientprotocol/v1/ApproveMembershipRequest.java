@@ -17,9 +17,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
@@ -45,9 +44,9 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 
-    GroupsTable.Group group = Common.getGroup(a, groupID);
+    var group = Common.getGroup(a, groupID);
 
-    RecipientsTable recipientsTable = m.getRecipientsTable();
+    var recipientsTable = Database.Get(m.getACI()).RecipientsTable;
     List<Recipient> recipients;
     try {
       recipients = group.getMembers();

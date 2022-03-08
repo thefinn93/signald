@@ -18,7 +18,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -66,7 +67,7 @@ public class SendRequest implements RequestType<SendResponse> {
     Recipient recipient = null;
     if (recipientAddress != null) {
       try {
-        recipient = manager.getRecipientsTable().get(recipientAddress);
+        recipient = Database.Get(manager.getACI()).RecipientsTable.get(recipientAddress);
       } catch (IOException | SQLException e) {
         throw new InternalError("error looking up recipient", e);
       }
@@ -139,15 +140,15 @@ public class SendRequest implements RequestType<SendResponse> {
 
       Account account = manager.getAccount();
 
-      Optional<GroupsTable.Group> groupOptional;
+      Optional<IGroupsTable.IGroup> groupOptional;
       try {
-        groupOptional = account.getGroupsTable().get(groupIdentifier);
+        groupOptional = Database.Get(account.getACI()).GroupsTable.get(groupIdentifier);
       } catch (SQLException | InvalidInputException | InvalidProtocolBufferException e) {
         throw new InternalError("unexpected error looking up group to send to", e);
       }
 
       if (groupOptional.isPresent()) {
-        GroupsTable.Group group = groupOptional.get();
+        var group = groupOptional.get();
         Recipient self;
         try {
           self = account.getSelf();

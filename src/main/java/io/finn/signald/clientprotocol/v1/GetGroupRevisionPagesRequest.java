@@ -8,7 +8,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.IGroupsTable;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
@@ -37,7 +37,7 @@ public class GetGroupRevisionPagesRequest implements RequestType<GroupHistoryPag
                                                       InvalidGroupStateError, InvalidRequestError, AuthorizationFailedError, RateLimitError {
     final Account acc = Common.getAccount(account);
     // use revision == 0 to avoid unnecessarily fetching from the server
-    final GroupsTable.Group group = Common.getGroup(acc, groupId, 0);
+    final IGroupsTable.IGroup group = Common.getGroup(acc, groupId, 0);
 
     final Groups groups = Common.getGroups(acc);
     final org.whispersystems.signalservice.api.groupsv2.GroupHistoryPage page;

@@ -19,7 +19,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -135,7 +135,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new InvalidGroupStateError(e);
     }
 
-    Optional<GroupsTable.Group> groupOptional;
+    Optional<IGroupsTable.IGroup> groupOptional;
     try {
       groupOptional = groups.getGroup(groupSecretParams, decryptedChange.getRevision());
     } catch (IOException | SQLException | InvalidInputException e) {
@@ -150,7 +150,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new UnknownGroupError();
     }
 
-    GroupsTable.Group group = groupOptional.get();
+    var group = groupOptional.get();
 
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
     SignalServiceDataMessage.Builder updateMessage =

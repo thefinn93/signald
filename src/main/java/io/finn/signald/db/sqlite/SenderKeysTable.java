@@ -5,8 +5,10 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.sqlite;
 
+import io.finn.signald.db.Database;
+import io.finn.signald.db.ISenderKeysTable;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -15,20 +17,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
-import org.whispersystems.libsignal.groups.state.SenderKeyStore;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
-public class SenderKeysTable implements SenderKeyStore {
+public class SenderKeysTable implements ISenderKeysTable {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String TABLE_NAME = "sender_keys";
-  private static final String ACCOUNT_UUID = "account_uuid";
-  private static final String ADDRESS = "address";
-  private static final String DEVICE = "device";
-  private static final String DISTRIBUTION_ID = "distribution_id";
-  private static final String RECORD = "record";
-  private static final String CREATED_AT = "created_at";
 
   private final ACI aci;
 
@@ -73,6 +68,7 @@ public class SenderKeysTable implements SenderKeyStore {
     }
   }
 
+  @Override
   public long getCreatedTime(SignalProtocolAddress address, UUID distributionId) throws SQLException {
     var query = "SELECT " + CREATED_AT + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DEVICE + " = ? AND " + DISTRIBUTION_ID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
@@ -86,6 +82,7 @@ public class SenderKeysTable implements SenderKeyStore {
     }
   }
 
+  @Override
   public void deleteAllFor(String address, DistributionId distributionId) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ? AND " + DISTRIBUTION_ID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
@@ -96,7 +93,8 @@ public class SenderKeysTable implements SenderKeyStore {
     }
   }
 
-  public static void deleteAccount(UUID uuid) throws SQLException {
+  @Override
+  public void deleteAccount(UUID uuid) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, uuid.toString());

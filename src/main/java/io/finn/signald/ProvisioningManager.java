@@ -8,9 +8,8 @@
 package io.finn.signald;
 
 import io.finn.signald.clientprotocol.v1.LinkingURI;
-import io.finn.signald.db.AccountDataTable;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -70,7 +69,7 @@ public class ProvisioningManager {
     password = Util.getSecret(18);
     final SleepTimer timer = new UptimeSleepTimer();
     DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
-    SignalServiceConfiguration serviceConfiguration = ServersTable.getServer(server).getSignalServiceConfiguration();
+    SignalServiceConfiguration serviceConfiguration = Database.Get().ServersTable.getServer(server).getSignalServiceConfiguration();
     accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
                                                      ServiceConfig.AUTOMATIC_NETWORK_RETRY);
   }
@@ -100,15 +99,15 @@ public class ProvisioningManager {
     int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
 
     ACI aci = newDeviceRegistration.getAci();
-    if (AccountsTable.exists(aci)) {
+    if (Database.Get().AccountsTable.exists(aci)) {
       throw new UserAlreadyExistsException(aci);
     }
-
-    AccountDataTable.set(aci, AccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
     Manager m = new Manager(newDeviceRegistration.getAci(), AccountData.createLinkedAccount(newDeviceRegistration, password, registrationId, deviceId, server));
     Account account = m.getAccount();
     account.setDeviceName(deviceName);
+
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
     m.refreshPreKeys();
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS));

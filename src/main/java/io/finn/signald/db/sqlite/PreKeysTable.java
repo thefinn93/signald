@@ -5,8 +5,10 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.sqlite;
 
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IPreKeysTable;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -15,10 +17,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.state.PreKeyRecord;
-import org.whispersystems.libsignal.state.PreKeyStore;
 import org.whispersystems.signalservice.api.push.ACI;
 
-public class PreKeysTable implements PreKeyStore {
+public class PreKeysTable implements IPreKeysTable {
   private static final Logger logger = LogManager.getLogger();
 
   private static final String TABLE_NAME = "prekeys";
@@ -98,7 +99,8 @@ public class PreKeysTable implements PreKeyStore {
     }
   }
 
-  public static void deleteAccount(UUID uuid) throws SQLException {
+  @Override
+  public void deleteAccount(UUID uuid) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, uuid.toString());

@@ -18,7 +18,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -38,7 +38,7 @@ public class RemoteConfigRequest implements RequestType<RemoteConfigList> {
   public RemoteConfigList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError {
     UUID accountUUID;
     try {
-      accountUUID = AccountsTable.getUUID(account);
+      accountUUID = Database.Get().AccountsTable.getUUID(account);
     } catch (SQLException e) {
       throw new InternalError("error getting local account UUID", e);
     } catch (NoSuchAccountException e) {

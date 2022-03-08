@@ -18,6 +18,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -52,7 +53,7 @@ public class MarkReadRequest implements RequestType<Empty> {
     }
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, when);
     Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), to);
+    Recipient recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, to);
     SignalServiceMessageSender sender = m.getMessageSender();
 
     SignalDependencies dependencies;

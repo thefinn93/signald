@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.Account;
-import io.finn.signald.db.SignedPreKeysTable;
+import io.finn.signald.db.Database;
 import java.io.IOException;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
@@ -71,7 +71,6 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
   }
 
   public void migrateToDB(Account account) {
-    SignedPreKeysTable signedPreKeysTable = new SignedPreKeysTable(account.getACI());
     logger.info("migrating " + store.size() + " signed pre-keys to the database");
     Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
     while (iterator.hasNext()) {
@@ -80,7 +79,7 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
         if (entry.getValue() == null) {
           continue;
         }
-        signedPreKeysTable.storeSignedPreKey(entry.getKey(), new SignedPreKeyRecord(entry.getValue()));
+        Database.Get(account.getACI()).SignedPreKeysTable.storeSignedPreKey(entry.getKey(), new SignedPreKeyRecord(entry.getValue()));
         iterator.remove();
       } catch (IOException e) {
         logger.warn("failed to migrate session record", e);

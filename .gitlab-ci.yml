@@ -144,13 +144,15 @@ build deb armv7-unknown-linux-gnueabihf:
   tags: [docker-builder]
   needs: []
   before_script: # per recommendations from https://github.com/docker/buildx/issues/495#issuecomment-754200673
-    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    - docker login --username "${CI_DEPENDENCY_PROXY_USER}" --password "${CI_DEPENDENCY_PROXY_PASSWORD}" "${CI_DEPENDENCY_PROXY_SERVER}"
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - docker run --rm --privileged "${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/multiarch/qemu-user-static" --reset -p yes
     - docker buildx create --name cibuilder --driver docker-container --use
     - docker buildx inspect --bootstrap
-    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
     - export VERSION="$(./version.sh | sed 's#+#-#g' | sed 's#/#-#g')"
     - DOCKER_PLATFORM=$(echo "${PLATFORM:6}" | sed 's#/#-#g')
   script:
+    - 'sed -i "s#FROM #FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/#g" Dockerfile'
     - docker buildx build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}" --push .
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald"'

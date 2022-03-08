@@ -5,8 +5,11 @@
  *
  */
 
-package io.finn.signald.db;
+package io.finn.signald.db.postgresql;
 
+import io.finn.signald.db.Database;
+import io.finn.signald.db.ISessionsTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -18,36 +21,26 @@ import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.libsignal.state.SessionStore;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
-public class SessionsTable implements SessionStore {
+public class SessionsTable implements ISessionsTable {
   private static final Logger logger = LogManager.getLogger();
 
-  private static final String TABLE_NAME = "sessions";
-  private static final String ROW_ID = "rowid";
-  private static final String ACCOUNT_UUID = "account_uuid";
-  private static final String RECIPIENT = "recipient";
-  private static final String DEVICE_ID = "device_id";
-  private static final String RECORD = "record";
+  private static final String TABLE_NAME = "signald_sessions";
 
   private final ACI aci;
-  private final RecipientsTable recipientsTable;
 
-  public SessionsTable(ACI aci) {
-    this.aci = aci;
-    recipientsTable = new RecipientsTable(aci);
-  }
+  public SessionsTable(ACI aci) { this.aci = aci; }
 
   @Override
   public SessionRecord loadSession(SignalProtocolAddress address) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
-      var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
+      var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setString(1, aci.toString());
+        statement.setObject(1, aci.uuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         try (var rows = Database.executeQuery(TABLE_NAME + "_load", statement)) {
@@ -69,10 +62,10 @@ public class SessionsTable implements SessionStore {
     List<SessionRecord> sessions = new ArrayList<>();
     for (SignalProtocolAddress address : list) {
       try {
-        Recipient recipient = recipientsTable.get(address.getName());
-        var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
+        Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
+        var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
         try (var statement = Database.getConn().prepareStatement(query)) {
-          statement.setString(1, aci.toString());
+          statement.setObject(1, aci.uuid());
           statement.setInt(2, recipient.getId());
           statement.setInt(3, address.getDeviceId());
           try (var rows = Database.executeQuery(TABLE_NAME + "_load_existing", statement)) {
@@ -92,10 +85,10 @@ public class SessionsTable implements SessionStore {
   @Override
   public List<Integer> getSubDeviceSessions(String name) {
     try {
-      Recipient recipient = recipientsTable.get(name);
-      var query = "SELECT " + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(name);
+      var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", DEVICE_ID, TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setString(1, aci.toString());
+        statement.setObject(1, aci.uuid());
         statement.setInt(2, recipient.getId());
         try (var rows = Database.executeQuery(TABLE_NAME + "_get_sub_device_session", statement)) {
           List<Integer> results = new ArrayList<>();
@@ -117,10 +110,16 @@ public class SessionsTable implements SessionStore {
   @Override
   public void storeSession(SignalProtocolAddress address, SessionRecord record) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
-      var query = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," + RECORD + ") VALUES (?, ?, ?, ?)";
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
+      var query = String.format("INSERT INTO %s (%s, %s, %s, %s) VALUES (?, ?, ?, ?) ON CONFLICT (%s, %s, %s) DO UPDATE SET %s=EXCLUDED.%s", TABLE_NAME,
+                                // FIELDS
+                                ACCOUNT_UUID, RECIPIENT, DEVICE_ID, RECORD,
+                                // ON CONFLICT
+                                ACCOUNT_UUID, RECIPIENT, DEVICE_ID,
+                                // DO UPDATE SET
+                                RECORD, RECORD);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setString(1, aci.toString());
+        statement.setObject(1, aci.uuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         statement.setBytes(4, record.serialize());
@@ -134,10 +133,10 @@ public class SessionsTable implements SessionStore {
   @Override
   public boolean containsSession(SignalProtocolAddress address) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
-      var query = "SELECT " + RECORD + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
+      var query = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? AND %s=?", RECORD, TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setString(1, aci.toString());
+        statement.setObject(1, aci.uuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         try (var rows = Database.executeQuery(TABLE_NAME + "_contains", statement)) {
@@ -157,10 +156,10 @@ public class SessionsTable implements SessionStore {
   @Override
   public void deleteSession(SignalProtocolAddress address) {
     try {
-      Recipient recipient = recipientsTable.get(address.getName());
-      var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ? AND " + DEVICE_ID + " = ?";
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(address.getName());
+      var query = String.format("DELETE FROM %s WHERE %s=? AND %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, RECIPIENT, DEVICE_ID);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setString(1, aci.toString());
+        statement.setObject(1, aci.uuid());
         statement.setInt(2, recipient.getId());
         statement.setInt(3, address.getDeviceId());
         Database.executeUpdate(TABLE_NAME + "_delete", statement);
@@ -173,10 +172,10 @@ public class SessionsTable implements SessionStore {
   @Override
   public void deleteAllSessions(String name) {
     try {
-      Recipient recipient = recipientsTable.get(name);
-      var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
+      Recipient recipient = Database.Get(aci).RecipientsTable.get(name);
+      var query = String.format("DELETE FROM %s WHERE %s=? AND %s=?", TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
       try (var statement = Database.getConn().prepareStatement(query)) {
-        statement.setString(1, aci.toString());
+        statement.setObject(1, aci.uuid());
         statement.setInt(2, recipient.getId());
         Database.executeUpdate(TABLE_NAME + "_delete_all", statement);
       }
@@ -185,12 +184,10 @@ public class SessionsTable implements SessionStore {
     }
   }
 
-  public void deleteAllSessions(Recipient recipient) { deleteAllSessions(recipient.getAddress().getIdentifier()); }
-
-  public static void deleteAccount(UUID uuid) throws SQLException {
-    var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
+  public void deleteAccount(UUID uuid) throws SQLException {
+    var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setObject(1, uuid);
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
@@ -198,20 +195,19 @@ public class SessionsTable implements SessionStore {
   public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> list) {
     List<SignalServiceAddress> addressList = list.stream().map(AddressUtil::fromIdentifier).collect(Collectors.toList());
     try {
-      List<Recipient> recipientList = recipientsTable.get(addressList);
-
-      String query = "SELECT " + RecipientsTable.TABLE_NAME + "." + RecipientsTable.UUID + "," + DEVICE_ID + "," + RECORD + " FROM " + TABLE_NAME + "," +
-                     RecipientsTable.TABLE_NAME + " WHERE " + TABLE_NAME + '.' + ACCOUNT_UUID + " = ? AND " + RecipientsTable.TABLE_NAME + "." + ROW_ID + " = " + RECIPIENT +
-                     " AND (";
-      for (int i = 0; i < recipientList.size() - 1; i++) {
-        query += RECIPIENT + " = ? OR ";
-      }
-      query += RECIPIENT + " = ?)";
-
+      var recipientList = Database.Get(aci).RecipientsTable.get(addressList);
+      var query = String.format("SELECT %s.%s, %s, %s FROM %s, %s WHERE %s.%s=? AND %s.%s=%s AND %s IN (",
+                                // FIELDS
+                                RecipientsTable.TABLE_NAME, RecipientsTable.UUID, DEVICE_ID, RECORD,
+                                // FROM
+                                TABLE_NAME, RecipientsTable.TABLE_NAME,
+                                // WHERE
+                                TABLE_NAME, ACCOUNT_UUID, RecipientsTable.TABLE_NAME, ROW_ID, RECIPIENT, RECIPIENT);
+      query += "?, ".repeat(recipientList.size() - 1) + " ?)";
       try (var statement = Database.getConn().prepareStatement(query)) {
-        int i = 1;
-        statement.setString(i++, aci.toString());
-        for (Recipient recipient : recipientList) {
+        var i = 1;
+        statement.setObject(i++, aci.uuid());
+        for (var recipient : recipientList) {
           statement.setInt(i++, recipient.getId());
         }
         try (var rows = Database.executeQuery(TABLE_NAME + "_get_addresses_with_active_sessions", statement)) {
@@ -234,9 +230,9 @@ public class SessionsTable implements SessionStore {
   }
 
   public void archiveAllSessions(Recipient recipient) throws SQLException {
-    var query = "SELECT " + RECORD + "," + DEVICE_ID + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + RECIPIENT + " = ?";
+    var query = String.format("SELECT %s, %s FROM %s WHERE %s=? AND %s=?", RECORD, DEVICE_ID, TABLE_NAME, ACCOUNT_UUID, RECIPIENT);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, aci.toString());
+      statement.setObject(1, aci.uuid());
       statement.setInt(2, recipient.getId());
       List<Pair<Integer, SessionRecord>> records = new ArrayList<>();
       try (var rows = Database.executeQuery(TABLE_NAME + "_archive_all_sessions_find", statement)) {
@@ -259,17 +255,22 @@ public class SessionsTable implements SessionStore {
         return;
       }
 
-      String storeStatementString = "INSERT OR REPLACE INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + RECIPIENT + "," + DEVICE_ID + "," + RECORD + ") VALUES "
-                                    + "(?, ?, ?, ?), ".repeat(records.size() - 1) + "(?, ?, ?, ?)";
+      var storeStatementString = String.format("INSERT INTO %s (%s, %s, %s, %s) VALUES (?, ?, ?, ?) ON CONFLICT (%s, %s, %s) DO UPDATE SET %s=EXCLUDED.%s", TABLE_NAME,
+                                               // FIELDS
+                                               ACCOUNT_UUID, RECIPIENT, DEVICE_ID, RECORD,
+                                               // ON CONFLICT
+                                               ACCOUNT_UUID, RECIPIENT, DEVICE_ID,
+                                               // DO UPDATE SET
+                                               RECORD, RECORD);
       try (var storeStatement = Database.getConn().prepareStatement(storeStatementString)) {
-        int i = 1;
         for (Pair<Integer, SessionRecord> record : records) {
-          storeStatement.setString(i++, aci.toString());
-          storeStatement.setInt(i++, recipient.getId());
-          storeStatement.setInt(i++, record.first());
-          storeStatement.setBytes(i++, record.second().serialize());
+          storeStatement.setObject(1, aci.uuid());
+          storeStatement.setInt(2, recipient.getId());
+          storeStatement.setInt(3, record.first());
+          storeStatement.setBytes(4, record.second().serialize());
+          storeStatement.addBatch();
         }
-        int updated = Database.executeUpdate(TABLE_NAME + "_archive_all_sessions", storeStatement);
+        int updated = Database.executeBatch(TABLE_NAME + "_archive_all_sessions", storeStatement).length;
         logger.debug("archived {} session(s) with {}", updated, recipient.toRedactedString());
       }
     }

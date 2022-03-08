@@ -12,10 +12,10 @@ import io.finn.signald.*;
 import io.finn.signald.Account;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupsTable;
+import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSendPermissionException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -68,7 +68,7 @@ public class Common {
     if (identifier.startsWith("+")) {
       ACI aci;
       try {
-        aci = AccountsTable.getACI(identifier);
+        aci = Database.Get().AccountsTable.getACI(identifier);
       } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
       } catch (SQLException e) {
@@ -110,7 +110,11 @@ public class Common {
     }
   }
 
-  static Recipient getRecipient(RecipientsTable table, SignalServiceAddress address) throws InternalError {
+  static Recipient getRecipient(ACI aci, SignalServiceAddress address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
+  static Recipient getRecipient(ACI aci, JsonAddress address) throws InternalError, UnregisteredUserError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
+  public static Recipient getRecipient(ACI aci, String address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
+
+  static Recipient getRecipient(IRecipientsTable table, SignalServiceAddress address) throws InternalError {
     try {
       return table.get(address);
     } catch (SQLException | IOException e) {
@@ -118,7 +122,7 @@ public class Common {
     }
   }
 
-  static Recipient getRecipient(RecipientsTable table, JsonAddress address) throws InternalError, UnregisteredUserError {
+  static Recipient getRecipient(IRecipientsTable table, JsonAddress address) throws InternalError, UnregisteredUserError {
     try {
       return table.get(address);
     } catch (UnregisteredUserException e) {
@@ -128,7 +132,7 @@ public class Common {
     }
   }
 
-  public static Recipient getRecipient(RecipientsTable table, String address) throws InternalError {
+  static Recipient getRecipient(IRecipientsTable table, String address) throws InternalError {
     try {
       return table.get(address);
     } catch (SQLException | IOException e) {
@@ -149,7 +153,7 @@ public class Common {
       }
       if (members != null) {
         memberRecipients = new ArrayList<>();
-        RecipientsTable recipientsTable = manager.getRecipientsTable();
+        var recipientsTable = Database.Get(manager.getACI()).RecipientsTable;
         for (JsonAddress member : members) {
           try {
             memberRecipients.add(getRecipient(recipientsTable, member));
@@ -194,7 +198,7 @@ public class Common {
     UUID accountUUID;
     if (identifier.startsWith("+")) {
       try {
-        accountUUID = AccountsTable.getUUID(identifier);
+        accountUUID = Database.Get().AccountsTable.getUUID(identifier);
       } catch (SQLException e) {
         throw new InternalError("error looking up local account", e);
       } catch (NoSuchAccountException e) {
@@ -225,7 +229,7 @@ public class Common {
     }
   }
 
-  public static GroupsTable.Group getGroup(GroupsTable groupsTable, String groupId) throws UnknownGroupError, InvalidRequestError, InternalError {
+  public static IGroupsTable.IGroup getGroup(ACI aci, String groupId) throws UnknownGroupError, InvalidRequestError, InternalError {
     GroupIdentifier groupIdentifier;
     try {
       groupIdentifier = new GroupIdentifier(Base64.decode(groupId));
@@ -233,9 +237,9 @@ public class Common {
       throw new InvalidRequestError(e.getMessage());
     }
 
-    Optional<GroupsTable.Group> g;
+    Optional<IGroupsTable.IGroup> g;
     try {
-      g = groupsTable.get(groupIdentifier);
+      g = Database.Get(aci).GroupsTable.get(groupIdentifier);
     } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
       throw new InternalError("error getting group", e);
     }
@@ -245,12 +249,12 @@ public class Common {
     return g.get();
   }
 
-  public static GroupsTable.Group getGroup(Account account, String groupId)
+  public static IGroupsTable.IGroup getGroup(Account account, String groupId)
       throws UnknownGroupError, NoSuchAccountError, ServerNotFoundError, InvalidRequestError, InternalError, InvalidProxyError, AuthorizationFailedError {
     return getGroup(account, groupId, -1);
   }
 
-  public static GroupsTable.Group getGroup(Account account, String groupId, int revision)
+  public static IGroupsTable.IGroup getGroup(Account account, String groupId, int revision)
       throws UnknownGroupError, InvalidRequestError, InternalError, NoSuchAccountError, InvalidProxyError, ServerNotFoundError, AuthorizationFailedError {
     Groups groups = getGroups(account);
 
@@ -261,9 +265,9 @@ public class Common {
       throw new InvalidRequestError(e.getMessage());
     }
 
-    Optional<GroupsTable.Group> g;
+    Optional<IGroupsTable.IGroup> g;
     try {
-      g = account.getGroupsTable().get(groupIdentifier);
+      g = Database.Get(account.getACI()).GroupsTable.get(groupIdentifier);
     } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
       throw new InternalError("error getting group", e);
     }
@@ -271,7 +275,7 @@ public class Common {
       throw new UnknownGroupError();
     }
 
-    Optional<GroupsTable.Group> groupOptional;
+    Optional<IGroupsTable.IGroup> groupOptional;
     try {
       groupOptional = groups.getGroup(g.get().getMasterKey(), revision);
     } catch (AuthorizationFailedException e) {
@@ -286,7 +290,7 @@ public class Common {
     return groupOptional.get();
   }
 
-  public static GroupsV2Operations.GroupOperations getGroupOperations(Account account, GroupsTable.Group group) throws InternalError, ServerNotFoundError, InvalidProxyError {
+  public static GroupsV2Operations.GroupOperations getGroupOperations(Account account, IGroupsTable.IGroup group) throws InternalError, ServerNotFoundError, InvalidProxyError {
     try {
       GroupsV2Operations operations = GroupsUtil.GetGroupsV2Operations(account.getServiceConfiguration());
       return operations.forGroup(group.getSecretParams());
@@ -299,7 +303,7 @@ public class Common {
     }
   }
 
-  public static List<SendMessageResult> updateGroup(Account account, GroupsTable.Group group, GroupChange.Actions.Builder change)
+  public static List<SendMessageResult> updateGroup(Account account, IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError {
     try {
       return updateGroup(account, group, change, group.getMembers());
@@ -308,9 +312,9 @@ public class Common {
     }
   }
 
-  public static List<SendMessageResult> updateGroup(Account account, GroupsTable.Group group, GroupChange.Actions.Builder change, List<Recipient> recipients)
+  public static List<SendMessageResult> updateGroup(Account account, IGroupsTable.IGroup group, GroupChange.Actions.Builder change, List<Recipient> recipients)
       throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError {
-    Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> updateOutput;
+    Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateOutput;
     try {
       updateOutput = getGroups(account).updateGroup(group, change);
     } catch (IOException | VerificationFailedException | SQLException | InvalidInputException e) {

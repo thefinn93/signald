@@ -33,7 +33,7 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
   public SendResponse run(Request request) throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, InvalidRequestError, NoSendPermissionError,
                                                   UnknownGroupError, RateLimitError, InvalidRecipientError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+    Recipient recipient = Common.getRecipient(m.getACI(), address);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
     if (timestamp == null) {
       timestamp = System.currentTimeMillis();

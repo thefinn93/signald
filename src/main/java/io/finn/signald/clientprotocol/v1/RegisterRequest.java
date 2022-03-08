@@ -9,7 +9,10 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.BuildConfig;
 import io.finn.signald.RegistrationManager;
-import io.finn.signald.annotations.*;
+import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
+import io.finn.signald.annotations.ProtocolType;
+import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequiredError;

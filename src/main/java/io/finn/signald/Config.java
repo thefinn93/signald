@@ -7,6 +7,7 @@ import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
 import io.sentry.Sentry;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.asamk.signal.TrustLevel;
+import org.whispersystems.libsignal.util.Pair;
 import picocli.CommandLine;
 
 public class Config {
@@ -29,7 +31,7 @@ public class Config {
   private static boolean userSocket = false;
   @CommandLine.Option(names = {"--system-socket"}, description = "make the socket file accessible system-wide") private static boolean systemSocket = false;
   @CommandLine.Option(names = {"-d", "--data"}, description = "Data storage location") private static String dataPath = System.getProperty("user.home") + "/.config/signald";
-  @CommandLine.Option(names = {"--database"}, description = "jdbc connection string. Defaults to jdbc:sqlite:~/.config/signald/signald.db. Only sqlite is supported at this time.")
+  @CommandLine.Option(names = {"--database"}, description = "jdbc connection string. Defaults to sqlite:~/.config/signald/signald.db (sqlite and postgres supported)")
   private static String db;
   @CommandLine.Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit "
                                                                  + "(https://signald.org/articles/protocol/documentation/)")
@@ -63,7 +65,11 @@ public class Config {
     }
 
     if (verbose) {
-      Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
+      if (System.getenv("SIGNALD_TRACE_LOGGING") != null && Boolean.parseBoolean(System.getenv("SIGNALD_TRACE_LOGGING"))) {
+        Configurator.setLevel(System.getProperty("log4j.logger"), Level.TRACE);
+      } else {
+        Configurator.setLevel(System.getProperty("log4j.logger"), Level.DEBUG);
+      }
       LogSetup.setup();
       logger.debug("Debug logging enabled");
     }
@@ -85,6 +91,10 @@ public class Config {
         options.setDebug(verbose);
       });
       logger.info("exception reporting via Sentry enabled");
+    }
+
+    if (System.getenv("SIGNALD_DATABASE") != null) {
+      db = System.getenv("SIGNALD_DATABASE");
     }
 
     if (System.getenv("SIGNALD_HTTP_LOGGING") != null) {
@@ -126,7 +136,7 @@ public class Config {
     }
 
     if (db == null) {
-      db = "jdbc:sqlite:" + dataPath + "/signald.db";
+      db = "sqlite:" + dataPath + "/signald.db";
     }
 
     if (socketPath == null) {
@@ -157,7 +167,46 @@ public class Config {
 
   public static boolean getLogHttpRequests() { return logHttpRequests; }
 
-  public static String getDb() { return db; }
+  private static Pair<String, String> getUserAndPassword() {
+    URI uri = URI.create(db);
+    var userInfoString = uri.getUserInfo();
+    if (userInfoString == null) {
+      return new Pair<>(null, null);
+    }
+
+    // Extract the user and password from the URI
+    var userInfo = userInfoString.split(":");
+    if (userInfo.length == 1) {
+      return new Pair<>(userInfo[0], null);
+    }
+
+    if (userInfo.length == 2) {
+      return new Pair<>(userInfo[0], userInfo[1]);
+    }
+
+    return new Pair<>(null, null);
+  }
+
+  public static String getDb() {
+    URI uri = URI.create(db);
+
+    String hostPort = "";
+    if (uri.getHost() != null) {
+      hostPort += "//" + uri.getHost();
+      if (uri.getPort() >= 0)
+        hostPort += ":" + uri.getPort();
+    }
+
+    String query = "";
+    if (uri.getQuery() != null && uri.getQuery().length() > 0)
+      query += "?" + uri.getQuery();
+
+    // Re-combine without the user and password.
+    return String.format("jdbc:%s:%s%s%s", uri.getScheme(), hostPort, uri.getPath(), query);
+  }
+
+  public static String getDbUser() { return getUserAndPassword().first(); }
+  public static String getDbPassword() { return getUserAndPassword().second(); }
 
   public static String getSocketPath() { return socketPath; }
 

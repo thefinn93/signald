@@ -88,7 +88,7 @@ public class Profile {
   }
 
   public void populateAvatar(Manager m) throws InternalError, UnregisteredUserError {
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+    Recipient recipient = Common.getRecipient(m.getACI(), address);
     File f = m.getProfileAvatarFile(recipient);
     if (f == null || !f.exists()) {
       return;

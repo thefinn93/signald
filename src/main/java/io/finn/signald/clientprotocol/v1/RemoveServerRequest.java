@@ -12,7 +12,7 @@ import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.Database;
 import java.sql.SQLException;
 import java.util.UUID;
 
@@ -23,7 +23,7 @@ public class RemoveServerRequest implements RequestType<Empty> {
   @Override
   public Empty run(Request request) throws InternalError {
     try {
-      ServersTable.delete(UUID.fromString(uuid));
+      Database.Get().ServersTable.delete(UUID.fromString(uuid));
     } catch (SQLException e) {
       throw new InternalError("error removing server", e);
     }

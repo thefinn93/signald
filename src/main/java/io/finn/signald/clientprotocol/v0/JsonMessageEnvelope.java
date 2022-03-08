@@ -14,7 +14,7 @@ import io.finn.signald.Manager;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -24,7 +24,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
-import java.util.UUID;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
@@ -54,7 +53,7 @@ public class JsonMessageEnvelope {
 
   public JsonMessageEnvelope(SignalServiceEnvelope envelope, SignalServiceContent c, ACI aci)
       throws IOException, SQLException, NoSuchAccountException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    this.username = AccountsTable.getE164(aci);
+    this.username = Database.Get().AccountsTable.getE164(aci);
 
     if (envelope.hasServerGuid()) {
       uuid = envelope.getServerGuid();
@@ -62,9 +61,9 @@ public class JsonMessageEnvelope {
 
     Manager m = Manager.get(aci);
     if (!envelope.isUnidentifiedSender()) {
-      source = new JsonAddress(m.getRecipientsTable().get(envelope.getSourceAddress()).getAddress());
+      source = new JsonAddress(Database.Get(m.getACI()).RecipientsTable.get(envelope.getSourceAddress()).getAddress());
     } else if (c != null) {
-      source = new JsonAddress(m.getRecipientsTable().get(c.getSender()).getAddress());
+      source = new JsonAddress(Database.Get(m.getACI()).RecipientsTable.get(c.getSender()).getAddress());
     }
 
     if (envelope.hasSourceDevice()) {

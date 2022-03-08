@@ -17,7 +17,6 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
 import io.finn.signald.db.Recipient;
 import io.sentry.Sentry;
 import java.io.IOException;
@@ -70,7 +69,7 @@ public class TypingRequest implements RequestType<Empty> {
     SignalServiceMessageSender messageSender = m.getMessageSender();
 
     if (address != null) {
-      Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+      Recipient recipient = Common.getRecipient(m.getACI(), address);
       try {
         messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
       } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
@@ -85,7 +84,7 @@ public class TypingRequest implements RequestType<Empty> {
         throw new InternalError("error sending typing message", e);
       }
     } else {
-      GroupsTable.Group g = Common.getGroup(a.getGroupsTable(), group);
+      var g = Common.getGroup(m.getACI(), group);
       List<Recipient> recipients;
       try {
         recipients = g.getMembers();

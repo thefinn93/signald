@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public class IdentityKeyList {
   public final JsonAddress address;
   public final List<IdentityKey> identities = new ArrayList<>();
 
-  public IdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, Recipient recipient, List<IdentityKeysTable.IdentityKeyRow> identities) {
+  public IdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, Recipient recipient, List<IIdentityKeysTable.IdentityKeyRow> identities) {
     this.self = self;
     this.ownKey = ownKey;
     this.address = new JsonAddress(recipient);
@@ -33,12 +33,10 @@ public class IdentityKeyList {
     if (identities == null) {
       return;
     }
-    for (IdentityKeysTable.IdentityKeyRow i : identities) {
-      addKey(i);
-    }
+    identities.forEach(this::addKey);
   }
 
-  public void addKey(IdentityKeysTable.IdentityKeyRow identity) {
+  public void addKey(IIdentityKeysTable.IdentityKeyRow identity) {
     Fingerprint safetyNumber = SafetyNumberHelper.computeFingerprint(self, ownKey, recipient, identity.getKey());
     if (safetyNumber == null) {
       return;

@@ -10,9 +10,8 @@ package io.finn.signald.jobs;
 import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.Util;
-import io.finn.signald.db.DatabaseAccountDataStore;
-import io.finn.signald.db.IdentityKeysTable;
-import io.finn.signald.db.RecipientsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.exceptions.InvalidAddressException;
 import io.finn.signald.storage.AccountData;
 import io.finn.signald.storage.ContactStore;
@@ -20,7 +19,6 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.*;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
@@ -41,20 +39,19 @@ public class SendContactsSyncJob implements Job {
     File contactsFile = Util.createTempFile();
     AccountData accountData = m.getAccountData();
     Account account = m.getAccount();
-    RecipientsTable recipientsTable = account.getRecipients();
-    DatabaseAccountDataStore protocolStore = account.getProtocolStore();
+    var protocolStore = account.getProtocolStore();
 
     try {
       try (OutputStream fos = new FileOutputStream(contactsFile)) {
         DeviceContactsOutputStream out = new DeviceContactsOutputStream(fos);
         for (ContactStore.ContactInfo record : accountData.contactStore.getContacts()) {
           VerifiedMessage verifiedMessage = null;
-          List<IdentityKeysTable.IdentityKeyRow> identities = protocolStore.getIdentities(recipientsTable.get(record.address));
+          var identities = protocolStore.getIdentities(Database.Get(record.address.getACI()).RecipientsTable.get(record.address));
           if (identities.size() == 0) {
             continue;
           }
-          IdentityKeysTable.IdentityKeyRow currentIdentity = null;
-          for (IdentityKeysTable.IdentityKeyRow id : identities) {
+          IIdentityKeysTable.IdentityKeyRow currentIdentity = null;
+          for (var id : identities) {
             if (currentIdentity == null || id.getDateAdded().after(currentIdentity.getDateAdded())) {
               currentIdentity = id;
             }
@@ -70,8 +67,9 @@ public class SendContactsSyncJob implements Job {
           ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.address.getSignalServiceAddress());
           ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
           out.write(new DeviceContact(record.address.getSignalServiceAddress(), Optional.fromNullable(record.name),
-                                      m.createContactAvatarAttachment(recipientsTable.get(record.address)), Optional.fromNullable(record.color),
-                                      Optional.fromNullable(verifiedMessage), Optional.fromNullable(profileKey), false, expirationTimer, Optional.absent(), false));
+                                      m.createContactAvatarAttachment(Database.Get(record.address.getACI()).RecipientsTable.get(record.address)),
+                                      Optional.fromNullable(record.color), Optional.fromNullable(verifiedMessage), Optional.fromNullable(profileKey), false, expirationTimer,
+                                      Optional.absent(), false));
         }
       }
 

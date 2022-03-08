@@ -14,7 +14,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.db.ServersTable;
+import io.finn.signald.db.Database;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -30,7 +30,7 @@ public class AddServerRequest implements RequestType<String> {
       server.uuid = UUID.randomUUID();
     }
     try {
-      ServersTable.create(server.getServer());
+      Database.Get().ServersTable.create(server.getServer());
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyError(e);
     } catch (SQLException | IOException e) {

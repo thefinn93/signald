@@ -9,9 +9,9 @@ package io.finn.signald;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
-import io.finn.signald.db.AccountsTable;
-import io.finn.signald.db.GroupCredentialsTable;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupCredentialsTable;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -24,6 +24,7 @@ import io.finn.signald.storage.ProfileCredentialStore;
 import io.finn.signald.util.GroupProtoUtil;
 import io.finn.signald.util.GroupsUtil;
 import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.annotations.Nullable;
 import io.sentry.Sentry;
 import java.io.File;
 import java.io.IOException;
@@ -37,8 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.Member;
@@ -78,8 +77,8 @@ public class Groups {
   private final static int MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS = MAX_GROUP_CHANGES_PER_PAGE * 6;
 
   private final GroupsV2Api groupsV2Api;
-  private final GroupCredentialsTable credentials;
-  private final GroupsTable groupsTable;
+  private final IGroupCredentialsTable credentials;
+  private final IGroupsTable groupsTable;
   private final ACI aci;
   private final GroupsV2Operations groupsV2Operations;
   private final SignalServiceConfiguration serviceConfiguration;
@@ -87,40 +86,40 @@ public class Groups {
   public Groups(ACI aci) throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
     this.aci = aci;
     groupsV2Api = SignalDependencies.get(aci).getAccountManager().getGroupsV2Api();
-    groupsTable = new GroupsTable(aci);
-    credentials = new GroupCredentialsTable(aci);
-    serviceConfiguration = AccountsTable.getServer(aci).getSignalServiceConfiguration();
+    groupsTable = Database.Get(aci).GroupsTable;
+    credentials = Database.Get(aci).GroupCredentialsTable;
+    serviceConfiguration = Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
     groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
   }
 
-  public Optional<GroupsTable.Group> getGroup(SignalServiceGroupV2 incomingGroupV2Context)
+  public Optional<IGroupsTable.IGroup> getGroup(SignalServiceGroupV2 incomingGroupV2Context)
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(incomingGroupV2Context.getMasterKey());
     final byte[] signedGroupChange = incomingGroupV2Context.hasSignedGroupChange() ? incomingGroupV2Context.getSignedGroupChange() : null;
     return getGroup(groupSecretParams, incomingGroupV2Context.getRevision(), signedGroupChange);
   }
 
-  public Optional<GroupsTable.Group> getGroup(GroupMasterKey masterKey, int revision)
+  public Optional<IGroupsTable.IGroup> getGroup(GroupMasterKey masterKey, int revision)
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
     return getGroup(groupSecretParams, revision, null);
   }
 
-  public Optional<GroupsTable.Group> getGroup(GroupSecretParams groupSecretParams, int revision)
+  public Optional<IGroupsTable.IGroup> getGroup(GroupSecretParams groupSecretParams, int revision)
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
     return getGroup(groupSecretParams, revision, null);
   }
 
-  private Optional<GroupsTable.Group> getGroup(GroupSecretParams groupSecretParams, int revision, byte[] signedGroupChangeBytes)
+  private Optional<IGroupsTable.IGroup> getGroup(GroupSecretParams groupSecretParams, int revision, byte[] signedGroupChangeBytes)
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
-    final Optional<GroupsTable.Group> localGroup = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
+    final Optional<IGroupsTable.IGroup> localGroup = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
 
     if (!localGroup.isPresent() || localGroup.get().getRevision() < revision || revision < 0) {
       int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
       AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
       GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
 
-      Optional<GroupsTable.Group> latestServerGroup;
+      Optional<IGroupsTable.IGroup> latestServerGroup;
       try {
         DecryptedGroup decryptedGroup = groupsV2Api.getGroup(groupSecretParams, authorization);
         groupsTable.upsert(groupSecretParams.getMasterKey(), decryptedGroup);
@@ -142,7 +141,7 @@ public class Groups {
   }
 
   /**
-   * Variant of {@link Groups#maybePersistNewProfileKeysOrThrow(Optional, GroupsTable.Group, byte[])} where all
+   * Variant of {@link Groups#maybePersistNewProfileKeysOrThrow(Optional, IGroupsTable.IGroup, byte[])} where all
    * typed exceptions are caught. Fills in missing profile keys from the mostRecentGroupState, and uses either the
    * signedGroupChangeBytes or paging from the server with the previousGroupState as the starting revision to do authoritative
    * profile key updates.
@@ -155,7 +154,7 @@ public class Groups {
    * @param mostRecentGroupState The most recent group state from the server. This is already stored in the signald database.
    * @param signedGroupChangeBytes Incoming bytes for a group changed signed by the GV2 server / storage service.
    */
-  private void maybePersistNewProfileKeys(Optional<GroupsTable.Group> previousGroupState, @NonNull GroupsTable.Group mostRecentGroupState,
+  private void maybePersistNewProfileKeys(Optional<IGroupsTable.IGroup> previousGroupState, @NonNull IGroupsTable.IGroup mostRecentGroupState,
                                           @Nullable byte[] signedGroupChangeBytes) {
     try {
       maybePersistNewProfileKeysOrThrow(previousGroupState, mostRecentGroupState, signedGroupChangeBytes);
@@ -166,7 +165,7 @@ public class Groups {
     }
   }
 
-  private void maybePersistNewProfileKeysOrThrow(Optional<GroupsTable.Group> previousGroupState, @NonNull GroupsTable.Group mostRecentGroupState,
+  private void maybePersistNewProfileKeysOrThrow(Optional<IGroupsTable.IGroup> previousGroupState, @NonNull IGroupsTable.IGroup mostRecentGroupState,
                                                  @Nullable byte[] signedGroupChangeBytes) throws InvalidGroupStateException, SQLException, ServerNotFoundException,
                                                                                                  NoSuchAccountException, InvalidProxyException, IOException, InvalidInputException,
                                                                                                  VerificationFailedException, InvalidKeyException {
@@ -273,7 +272,7 @@ public class Groups {
       }
 
       logger.info("Paging group " + groupId +
-                  " for authoritative profile keys. previousGroupState revision: " + (previousGroupState.transform(GroupsTable.Group::getRevision).orNull()) +
+                  " for authoritative profile keys. previousGroupState revision: " + (previousGroupState.transform(IGroupsTable.IGroup::getRevision).orNull()) +
                   ", most recent revision: " + mostRecentGroupState.getRevision() + ", logsNeededFrom: " + logsNeededFrom);
       firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, false);
     }
@@ -291,9 +290,9 @@ public class Groups {
    * @param mostRecentGroup The most recent group to use to fill in missing profile keys, if available.
    */
   public void persistProfileKeysFromServerGroupHistory(@NonNull final GroupSecretParams groupSecretParams, @NonNull final GroupHistoryPage firstPage,
-                                                       @Nullable GroupsTable.Group mostRecentGroup) throws InvalidGroupStateException, IOException, VerificationFailedException,
-                                                                                                           InvalidInputException, SQLException, NoSuchAccountException,
-                                                                                                           ServerNotFoundException, InvalidKeyException, InvalidProxyException {
+                                                       @Nullable IGroupsTable.IGroup mostRecentGroup) throws InvalidGroupStateException, IOException, VerificationFailedException,
+                                                                                                             InvalidInputException, SQLException, NoSuchAccountException,
+                                                                                                             ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     GroupHistoryPage currentPage = firstPage;
     final ProfileKeySet profileKeys = new ProfileKeySet();
     while (currentPage.getPagingData().hasMorePages()) {
@@ -355,7 +354,7 @@ public class Groups {
     return groupsV2Api.getGroupJoinInfo(groupSecretParams, Optional.of(password), getAuthorizationForToday(groupSecretParams));
   }
 
-  public GroupsTable.Group createGroup(String title, File avatar, List<Recipient> members, Member.Role memberRole, int timer)
+  public IGroupsTable.IGroup createGroup(String title, File avatar, List<Recipient> members, Member.Role memberRole, int timer)
       throws IOException, VerificationFailedException, InvalidGroupStateException, InvalidInputException, SQLException, NoSuchAccountException, ServerNotFoundException,
              InvalidKeyException, InvalidProxyException {
     GroupSecretParams groupSecretParams = GroupSecretParams.generate();
@@ -387,7 +386,7 @@ public class Groups {
     return groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
   }
 
-  public Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> updateGroup(GroupsTable.Group group, GroupChange.Actions.Builder change)
+  public Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateGroup(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws SQLException, VerificationFailedException, InvalidInputException, IOException {
     change.setSourceUuid(aci.toByteString());
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
@@ -400,7 +399,7 @@ public class Groups {
     return new Pair<>(updateMessage, group);
   }
 
-  private Pair<DecryptedGroup, GroupChange> commitChange(GroupsTable.Group group, GroupChange.Actions.Builder change)
+  private Pair<DecryptedGroup, GroupChange> commitChange(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws IOException, VerificationFailedException, InvalidInputException, SQLException {
     final GroupSecretParams groupSecretParams = group.getSecretParams();
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(groupSecretParams);
@@ -443,7 +442,7 @@ public class Groups {
     return groupsV2Api.patchGroup(changeActions, authString, Optional.fromNullable(password));
   }
 
-  public Optional<DecryptedGroupChange> decryptChange(GroupsTable.Group group, GroupChange groupChange, boolean verifySignature)
+  public Optional<DecryptedGroupChange> decryptChange(IGroupsTable.IGroup group, GroupChange groupChange, boolean verifySignature)
       throws InvalidGroupStateException, InvalidProtocolBufferException, VerificationFailedException {
     final GroupsV2Operations.GroupOperations groupOperations = groupsV2Operations.forGroup(group.getSecretParams());
     return groupOperations.decryptChange(groupChange, verifySignature);

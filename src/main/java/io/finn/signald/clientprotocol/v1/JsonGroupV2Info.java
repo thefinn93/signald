@@ -18,7 +18,8 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.util.GroupsUtil;
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.sentry.Sentry;
@@ -84,7 +85,7 @@ public class JsonGroupV2Info {
     update(o);
   }
 
-  public JsonGroupV2Info(GroupsTable.Group g) { this(g.getSignalServiceGroupV2(), g.getDecryptedGroup()); }
+  public JsonGroupV2Info(IGroupsTable.IGroup g) { this(g.getSignalServiceGroupV2(), g.getDecryptedGroup()); }
 
   // format a group for an incoming message
   public JsonGroupV2Info(SignalServiceGroupV2 group, ACI aci) {
@@ -92,10 +93,9 @@ public class JsonGroupV2Info {
     id = Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(group.getMasterKey()).serialize());
     revision = group.getRevision();
 
-    Optional<GroupsTable.Group> localState;
-    final Account account = new Account(aci);
+    Optional<IGroupsTable.IGroup> localState;
     try {
-      localState = account.getGroupsTable().get(group);
+      localState = Database.Get(aci).GroupsTable.get(group);
     } catch (InvalidProtocolBufferException | InvalidInputException | SQLException e) {
       logger.error("error fetching group state from local db");
       Sentry.captureException(e);
@@ -104,7 +104,7 @@ public class JsonGroupV2Info {
 
     if (localState.isPresent() && group.hasSignedGroupChange()) {
       try {
-        groupChange = GroupChange.fromBytes(Common.getGroups(account), localState.get(), group.getSignedGroupChange());
+        groupChange = GroupChange.fromBytes(Common.getGroups(new Account(aci)), localState.get(), group.getSignedGroupChange());
       } catch (InvalidGroupStateException | InternalError | ServerNotFoundError | NoSuchAccountError | InvalidProxyError | IOException e) {
         logger.error("error decrypting and serializing signed group change");
         Sentry.captureException(e);
@@ -162,8 +162,9 @@ public class JsonGroupV2Info {
   }
 
   public void update(JsonGroupV2Info other) {
-    assert id.equals(other.id);
-    assert masterKey.equals(other.masterKey);
+    if (!id.equals(other.id) || !masterKey.equals(other.masterKey)) {
+      throw new IllegalArgumentException("IDs or master keys differ");
+    }
     revision = other.revision;
     title = other.title;
     description = other.description;

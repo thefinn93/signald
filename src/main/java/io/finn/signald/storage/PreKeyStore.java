@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.finn.signald.Account;
-import io.finn.signald.db.PreKeysTable;
+import io.finn.signald.db.Database;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.util.HashMap;
@@ -45,13 +45,12 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
   }
 
   public void migrateToDB(Account account) {
-    PreKeysTable table = new PreKeysTable(account.getACI());
     Iterator<Map.Entry<Integer, byte[]>> iterator = store.entrySet().iterator();
     logger.info("migrating " + store.size() + " prekeys to database");
     while (iterator.hasNext()) {
       Map.Entry<Integer, byte[]> entry = iterator.next();
       try {
-        table.storePreKey(entry.getKey(), new PreKeyRecord(entry.getValue()));
+        Database.Get(account.getACI()).PreKeysTable.storePreKey(entry.getKey(), new PreKeyRecord(entry.getValue()));
         iterator.remove();
       } catch (IOException e) {
         logger.warn("failed to migrate prekey record", e);

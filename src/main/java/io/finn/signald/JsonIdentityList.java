@@ -8,7 +8,7 @@
 package io.finn.signald;
 
 import io.finn.signald.annotations.Deprecated;
-import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidAddressException;
 import java.io.IOException;
@@ -21,21 +21,21 @@ import org.whispersystems.libsignal.InvalidKeyException;
 class JsonIdentityList {
   public List<JsonIdentity> identities = new ArrayList<>();
 
-  JsonIdentityList(List<IdentityKeysTable.IdentityKeyRow> identities, Manager m) throws IOException, SQLException {
-    for (IdentityKeysTable.IdentityKeyRow identity : identities) {
+  JsonIdentityList(List<IIdentityKeysTable.IdentityKeyRow> identities, Manager m) throws IOException, SQLException {
+    for (var identity : identities) {
       this.identities.add(new JsonIdentity(identity, m));
     }
   }
 
   JsonIdentityList(Recipient recipient, Manager m) throws SQLException, InvalidKeyException, InvalidAddressException, IOException {
     if (recipient == null) {
-      for (IdentityKeysTable.IdentityKeyRow identity : m.getIdentities()) {
+      for (var identity : m.getIdentities()) {
         this.identities.add(new JsonIdentity(identity, m));
       }
     } else {
-      List<IdentityKeysTable.IdentityKeyRow> identities = m.getIdentities(recipient);
+      var identities = m.getIdentities(recipient);
       if (identities != null) {
-        for (IdentityKeysTable.IdentityKeyRow identity : identities) {
+        for (var identity : identities) {
           this.identities.add(new JsonIdentity(identity, m, recipient));
         }
       }

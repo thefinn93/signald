@@ -2,6 +2,7 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
 import io.finn.signald.MessageReceiver;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -165,7 +166,7 @@ public class SyncStorageDataJob implements Job {
 
     Recipient recipient;
     try {
-      recipient = account.getRecipients().get(address);
+      recipient = Database.Get(account.getACI()).RecipientsTable.get(address);
     } catch (SQLException e) {
       logger.error("error getting recipient for storage sync", e);
       Sentry.captureException(e);

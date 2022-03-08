@@ -17,9 +17,9 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -59,11 +59,11 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
              GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
-    RecipientsTable recipientsTable = m.getRecipientsTable();
     List<Recipient> recipients = new ArrayList<>();
     if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getACI()) == null) {
       throw new OwnProfileKeyDoesNotExistError();
     }
+    var recipientsTable = Database.Get(m.getACI()).RecipientsTable;
     for (JsonAddress member : members) {
       Recipient recipient = Common.getRecipient(recipientsTable, member);
       try {
@@ -99,7 +99,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
     File avatarFile = avatar == null ? null : new File(avatar);
 
-    GroupsTable.Group group;
+    IGroupsTable.IGroup group;
     try {
       group = Common.getGroups(Common.getAccount(account)).createGroup(title, avatarFile, recipients, role, timer);
     } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {

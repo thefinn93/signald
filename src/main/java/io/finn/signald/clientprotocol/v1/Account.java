@@ -12,8 +12,8 @@ import io.finn.signald.RegistrationManager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.db.AccountDataTable;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IAccountDataTable;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -38,11 +38,11 @@ public class Account {
   public Account(ACI aci) throws NoSuchAccountError, InternalError {
     try {
       try {
-        accountID = AccountsTable.getE164(aci);
+        accountID = Database.Get().AccountsTable.getE164(aci);
       } catch (NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
       }
-      deviceID = AccountDataTable.getInt(aci, AccountDataTable.Key.DEVICE_ID);
+      deviceID = Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.DEVICE_ID);
     } catch (SQLException e) {
       throw new InternalError("error resolving account e164", e);
     }

@@ -21,7 +21,9 @@ import io.finn.signald.clientprotocol.v0.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.GroupLinkInfoRequest;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.*;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IServersTable;
+import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.storage.GroupInfo;
 import io.finn.signald.storage.ProfileAndCredentialEntry;
@@ -53,7 +55,6 @@ import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.groups.UuidCiphertext;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
@@ -63,7 +64,6 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.push.ContactTokenDetails;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
 import org.whispersystems.signalservice.internal.push.LockedException;
@@ -230,7 +230,8 @@ public class LegacySocketHandler {
       messageBuilder.withTimestamp(request.timestamp);
     }
 
-    Recipient recipient = request.recipientAddress == null ? null : manager.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+    var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
+    var recipient = request.recipientAddress == null ? null : recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
     GroupIdentifier groupIdentifier = request.recipientGroupId == null ? null : new GroupIdentifier(Base64.decode(request.recipientGroupId));
     handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier, null), request);
   }
@@ -254,12 +255,13 @@ public class LegacySocketHandler {
 
     SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, request.when, Optional.fromNullable(groupId));
 
-    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+    var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
+    var recipient = recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
     SendMessageResult result = m.sendTypingMessage(message, recipient);
     if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
-        Recipient r = m.getRecipientsTable().get(result.getAddress());
+        var r = recipientsTable.get(result.getAddress());
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), r, m, request), request.id);
       }
     }
@@ -275,12 +277,12 @@ public class LegacySocketHandler {
 
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.DELIVERY, request.timestamps, request.when);
 
-    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+    Recipient recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
     SendMessageResult result = m.sendReceipt(message, recipient);
     if (result != null) {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
-        Recipient r = m.getRecipientsTable().get(result.getAddress());
+        Recipient r = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(result.getAddress());
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), r, m, request), request.id);
       }
     }
@@ -295,14 +297,14 @@ public class LegacySocketHandler {
     }
 
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, request.timestamps, request.when);
-    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+    Recipient recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
     SendMessageResult result = m.sendReceipt(message, recipient);
     if (result == null) {
       this.reply("mark_read", null, request.id);
     } else {
       SendMessageResult.IdentityFailure identityFailure = result.getIdentityFailure();
       if (identityFailure != null) {
-        Recipient r = m.getRecipientsTable().get(result.getAddress());
+        Recipient r = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(result.getAddress());
         this.reply("untrusted_identity", new JsonUntrustedIdentityException(identityFailure.getIdentityKey(), r, m, request), request.id);
       }
     }
@@ -323,7 +325,7 @@ public class LegacySocketHandler {
 
     logger.info("Registering (voice: " + voice + ")");
     try {
-      m.register(voice, Optional.fromNullable(request.captcha), ServersTable.DEFAULT_SERVER);
+      m.register(voice, Optional.fromNullable(request.captcha), IServersTable.DEFAULT_SERVER);
       this.reply("verification_required", new JsonAccount(m), request.id);
     } catch (CaptchaRequiredException e) {
       this.reply("captcha_required", "see https://signald.org/articles/captcha/", request.id);
@@ -388,13 +390,13 @@ public class LegacySocketHandler {
     }
 
     if (request.recipientGroupId.length() == 44) { // v2 group
-      Optional<GroupsTable.Group> groupOptional = m.getAccount().getGroupsTable().get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
+      var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
       if (!groupOptional.isPresent()) {
         throw new GroupNotFoundException(request.recipientGroupId);
       }
 
-      GroupsTable.Group group = groupOptional.get();
-      Account account = new Account(AccountsTable.getACI(request.username));
+      var group = groupOptional.get();
+      Account account = new Account(Database.Get().AccountsTable.getACI(request.username));
       GroupsV2Operations operations = GroupsUtil.GetGroupsV2Operations(account.getServiceConfiguration());
       GroupsV2Operations.GroupOperations groupOperations = operations.forGroup(group.getSecretParams());
       List<Recipient> recipients = group.getMembers();
@@ -403,7 +405,7 @@ public class LegacySocketHandler {
       if (request.groupName != null) {
         change = groupOperations.createModifyGroupTitle(request.groupName);
       } else if (request.members != null) {
-        RecipientsTable recipientsTable = m.getRecipientsTable();
+        var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
         List<ProfileAndCredentialEntry> members = new ArrayList<>();
         Set<GroupCandidate> candidates = new HashSet<>();
         for (String member : request.members) {
@@ -448,23 +450,23 @@ public class LegacySocketHandler {
     if (request.recipientGroupId != null) {
       if (request.recipientGroupId.length() == 44) {
         Account account = m.getAccount();
-        Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
+        var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
         if (!groupOptional.isPresent()) {
           throw new UnknownGroupException();
         }
-        GroupsTable.Group group = groupOptional.get();
+        var group = groupOptional.get();
 
         GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
         GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(account.getServiceConfiguration()).forGroup(groupSecretParams);
         GroupChange.Actions.Builder change = groupOperations.createModifyGroupTimerChange(request.expiresInSeconds);
-        Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> updateOutput = account.getGroups().updateGroup(group, change);
+        var updateOutput = account.getGroups().updateGroup(group, change);
         results = m.sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), group.getMembers());
       } else {
         byte[] groupId = Base64.decode(request.recipientGroupId);
         results = m.setExpiration(groupId, request.expiresInSeconds);
       }
     } else {
-      Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+      Recipient recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
       results = m.setExpiration(recipient, request.expiresInSeconds);
     }
 
@@ -482,12 +484,12 @@ public class LegacySocketHandler {
     Manager m = Manager.get(request.username);
     if (request.recipientGroupId.length() == 44) {
       Account account = m.getAccount();
-      Optional<GroupsTable.Group> groupOptional = account.getGroupsTable().get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
+      var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
       if (!groupOptional.isPresent()) {
         reply("leave_group_error", "group not found", request.id);
         return;
       }
-      GroupsTable.Group group = groupOptional.get();
+      var group = groupOptional.get();
       List<Recipient> recipients = group.getMembers();
 
       GroupsV2Operations operations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration());
@@ -505,7 +507,7 @@ public class LegacySocketHandler {
         change = operationsForGroup.createRemoveMembersChange(uuidsToRemove);
       }
 
-      Pair<SignalServiceDataMessage.Builder, GroupsTable.Group> output = account.getGroups().updateGroup(group, change);
+      var output = account.getGroups().updateGroup(group, change);
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
       group.delete();
     } else {
@@ -556,7 +558,7 @@ public class LegacySocketHandler {
     Manager m = Manager.get(request.username);
     Recipient recipient = null;
     if (request.recipientAddress != null) {
-      recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+      recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
     }
     this.reply("identities", new JsonIdentityList(recipient, m), request.id);
   }
@@ -577,7 +579,7 @@ public class LegacySocketHandler {
       }
     }
     String fingerprint = request.fingerprint.replaceAll(" ", "");
-    RecipientsTable recipientsTable = m.getRecipientsTable();
+    var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
     if (fingerprint.length() == 66) {
       byte[] fingerprintBytes;
       fingerprintBytes = Hex.toByteArray(fingerprint.toLowerCase(Locale.ROOT));
@@ -648,13 +650,13 @@ public class LegacySocketHandler {
   }
 
   private void subscribe(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    ACI aci = AccountsTable.getACI(request.username);
+    ACI aci = Database.Get().AccountsTable.getACI(request.username);
     MessageReceiver.subscribe(aci, new LegacyMessageEncoder(socket, request.username));
     this.reply("subscribed", null, request.id);
   }
 
   private void unsubscribe(JsonRequest request) throws IOException, SQLException, NoSuchAccountException {
-    ACI aci = AccountsTable.getACI(request.username);
+    ACI aci = Database.Get().AccountsTable.getACI(request.username);
     MessageReceiver.unsubscribe(aci, socket);
     this.reply("unsubscribed", null, request.id);
   }
@@ -662,7 +664,7 @@ public class LegacySocketHandler {
   private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException, SQLException,
                                                       InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     Manager m = Manager.get(request.username);
-    Recipient recipient = m.getRecipientsTable().get(request.recipientAddress.number, request.recipientAddress.getACI());
+    Recipient recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
     ProfileAndCredentialEntry profileEntry = m.getRecipientProfileKeyCredential(recipient);
     if (profileEntry == null) {
       this.reply("profile_not_available", new JsonAddress(recipient.getAddress()), request.id);
@@ -683,7 +685,7 @@ public class LegacySocketHandler {
   private void react(JsonRequest request) throws IOException, NoSuchAccountException, InvalidRecipientException, UnknownGroupException, SQLException, InvalidKeyException,
                                                  ServerNotFoundException, InvalidProxyException, NoSendPermissionException, InvalidInputException {
     Manager manager = Manager.get(request.username);
-    RecipientsTable recipientsTable = manager.getRecipientsTable();
+    var recipientsTable = Database.Get(manager.getACI()).RecipientsTable;
     Recipient recipient = null;
     if (request.recipientAddress != null) {
       recipient = recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
@@ -732,7 +734,7 @@ public class LegacySocketHandler {
     LegacyMessageEncoder(Socket socket, String accountE164) throws SQLException, NoSuchAccountException {
       this.socket = socket;
       this.accountE164 = accountE164;
-      this.aci = AccountsTable.getACI(accountE164);
+      this.aci = Database.Get().AccountsTable.getACI(accountE164);
     }
 
     private void broadcast(JsonMessageWrapper o) throws IOException {

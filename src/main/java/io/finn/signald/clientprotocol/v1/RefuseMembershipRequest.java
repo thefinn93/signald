@@ -17,9 +17,8 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.GroupsTable;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.db.RecipientsTable;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -42,8 +41,7 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError,
                                                      InvalidRequestError, AuthorizationFailedError, UnregisteredUserError {
     Account a = Common.getAccount(account);
-
-    GroupsTable.Group group = Common.getGroup(a, groupID);
+    var group = Common.getGroup(a, groupID);
 
     List<Recipient> recipients;
     try {
@@ -52,7 +50,7 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
       throw new InternalError("error looking up recipients", e);
     }
 
-    RecipientsTable recipientsTable = a.getRecipients();
+    var recipientsTable = Database.Get(a.getACI()).RecipientsTable;
     for (JsonAddress member : members) {
       try {
         recipients.add(recipientsTable.get(member));
@@ -63,7 +61,7 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
 
     Set<UUID> membersToRefuse = new HashSet<>();
     for (JsonAddress member : members) {
-      membersToRefuse.add(Common.getRecipient(recipientsTable, member).getUUID());
+      membersToRefuse.add(Common.getRecipient(a.getACI(), member).getUUID());
     }
 
     GroupChange.Actions.Builder change = Common.getGroupOperations(a, group).createRefuseGroupJoinRequest(membersToRefuse);

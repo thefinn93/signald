@@ -84,8 +84,9 @@ public class JsonGroupV2Info {
   }
 
   public void update(JsonGroupV2Info other) {
-    assert id.equals(other.id);
-    assert masterKey.equals(other.masterKey);
+    if (!id.equals(other.id) || !masterKey.equals(other.masterKey)) {
+      throw new IllegalArgumentException("IDs or master keys differ");
+    }
     revision = other.revision;
     title = other.title;
     description = other.description;

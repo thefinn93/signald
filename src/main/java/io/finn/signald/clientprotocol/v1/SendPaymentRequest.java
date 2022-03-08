@@ -16,6 +16,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
@@ -36,8 +37,7 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
   public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError,
                                                   UnknownGroupError, NoSendPermissionError, InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError {
     Manager m = Common.getManager(account);
-
-    Recipient recipient = Common.getRecipient(m.getRecipientsTable(), address);
+    Recipient recipient = Common.getRecipient(m.getACI(), address);
 
     if (when == null) {
       when = System.currentTimeMillis();

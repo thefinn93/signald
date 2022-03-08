@@ -10,7 +10,8 @@ package io.finn.signald;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
-import io.finn.signald.db.IdentityKeysTable;
+import io.finn.signald.db.Database;
+import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
 import java.io.IOException;
@@ -28,7 +29,7 @@ class JsonIdentity {
   public String qr_code_data;
   public JsonAddress address;
 
-  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m) throws IOException, SQLException {
+  JsonIdentity(IIdentityKeysTable.IdentityKeyRow identity, Manager m) throws IOException, SQLException {
     this.trust_level = identity.getTrustLevel().name();
     this.added = identity.getDateAdded().getTime();
     this.fingerprint = Hex.toStringCondensed(identity.getFingerprint());
@@ -38,15 +39,16 @@ class JsonIdentity {
     }
   }
 
-  JsonIdentity(IdentityKeysTable.IdentityKeyRow identity, Manager m, Recipient recipient) throws IOException, SQLException {
+  JsonIdentity(IIdentityKeysTable.IdentityKeyRow identity, Manager m, Recipient recipient) throws IOException, SQLException {
     this(identity, m);
     this.address = new JsonAddress(recipient.getAddress());
     generateSafetyNumber(identity, m);
   }
 
-  private void generateSafetyNumber(IdentityKeysTable.IdentityKeyRow identity, Manager m) throws IOException, SQLException {
+  private void generateSafetyNumber(IIdentityKeysTable.IdentityKeyRow identity, Manager m) throws IOException, SQLException {
     if (address != null) {
-      Fingerprint fingerprint = SafetyNumberHelper.computeFingerprint(m.getOwnRecipient(), m.getIdentity(), m.getRecipientsTable().get(address), identity.getKey());
+      Fingerprint fingerprint =
+          SafetyNumberHelper.computeFingerprint(m.getOwnRecipient(), m.getIdentity(), Database.Get(m.getACI()).RecipientsTable.get(address), identity.getKey());
       if (fingerprint == null) {
         safety_number = "INVALID ID";
       } else {

@@ -34,7 +34,4 @@ public class Recipient {
   public ACI getACI() { return address.getAci(); }
 
   public boolean equals(Recipient other) { return other.getId() == getId(); }
-
-  // getTable returns a RecipientTable for the same account as the Recipient
-  public RecipientsTable getTable() { return new RecipientsTable(account); }
 }

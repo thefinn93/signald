@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.db.AccountsTable;
+import io.finn.signald.db.Database;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,7 @@ public class AccountList {
   public AccountList() throws NoSuchAccountError, InternalError {
     accounts = new ArrayList<>();
     try {
-      for (UUID uuid : AccountsTable.getAll()) {
+      for (UUID uuid : Database.Get().AccountsTable.getAll()) {
         accounts.add(new Account(uuid));
       }
     } catch (SQLException e) {
