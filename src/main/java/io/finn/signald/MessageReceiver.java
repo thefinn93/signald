@@ -25,10 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.InvalidMetadataMessageException;
 import org.signal.libsignal.metadata.ProtocolException;
 import org.signal.libsignal.metadata.SelfSendException;
-import org.whispersystems.libsignal.DuplicateMessageException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.UntrustedIdentityException;
+import org.whispersystems.libsignal.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -222,10 +219,12 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         logger.debug("UntrustedIdentityException", exception);
       } else if (exception instanceof InvalidMetadataMessageException) {
         logger.warn("Received invalid metadata in incoming message", exception);
-      } else if (exception instanceof ProtocolException) {
+      } else if (exception instanceof ProtocolException || exception.getCause() instanceof ProtocolException) {
         logger.warn("ProtocolException thrown while receiving", exception);
       } else if (exception instanceof InvalidMessageException) {
         logger.warn("InvalidMessageException thrown while receiving");
+      } else if (exception instanceof InvalidKeyIdException) {
+        logger.warn("InvalidKeyIdException while receiving: {}", exception.getMessage());
       } else {
         logger.error("Unexpected error while receiving incoming message! Please report this at " + BuildConfig.ERROR_REPORTING_URL, exception);
         Sentry.captureException(exception);
