@@ -51,7 +51,7 @@ public interface IContactsTable {
     if (contactRecord.getGivenName().isPresent() && contactRecord.getFamilyName().isPresent()) {
       name = contactRecord.getGivenName().get() + " " + contactRecord.getFamilyName().get();
     } else if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
-      name = contactRecord.getGivenName().get() + contactRecord.getFamilyName().get();
+      name = contactRecord.getGivenName().or("") + contactRecord.getFamilyName().or("");
     }
     return update(recipient, name, null, contactRecord.getProfileKey().orNull(), null, null);
   }
