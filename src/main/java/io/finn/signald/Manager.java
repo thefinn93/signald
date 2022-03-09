@@ -610,7 +610,8 @@ public class Manager {
         // Send to all individually, so sync messages are sent correctly
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
         for (Recipient recipient : recipients) {
-          messageBuilder.withExpiration(Database.Get(aci).ContactsTable.get(recipient).messageExpirationTime);
+          var contact = Database.Get(aci).ContactsTable.get(recipient);
+          messageBuilder.withExpiration(contact != null ? contact.messageExpirationTime : 0);
           message = messageBuilder.build();
           try {
             if (self.equals(recipient)) { // sending to ourself
