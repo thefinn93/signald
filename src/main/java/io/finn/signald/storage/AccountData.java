@@ -165,11 +165,11 @@ public class AccountData {
     if (version < VERSION_IMPORT_CONTACT_PROFILES) {
       // migrate profile keys from contacts to profileCredentialStore
       for (var c : Database.Get(address.getACI()).ContactsTable.getAll()) {
-        if (c.profileKey == null) {
+        if (c.profileKey == null || c.profileKey.length == 0) {
           continue;
         }
         try {
-          ProfileKey p = new ProfileKey(Base64.decode(c.profileKey));
+          ProfileKey p = new ProfileKey(c.profileKey);
           Recipient recipient = Database.Get(self.getACI()).RecipientsTable.get(c.recipient.getACI());
           profileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
