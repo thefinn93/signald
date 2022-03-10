@@ -266,7 +266,11 @@ public class Manager {
   private SignedPreKeyRecord generateSignedPreKey() throws SQLException {
     try {
       ECKeyPair keyPair = Curve.generateKeyPair();
-      byte[] signature = Curve.calculateSignature(account.getIdentityKeyPair().getPrivateKey(), keyPair.getPublicKey().serialize());
+      var identityKey = account.getIdentityKeyPair();
+      if (identityKey == null) {
+        throw new InvalidKeyException("Identity key pair must not be null");
+      }
+      byte[] signature = Curve.calculateSignature(identityKey.getPrivateKey(), keyPair.getPublicKey().serialize());
       int signedPreKeyId = account.getNextSignedPreKeyId();
       SignedPreKeyRecord record = new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
       account.getProtocolStore().storeSignedPreKey(signedPreKeyId, record);
