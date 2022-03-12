@@ -13,7 +13,7 @@ aptly repo create signald
 aptly mirror create -ignore-signatures backfill-mirror https://updates.signald.org "${DISTRIBUTION}" main
 aptly mirror update -ignore-signatures backfill-mirror
 
-aptly repo import backfill-mirror signald signaldctl 'signald (>= 0.16.0)'
+aptly repo import backfill-mirror signald signaldctl 'signald (>= 0.17.0)'
 
 aptly repo add signald signald_*.deb
 

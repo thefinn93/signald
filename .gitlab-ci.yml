@@ -271,7 +271,6 @@ unit tests aarch64-unknown-linux-gnu:
       allow_failure: true
 
 unit tests x86_64-apple-darwin:
-  <<: *testserver
   image: debian
   stage: test
   tags: [darwin-builder]
