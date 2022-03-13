@@ -153,10 +153,9 @@ build deb armv7-unknown-linux-gnueabihf:
     - export VERSION="$(./version.sh | sed 's#+#-#g' | sed 's#/#-#g')"
     - DOCKER_PLATFORM=$(echo "${PLATFORM:6}" | sed 's#/#-#g')
   script:
-    - 'sed -i "s#FROM #FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/#g" Dockerfile'
     - docker buildx build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}" --push .
   rules:
-    - if: '$CI_PROJECT_NAMESPACE == "signald"'
+    - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
     - when: manual
       allow_failure: true
