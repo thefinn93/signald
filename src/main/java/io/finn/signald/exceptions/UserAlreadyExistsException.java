@@ -12,7 +12,7 @@ import org.whispersystems.signalservice.api.push.ACI;
 public class UserAlreadyExistsException extends Exception {
   private final ACI aci;
   public UserAlreadyExistsException(ACI aci) {
-    super("a user with that UUID is already registered");
+    super("a user with that UUID is already registered on this signald instance");
     this.aci = aci;
   }
 

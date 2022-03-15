@@ -15,7 +15,7 @@ public class UserAlreadyExistsError extends ExceptionWrapper {
 
   public UUID getUuid() { return uuid; }
   public UserAlreadyExistsError(UserAlreadyExistsException e) {
-    super("a user with that UUID is already registered");
+    super("a user with that UUID is already registered on this signald instance");
     this.uuid = e.getACI().uuid();
   }
 }
