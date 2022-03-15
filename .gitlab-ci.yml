@@ -194,8 +194,10 @@ docker manifest:
     - docker manifest create "${CI_REGISTRY_IMAGE}:${VERSION}" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
     - docker manifest push "${CI_REGISTRY_IMAGE}:${VERSION}"
     - |
-      if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then 
+      if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then
         set -x
+        docker manifest create "${CI_REGISTRY_IMAGE}:latest" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
+        docker manifest push "${CI_REGISTRY_IMAGE}:latest"
         for platform in amd64 arm64-v8 arm-v7; do
           docker tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
           docker push --quiet "docker.io/signald/signald:${VERSION}-${platform}"
@@ -209,6 +211,12 @@ docker manifest:
 
           docker -l debug manifest create "docker.io/signald/signald:stable" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
           docker -l debug manifest push "docker.io/signald/signald:stable"
+
+          docker manifest create "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
+          docker manifest push "${CI_REGISTRY_IMAGE}:${VERSION}"
+
+          docker manifest create "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
+          docker manifest push "${CI_REGISTRY_IMAGE}:stable"
 
           docker -l debug manifest create "docker.io/finn/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
           docker -l debug manifest push "docker.io/finn/signald:${VERSION}"
