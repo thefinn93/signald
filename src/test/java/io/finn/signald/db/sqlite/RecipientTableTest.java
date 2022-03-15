@@ -7,8 +7,7 @@
 
 package io.finn.signald.db.sqlite;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IRecipientsTable;
@@ -70,5 +69,20 @@ public class RecipientTableTest {
     Recipient r = recipientsTable.get(ADDRESS_B.getAci());
     assertEquals(r.getACI(), ADDRESS_B.getAci());
     assertFalse(r.getAddress().getNumber().isPresent());
+  }
+
+  @Test
+  @DisplayName("ensure all recipients are registered by default")
+  void get_registered() throws SQLException, IOException {
+    assertTrue(recipientsTable.get(ADDRESS_B.getAci()).isRegistered());
+  }
+
+  @Test
+  @DisplayName("mark a recipient as unregistered")
+  void setRegistrationStatus() throws SQLException, IOException {
+    Recipient r = recipientsTable.get(ADDRESS_A.getAci());
+    recipientsTable.setRegistrationStatus(r, false);
+
+    assertFalse(recipientsTable.get(ADDRESS_A.getAci()).isRegistered());
   }
 }

@@ -14,8 +14,10 @@ public interface IRecipientsTable {
   String ACCOUNT_UUID = "account_uuid";
   String UUID = "uuid";
   String E164 = "e164";
+  String REGISTERED = "registered";
 
   Recipient get(String e164, ACI aci) throws SQLException, IOException;
+  void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException, IOException;
   void deleteAccount(UUID uuid) throws SQLException;
 
   default List<Recipient> get(List<SignalServiceAddress> addresses) throws SQLException, IOException {

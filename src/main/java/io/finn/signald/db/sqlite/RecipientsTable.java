@@ -20,7 +20,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
@@ -46,7 +45,8 @@ public class RecipientsTable implements IRecipientsTable {
 
   public Recipient get(String e164, ACI aci) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();
-    var query = "SELECT " + ROW_ID + "," + E164 + "," + UUID + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 + " = ?) AND " + ACCOUNT_UUID + " = ?";
+    var query =
+        "SELECT " + ROW_ID + "," + E164 + "," + UUID + "," + REGISTERED + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 + " = ?) AND " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       if (aci != null) {
         statement.setString(1, aci.toString());
@@ -62,8 +62,9 @@ public class RecipientsTable implements IRecipientsTable {
           int rowid = rows.getInt(ROW_ID);
           String storedE164 = rows.getString(E164);
           String storedUUID = rows.getString(UUID);
+          boolean registered = rows.getBoolean(REGISTERED);
           SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
-          results.add(new Recipient(uuid, rowid, a));
+          results.add(new Recipient(uuid, rowid, a, registered));
         }
       }
     }
@@ -71,6 +72,7 @@ public class RecipientsTable implements IRecipientsTable {
     int rowid = -1;
     ACI storedACI = null;
     String storedE164 = null;
+    boolean registered = true;
     if (results.size() > 0) {
       Recipient result = results.get(0);
       rowid = result.getId();
@@ -90,6 +92,7 @@ public class RecipientsTable implements IRecipientsTable {
 
       storedACI = result.getAddress() != null ? result.getACI() : null;
       storedE164 = result.getAddress() != null ? result.getAddress().getNumber().orNull() : null;
+      registered = result.isRegistered();
       rowid = result.getId();
     }
 
@@ -135,7 +138,7 @@ public class RecipientsTable implements IRecipientsTable {
       rowid = storeNew(aci, e164);
     }
 
-    return new Recipient(uuid, rowid, new SignalServiceAddress(storedACI, storedE164));
+    return new Recipient(uuid, rowid, new SignalServiceAddress(storedACI, storedE164), registered);
   }
 
   private int storeNew(ACI aci, String e164) throws SQLException {
@@ -215,6 +218,16 @@ public class RecipientsTable implements IRecipientsTable {
     } catch (InvalidKeyException | KeyStoreException | CertificateException | NoSuchAlgorithmException | Quote.InvalidQuoteFormatException | UnauthenticatedQuoteException |
              SignatureException | UnauthenticatedResponseException e) {
       throw new IOException(e);
+    }
+  }
+
+  public void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException {
+    var query = "UPDATE " + TABLE_NAME + " SET " + REGISTERED + " = ? WHERE " + ACCOUNT_UUID + " = ? AND " + ROW_ID + " = ?";
+    try (var statement = Database.getConn().prepareStatement(query)) {
+      statement.setBoolean(1, registered);
+      statement.setString(2, uuid.toString());
+      statement.setInt(3, recipient.getId());
+      Database.executeUpdate(TABLE_NAME + "_set_registered", statement);
     }
   }
 }

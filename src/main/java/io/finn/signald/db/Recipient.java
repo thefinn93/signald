@@ -16,12 +16,16 @@ public class Recipient {
   private UUID account;
   private int id;
   private SignalServiceAddress address;
+  private boolean registered;
 
-  public Recipient(UUID account, int id, SignalServiceAddress address) {
+  public Recipient(UUID account, int id, SignalServiceAddress address, boolean registered) {
     this.account = account;
     this.id = id;
     this.address = address;
+    this.registered = registered;
   }
+
+  public Recipient(UUID account, int id, SignalServiceAddress address) { this(account, id, address, true); }
 
   public int getId() { return id; }
 
@@ -32,6 +36,8 @@ public class Recipient {
   public UUID getUUID() { return address.getAci().uuid(); }
 
   public ACI getACI() { return address.getAci(); }
+
+  public boolean isRegistered() { return registered; }
 
   public boolean equals(Recipient other) { return other.getId() == getId(); }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE signald_recipients ADD COLUMN registered BOOLEAN DEFAULT true;

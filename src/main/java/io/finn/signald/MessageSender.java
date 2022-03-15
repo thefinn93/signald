@@ -81,6 +81,7 @@ public class MessageSender {
     List<UnidentifiedAccess> access = new LinkedList<>();
 
     Manager m = Manager.get(account.getACI());
+    IRecipientsTable recipientsTable = Database.Get(account.getACI()).RecipientsTable;
 
     // check our own profile first
     ProfileAndCredentialEntry selfProfileAndCredentialEntry = m.getRecipientProfileKeyCredential(self);
@@ -90,6 +91,11 @@ public class MessageSender {
       legacyTargets.addAll(members);
     } else {
       for (Recipient member : members) {
+        if (!member.isRegistered()) {
+          legacyTargets.add(member);
+          logger.debug("refusing to send to {} using sender keys because we think they're no longer registered on Signal", member.toRedactedString());
+          continue;
+        }
         ProfileAndCredentialEntry profileAndCredentialEntry = m.getAccountData().profileCredentialStore.get(member);
         RefreshProfileJob.queueIfNeeded(m, profileAndCredentialEntry);
         Optional<UnidentifiedAccessPair> accessPairs = m.getAccessPairFor(member);
@@ -139,7 +145,6 @@ public class MessageSender {
             if (self.getAddress().equals(result.getAddress())) {
               isRecipientUpdate = true; // prevent duplicate sync messages from being sent
             }
-
             results.add(result);
           } else if (result.isNetworkFailure()) {
             // always guaranteed to have an ACI; don't use address for HashSet because of ambiguity with e164 in server
@@ -177,7 +182,6 @@ public class MessageSender {
           List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
                                                                                              ContentHint.DEFAULT, message.build(), SenderKeyGroupEventsLogger.INSTANCE);
 
-          IRecipientsTable recipientsTable = Database.Get(account.getACI()).RecipientsTable;
           for (var result : senderKeyRetryResults) {
             if (result.isSuccess()) {
               if (self.getAddress().equals(result.getAddress())) {
@@ -238,13 +242,23 @@ public class MessageSender {
           Sentry.captureException(e);
         }
       }
+      if (r.isSuccess()) {
+        Recipient recipient = recipientsTable.get(r.getAddress());
+        if (!recipient.isRegistered()) {
+          recipientsTable.setRegistrationStatus(recipient, true);
+        }
+      }
     }
     return results;
   }
 
-  private void handleUnregisteredFailure(SendMessageResult unregisteredFailureResult) {
-    // TODO: prevent this recipient from being included in future SKDMs (https://gitlab.com/signald/signald/-/issues/299)
-    logger.debug("found an unregistered recipient");
+  private void handleUnregisteredFailure(SendMessageResult unregisteredFailureResult) throws SQLException, IOException {
+    IRecipientsTable recipientsTable = Database.Get(account.getACI()).RecipientsTable;
+    Recipient recipient = recipientsTable.get(unregisteredFailureResult.getAddress());
+    if (!recipient.isRegistered()) {
+      logger.debug("found an unregistered recipient");
+      recipientsTable.setRegistrationStatus(recipient, false);
+    }
   }
 
   private long getCreateTimeForOurKey(DistributionId distributionId) throws SQLException {

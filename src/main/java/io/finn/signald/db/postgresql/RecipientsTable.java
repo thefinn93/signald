@@ -46,9 +46,9 @@ public class RecipientsTable implements IRecipientsTable {
   public synchronized Recipient get(String queryE164, ACI queryACI) throws SQLException, IOException {
     logger.trace("looking up recipient {}/{}", queryE164, queryACI);
     List<Recipient> results = new ArrayList<>();
-    var query = String.format("SELECT %s, %s, %s FROM %s WHERE (%s=? OR %s=?) AND %s=?",
+    var query = String.format("SELECT %s, %s, %s, %s FROM %s WHERE (%s=? OR %s=?) AND %s=?",
                               // FIELDS
-                              ROW_ID, E164, UUID,
+                              ROW_ID, E164, UUID, REGISTERED,
                               // FROM
                               TABLE_NAME,
                               // WHERE
@@ -63,7 +63,8 @@ public class RecipientsTable implements IRecipientsTable {
           String storedE164 = rows.getString(E164);
           UUID storedUUID = rows.getObject(UUID, java.util.UUID.class);
           SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(storedUUID), storedE164);
-          results.add(new Recipient(accountUUID, rowid, a));
+          boolean registered = rows.getBoolean(REGISTERED);
+          results.add(new Recipient(accountUUID, rowid, a, registered));
           logger.trace("found result with rowid {} ({}/{})", rowid, storedE164, storedUUID);
         }
       }
@@ -72,6 +73,7 @@ public class RecipientsTable implements IRecipientsTable {
     int rowid = -1;
     ACI storedACI = null;
     String storedE164 = null;
+    boolean registered = true;
     if (results.size() > 0) {
       logger.trace("at least one result returned");
       Recipient result = results.get(0);
@@ -93,6 +95,7 @@ public class RecipientsTable implements IRecipientsTable {
 
       storedACI = result.getAddress() != null ? result.getACI() : null;
       storedE164 = result.getAddress() != null ? result.getAddress().getNumber().orNull() : null;
+      registered = result.isRegistered();
       rowid = result.getId();
     }
 
@@ -147,7 +150,7 @@ public class RecipientsTable implements IRecipientsTable {
     }
 
     logger.trace("returning recipient {}", rowid);
-    return new Recipient(accountUUID, rowid, new SignalServiceAddress(storedACI, storedE164));
+    return new Recipient(accountUUID, rowid, new SignalServiceAddress(storedACI, storedE164), registered);
   }
 
   private int storeNew(ACI aci, String e164) throws SQLException {
@@ -235,4 +238,6 @@ public class RecipientsTable implements IRecipientsTable {
 
     return registeredUsers;
   }
+
+  public void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException { update(REGISTERED, registered, recipient.getId()); }
 }
