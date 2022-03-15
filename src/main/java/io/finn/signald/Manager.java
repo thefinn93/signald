@@ -1269,7 +1269,13 @@ public class Manager {
     }
   }
 
-  public File getContactAvatarFile(Recipient recipient) { return new File(avatarsPath, "contact-" + recipient.getAddress().getNumber().get()); }
+  public File getContactAvatarFile(Recipient recipient) {
+    SignalServiceAddress address = recipient.getAddress();
+    if (address.getNumber().isPresent()) {
+      return new File(avatarsPath, "contact-" + address.getNumber().get());
+    }
+    return new File(avatarsPath, "contact-" + address.getIdentifier());
+  }
 
   public File getProfileAvatarFile(Recipient recipient) {
     if (recipient.getUUID() == null) {
