@@ -7,6 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.Empty;
 import io.finn.signald.MessageReceiver;
@@ -33,6 +34,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
@@ -69,8 +72,9 @@ public class SubscribeRequest implements RequestType<Empty> {
       throw new InternalError("error preparing account", e);
     }
 
+    EmptyWithCallback reply = new EmptyWithCallback();
     try {
-      MessageReceiver.subscribe(aci, new IncomingMessageEncoder(request.getSocket(), aci, account));
+      MessageReceiver.subscribe(aci, new IncomingMessageEncoder(request.getSocket(), aci, account, reply.lock));
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
@@ -82,7 +86,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     } catch (IOException | SQLException | InvalidKeyException e) {
       throw new InternalError("error subscribing", e);
     }
-    return new Empty();
+    return reply;
   }
 
   static class IncomingMessageEncoder implements MessageEncoder {
@@ -91,6 +95,7 @@ public class SubscribeRequest implements RequestType<Empty> {
     Socket socket;
     ACI aci;
     String account; // account identifier is still e164 for now, so that needs to be stored separately from the UUID
+    Lock lock;
 
     private static final HashMap<Class<? extends Exception>, Class<? extends ExceptionWrapper>> exceptions = new HashMap<>();
     static {
@@ -112,15 +117,18 @@ public class SubscribeRequest implements RequestType<Empty> {
 
     public static List<Class<?>> getIncomingTypes() { return incomingTypes; }
 
-    IncomingMessageEncoder(Socket socket, ACI aci, String account) {
+    IncomingMessageEncoder(Socket socket, ACI aci, String account, Lock lock) {
       this.socket = socket;
       this.aci = aci;
       this.account = account;
+      this.lock = lock;
     }
 
     public void broadcast(ClientMessageWrapper w) throws IOException {
+      lock.lock();
       PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
       out.println(mapper.writeValueAsString(w));
+      lock.unlock();
     }
 
     @Override
@@ -199,6 +207,17 @@ public class SubscribeRequest implements RequestType<Empty> {
       ClientMessageWrapper wrapper = new ClientMessageWrapper(account, error);
       wrapper.error = true;
       return wrapper;
+    }
+  }
+
+  class EmptyWithCallback extends Empty implements Request.PostDeliveryCallback {
+    @JsonIgnore private final ReentrantLock lock = new ReentrantLock();
+    EmptyWithCallback() { lock.lock(); }
+
+    @Override
+    @JsonIgnore
+    public void onResponseDelivered() {
+      lock.unlock();
     }
   }
 }

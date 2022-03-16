@@ -148,6 +148,9 @@ public class Request {
       if (id != null) {
         logger.info("handled request {} successfully", id);
       }
+      if (r instanceof PostDeliveryCallback) {
+        ((PostDeliveryCallback)r).onResponseDelivered();
+      }
     } catch (ExceptionWrapper e) {
       error(e);
       if (e.isUnexpected()) {
@@ -251,5 +254,9 @@ public class Request {
       return f.getAnnotation(JsonProperty.class).value();
     }
     return f.getName();
+  }
+
+  public interface PostDeliveryCallback {
+    void onResponseDelivered();
   }
 }
