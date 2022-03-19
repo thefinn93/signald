@@ -21,7 +21,7 @@ public class JsonSentTranscriptMessage {
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   public long expirationStartTimestamp;
   public JsonDataMessage message;
-  public Map<String, Boolean> unidentifiedStatus = new HashMap<>();
+  public Map<String, String> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
   JsonSentTranscriptMessage(SentTranscriptMessage s, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
@@ -33,9 +33,9 @@ public class JsonSentTranscriptMessage {
     message = new JsonDataMessage(s.getMessage(), aci);
     for (SignalServiceAddress r : s.getRecipients()) {
       if (r.getNumber().isPresent()) {
-        unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
+        unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()) ? "true" : "false");
       }
-      unidentifiedStatus.put(r.getAci().toString(), s.isUnidentified(r.getAci()));
+      unidentifiedStatus.put(r.getAci().toString(), s.isUnidentified(r.getAci()) ? "true" : "false");
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }
