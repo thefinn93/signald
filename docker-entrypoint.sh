@@ -6,4 +6,4 @@ if [[ "${SIGNALD_DATABASE:-}" == "postgres"* ]] && [[ -f "/signald/signald.db" ]
   signaldctl db-move "${SIGNALD_DATABASE}" /signald/signald.db || (echo "database move failed, leaving container running for 10 minutes" && sleep 600 && exit 1)
 fi
 
-/usr/local/bin/signald -d /signald -s /signald/signald.sock
+/usr/local/bin/signald "$@"

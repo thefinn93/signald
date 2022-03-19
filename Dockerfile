@@ -30,4 +30,5 @@ VOLUME /signald
 
 ADD docker-entrypoint.sh /entrypoint.sh
 
-CMD ["/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["-d", "/signald", "-s", "/signald/signald.sock"]
