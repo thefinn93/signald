@@ -51,18 +51,12 @@ import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedE
 @Doc("receive incoming messages. After making a subscribe request, incoming messages will be sent to the client encoded "
      + "as ClientMessageWrapper. Send an unsubscribe request or disconnect from the socket to stop receiving messages.")
 public class SubscribeRequest implements RequestType<Empty> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to subscribe to incoming message for") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to subscribe to incoming message for") @Required public String account;
 
   @Override
   public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
-    ACI aci;
-    try {
-      aci = Database.Get().AccountsTable.getACI(account);
-    } catch (NoSuchAccountException e) {
-      throw new NoSuchAccountError(e);
-    } catch (SQLException e) {
-      throw new SQLError(e);
-    }
+
+    ACI aci = Common.getACIFromIdentifier(account);
 
     try {
       RefreshPreKeysJob.runIfNeeded(aci, Common.getManager(aci));

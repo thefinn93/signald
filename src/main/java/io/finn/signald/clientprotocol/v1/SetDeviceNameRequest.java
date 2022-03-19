@@ -24,7 +24,7 @@ import java.sql.SQLException;
 @ProtocolType("set_device_name")
 @Doc("set this device's name. This will show up on the mobile device on the same account under settings -> linked devices")
 public class SetDeviceNameRequest implements RequestType<Empty> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to set the device name of") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to set the device name of") @Required public String account;
 
   @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override

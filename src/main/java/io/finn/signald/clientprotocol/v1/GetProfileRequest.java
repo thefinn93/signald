@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
@@ -34,7 +35,7 @@ import java.util.concurrent.TimeoutException;
 @ProtocolType("get_profile")
 public class GetProfileRequest implements RequestType<Profile> {
 
-  @Required @Doc("the signald account to use") public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Required @Doc("the signald account to use") public String account;
 
   @Required @Doc("the address to look up") @JsonProperty("address") public JsonAddress requestedAddress;
 

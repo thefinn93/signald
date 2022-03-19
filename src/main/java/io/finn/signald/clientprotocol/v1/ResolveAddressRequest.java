@@ -26,18 +26,12 @@ import java.sql.SQLException;
      + "function for client authors, mostly because signald doesn't resolve all the partials it returns.")
 @ProtocolType("resolve_address")
 public class ResolveAddressRequest implements RequestType<JsonAddress> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The signal account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The signal account to use") @Required public String account;
 
   @Doc("The partial address, missing fields") @Required public JsonAddress partial;
 
   @Override
   public JsonAddress run(Request request) throws InternalError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError, SQLError {
-    try {
-      return new JsonAddress(Common.getRecipient(Database.Get().AccountsTable.getACI(account), partial));
-    } catch (NoSuchAccountException e) {
-      throw new NoSuchAccountError(e);
-    } catch (SQLException e) {
-      throw new SQLError(e);
-    }
+    return new JsonAddress(Common.getRecipient(Common.getACIFromIdentifier(account), partial));
   }
 }

@@ -9,6 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Empty;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
@@ -24,7 +25,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 
 @ProtocolType("submit_challenge")
 public class SubmitChallengeRequest implements RequestType<Empty> {
-  @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Required public String account;
   @Required public String challenge;
   @JsonProperty("captcha_token") public String captchaToken;
 

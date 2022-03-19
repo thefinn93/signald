@@ -60,12 +60,7 @@ public class Common {
   private static final Histogram messageSendTime =
       Histogram.build().name(BuildConfig.NAME + "_message_send_time").help("Time to send messages in seconds").labelNames("account_uuid").register();
 
-  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
-    return getManager(identifier, false);
-  }
-
-  static Manager getManager(String identifier, boolean offline)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
+  static ACI getACIFromIdentifier(String identifier) throws NoSuchAccountError, SQLError {
     if (identifier.startsWith("+")) {
       ACI aci;
       try {
@@ -75,10 +70,19 @@ public class Common {
       } catch (SQLException e) {
         throw new SQLError(e);
       }
-      return getManager(aci, offline);
+      return aci;
     } else {
-      return getManager(ACI.from(UUID.fromString(identifier)));
+      return ACI.from(UUID.fromString(identifier));
     }
+  }
+
+  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
+    return getManager(identifier, false);
+  }
+
+  static Manager getManager(String identifier, boolean offline)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
+    return getManager(getACIFromIdentifier(identifier), offline);
   }
 
   public static Manager getManager(ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
@@ -203,23 +207,7 @@ public class Common {
   }
 
   public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, InvalidRequestError, SQLError {
-    UUID accountUUID;
-    if (identifier.startsWith("+")) {
-      try {
-        accountUUID = Database.Get().AccountsTable.getUUID(identifier);
-      } catch (NoSuchAccountException e) {
-        throw new NoSuchAccountError(e);
-      } catch (SQLException e) {
-        throw new SQLError(e);
-      }
-    } else {
-      try {
-        accountUUID = UUID.fromString(identifier);
-      } catch (IllegalArgumentException e) {
-        throw new InvalidRequestError("invalid UUID");
-      }
-    }
-    return getAccount(accountUUID);
+    return getAccount(getACIFromIdentifier(identifier).uuid());
   }
   public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(accountUUID); }
 

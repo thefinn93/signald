@@ -9,6 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Account;
 import io.finn.signald.Manager;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
@@ -21,7 +22,7 @@ import java.sql.SQLException;
 @ProtocolType("list_groups")
 public class ListGroupsRequest implements RequestType<GroupList> {
 
-  @Required public String account;
+  @Required @ExampleValue(ExampleValue.LOCAL_UUID) public String account;
 
   @Override
   public GroupList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRequestError, AuthorizationFailedError, SQLError {

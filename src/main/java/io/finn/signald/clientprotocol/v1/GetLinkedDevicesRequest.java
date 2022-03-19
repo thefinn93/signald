@@ -31,7 +31,7 @@ import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedE
 @Doc("list all linked devices on a Signal account")
 public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
   private static final Logger logger = LogManager.getLogger();
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @Override
   public LinkedDevices run(Request request)

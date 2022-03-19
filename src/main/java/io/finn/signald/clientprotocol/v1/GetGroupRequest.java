@@ -20,7 +20,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 @Doc("Query the server for the latest state of a known group. If the account is not a member of the group, an "
      + "UnknownGroupError is returned.")
 public class GetGroupRequest implements RequestType<JsonGroupV2Info> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 

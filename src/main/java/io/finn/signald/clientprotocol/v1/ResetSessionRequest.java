@@ -24,7 +24,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 @Doc("reset a session with a particular user")
 @ProtocolType("reset_session")
 public class ResetSessionRequest implements RequestType<SendResponse> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to use") @Required public String account;
   @Doc("the user to reset session with") @Required public JsonAddress address;
 
   public Long timestamp;

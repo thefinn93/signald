@@ -21,7 +21,7 @@ import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 @ErrorDoc(error = AuthorizationFailedError.class, doc = "caused when not a member of the group, when requesting logs from a revision lower than your joinedAtVersion, etc.")
 @Doc("Query the server for group revision history. The history contains information about the changes between each revision and the user that made the change.")
 public class GetGroupRevisionPagesRequest implements RequestType<GroupHistoryPage> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @JsonProperty("group_id") @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupId;
 

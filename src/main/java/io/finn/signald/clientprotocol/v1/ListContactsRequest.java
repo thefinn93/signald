@@ -9,6 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
@@ -37,7 +38,7 @@ import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 public class ListContactsRequest implements RequestType<ProfileList> {
   private static final Logger logger = LogManager.getLogger();
 
-  @Required public String account;
+  @Required @ExampleValue(ExampleValue.LOCAL_UUID) public String account;
 
   @Doc("return results from local store immediately, refreshing from server afterward if needed. If false (default), block until all pending profiles have been retrieved.")
   public boolean async;

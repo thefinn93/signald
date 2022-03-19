@@ -29,7 +29,7 @@ import org.whispersystems.util.Base64;
 public class TrustRequest implements RequestType<Empty> {
   private static final String FINGERPRINT_TYPE = "fingerprint-type";
 
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @Doc("The user to query identity keys for") @Required public JsonAddress address;
 

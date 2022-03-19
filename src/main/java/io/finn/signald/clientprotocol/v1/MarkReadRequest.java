@@ -38,7 +38,7 @@ import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedE
 @ProtocolType("mark_read")
 public class MarkReadRequest implements RequestType<Empty> {
 
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @Doc("The address that sent the message being marked as read") @Required public JsonAddress to;
 

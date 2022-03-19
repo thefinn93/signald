@@ -24,7 +24,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 @ErrorDoc(error = InvalidRequestError.class, doc = "caused by syntax errors with the provided linking URI")
 @Doc("Link a new device to a local Signal account")
 public class AddLinkedDeviceRequest implements RequestType<Empty> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.LINKING_URI) @Doc("the sgnl://linkdevice uri provided (typically in qr code form) by the new device") @Required public String uri;
 

@@ -51,7 +51,7 @@ import org.whispersystems.util.Base64;
 public class UpdateGroupRequest implements RequestType<GroupInfo> {
   private static final Logger logger = LogManager.getLogger();
 
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The identifier of the account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The identifier of the account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("the ID of the group to update") @Required public String groupID;
 

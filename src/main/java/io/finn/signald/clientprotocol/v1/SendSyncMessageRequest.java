@@ -33,9 +33,7 @@ import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserExce
 @ProtocolType("send_sync_message")
 @Doc("Sends a sync message to the account's devices")
 public class SendSyncMessageRequest implements RequestType<JsonSendMessageResult> {
-  private static final Logger logger = LogManager.getLogger();
-
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Required public String account;
 
   @JsonProperty("view_once_open_message")
   @ExactlyOneOfRequired(SYNC_REQUEST)

@@ -31,7 +31,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 @ProtocolType("refuse_membership")
 @Doc("deny a request to join a group")
 public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @JsonProperty("group_id") @Required public String groupID;
 

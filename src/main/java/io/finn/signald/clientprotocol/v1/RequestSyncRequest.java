@@ -31,7 +31,7 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 @Doc("Request other devices on the account send us their group list, syncable config and contact list.")
 @ProtocolType("request_sync")
 public class RequestSyncRequest implements RequestType<Empty> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required @JsonProperty("account") public String accountIdentifier;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to use") @Required @JsonProperty("account") public String accountIdentifier;
   @Doc("request group sync (default true)") public boolean groups = true;
   @Doc("request configuration sync (default true)") public boolean configuration = true;
   @Doc("request contact sync (default true)") public boolean contacts = true;

@@ -40,7 +40,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 
 @ProtocolType("create_group")
 public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @Required @ExampleValue(ExampleValue.GROUP_TITLE) public String title;
 

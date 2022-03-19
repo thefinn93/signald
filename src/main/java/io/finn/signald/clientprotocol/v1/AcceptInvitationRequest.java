@@ -32,7 +32,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 @ProtocolType("accept_invitation")
 @Doc("Accept a v2 group invitation. Note that you must have a profile name set to join groups.")
 public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 

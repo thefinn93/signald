@@ -24,7 +24,7 @@ import java.sql.SQLException;
 @Doc(
     "delete all account data signald has on disk, and optionally delete the account from the server as well. Note that this is not \"unlink\" and will delete the entire account, even from a linked device.")
 public class DeleteAccountRequest implements RequestType<Empty> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to delete") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to delete") @Required public String account;
 
   @Doc("delete account information from the server as well (default false)") public boolean server = false;
 

@@ -34,7 +34,7 @@ import org.whispersystems.util.Base64;
 public class SetExpirationRequest implements RequestType<SendResponse> {
   private static final Logger logger = LogManager.getLogger();
 
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to use") @Required public String account;
   @ExactlyOneOfRequired(RECIPIENT) public JsonAddress address;
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String group;
   @ExampleValue("604800") @Required public int expiration;

@@ -25,7 +25,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 @ProtocolType("send_payment")
 @Doc("send a mobilecoin payment")
 public class SendPaymentRequest implements RequestType<SendResponse> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("the account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("the account to use") @Required public String account;
 
   @Required @Doc("the address to send the payment message to") public JsonAddress address;
 

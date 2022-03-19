@@ -38,7 +38,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @ProtocolType("leave_group")
 public class LeaveGroupRequest implements RequestType<GroupInfo> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to use") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Doc("The group to leave") @Required public String groupID;
 

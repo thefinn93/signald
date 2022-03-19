@@ -32,7 +32,7 @@ import org.whispersystems.util.Base64UrlSafe;
 @ProtocolType("group_link_info")
 @Doc("Get information about a group from a signal.group link")
 public class GroupLinkInfoRequest implements RequestType<JsonGroupJoinInfo> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to use") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("the signald.group link") @Required public String uri;
 

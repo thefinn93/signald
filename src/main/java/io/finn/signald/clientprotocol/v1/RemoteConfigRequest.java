@@ -30,22 +30,13 @@ import java.util.UUID;
 @ProtocolType("get_remote_config")
 @Doc("Retrieves the remote config (feature flags) from the server.")
 public class RemoteConfigRequest implements RequestType<RemoteConfigList> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to use to retrieve the remote config") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to use to retrieve the remote config") @Required public String account;
 
   @Override
   public RemoteConfigList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, SQLError {
-    UUID accountUUID;
-    try {
-      accountUUID = Database.Get().AccountsTable.getUUID(account);
-    } catch (NoSuchAccountException e) {
-      throw new NoSuchAccountError(e);
-    } catch (SQLException e) {
-      throw new SQLError(e);
-    }
-
     final Map<String, Object> remoteConfig;
     try {
-      remoteConfig = SignalDependencies.get(accountUUID).getAccountManager().getRemoteConfig();
+      remoteConfig = SignalDependencies.get(Common.getACIFromIdentifier(account).uuid()).getAccountManager().getRemoteConfig();
     } catch (IOException | SQLException e) {
       throw new InternalError("error getting remote config", e);
     } catch (InvalidProxyException e) {

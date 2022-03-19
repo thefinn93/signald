@@ -24,7 +24,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 @ProtocolType("remote_delete")
 @Doc("delete a message previously sent")
 public class RemoteDeleteRequest implements RequestType<SendResponse> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("the account to use") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("the account to use") @Required public String account;
 
   @ExactlyOneOfRequired(RECIPIENT)
   @Doc("the address to send the delete message to. should match address the message to be deleted was sent to. required if group is not set.")

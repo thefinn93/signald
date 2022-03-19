@@ -7,6 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import static io.finn.signald.annotations.ExactlyOneOfRequired.ACCOUNT;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -47,7 +48,8 @@ import org.whispersystems.util.Base64;
 public class SendRequest implements RequestType<SendResponse> {
   private static final Logger logger = LogManager.getLogger();
 
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Required public String username;
+  @ExactlyOneOfRequired(ACCOUNT) @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) public String username;
+  @ExactlyOneOfRequired(ACCOUNT) @ExampleValue(ExampleValue.LOCAL_UUID) public String account;
   @ExactlyOneOfRequired(RECIPIENT) public JsonAddress recipientAddress;
   @ExampleValue(ExampleValue.GROUP_ID) @ExactlyOneOfRequired(RECIPIENT) public String recipientGroupId;
   @ExampleValue(ExampleValue.MESSAGE_BODY) @AtLeastOneOfRequired({"attachments"}) public String messageBody;
@@ -62,7 +64,7 @@ public class SendRequest implements RequestType<SendResponse> {
   public SendResponse run(Request request)
       throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError, InvalidRequestError, UnknownGroupError,
              RateLimitError, InvalidRecipientError, AttachmentTooLargeError, AuthorizationFailedError, SQLError {
-    Manager manager = Common.getManager(username);
+    Manager manager = account == null ? Common.getManager(username) : Common.getManager(account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
 

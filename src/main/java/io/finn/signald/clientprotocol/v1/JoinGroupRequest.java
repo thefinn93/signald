@@ -47,7 +47,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 @ProtocolType("join_group")
 @Doc("Join a group using the a signal.group URL. Note that you must have a profile name set to join groups.")
 public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_JOIN_URI) @Doc("The signal.group URL") @Required public String uri;
 

@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
@@ -24,7 +25,7 @@ import java.sql.SQLException;
 @ProtocolType("update_contact")
 @Doc("update information about a local contact")
 public class UpdateContactRequest implements RequestType<Profile> {
-  @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Required public String account;
   @Required public JsonAddress address;
   public String name;
   public String color;

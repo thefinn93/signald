@@ -25,7 +25,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 @Doc("Get information about a known keys for a particular address")
 @ProtocolType("get_identities")
 public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @Doc("address to get keys for") @Required public JsonAddress address;
 

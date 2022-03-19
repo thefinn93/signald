@@ -32,7 +32,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 @ProtocolType("approve_membership")
 @Doc("approve a request to join a group")
 public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
-  @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
+  @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
   @ExampleValue(ExampleValue.GROUP_ID) @Required public String groupID;
 
