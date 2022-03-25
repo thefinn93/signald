@@ -53,7 +53,16 @@ import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.groupsv2.*;
+import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupHistoryEntry;
+import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
+import org.whispersystems.signalservice.api.groupsv2.GroupHistoryPage;
+import org.whispersystems.signalservice.api.groupsv2.GroupLinkNotActiveException;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2AuthorizationString;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
+import org.whispersystems.signalservice.api.groupsv2.NotAbleToApplyGroupV2ChangeException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -406,20 +415,29 @@ public class Groups {
     final DecryptedGroup previousGroupState = group.getDecryptedGroup();
     final int nextRevision = previousGroupState.getRevision() + 1;
     final GroupChange.Actions changeActions = change.setRevision(nextRevision).build();
-    final DecryptedGroupChange decryptedChange;
-    final DecryptedGroup decryptedGroupState;
-
-    try {
-      decryptedChange = groupOperations.decryptChange(changeActions, aci.uuid());
-      decryptedGroupState = DecryptedGroupUtil.apply(previousGroupState, decryptedChange);
-    } catch (VerificationFailedException | InvalidGroupStateException | NotAbleToApplyGroupV2ChangeException e) {
-      throw new IOException(e);
-    }
-
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
     GroupChange signedGroupChange = groupsV2Api.patchGroup(changeActions, authString, Optional.absent());
+
+    final DecryptedGroup decryptedGroupState;
+    try {
+      final DecryptedGroupChange decryptedChange;
+
+      final var changeFromServerOptional = groupOperations.decryptChange(signedGroupChange, false);
+      // always prefer using the server's change, because the server fills/changes some fields such as timestamp
+      if (changeFromServerOptional.isPresent()) {
+        decryptedChange = changeFromServerOptional.get();
+      } else {
+        logger.warn("Unable to apply server's change for group {} (server change epoch {}); falling back to local change", Base64.encodeBytes(group.getId().serialize()),
+                    signedGroupChange.getChangeEpoch());
+        decryptedChange = groupOperations.decryptChange(changeActions, aci.uuid());
+      }
+
+      decryptedGroupState = DecryptedGroupUtil.apply(previousGroupState, decryptedChange);
+    } catch (VerificationFailedException | InvalidGroupStateException | NotAbleToApplyGroupV2ChangeException e) {
+      throw new IOException(e);
+    }
     group.setDecryptedGroup(decryptedGroupState);
     return new Pair<>(decryptedGroupState, signedGroupChange);
   }
