@@ -26,11 +26,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.util.Base64;
@@ -90,13 +91,13 @@ public class SetProfile implements RequestType<Empty> {
 
     if (existing != null) {
       try {
-        paymentAddress = Optional.fromNullable(existing.getPaymentAddress());
+        paymentAddress = Optional.ofNullable(existing.getPaymentAddress());
       } catch (IOException e) {
         logger.warn("error getting current payment address while setting profile: {}", e.getMessage());
-        paymentAddress = Optional.absent();
+        paymentAddress = Optional.empty();
       }
     } else {
-      paymentAddress = Optional.absent();
+      paymentAddress = Optional.empty();
     }
 
     if (mobilecoinAddress != null && !mobilecoinAddress.equals("")) {
@@ -121,7 +122,8 @@ public class SetProfile implements RequestType<Empty> {
     }
 
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      m.getAccountManager().setVersionedProfile(m.getACI(), m.getAccountData().getProfileKey(), name, about, emoji, paymentAddress, streamDetails, visibleBadgeIds);
+      AvatarUploadParams avatarUploadParams = AvatarUploadParams.forAvatar(streamDetails);
+      m.getAccountManager().setVersionedProfile(m.getACI(), m.getAccountData().getProfileKey(), name, about, emoji, paymentAddress, avatarUploadParams, visibleBadgeIds);
     } catch (IOException e) {
       throw new InternalError("error reading avatar file", e);
     } catch (InvalidInputException e) {

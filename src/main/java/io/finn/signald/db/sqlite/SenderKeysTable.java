@@ -94,10 +94,10 @@ public class SenderKeysTable implements ISenderKeysTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

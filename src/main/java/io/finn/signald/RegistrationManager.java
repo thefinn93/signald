@@ -19,6 +19,7 @@ import io.finn.signald.util.KeyUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
@@ -30,11 +31,11 @@ import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.KeyHelper;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -71,21 +72,22 @@ public class RegistrationManager {
     String password = Util.getSecret(18);
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.PASSWORD, password);
 
-    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, e164, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, e164, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     GroupsV2Operations groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
     accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.USER_AGENT, groupsV2Operations, ServiceConfig.AUTOMATIC_NETWORK_RETRY);
   }
 
   public void register(boolean voiceVerification, Optional<String> captcha, UUID server) throws IOException, InvalidInputException, SQLException {
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
-    Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
+    Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
+    Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.SERVER_UUID, server.toString());
 
     ServiceResponse<RequestVerificationCodeResponse> r;
     if (voiceVerification) {
-      r = accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.absent(), Optional.absent());
+      r = accountManager.requestVoiceVerificationCode(Locale.getDefault(), captcha, Optional.empty(), Optional.empty());
     } else {
-      r = accountManager.requestSmsVerificationCode(false, captcha, Optional.absent(), Optional.absent());
+      r = accountManager.requestSmsVerificationCode(false, captcha, Optional.empty(), Optional.empty());
     }
     handleResponseException(r);
 
@@ -104,8 +106,10 @@ public class RegistrationManager {
 
     VerifyAccountResponse result = r.getResult().get();
     ACI aci = ACI.from(UUID.fromString(result.getUuid()));
+    PNI pni = PNI.from(UUID.fromString(result.getPni()));
     accountData.setUUID(aci);
     Account account = new Account(aci);
+    account.setPNI(pni);
 
     String server = Database.Get().PendingAccountDataTable.getString(e164, IPendingAccountDataTable.Key.SERVER_UUID);
     Database.Get().AccountsTable.add(e164, aci, getFileName(), server == null ? null : UUID.fromString(server));
@@ -115,10 +119,13 @@ public class RegistrationManager {
     String password = Database.Get().PendingAccountDataTable.getString(e164, IPendingAccountDataTable.Key.PASSWORD);
     account.setPassword(password);
 
-    byte[] identityKeyPair = Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
-    account.setIdentityKeyPair(new IdentityKeyPair(identityKeyPair));
+    IdentityKeyPair aciIdentityKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR));
+    account.setACIIdentityKeyPair(aciIdentityKeyPair);
 
-    Database.Get(aci).IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), new IdentityKeyPair(identityKeyPair).getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
+    IdentityKeyPair pniIdentityKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR));
+    account.setPNIIdentityKeyPair(pniIdentityKeyPair);
+
+    Database.Get(aci).IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), aciIdentityKeyPair.getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
     account.setLocalRegistrationId(registrationID);
     account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
@@ -136,12 +143,15 @@ public class RegistrationManager {
 
   private String getFileName() { return Manager.getFileName(e164); }
 
-  public boolean hasPendingKeys() throws SQLException { return Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR) != null; }
+  public boolean hasPendingKeys() throws SQLException {
+    return Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR) != null &&
+        Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR) != null;
+  }
 
   public boolean isRegistered() { return accountData.registered; }
 
   private void handleResponseException(final ServiceResponse<?> response) throws IOException {
-    final Optional<Throwable> throwableOptional = response.getExecutionError().or(response.getApplicationError());
+    final Optional<Throwable> throwableOptional = response.getExecutionError().or(response::getApplicationError);
     if (throwableOptional.isPresent()) {
       if (throwableOptional.get() instanceof IOException) {
         throw(IOException) throwableOptional.get();

@@ -18,19 +18,21 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.StorageKey;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.signalservice.internal.push.WhoAmIResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 
 public class Account {
   private static final Logger logger = LogManager.getLogger();
   private final ACI aci;
 
-  public Account(UUID accountUUID) { this(ACI.from(accountUUID)); }
   public Account(ACI aci) { this.aci = aci; }
 
   public String getE164() throws SQLException, NoSuchAccountException { return Database.Get().AccountsTable.getE164(aci); }
@@ -38,6 +40,19 @@ public class Account {
   public UUID getUUID() { return aci.uuid(); }
 
   public ACI getACI() { return aci; }
+
+  public void setPNI(PNI pni) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI, pni.toString()); }
+
+  public void setPNI() throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException {
+    logger.debug("asking server for our PNI");
+    WhoAmIResponse whoami = getSignalDependencies().getAccountManager().getWhoAmI();
+    if (whoami.getPni() != null) {
+      logger.info("successfully got PNI from server");
+      setPNI(PNI.parseOrThrow(whoami.getPni()));
+    }
+  }
+
+  public PNI getPNI() throws SQLException { return PNI.parseOrNull(Database.Get().AccountDataTable.getString(aci, IAccountDataTable.Key.PNI)); }
 
   public SignalServiceConfiguration getServiceConfiguration() throws SQLException, ServerNotFoundException, InvalidProxyException, IOException {
     return Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
@@ -54,7 +69,7 @@ public class Account {
   public Groups getGroups() throws SQLException, ServerNotFoundException, NoSuchAccountException, InvalidProxyException, IOException { return new Groups(aci); }
 
   public DynamicCredentialsProvider getCredentialsProvider() throws SQLException, NoSuchAccountException {
-    return new DynamicCredentialsProvider(aci, getE164(), getPassword(), getDeviceId());
+    return new DynamicCredentialsProvider(aci, getPNI(), getE164(), getPassword(), getDeviceId());
   }
 
   public int getLocalRegistrationId() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.LOCAL_REGISTRATION_ID); }
@@ -89,16 +104,31 @@ public class Account {
 
   public void setPassword(String password) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PASSWORD, password); }
 
-  public IdentityKeyPair getIdentityKeyPair() throws SQLException {
-    byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
+  public IdentityKeyPair getACIIdentityKeyPair() throws SQLException {
+    byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR);
     if (serialized == null) {
       return null;
     }
     return new IdentityKeyPair(serialized);
   }
 
-  public void setIdentityKeyPair(IdentityKeyPair identityKeyPair) throws SQLException {
-    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+  public IdentityKeyPair getPNIIdentityKeyPair() throws SQLException {
+    byte[] serialized = Database.Get().AccountDataTable.getBytes(aci, IAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR);
+    if (serialized == null) {
+      return null;
+    }
+    return new IdentityKeyPair(serialized);
+  }
+
+  public void setACIIdentityKeyPair(IdentityKeyPair identityKeyPair) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+  }
+
+  public void setPNIIdentityKeyPair(@Nullable IdentityKeyPair identityKeyPair) throws SQLException {
+    if (identityKeyPair == null) {
+      return;
+    }
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
   }
 
   public long getLastPreKeyRefresh() throws SQLException { return Database.Get().AccountDataTable.getLong(aci, IAccountDataTable.Key.LAST_PRE_KEY_REFRESH); }

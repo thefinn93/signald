@@ -1,0 +1,1 @@
+UPDATE signald_account_data SET key = 'ACI_IDENTITY_KEY_PAIR' WHERE key = 'OWN_IDENTITY_KEY_PAIR';

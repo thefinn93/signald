@@ -35,7 +35,7 @@ public class JsonSentTranscriptMessage {
       if (r.getNumber().isPresent()) {
         unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()) ? "true" : "false");
       }
-      unidentifiedStatus.put(r.getAci().toString(), s.isUnidentified(r.getAci()) ? "true" : "false");
+      unidentifiedStatus.put(r.getServiceId().toString(), s.isUnidentified(r.getIdentifier()) ? "true" : "false");
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }

@@ -11,9 +11,9 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
-import org.whispersystems.libsignal.util.guava.Optional;
+import java.util.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.push.ACI;
 
 @Doc("metadata about one of the links in a message")
@@ -26,7 +26,7 @@ public class JsonPreview {
 
   public JsonPreview() {}
 
-  public JsonPreview(SignalServiceDataMessage.Preview preview, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
+  public JsonPreview(SignalServicePreview preview, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
     url = preview.getUrl();
     title = preview.getTitle();
     description = preview.getDescription();
@@ -36,7 +36,7 @@ public class JsonPreview {
     }
   }
 
-  public SignalServiceDataMessage.Preview asSignalPreview() throws InvalidAttachmentError {
+  public SignalServicePreview asSignalPreview() throws InvalidAttachmentError {
     SignalServiceAttachment signalServiceAttachment = null;
     if (attachment != null) {
       try {
@@ -45,6 +45,6 @@ public class JsonPreview {
         throw new InvalidAttachmentError(attachment.filename, e);
       }
     }
-    return new SignalServiceDataMessage.Preview(url, title, description, date, Optional.fromNullable(signalServiceAttachment));
+    return new SignalServicePreview(url, title, description, date, Optional.ofNullable(signalServiceAttachment));
   }
 }

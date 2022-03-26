@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class AllIdentityKeyList {
   @JsonProperty("identity_keys") List<IdentityKeyList> identityKeys;
@@ -27,7 +28,7 @@ public class AllIdentityKeyList {
     try {
       for (var row : entireIdentityDB) {
         if (!keyMap.containsKey(row.getAddress().toString())) {
-          var recipient = Database.Get(self.getACI()).RecipientsTable.get(row.getAddress());
+          var recipient = Database.Get((ACI)self.getServiceId()).RecipientsTable.get(row.getAddress());
           keyMap.put(row.getAddress().toString(), new IdentityKeyList(self, ownKey, recipient, null));
         }
         keyMap.get(row.getAddress().toString()).addKey(row);

@@ -25,13 +25,13 @@ public class SharedContactAddress {
 
   public SharedContactAddress(SharedContact.PostalAddress a) {
     type = a.getType().name();
-    label = a.getLabel().orNull();
-    street = a.getStreet().orNull();
-    pobox = a.getPobox().orNull();
-    neighborhood = a.getNeighborhood().orNull();
-    city = a.getCity().orNull();
-    region = a.getRegion().orNull();
-    postcode = a.getPostcode().orNull();
-    country = a.getCountry().orNull();
+    label = a.getLabel().orElse(null);
+    street = a.getStreet().orElse(null);
+    pobox = a.getPobox().orElse(null);
+    neighborhood = a.getNeighborhood().orElse(null);
+    city = a.getCity().orElse(null);
+    region = a.getRegion().orElse(null);
+    postcode = a.getPostcode().orElse(null);
+    country = a.getCountry().orElse(null);
   }
 }

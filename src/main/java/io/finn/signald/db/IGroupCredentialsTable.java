@@ -10,13 +10,13 @@ package io.finn.signald.db;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.UUID;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public interface IGroupCredentialsTable {
   Logger logger = LogManager.getLogger();
@@ -26,7 +26,7 @@ public interface IGroupCredentialsTable {
   String CREDENTIAL = "credential";
 
   void setCredentials(HashMap<Integer, AuthCredentialResponse> credentials) throws SQLException;
-  void deleteAccount(UUID uuid) throws SQLException;
+  void deleteAccount(ACI aci) throws SQLException;
   Optional<AuthCredentialResponse> getCredential(int date) throws SQLException, InvalidInputException;
 
   default AuthCredentialResponse getCredential(GroupsV2Api groupsV2Api, int today) throws InvalidInputException, SQLException, IOException {

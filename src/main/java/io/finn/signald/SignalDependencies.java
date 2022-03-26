@@ -21,11 +21,11 @@ import java.security.cert.CertificateException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.signal.zkgroup.profiles.ClientZkProfileOperations;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -120,7 +120,7 @@ public class SignalDependencies {
 
           @Override
           public WebSocketConnection createUnidentifiedWebSocket() {
-            return new WebSocketConnection("unidentified", server.getSignalServiceConfiguration(), Optional.absent(), BuildConfig.USER_AGENT, healthMonitor);
+            return new WebSocketConnection("unidentified", server.getSignalServiceConfiguration(), Optional.empty(), BuildConfig.USER_AGENT, healthMonitor);
           }
         };
         websocket = new SignalWebSocket(webSocketFactory);
@@ -146,7 +146,7 @@ public class SignalDependencies {
       if (messageSender == null) {
         ClientZkProfileOperations profileOperations = getProfileOperations();
         messageSender = new SignalServiceMessageSender(server.getSignalServiceConfiguration(), credentialsProvider, dataStore, sessionLock, BuildConfig.USER_AGENT, getWebSocket(),
-                                                       Optional.absent(), profileOperations, executor, ServiceConfig.MAX_ENVELOPE_SIZE, ServiceConfig.AUTOMATIC_NETWORK_RETRY);
+                                                       Optional.empty(), profileOperations, executor, ServiceConfig.MAX_ENVELOPE_SIZE, ServiceConfig.AUTOMATIC_NETWORK_RETRY);
       }
     }
     return messageSender;

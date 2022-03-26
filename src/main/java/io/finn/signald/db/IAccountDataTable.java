@@ -9,7 +9,6 @@ package io.finn.signald.db;
 
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public interface IAccountDataTable {
@@ -19,10 +18,11 @@ public interface IAccountDataTable {
 
   byte[] getBytes(ACI aci, IAccountDataTable.Key key) throws SQLException;
   void set(ACI aci, IAccountDataTable.Key key, byte[] value) throws SQLException;
-  void deleteAccount(UUID uuid) throws SQLException;
+  void deleteAccount(ACI aci) throws SQLException;
 
   enum Key {
-    OWN_IDENTITY_KEY_PAIR,
+    ACI_IDENTITY_KEY_PAIR, // one of these were previously OWN_IDENTITY_KEY_PAIR
+    PNI_IDENTITY_KEY_PAIR,
     LOCAL_REGISTRATION_ID,
     LAST_PRE_KEY_REFRESH,
     DEVICE_NAME,
@@ -36,7 +36,8 @@ public interface IAccountDataTable {
     NEXT_SIGNED_PRE_KEY_ID,
     LAST_ACCOUNT_REPAIR, // fixes to historical signald bugs (see ../AccountRepair.java)
     STORAGE_KEY,
-    STORAGE_MANIFEST_VERSION
+    STORAGE_MANIFEST_VERSION,
+    PNI
   }
 
   // Default implementations for setting values

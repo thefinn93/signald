@@ -108,7 +108,7 @@ public class IdentityKeyStore {
     }
 
     if (identityKeyPair != null) {
-      account.setIdentityKeyPair(identityKeyPair);
+      account.setACIIdentityKeyPair(identityKeyPair);
       identityKeyPair = null;
     }
 

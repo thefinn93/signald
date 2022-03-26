@@ -41,8 +41,8 @@ public interface IContactsTable {
   }
   default ContactInfo update(DeviceContact c) throws SQLException, IOException {
     Recipient recipient = Database.Get(getACI()).RecipientsTable.get(c.getAddress());
-    return update(recipient, c.getName().orNull(), c.getColor().orNull(), c.getProfileKey().isPresent() ? c.getProfileKey().get().serialize() : null,
-                  c.getExpirationTimer().orNull(), c.getInboxPosition().orNull());
+    return update(recipient, c.getName().orElse(null), c.getColor().orElse(null), c.getProfileKey().isPresent() ? c.getProfileKey().get().serialize() : null,
+                  c.getExpirationTimer().orElse(null), c.getInboxPosition().orElse(null));
   }
 
   default ContactInfo update(SignalContactRecord contactRecord) throws SQLException, IOException {
@@ -51,9 +51,9 @@ public interface IContactsTable {
     if (contactRecord.getGivenName().isPresent() && contactRecord.getFamilyName().isPresent()) {
       name = contactRecord.getGivenName().get() + " " + contactRecord.getFamilyName().get();
     } else if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
-      name = contactRecord.getGivenName().or("") + contactRecord.getFamilyName().or("");
+      name = contactRecord.getGivenName().orElse("") + contactRecord.getFamilyName().orElse("");
     }
-    return update(recipient, name, null, contactRecord.getProfileKey().orNull(), null, null);
+    return update(recipient, name, null, contactRecord.getProfileKey().orElse(null), null, null);
   }
   default ContactInfo update(ContactInfo contactInfo) throws SQLException {
     return update(contactInfo.recipient, contactInfo.name, contactInfo.color, contactInfo.profileKey, contactInfo.messageExpirationTime, contactInfo.inboxPosition);

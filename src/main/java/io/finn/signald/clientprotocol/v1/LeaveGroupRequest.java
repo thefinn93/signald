@@ -20,10 +20,7 @@ import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
@@ -31,7 +28,6 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.UuidCiphertext;
 import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
@@ -71,7 +67,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
     } else {
       Set<UUID> uuidsToRemove = new HashSet<>();
       uuidsToRemove.add(a.getUUID());
-      change = groupOperations.createRemoveMembersChange(uuidsToRemove);
+      change = groupOperations.createRemoveMembersChange(uuidsToRemove, false);
     }
 
     Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateOutput;

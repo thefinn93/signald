@@ -18,14 +18,13 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
-import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -65,21 +64,13 @@ public class TypingRequest implements RequestType<Empty> {
     }
 
     SignalServiceTypingMessage.Action action = typing ? SignalServiceTypingMessage.Action.STARTED : SignalServiceTypingMessage.Action.STOPPED;
-    SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, when, Optional.fromNullable(groupId));
+    SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, when, Optional.ofNullable(groupId));
     SignalServiceMessageSender messageSender = m.getMessageSender();
 
     if (address != null) {
       Recipient recipient = Common.getRecipient(m.getACI(), address);
       try {
-        messageSender.sendTyping(recipient.getAddress(), m.getAccessPairFor(recipient), message);
-      } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-        try {
-          Common.getAccount(account).getProtocolStore().handleUntrustedIdentityException(e);
-        } catch (IOException | SQLException exception) {
-          logger.error("internal error while saving new identity", exception);
-          Sentry.captureException(exception);
-        }
-        throw new UntrustedIdentityError(m.getACI(), e);
+        messageSender.sendTyping(List.of(recipient.getAddress()), List.of(m.getAccessPairFor(recipient)), message, null);
       } catch (IOException e) {
         throw new InternalError("error sending typing message", e);
       }

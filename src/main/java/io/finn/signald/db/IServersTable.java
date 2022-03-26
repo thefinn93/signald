@@ -28,7 +28,6 @@ import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.TrustStore;
 import org.whispersystems.signalservice.internal.configuration.*;
 
@@ -131,13 +130,13 @@ public interface IServersTable {
         signalCdnUrlMap.put(cdn.getKey(), new SignalCdnUrl[] {new SignalCdnUrl(cdn.getValue(), trustStore)});
       }
 
-      org.whispersystems.libsignal.util.guava.Optional<SignalProxy> proxyOptional = org.whispersystems.libsignal.util.guava.Optional.absent();
+      Optional<SignalProxy> proxyOptional = Optional.empty();
       if (proxy != null) {
         String[] parts = proxy.split(":");
         if (parts.length == 2) {
           int port = Integer.parseInt(parts[1]);
           SignalProxy proxy = new SignalProxy(parts[0], port);
-          proxyOptional = org.whispersystems.libsignal.util.guava.Optional.of(proxy);
+          proxyOptional = Optional.of(proxy);
         }
       }
 
@@ -149,7 +148,7 @@ public interface IServersTable {
           new SignalStorageUrl[] {new SignalStorageUrl(storageURL, trustStore)},                            // SignalStorageUrl[] signalStorageUrls
           new SignalCdshUrl[] {new SignalCdshUrl(cdshURL, trustStore)},                                     // SignalCdshUrl[] signalCdshUrls
           getInterceptors(),                                                                                // List<Interceptor> networkInterceptors
-          Optional.absent(),                                                                                // Optional<Dns> dns
+          Optional.empty(),                                                                                 // Optional<Dns> dns
           proxyOptional,                                                                                    // Optional<SignalProxy> proxy
           zkParams                                                                                          // byte[] zkGroupServerPublicParams
       );

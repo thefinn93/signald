@@ -26,6 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.internal.contacts.crypto.Quote;
@@ -43,13 +44,13 @@ public class RecipientsTable implements IRecipientsTable {
 
   public RecipientsTable(ACI aci) { uuid = aci.uuid(); }
 
-  public Recipient get(String e164, ACI aci) throws SQLException, IOException {
+  public Recipient get(String e164, ServiceId serviceId) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();
     var query =
         "SELECT " + ROW_ID + "," + E164 + "," + UUID + "," + REGISTERED + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 + " = ?) AND " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      if (aci != null) {
-        statement.setString(1, aci.toString());
+      if (serviceId != null) {
+        statement.setString(1, serviceId.toString());
       }
 
       if (e164 != null) {
@@ -59,93 +60,93 @@ public class RecipientsTable implements IRecipientsTable {
       statement.setString(3, uuid.toString());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
         while (rows.next()) {
-          int rowid = rows.getInt(ROW_ID);
+          int rowId = rows.getInt(ROW_ID);
           String storedE164 = rows.getString(E164);
           String storedUUID = rows.getString(UUID);
           boolean registered = rows.getBoolean(REGISTERED);
           SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
-          results.add(new Recipient(uuid, rowid, a, registered));
+          results.add(new Recipient(uuid, rowId, a, registered));
         }
       }
     }
 
-    int rowid = -1;
-    ACI storedACI = null;
+    int rowId = -1;
+    ServiceId storedServiceId = null;
     String storedE164 = null;
     boolean registered = true;
     if (results.size() > 0) {
       Recipient result = results.get(0);
-      rowid = result.getId();
+      rowId = result.getId();
 
       if (results.size() > 1) {
         logger.warn("recipient query returned multiple results, merging");
         for (Recipient r : results) {
-          if (rowid < 0 && r.getAddress() != null) { // have not selected a preferred winner yet and this candidate has a UUID
-            rowid = r.getId();
+          if (rowId < 0 && r.getAddress() != null) { // have not selected a preferred winner yet and this candidate has a UUID
+            rowId = r.getId();
             result = r;
           } else {
-            logger.debug("Dropping duplicate recipient row id = " + rowid);
+            logger.debug("Dropping duplicate recipient row id = " + rowId);
             delete(r.getId());
           }
         }
       }
 
-      storedACI = result.getAddress() != null ? result.getACI() : null;
-      storedE164 = result.getAddress() != null ? result.getAddress().getNumber().orNull() : null;
+      storedServiceId = result.getAddress() != null ? result.getServiceId() : null;
+      storedE164 = result.getAddress() != null ? result.getAddress().getNumber().orElse(null) : null;
       registered = result.isRegistered();
-      rowid = result.getId();
+      rowId = result.getId();
     }
 
     // query included a UUID that wasn't in the database
-    if (aci != null && storedACI == null) {
-      if (rowid < 0) {
-        rowid = storeNew(aci, e164);
+    if (serviceId != null && storedServiceId == null) {
+      if (rowId < 0) {
+        rowId = storeNew(serviceId, e164);
         storedE164 = e164;
       } else {
-        update(UUID, aci.toString(), rowid);
+        update(UUID, serviceId.toString(), rowId);
       }
-      storedACI = aci;
+      storedServiceId = serviceId;
     }
 
     // query included an e164 that wasn't in the database
-    if (e164 != null && rowid > -1 && storedE164 == null) {
-      update(E164, e164, rowid);
+    if (e164 != null && rowId > -1 && storedE164 == null) {
+      update(E164, e164, rowId);
       storedE164 = e164;
     }
 
     if (e164 != null && !e164.equals(storedE164)) {
       // phone number change
       // TODO: notify clients?
-      update(E164, e164, rowid);
+      update(E164, e164, rowId);
     }
 
     // query did not include a UUID
-    if (storedACI == null) {
+    if (storedServiceId == null) {
       // ask the server for the UUID (throws UnregisteredUserException if the e164 isn't registered)
-      storedACI = getRegisteredUser(e164);
+      storedServiceId = getRegisteredUser(e164);
 
-      if (rowid > 0) {
+      if (rowId > 0) {
         // if the e164 was in the database already, update the existing row
-        update(UUID, storedACI.toString(), rowid);
+        update(UUID, storedServiceId.toString(), rowId);
       } else {
         // if the e164 was not in the database, re-run the get() with both e164 and UUID
         // can't just insert because the newly-discovered UUID might already be in the database
-        return get(e164, storedACI);
+        return get(e164, storedServiceId);
       }
     }
 
-    if (rowid == -1 && aci != null) {
-      rowid = storeNew(aci, e164);
+    if (rowId == -1 && serviceId != null) {
+      rowId = storeNew(serviceId, e164);
     }
 
-    return new Recipient(uuid, rowid, new SignalServiceAddress(storedACI, storedE164), registered);
+    return new Recipient(uuid, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered);
   }
 
-  private int storeNew(ACI aci, String e164) throws SQLException {
+  private int storeNew(ServiceId serviceId, String e164) throws SQLException {
     var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, uuid.toString());
-      statement.setString(2, aci.toString());
+      statement.setString(2, serviceId.toString());
       if (e164 != null) {
         statement.setString(3, e164);
       }
@@ -154,7 +155,7 @@ public class RecipientsTable implements IRecipientsTable {
     try (var statement = Database.getConn().prepareStatement("SELECT last_insert_rowid()")) {
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_stored", statement)) {
         if (!rows.next()) {
-          throw new AssertionError("error fetching ID of last row inserted while storing " + aci + "/" + e164);
+          throw new AssertionError("error fetching ID of last row inserted while storing " + serviceId + "/" + e164);
         }
         return rows.getInt(1);
       }
@@ -181,10 +182,10 @@ public class RecipientsTable implements IRecipientsTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

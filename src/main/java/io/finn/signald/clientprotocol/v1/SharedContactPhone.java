@@ -20,6 +20,6 @@ public class SharedContactPhone {
   public SharedContactPhone(SharedContact.Phone p) {
     type = p.getType().name();
     value = p.getValue();
-    label = p.getLabel().orNull();
+    label = p.getLabel().orElse(null);
   }
 }

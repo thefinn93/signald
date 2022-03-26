@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -52,7 +53,6 @@ import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupHistoryEntry;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
@@ -90,14 +90,13 @@ public class Groups {
   private final IGroupsTable groupsTable;
   private final ACI aci;
   private final GroupsV2Operations groupsV2Operations;
-  private final SignalServiceConfiguration serviceConfiguration;
 
   public Groups(ACI aci) throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
     this.aci = aci;
     groupsV2Api = SignalDependencies.get(aci).getAccountManager().getGroupsV2Api();
     groupsTable = Database.Get(aci).GroupsTable;
     credentials = Database.Get(aci).GroupCredentialsTable;
-    serviceConfiguration = Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
+    SignalServiceConfiguration serviceConfiguration = Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
     groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
   }
 
@@ -137,7 +136,7 @@ public class Groups {
         if (localGroup.isPresent()) {
           localGroup.get().delete();
         }
-        latestServerGroup = Optional.absent();
+        latestServerGroup = Optional.empty();
       }
 
       if (latestServerGroup.isPresent()) {
@@ -194,14 +193,14 @@ public class Groups {
         } catch (VerificationFailedException e) {
           logger.error("failed to verify incoming P2P group change for " + groupId);
           Sentry.captureException(e);
-          signedGroupChange = Optional.absent();
+          signedGroupChange = Optional.empty();
         } catch (InvalidProtocolBufferException e) {
           logger.error("failed to parse incoming P2P group change for " + groupId);
           Sentry.captureException(e);
-          signedGroupChange = Optional.absent();
+          signedGroupChange = Optional.empty();
         }
       } else {
-        signedGroupChange = Optional.absent();
+        signedGroupChange = Optional.empty();
       }
 
       if (signedGroupChange.isPresent() && previousGroupState.get().getRevision() + 1 == signedGroupChange.get().getRevision() &&
@@ -222,8 +221,8 @@ public class Groups {
     if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroupState.getDecryptedGroup().getMembersList())) {
       logger.info("Not a member, use latest only for " + groupId);
       firstGroupHistoryPage = new GroupHistoryPage(
-          Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.absent())), GroupHistoryPage.PagingData.NONE);
-    } else if (!previousGroupState.isPresent()) {
+          Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.empty())), GroupHistoryPage.PagingData.NONE);
+    } else if (previousGroupState.isEmpty()) {
       // When we connect signald as a new linked device, we can have !previousGroupState.isPresent() with a large number of
       // group pages to go through for profile keys, especially if we have groups that we've joined from other devices
       // that have gotten many group updates before we started to link signald. However, if we read the group history
@@ -263,7 +262,7 @@ public class Groups {
       // because that would mess with users that request to join groups.
       logger.info("New group " + groupId + "; use only latest state");
       firstGroupHistoryPage = new GroupHistoryPage(
-          Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.absent())), GroupHistoryPage.PagingData.NONE);
+          Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.empty())), GroupHistoryPage.PagingData.NONE);
     } else {
       int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroupState.getDecryptedGroup(), aci.uuid());
       int logsNeededFrom = Math.max(previousGroupState.get().getRevision(), revisionWeWereAdded);
@@ -280,14 +279,13 @@ public class Groups {
         return;
       }
 
-      logger.info("Paging group " + groupId +
-                  " for authoritative profile keys. previousGroupState revision: " + (previousGroupState.transform(IGroupsTable.IGroup::getRevision).orNull()) +
+      logger.info("Paging group " + groupId + " for authoritative profile keys. previousGroupState revision: " + previousGroupState.get().getRevision() +
                   ", most recent revision: " + mostRecentGroupState.getRevision() + ", logsNeededFrom: " + logsNeededFrom);
       firstGroupHistoryPage = getGroupHistoryPage(groupSecretParams, logsNeededFrom, false);
     }
     // only include all (non-authoritative) profile keys if
     // this is a new group we haven't seen before <=> !previousGroupState.isPresent()
-    persistProfileKeysFromServerGroupHistory(groupSecretParams, firstGroupHistoryPage, !previousGroupState.isPresent() ? mostRecentGroupState : null);
+    persistProfileKeysFromServerGroupHistory(groupSecretParams, firstGroupHistoryPage, previousGroupState.isEmpty() ? mostRecentGroupState : null);
   }
 
   /**
@@ -368,7 +366,7 @@ public class Groups {
              InvalidKeyException, InvalidProxyException {
     GroupSecretParams groupSecretParams = GroupSecretParams.generate();
 
-    Optional<byte[]> avatarBytes = Optional.absent();
+    Optional<byte[]> avatarBytes = Optional.empty();
     if (avatar != null) {
       avatarBytes = Optional.of(Files.readAllBytes(avatar.toPath()));
     }
@@ -377,8 +375,8 @@ public class Groups {
     GroupCandidate groupCandidateSelf = new GroupCandidate(aci.uuid(), Optional.of(profileCredentialStore.getProfileKeyCredential(aci)));
     Set<GroupCandidate> candidates = members.stream()
                                          .map(x -> {
-                                           ProfileKeyCredential profileCredential = profileCredentialStore.getProfileKeyCredential(x.getACI());
-                                           return new GroupCandidate(x.getUUID(), Optional.fromNullable(profileCredential));
+                                           ProfileKeyCredential profileCredential = profileCredentialStore.getProfileKeyCredential(x.getServiceId());
+                                           return new GroupCandidate(x.getUUID(), Optional.ofNullable(profileCredential));
                                          })
                                          .collect(Collectors.toSet());
 
@@ -418,7 +416,7 @@ public class Groups {
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
-    GroupChange signedGroupChange = groupsV2Api.patchGroup(changeActions, authString, Optional.absent());
+    GroupChange signedGroupChange = groupsV2Api.patchGroup(changeActions, authString, Optional.empty());
 
     final DecryptedGroup decryptedGroupState;
     try {
@@ -457,7 +455,7 @@ public class Groups {
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredentialResponse = credentials.getCredential(groupsV2Api, today);
     GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredentialResponse);
-    return groupsV2Api.patchGroup(changeActions, authString, Optional.fromNullable(password));
+    return groupsV2Api.patchGroup(changeActions, authString, Optional.ofNullable(password));
   }
 
   public Optional<DecryptedGroupChange> decryptChange(IGroupsTable.IGroup group, GroupChange groupChange, boolean verifySignature)

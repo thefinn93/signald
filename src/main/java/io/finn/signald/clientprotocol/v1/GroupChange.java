@@ -6,12 +6,12 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.db.IGroupsTable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.signal.zkgroup.VerificationFailedException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -63,7 +63,7 @@ public class GroupChange {
     final org.signal.storageservice.protos.groups.GroupChange protoGroupChange = org.signal.storageservice.protos.groups.GroupChange.parseFrom(signedGroupChange);
 
     final Optional<DecryptedGroupChange> changeOptional = groups.decryptChange(group, protoGroupChange, true);
-    if (!changeOptional.isPresent()) {
+    if (changeOptional.isEmpty()) {
       throw new IOException("failed to get decrypted group change");
     }
     return new GroupChange(changeOptional.get());

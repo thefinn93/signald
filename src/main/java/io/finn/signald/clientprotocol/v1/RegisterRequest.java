@@ -20,9 +20,9 @@ import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.UUID;
 import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 
 @ProtocolType("register")
@@ -51,7 +51,7 @@ public class RegisterRequest implements RequestType<Account> {
     }
 
     try {
-      m.register(voice, Optional.fromNullable(captcha), UUID.fromString(server));
+      m.register(voice, Optional.ofNullable(captcha), UUID.fromString(server));
     } catch (CaptchaRequiredException e) {
       throw new CaptchaRequiredError();
     } catch (InvalidInputException | IOException | SQLException e) {

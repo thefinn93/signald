@@ -21,30 +21,22 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.SenderKeyUtil;
 import io.sentry.Sentry;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.Member;
-import org.signal.storageservice.protos.groups.local.DecryptedGroup;
-import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
-import org.signal.storageservice.protos.groups.local.DecryptedMember;
-import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
-import org.signal.storageservice.protos.groups.local.DecryptedRequestingMember;
+import org.signal.storageservice.protos.groups.local.*;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupChangeReconstruct;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
@@ -73,7 +65,7 @@ public class GroupsTable implements IGroupsTable {
       statement.setString(1, aci.toString());
       statement.setBytes(2, identifier.serialize());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
-        return rows.next() ? Optional.of(new Group(rows)) : Optional.absent();
+        return rows.next() ? Optional.of(new Group(rows)) : Optional.empty();
       }
     }
   }
@@ -158,10 +150,10 @@ public class GroupsTable implements IGroupsTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
@@ -182,7 +174,7 @@ public class GroupsTable implements IGroupsTable {
     private DecryptedGroup group;
 
     private Group(ResultSet row) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
-      account = new Account(UUID.fromString(row.getString(ACCOUNT_UUID)));
+      account = new Account(ACI.parseOrThrow(row.getString(ACCOUNT_UUID)));
       rowId = row.getInt(ROWID);
       masterKey = new GroupMasterKey(row.getBytes(MASTER_KEY));
       revision = row.getInt(REVISION);

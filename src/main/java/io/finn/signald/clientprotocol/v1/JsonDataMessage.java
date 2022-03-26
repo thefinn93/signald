@@ -13,14 +13,12 @@ import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
+import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class JsonDataMessage {
@@ -69,6 +67,8 @@ public class JsonDataMessage {
 
   @Doc("details about the MobileCoin payment attached to the message, if present") public Payment payment;
 
+  @JsonProperty("story_context") public StoryContext storyContext;
+
   public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
     timestamp = dataMessage.getTimestamp();
 
@@ -112,7 +112,7 @@ public class JsonDataMessage {
 
     if (dataMessage.getPreviews().isPresent()) {
       previews = new ArrayList<>();
-      for (SignalServiceDataMessage.Preview p : dataMessage.getPreviews().get()) {
+      for (SignalServicePreview p : dataMessage.getPreviews().get()) {
         previews.add(new JsonPreview(p, aci));
       }
     }
@@ -147,6 +147,10 @@ public class JsonDataMessage {
       if (p.getPaymentNotification().isPresent()) {
         payment = new Payment(p.getPaymentNotification().get());
       }
+    }
+
+    if (dataMessage.getStoryContext().isPresent()) {
+      storyContext = new StoryContext(dataMessage.getStoryContext().get());
     }
   }
 }

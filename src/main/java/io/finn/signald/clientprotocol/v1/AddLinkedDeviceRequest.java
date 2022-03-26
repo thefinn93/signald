@@ -17,6 +17,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.SQLException;
 import org.signal.zkgroup.InvalidInputException;
 import org.whispersystems.libsignal.InvalidKeyException;
 
@@ -33,7 +34,7 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
     Manager m = Common.getManager(account);
     try {
       m.addDeviceLink(new URI(uri));
-    } catch (IOException | InvalidKeyException e) {
+    } catch (IOException | InvalidKeyException | SQLException e) {
       throw new InternalError("error adding device", e);
     } catch (InvalidInputException | URISyntaxException e) {
       throw new InvalidRequestError(e.getMessage());

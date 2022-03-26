@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.*;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class ContactsTableMigrationTest {
   private File databaseFile;
@@ -68,19 +69,19 @@ public class ContactsTableMigrationTest {
                               + "]}";
     var contactStore = mapper.readValue(testContactsJson, ContactStore.class);
 
-    var account = new Account(UUID.randomUUID());
+    var account = new Account(ACI.from(UUID.randomUUID()));
     contactStore.migrateToDB(account);
     var allContacts = Database.Get(account.getACI()).ContactsTable.getAll();
 
     // First contact
     Assertions.assertEquals("\u2068John Smith\u2069", allContacts.get(0).name);
-    Assertions.assertEquals("1acbe9cc-9917-4d2c-a4f2-c9d9389975ff", allContacts.get(0).recipient.getACI().toString());
+    Assertions.assertEquals("1acbe9cc-9917-4d2c-a4f2-c9d9389975ff", allContacts.get(0).recipient.getServiceId().toString());
     Assertions.assertEquals("ultramarine", allContacts.get(0).color);
     Assertions.assertEquals(0, allContacts.get(0).messageExpirationTime);
 
     // Second contact
     Assertions.assertEquals("\u2068Foo Bar\u2069", allContacts.get(1).name);
-    Assertions.assertEquals("78aef659-a594-4c2a-817e-4a7a0f4c87fe", allContacts.get(1).recipient.getACI().toString());
+    Assertions.assertEquals("78aef659-a594-4c2a-817e-4a7a0f4c87fe", allContacts.get(1).recipient.getServiceId().toString());
     Assertions.assertEquals("ultramarine", allContacts.get(1).color);
     Assertions.assertArrayEquals(new byte[] {(byte)0xa7, (byte)0x0a, (byte)0x21, (byte)0x79, (byte)0xa9, (byte)0xd9, (byte)0x41, (byte)0xf7, (byte)0x8e, (byte)0x1c, (byte)0x40,
                                              (byte)0x36, (byte)0x97, (byte)0x2d, (byte)0xb1, (byte)0x1d, (byte)0xcd, (byte)0xf5, (byte)0xdb, (byte)0x73, (byte)0xb9, (byte)0x0b,
@@ -91,7 +92,7 @@ public class ContactsTableMigrationTest {
 
     // Third contact
     Assertions.assertEquals("\u2068Another Friend\u2069", allContacts.get(2).name);
-    Assertions.assertEquals("507eed40-671f-4150-b554-f001212decc4", allContacts.get(2).recipient.getACI().toString());
+    Assertions.assertEquals("507eed40-671f-4150-b554-f001212decc4", allContacts.get(2).recipient.getServiceId().toString());
     Assertions.assertEquals("ultramarine", allContacts.get(2).color);
     Assertions.assertArrayEquals(new byte[] {(byte)0x6b, (byte)0x74, (byte)0x93, (byte)0x9c, (byte)0xe1, (byte)0xfc, (byte)0x02, (byte)0xa8, (byte)0xec, (byte)0x4c, (byte)0x02,
                                              (byte)0x1f, (byte)0x36, (byte)0xfc, (byte)0xbf, (byte)0xd9, (byte)0x21, (byte)0x4f, (byte)0x2e, (byte)0xb8, (byte)0x80, (byte)0x27,

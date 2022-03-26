@@ -9,6 +9,7 @@ package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -165,32 +166,30 @@ public class SignalProfile {
 
   public static class Capabilities {
     @JsonIgnore public boolean uuid;
-
-    @JsonProperty public boolean gv2;
-
     @JsonProperty public boolean storage;
-
     @JsonProperty public boolean gv1Migration;
-
     @JsonProperty public boolean senderKey;
-
     @JsonProperty public boolean announcementGroup;
-
     @JsonProperty public boolean changeNumber;
+    @JsonProperty public boolean stories;
 
     public Capabilities() {}
 
     public Capabilities(SignalServiceProfile.Capabilities capabilities) {
       gv1Migration = capabilities.isGv1Migration();
-      gv2 = capabilities.isGv2();
       storage = capabilities.isStorage();
       senderKey = capabilities.isSenderKey();
       announcementGroup = capabilities.isAnnouncementGroup();
       changeNumber = capabilities.isChangeNumber();
+      stories = capabilities.isStories();
     }
 
     public boolean equals(Capabilities other) {
-      return other.uuid == uuid && other.gv2 == gv2 && other.storage == storage && other.gv1Migration == gv1Migration && other.senderKey == senderKey;
+      return other.uuid == uuid && other.storage == storage && other.gv1Migration == gv1Migration && other.senderKey == senderKey && other.stories == this.stories;
     }
+
+    // empty setter for legacy property that we don't care about anymore
+    @JsonSetter("gv2")
+    public void setGv2(boolean ignored) {}
   }
 }

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.TrustLevel;
@@ -22,7 +23,6 @@ import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -114,11 +114,11 @@ public class SyncStorageDataJob implements Job {
       return;
     }
 
-    SignalAccountRecord accountRecord = record.getAccount().orNull();
-    if (accountRecord == null) {
+    if (record.getAccount().isEmpty()) {
       logger.warn("The storage record didn't actually have an account, ignoring.");
       return;
     }
+    SignalAccountRecord accountRecord = record.getAccount().get();
 
     if (!accountRecord.getE164().equals(account.getE164())) {
       // TODO implement changed number handling

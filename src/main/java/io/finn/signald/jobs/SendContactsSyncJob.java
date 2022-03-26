@@ -18,11 +18,11 @@ import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.*;
 import java.nio.file.Files;
 import java.sql.SQLException;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
@@ -62,13 +62,13 @@ public class SendContactsSyncJob implements Job {
           }
 
           // TODO: Don't hard code `false` value for blocked argument
-          Optional<Integer> expirationTimer = Optional.absent();
+          Optional<Integer> expirationTimer = Optional.empty();
           ProfileAndCredentialEntry profileAndCredential = accountData.profileCredentialStore.get(record.recipient);
           ProfileKey profileKey = profileAndCredential == null ? null : profileAndCredential.getProfileKey();
-          out.write(new DeviceContact(record.recipient.getAddress(), Optional.fromNullable(record.name),
+          out.write(new DeviceContact(record.recipient.getAddress(), Optional.ofNullable(record.name),
                                       m.createContactAvatarAttachment(Database.Get(m.getACI()).RecipientsTable.get(record.recipient.getAddress())),
-                                      Optional.fromNullable(record.color), Optional.fromNullable(verifiedMessage), Optional.fromNullable(profileKey), false, expirationTimer,
-                                      Optional.absent(), false));
+                                      Optional.ofNullable(record.color), Optional.ofNullable(verifiedMessage), Optional.ofNullable(profileKey), false, expirationTimer,
+                                      Optional.empty(), false));
         }
       }
 

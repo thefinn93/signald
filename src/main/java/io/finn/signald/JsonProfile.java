@@ -45,19 +45,18 @@ public class JsonProfile {
       unrestricted_unidentified_access = true;
     }
     capabilities = new JsonCapabilities(p.getCapabilities());
-    if (p.getAci() != null) {
-      uuid = p.getAci().uuid().toString();
+    if (p.getServiceId() != null) {
+      uuid = p.getServiceId().toString();
     }
     address = a;
   }
 
   public static class JsonCapabilities {
-    public boolean gv2;
+    public boolean gv2 = true; // legacy capability, everyone supports this now
     public boolean storage;
     @JsonProperty("gv1-migration") public boolean gv1Migration;
 
     public JsonCapabilities(SignalServiceProfile.Capabilities c) {
-      gv2 = c.isGv2();
       storage = c.isStorage();
       gv1Migration = c.isGv1Migration();
     }

@@ -20,6 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 
 public class RefreshPreKeysJob implements Job {
   public static long INTERVAL = TimeUnit.DAYS.toMillis(3);
@@ -35,7 +36,7 @@ public class RefreshPreKeysJob implements Job {
     runWithManager(m);
   }
 
-  public static void runIfNeeded(ACI aci, Manager m) throws SQLException, IOException {
+  public static void runIfNeeded(ACI aci, Manager m) throws SQLException, IOException, InvalidKeyException {
     long lastRefresh = new Account(aci).getLastPreKeyRefresh();
     if (System.currentTimeMillis() - lastRefresh > INTERVAL) {
       RefreshPreKeysJob job = new RefreshPreKeysJob(aci);
@@ -43,12 +44,12 @@ public class RefreshPreKeysJob implements Job {
     }
   }
 
-  private void runWithManager(Manager m) throws IOException, SQLException {
+  private void runWithManager(Manager m) throws IOException, SQLException, InvalidKeyException {
     long lastRefresh = m.getAccount().getLastPreKeyRefresh();
     if (lastRefresh <= 0) {
       logger.info("generating pre keys");
       m.refreshPreKeys();
-    } else if (m.getAccountManager().getPreKeysCount() < ServiceConfig.PREKEY_MINIMUM_COUNT) {
+    } else if (m.getAccountManager().getPreKeysCount(ServiceIdType.ACI) < ServiceConfig.PREKEY_MINIMUM_COUNT) {
       logger.info("insufficient number of pre keys available, refreshing");
       m.refreshPreKeys();
     }

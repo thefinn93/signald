@@ -14,19 +14,13 @@ import io.finn.signald.Util;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.SyncStorageDataJob;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class ProfileCredentialStore {
@@ -43,8 +37,8 @@ public class ProfileCredentialStore {
   }
 
   @JsonIgnore
-  public ProfileKeyCredential getProfileKeyCredential(ACI aci) {
-    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(aci, Optional.absent()));
+  public ProfileKeyCredential getProfileKeyCredential(ServiceId serviceId) {
+    ProfileAndCredentialEntry entry = get(new SignalServiceAddress(serviceId, Optional.empty()));
     if (entry != null) {
       return entry.getProfileKeyCredential();
     }
@@ -157,7 +151,7 @@ public class ProfileCredentialStore {
         final var selfProfileKeyEntry = get(self);
         if (selfProfileKeyEntry != null && !selfProfileKeyEntry.getProfileKey().equals(entry.getValue())) {
           logger.warn("Seen authoritative update for self that didn't match local, scheduling storage sync");
-          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account(self.getACI())));
+          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account((ACI)self.getServiceId())));
         }
       } else {
         logger.debug("Profile key from owner for " + Util.redact(entry.getKey()));

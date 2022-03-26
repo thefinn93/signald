@@ -11,10 +11,10 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IMessageQueueTable;
 import io.finn.signald.db.StoredEnvelope;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -82,7 +82,7 @@ public class MessageQueueTable implements IMessageQueueTable {
         }
         long id = rows.getLong(ID);
         int type = rows.getInt(TYPE);
-        Optional<SignalServiceAddress> sender = Optional.absent();
+        Optional<SignalServiceAddress> sender = Optional.empty();
         String senderE164 = rows.getString(SOURCE_E164);
         String senderUUIDString = rows.getString(SOURCE_UUID);
         if ((senderE164 != null && senderE164.length() > 0) || (senderUUIDString != null && senderUUIDString.length() > 0)) {

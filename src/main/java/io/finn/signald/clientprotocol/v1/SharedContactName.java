@@ -21,11 +21,11 @@ public class SharedContactName {
   public SharedContactName() {}
 
   public SharedContactName(SharedContact.Name n) {
-    display = n.getDisplay().orNull();
-    given = n.getGiven().orNull();
-    middle = n.getMiddle().orNull();
-    family = n.getFamily().orNull();
-    prefix = n.getPrefix().orNull();
-    suffix = n.getSuffix().orNull();
+    display = n.getDisplay().orElse(null);
+    given = n.getGiven().orElse(null);
+    middle = n.getMiddle().orElse(null);
+    family = n.getFamily().orElse(null);
+    prefix = n.getPrefix().orElse(null);
+    suffix = n.getSuffix().orElse(null);
   }
 }

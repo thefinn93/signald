@@ -10,7 +10,6 @@ package io.finn.signald.db.sqlite;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IAccountDataTable;
 import java.sql.SQLException;
-import java.util.UUID;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class AccountDataTable implements IAccountDataTable {
@@ -41,10 +40,10 @@ public class AccountDataTable implements IAccountDataTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

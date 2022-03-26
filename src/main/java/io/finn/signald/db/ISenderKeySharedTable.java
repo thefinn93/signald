@@ -3,8 +3,8 @@ package io.finn.signald.db;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Set;
-import java.util.UUID;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public interface ISenderKeySharedTable {
@@ -20,6 +20,6 @@ public interface ISenderKeySharedTable {
   boolean isMultiDevice();
   void deleteAllFor(DistributionId distributionId) throws SQLException;
   void deleteForAll(Recipient recipient) throws SQLException;
-  void deleteAccount(UUID uuid) throws SQLException;
+  void deleteAccount(ACI aci) throws SQLException;
   void deleteSharedWith(Recipient source) throws SQLException;
 }

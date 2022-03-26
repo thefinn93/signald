@@ -73,25 +73,25 @@ public class AccountsTable implements IAccountsTable {
   }
 
   @Override
-  public void DeleteAccount(ACI aci, java.util.UUID uuid, String legacyUsername) throws SQLException {
+  public void DeleteAccount(ACI aci, String legacyUsername) throws SQLException {
     Database.getConn().setAutoCommit(false);
     // TODO we should use ON DELETE CASCADE for SQLite as well eventually
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       Database.executeUpdate(TABLE_NAME + "_delete", statement);
     }
-    Database.Get().AccountDataTable.deleteAccount(uuid);
-    Database.Get(aci).GroupCredentialsTable.deleteAccount(uuid);
-    Database.Get(aci).GroupsTable.deleteAccount(uuid);
-    Database.Get(aci).IdentityKeysTable.deleteAccount(uuid);
+    Database.Get().AccountDataTable.deleteAccount(aci);
+    Database.Get(aci).GroupCredentialsTable.deleteAccount(aci);
+    Database.Get(aci).GroupsTable.deleteAccount(aci);
+    Database.Get(aci).IdentityKeysTable.deleteAccount(aci);
     Database.Get(aci).MessageQueueTable.deleteAccount(legacyUsername);
-    Database.Get(aci).PreKeysTable.deleteAccount(uuid);
-    Database.Get(aci).SessionsTable.deleteAccount(uuid);
-    Database.Get(aci).RecipientsTable.deleteAccount(uuid);
-    Database.Get(aci).SenderKeySharedTable.deleteAccount(uuid);
-    Database.Get(aci).SenderKeysTable.deleteAccount(uuid);
-    Database.Get(aci).SignedPreKeysTable.deleteAccount(uuid);
+    Database.Get(aci).PreKeysTable.deleteAccount(aci);
+    Database.Get(aci).SessionsTable.deleteAccount(aci);
+    Database.Get(aci).RecipientsTable.deleteAccount(aci);
+    Database.Get(aci).SenderKeySharedTable.deleteAccount(aci);
+    Database.Get(aci).SenderKeysTable.deleteAccount(aci);
+    Database.Get(aci).SignedPreKeysTable.deleteAccount(aci);
     Database.getConn().commit();
     Database.getConn().setAutoCommit(true);
   }
@@ -177,7 +177,7 @@ public class AccountsTable implements IAccountsTable {
           throw new AssertionError("account not found");
         }
         String e164 = rows.getString(E164);
-        return new DynamicCredentialsProvider(account.getACI(), e164, account.getPassword(), account.getDeviceId());
+        return new DynamicCredentialsProvider(account.getACI(), account.getPNI(), e164, account.getPassword(), account.getDeviceId());
       }
     }
   }
@@ -194,13 +194,13 @@ public class AccountsTable implements IAccountsTable {
   }
 
   @Override
-  public List<java.util.UUID> getAll() throws SQLException {
+  public List<ACI> getAll() throws SQLException {
     var query = "SELECT " + UUID + " FROM " + TABLE_NAME;
     try (var statement = Database.getConn().prepareStatement(query)) {
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_all", statement)) {
-        List<java.util.UUID> results = new ArrayList<>();
+        List<ACI> results = new ArrayList<>();
         while (rows.next()) {
-          results.add(java.util.UUID.fromString(rows.getString(UUID)));
+          results.add(ACI.parseOrThrow(rows.getString(UUID)));
         }
         return results;
       }

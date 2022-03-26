@@ -34,7 +34,7 @@ public class AccountRepair {
 
   private static void clearSenderKeyShared(Account account) throws SQLException {
     logger.info("clearing all sender key shared state to make sure they get re-shared");
-    Database.Get(account.getACI()).SenderKeySharedTable.deleteAccount(account.getUUID());
+    Database.Get(account.getACI()).SenderKeySharedTable.deleteAccount(account.getACI());
     Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
   }
 

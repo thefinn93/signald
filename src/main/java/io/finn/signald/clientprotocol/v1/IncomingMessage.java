@@ -38,6 +38,7 @@ public class IncomingMessage {
   @JsonProperty("call_message") public CallMessage callMessage;
   @JsonProperty("receipt_message") public ReceiptMessage receiptMessage;
   @JsonProperty("typing_message") public TypingMessage typingMessage;
+  @JsonProperty("story_message") public StoryMessage storyMessage;
   @JsonProperty("server_guid") public String serverGuid;
 
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci)
@@ -88,6 +89,10 @@ public class IncomingMessage {
 
       if (content.getTypingMessage().isPresent()) {
         this.typingMessage = new TypingMessage(content.getTypingMessage().get());
+      }
+
+      if (content.getStoryMessage().isPresent()) {
+        storyMessage = new StoryMessage(content.getStoryMessage().get(), aci);
       }
     }
     unidentifiedSender = envelope.isUnidentifiedSender();

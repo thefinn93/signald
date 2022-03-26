@@ -23,7 +23,7 @@ public class SharedContact {
 
   public SharedContact(org.whispersystems.signalservice.api.messages.shared.SharedContact c) {
     name = new SharedContactName(c.getName());
-    organization = c.getOrganization().orNull();
+    organization = c.getOrganization().orElse(null);
 
     if (c.getEmail().isPresent()) {
       email = new ArrayList<>();

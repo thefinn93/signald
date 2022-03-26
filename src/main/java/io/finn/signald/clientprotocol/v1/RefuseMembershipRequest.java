@@ -37,6 +37,8 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
 
   @Required @Doc("list of requesting members to refuse") public List<JsonAddress> members;
 
+  @JsonProperty("also_ban") public boolean alsoBan = false;
+
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError,
                                                      InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError {
@@ -64,7 +66,7 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
       membersToRefuse.add(Common.getRecipient(a.getACI(), member).getUUID());
     }
 
-    GroupChange.Actions.Builder change = Common.getGroupOperations(a, group).createRefuseGroupJoinRequest(membersToRefuse);
+    GroupChange.Actions.Builder change = Common.getGroupOperations(a, group).createRefuseGroupJoinRequest(membersToRefuse, alsoBan);
     change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);

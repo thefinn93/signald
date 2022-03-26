@@ -15,12 +15,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.SocketException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
 import java.security.Security;
-import java.util.UUID;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -99,8 +97,12 @@ public class Main {
         }
       }
 
-      for (UUID accountUUID : Database.Get().AccountsTable.getAll()) {
-        AccountRepair.repairAccountIfNeeded(new Account(accountUUID));
+      for (ACI aci : Database.Get().AccountsTable.getAll()) {
+        Account account = new Account(aci);
+        AccountRepair.repairAccountIfNeeded(account);
+        if (account.getPNI() == null) {
+          account.setPNI();
+        }
       }
 
       BackgroundJobRunnerThread.start();

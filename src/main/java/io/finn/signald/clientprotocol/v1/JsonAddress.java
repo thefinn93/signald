@@ -12,10 +12,12 @@ import io.finn.signald.Util;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.db.Recipient;
+import java.util.Objects;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -67,6 +69,11 @@ public class JsonAddress {
   }
 
   @JsonIgnore
+  public ServiceId getServiceID() {
+    return ServiceId.parseOrNull(uuid);
+  }
+
+  @JsonIgnore
   public ACI getACI() {
     if (uuid == null) {
       return null;
@@ -86,9 +93,7 @@ public class JsonAddress {
       }
     }
 
-    if (address.getAci() != null) {
-      uuid = address.getAci().toString();
-    }
+    uuid = address.getServiceId().toString();
   }
   public JsonAddress(Recipient recipient) { this(recipient.getAddress()); }
 
@@ -104,20 +109,16 @@ public class JsonAddress {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof JsonAddress))
+    if (!(other instanceof JsonAddress)) {
       return false;
+    }
 
     JsonAddress that = (JsonAddress)other;
     return getSignalServiceAddress().equals(that.getSignalServiceAddress());
   }
 
   public String toString() {
-    String out = "";
-    if (number == null) {
-      out += "null";
-    } else {
-      out += number;
-    }
+    String out = Objects.requireNonNullElse(number, "null");
 
     out += "/";
 
@@ -165,8 +166,8 @@ public class JsonAddress {
   public boolean matches(SignalServiceAddress other) { return matches(new JsonAddress(other)); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getAci() != null) {
-      uuid = a.getAci().toString();
+    if (uuid == null) {
+      uuid = a.getServiceId().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {

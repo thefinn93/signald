@@ -129,16 +129,16 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
-      statement.setString(2, recipient.getACI().toString());
+      statement.setString(2, recipient.getServiceId().toString());
       Database.executeUpdate(TABLE_NAME + "_delete_all_for_recipient", statement);
     }
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, uuid.toString());
+      statement.setString(1, aci.toString());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
@@ -148,7 +148,7 @@ public class SenderKeySharedTable implements ISenderKeySharedTable {
     var query = "DELETE FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + ADDRESS + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
-      statement.setString(2, source.getACI().toString());
+      statement.setString(2, source.getServiceId().toString());
       Database.executeUpdate(TABLE_NAME + "_delete_shared_with", statement);
     }
   }

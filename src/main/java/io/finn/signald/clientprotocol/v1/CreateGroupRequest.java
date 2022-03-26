@@ -79,7 +79,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       }
       recipients.add(recipient);
       if (recipient.getUUID() == null) {
-        throw new NoKnownUUIDError(recipient.getAddress().getNumber().orNull());
+        throw new NoKnownUUIDError(recipient.getAddress().getNumber().orElse(null));
       }
     }
 

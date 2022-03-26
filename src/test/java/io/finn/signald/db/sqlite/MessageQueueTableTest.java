@@ -16,12 +16,12 @@ import io.finn.signald.db.TestUtil;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -51,7 +51,7 @@ class MessageQueueTableTest {
   @DisplayName("nextEnvelope() with unidentified sender type")
   void nextEnvelope_withUnidentifiedSender() throws SQLException {
     int type = TYPE_UNIDENTIFIED_SENDER;
-    Optional<SignalServiceAddress> sender = Optional.absent();
+    Optional<SignalServiceAddress> sender = Optional.empty();
     int senderDevice = 0;
     long timestamp = 100L;
     byte[] legacyMessage = {};
@@ -103,7 +103,7 @@ class MessageQueueTableTest {
   }
 
   private SignalServiceEnvelope createUnidentifiedSenderSignalServiceEnvelope(byte[] content) {
-    Optional<SignalServiceAddress> sender = Optional.absent();
+    Optional<SignalServiceAddress> sender = Optional.empty();
     int senderDevice = 0;
     long timestamp = 100L;
     byte[] legacyMessage = {};

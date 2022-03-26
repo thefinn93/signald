@@ -21,6 +21,7 @@ import io.reactivex.rxjava3.core.Single;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -28,7 +29,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
@@ -68,7 +68,7 @@ public class RefreshProfileJob implements Job {
     }
 
     SignalServiceProfile.RequestType requestType = SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL;
-    Optional<ProfileKey> profileKeyOptional = Optional.fromNullable(entry.getProfileKey());
+    Optional<ProfileKey> profileKeyOptional = Optional.ofNullable(entry.getProfileKey());
     SignalServiceAddress address = entry.getServiceAddress();
     Optional<UnidentifiedAccess> unidentifiedAccess = m.getUnidentifiedAccess();
     Locale locale = Locale.getDefault();
@@ -87,13 +87,14 @@ public class RefreshProfileJob implements Job {
       return;
     }
     long now = System.currentTimeMillis();
-    ProfileKeyCredential profileKeyCredential = profileAndCredential.getProfileKeyCredential().orNull();
+    Optional<ProfileKeyCredential> profileKeyCredential = profileAndCredential.getProfileKeyCredential();
     Recipient recipient = Database.Get(m.getACI()).RecipientsTable.get(entry.getServiceAddress());
     final SignalProfile profile = m.decryptProfile(recipient, entry.getProfileKey(), profileAndCredential.getProfile());
     final ProfileAndCredentialEntry.UnidentifiedAccessMode unidentifiedAccessMode =
         getUnidentifiedAccessMode(profile.getUnidentifiedAccess(), profile.isUnrestrictedUnidentifiedAccess());
 
-    accountData.profileCredentialStore.update(entry.getServiceAddress(), entry.getProfileKey(), now, profile, profileKeyCredential, unidentifiedAccessMode);
+    accountData.profileCredentialStore.update(entry.getServiceAddress(), entry.getProfileKey(), now, profile, profileKeyCredential.isEmpty() ? null : profileKeyCredential.get(),
+                                              unidentifiedAccessMode);
     accountData.saveIfNeeded();
   }
 

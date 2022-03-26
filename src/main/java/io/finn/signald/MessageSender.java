@@ -29,7 +29,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidRegistrationIdException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
@@ -37,8 +36,8 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 import org.whispersystems.signalservice.internal.push.exceptions.InvalidUnidentifiedAccessHeaderException;
@@ -139,7 +138,7 @@ public class MessageSender {
       try {
         List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
                                                                                  message.build(), SenderKeyGroupEventsLogger.INSTANCE);
-        Set<ACI> networkFailAddressesForRetry = new HashSet<>();
+        Set<ServiceId> networkFailAddressesForRetry = new HashSet<>();
         for (var result : skdmResults) {
           if (result.isSuccess()) {
             if (self.getAddress().equals(result.getAddress())) {
@@ -154,7 +153,7 @@ public class MessageSender {
           } else if (result.isNetworkFailure()) {
             // always guaranteed to have an ACI; don't use address for HashSet because of ambiguity with e164 in server
             // responses
-            networkFailAddressesForRetry.add(result.getAddress().getAci());
+            networkFailAddressesForRetry.add(result.getAddress().getServiceId());
           } else if (result.isUnregisteredFailure()) {
             handleUnregisteredFailure(result);
             results.add(result);
@@ -175,7 +174,7 @@ public class MessageSender {
           while (senderKeyTargetIterator.hasNext()) {
             var currentTarget = senderKeyTargetIterator.next();
             accessIterator.next();
-            if (!networkFailAddressesForRetry.contains(currentTarget.getAddress().getAci())) {
+            if (!networkFailAddressesForRetry.contains(currentTarget.getAddress().getServiceId())) {
               senderKeyTargetIterator.remove();
               accessIterator.remove();
             }

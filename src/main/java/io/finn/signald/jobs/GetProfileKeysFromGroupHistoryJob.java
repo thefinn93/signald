@@ -8,6 +8,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +16,6 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.util.Base64;
@@ -42,7 +42,7 @@ public class GetProfileKeysFromGroupHistoryJob implements Job {
     // don't refresh group from server, and ensure we're still in the group
     final Optional<IGroupsTable.IGroup> localGroup = groups.getGroup(groupSecretParams, mostRecentGroupRevision);
     final String groupId = Base64.encodeBytes(groupSecretParams.getPublicParams().getGroupIdentifier().serialize());
-    if (!localGroup.isPresent()) {
+    if (localGroup.isEmpty()) {
       logger.warn("Missing group " + groupId + "; might've left the group");
       return;
     }

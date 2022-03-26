@@ -74,8 +74,8 @@ public class JsonAddress {
       }
     }
 
-    if (address.getAci() != null) {
-      uuid = address.getAci().uuid().toString();
+    if (address.getServiceId() != null) {
+      uuid = address.getServiceId().uuid().toString();
     }
   }
 
@@ -91,8 +91,9 @@ public class JsonAddress {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof JsonAddress))
+    if (!(other instanceof JsonAddress)) {
       return false;
+    }
 
     JsonAddress that = (JsonAddress)other;
     return getSignalServiceAddress().equals(that.getSignalServiceAddress());
@@ -150,8 +151,8 @@ public class JsonAddress {
   public boolean matches(SignalServiceAddress other) { return getSignalServiceAddress().matches(other); }
 
   public void update(SignalServiceAddress a) {
-    if (uuid == null && a.getAci() != null) {
-      uuid = a.getAci().uuid().toString();
+    if (uuid == null && a.getServiceId() != null) {
+      uuid = a.getServiceId().uuid().toString();
     }
 
     if (number == null && a.getNumber().isPresent()) {

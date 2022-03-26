@@ -13,15 +13,15 @@ import io.finn.signald.db.Database;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 
 public class AccountList {
   public final List<Account> accounts;
   public AccountList() throws NoSuchAccountError, InternalError {
     accounts = new ArrayList<>();
     try {
-      for (UUID uuid : Database.Get().AccountsTable.getAll()) {
-        accounts.add(new Account(uuid));
+      for (ACI aci : Database.Get().AccountsTable.getAll()) {
+        accounts.add(new Account(aci));
       }
     } catch (SQLException e) {
       throw new InternalError("error resolving account e164", e);

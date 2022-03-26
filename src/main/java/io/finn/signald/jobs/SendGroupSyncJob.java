@@ -14,9 +14,9 @@ import io.finn.signald.storage.GroupInfo;
 import java.io.*;
 import java.nio.file.Files;
 import java.sql.SQLException;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
@@ -38,10 +38,10 @@ public class SendGroupSyncJob implements Job {
       try (OutputStream fos = new FileOutputStream(groupsFile)) {
         DeviceGroupsOutputStream out = new DeviceGroupsOutputStream(fos);
         for (GroupInfo record : accountData.groupStore.getGroups()) {
-          Optional<Integer> expirationTimer = Optional.absent();
-          Optional<String> color = Optional.absent();
-          out.write(new DeviceGroup(record.groupId, Optional.fromNullable(record.name), record.getMembers(), m.createGroupAvatarAttachment(record.groupId), record.active,
-                                    expirationTimer, color, false, Optional.absent(), false));
+          Optional<Integer> expirationTimer = Optional.empty();
+          Optional<String> color = Optional.empty();
+          out.write(new DeviceGroup(record.groupId, Optional.ofNullable(record.name), record.getMembers(), m.createGroupAvatarAttachment(record.groupId), record.active,
+                                    expirationTimer, color, false, Optional.empty(), false));
         }
       }
 

@@ -14,7 +14,10 @@ import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
-import io.finn.signald.storage.*;
+import io.finn.signald.storage.AccountData;
+import io.finn.signald.storage.GroupInfo;
+import io.finn.signald.storage.ProfileAndCredentialEntry;
+import io.finn.signald.storage.SignalProfile;
 import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
@@ -52,6 +55,7 @@ import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.fingerprint.Fingerprint;
 import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
@@ -60,16 +64,17 @@ import org.whispersystems.libsignal.protocol.DecryptionErrorMessage;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.libsignal.util.Medium;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.*;
 import org.whispersystems.signalservice.api.crypto.*;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
+import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.storage.StorageKey;
@@ -85,7 +90,7 @@ public class Manager {
   private final Logger logger;
   private final SignalServiceConfiguration serviceConfiguration;
   private final ECPublicKey unidentifiedSenderTrustRoot;
-  private final static int ACCOUNT_REFRESH_VERSION = 5;
+  private final static int ACCOUNT_REFRESH_VERSION = 6;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
   private static final Histogram messageDecryptionTime =
@@ -219,7 +224,7 @@ public class Manager {
     return map;
   }
 
-  public void addDeviceLink(URI linkUri) throws IOException, InvalidKeyException, InvalidInputException {
+  public void addDeviceLink(URI linkUri) throws IOException, InvalidKeyException, InvalidInputException, SQLException {
     Map<String, String> query = getQueryMap(linkUri.getRawQuery());
     String deviceIdentifier = query.get("uuid");
     String publicKeyEncoded = query.get("pub_key");
@@ -230,18 +235,9 @@ public class Manager {
 
     ECPublicKey deviceKey = Curve.decodePoint(Base64.decode(publicKeyEncoded), 0);
 
-    addDevice(deviceIdentifier, deviceKey);
-  }
-
-  private void addDevice(String deviceIdentifier, ECPublicKey deviceKey) throws IOException, InvalidKeyException, InvalidInputException {
-    IdentityKeyPair identityKeyPair = account.getProtocolStore().getIdentityKeyPair();
     SignalServiceAccountManager accountManager = dependencies.getAccountManager();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
-
-    Optional<byte[]> profileKeyOptional;
-    ProfileKey profileKey = accountData.getProfileKey();
-    profileKeyOptional = Optional.of(profileKey.serialize());
-    accountManager.addDevice(deviceIdentifier, deviceKey, identityKeyPair, profileKeyOptional, verificationCode);
+    accountManager.addDevice(deviceIdentifier, deviceKey, account.getACIIdentityKeyPair(), account.getPNIIdentityKeyPair(), accountData.getProfileKey(), verificationCode);
   }
 
   private List<PreKeyRecord> generatePreKeys() throws IOException, SQLException {
@@ -263,29 +259,30 @@ public class Manager {
     return records;
   }
 
-  private SignedPreKeyRecord generateSignedPreKey() throws SQLException {
-    try {
-      ECKeyPair keyPair = Curve.generateKeyPair();
-      var identityKey = account.getIdentityKeyPair();
-      if (identityKey == null) {
-        throw new InvalidKeyException("Identity key pair must not be null");
-      }
-      byte[] signature = Curve.calculateSignature(identityKey.getPrivateKey(), keyPair.getPublicKey().serialize());
-      int signedPreKeyId = account.getNextSignedPreKeyId();
-      SignedPreKeyRecord record = new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
-      account.getProtocolStore().storeSignedPreKey(signedPreKeyId, record);
-      account.setNextSignedPreKeyId((signedPreKeyId + 1) % Medium.MAX_VALUE);
-      return record;
-    } catch (InvalidKeyException e) {
-      throw new AssertionError(e);
-    }
+  private SignedPreKeyRecord generateSignedPreKey(IdentityKeyPair identityKey) throws SQLException, InvalidKeyException {
+    ECKeyPair keyPair = Curve.generateKeyPair();
+    byte[] signature = Curve.calculateSignature(identityKey.getPrivateKey(), keyPair.getPublicKey().serialize());
+    int signedPreKeyId = account.getNextSignedPreKeyId();
+    SignedPreKeyRecord record = new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
+    account.getProtocolStore().storeSignedPreKey(signedPreKeyId, record);
+    account.setNextSignedPreKeyId((signedPreKeyId + 1) % Medium.MAX_VALUE);
+    return record;
   }
 
-  public void refreshPreKeys() throws IOException, SQLException {
+  public void refreshPreKeys() throws IOException, SQLException, InvalidKeyException {
+    refreshPreKeys(ServiceIdType.ACI);
+    refreshPreKeys(ServiceIdType.PNI);
+  }
+
+  public void refreshPreKeys(ServiceIdType serviceIdType) throws IOException, SQLException, InvalidKeyException {
+    if (serviceIdType != ServiceIdType.ACI) {
+      // TODO implement
+      return;
+    }
     List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
-    SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey();
-    IdentityKeyPair identityKeyPair = account.getIdentityKeyPair();
-    dependencies.getAccountManager().setPreKeys(identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
+    SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(account.getACIIdentityKeyPair());
+    IdentityKeyPair identityKeyPair = account.getACIIdentityKeyPair();
+    dependencies.getAccountManager().setPreKeys(serviceIdType, identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
 
   private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException {
@@ -295,14 +292,14 @@ public class Manager {
     if (mime == null) {
       mime = "application/octet-stream";
     }
-    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.absent(), 0, 0,
-                                             System.currentTimeMillis(), Optional.absent(), Optional.absent(), null, null, Optional.absent());
+    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.empty(), 0, 0,
+                                             System.currentTimeMillis(), Optional.empty(), Optional.empty(), null, null, Optional.empty());
   }
 
   public Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
     File file = getGroupAvatarFile(groupId);
     if (!file.exists()) {
-      return Optional.absent();
+      return Optional.empty();
     }
 
     return Optional.of(createAttachment(file));
@@ -311,7 +308,7 @@ public class Manager {
   public Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(Recipient recipient) throws IOException {
     File file = getContactAvatarFile(recipient);
     if (!file.exists()) {
-      return Optional.absent();
+      return Optional.empty();
     }
 
     return Optional.of(createAttachment(file));
@@ -523,13 +520,9 @@ public class Manager {
 
   public SendMessageResult sendTypingMessage(SignalServiceTypingMessage message, Recipient recipient) throws IOException, SQLException {
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
-    SignalServiceAddress address = recipient.getAddress();
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-      messageSender.sendTyping(address, getAccessPairFor(recipient), message);
+      messageSender.sendTyping(List.of(recipient.getAddress()), getAccessPairFor(List.of(recipient)), message, null);
       return null;
-    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
-      account.getProtocolStore().handleUntrustedIdentityException(e);
-      return SendMessageResult.identityFailure(address, e.getIdentityKey());
     }
   }
 
@@ -730,8 +723,8 @@ public class Manager {
   public List<SendMessageResult> send(SignalServiceDataMessage.Builder message, Recipient recipient, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws IOException, InvalidRecipientException, UnknownGroupException, SQLException, NoSendPermissionException, InvalidInputException {
     if (recipientGroupId != null && recipient == null) {
-      var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
-      if (!groupOptional.isPresent()) {
+      Optional<IGroupsTable.IGroup> groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
+      if (groupOptional.isEmpty()) {
         throw new UnknownGroupException();
       }
       var group = groupOptional.get();
@@ -879,7 +872,7 @@ public class Manager {
     }
 
     if (message.getPreviews().isPresent() && !ignoreAttachments) {
-      for (SignalServiceDataMessage.Preview preview : message.getPreviews().get()) {
+      for (SignalServicePreview preview : message.getPreviews().get()) {
         if (preview.getImage().isPresent()) {
           SignalServiceAttachment attachment = preview.getImage().get();
           if (attachment.isPointer()) {
@@ -956,8 +949,9 @@ public class Manager {
           if (exception == null && content != null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
-            } catch (VerificationFailedException e) {
+            } catch (VerificationFailedException | InvalidKeyException | InvalidMessageException e) {
               logger.catching(e);
+              Sentry.captureException(e);
             }
           }
         }
@@ -993,8 +987,9 @@ public class Manager {
           if (exception == null && content != null) {
             try {
               handleMessage(envelope, content, ignoreAttachments);
-            } catch (VerificationFailedException e) {
+            } catch (VerificationFailedException | InvalidKeyException | InvalidMessageException e) {
               logger.catching(e);
+              Sentry.captureException(e);
             }
           }
         }
@@ -1055,7 +1050,12 @@ public class Manager {
             exception = e;
           }
           if (exception == null && content != null) {
-            handleMessage(envelope, content, ignoreAttachments);
+            try {
+              handleMessage(envelope, content, ignoreAttachments);
+            } catch (InvalidKeyException | InvalidMessageException e) {
+              logger.catching(e);
+              Sentry.captureException(e);
+            }
           }
         }
         if (exception != null || content != null) {
@@ -1078,7 +1078,7 @@ public class Manager {
   }
 
   private void handleMessage(SignalServiceEnvelope envelope, SignalServiceContent content, boolean ignoreAttachments)
-      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException {
+      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException, InvalidKeyException, InvalidMessageException {
     List<Job> jobs = new ArrayList<>();
     if (content == null) {
       return;
@@ -1190,7 +1190,7 @@ public class Manager {
         Recipient destination = Database.Get(aci).RecipientsTable.get(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
         account.getProtocolStore().saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
-        logger.info("received verified state update from device " + content.getSenderDevice());
+        logger.info("received verified state update from device {}", content.getSenderDevice());
       }
 
       if (syncMessage.getKeys().isPresent()) {
@@ -1213,7 +1213,23 @@ public class Manager {
           break;
         }
       }
+
+      if (syncMessage.getPniIdentity().isPresent()) {
+        SignalServiceProtos.SyncMessage.PniIdentity pniIdentity = syncMessage.getPniIdentity().get();
+        IdentityKey pniIdentityKey = new IdentityKey(pniIdentity.getPublicKey().toByteArray());
+        ECPrivateKey pniPrivateKey = Curve.decodePrivatePoint(pniIdentity.getPrivateKey().toByteArray());
+        account.setPNIIdentityKeyPair(new IdentityKeyPair(pniIdentityKey, pniPrivateKey));
+        logger.info("received PNI identity key from device {}", content.getSenderDevice());
+      }
     }
+
+    if (content.getStoryMessage().isPresent()) {
+      SignalServiceStoryMessage story = content.getStoryMessage().get();
+      if (story.getFileAttachment().isPresent()) {
+        retrieveAttachment(story.getFileAttachment().get().asPointer());
+      }
+    }
+
     for (Job job : jobs) {
       BackgroundJobRunnerThread.queue(job);
     }
@@ -1264,7 +1280,7 @@ public class Manager {
       if (version >= 4) {
         serverDeliveredTimestamp = in.readLong();
       }
-      Optional<SignalServiceAddress> sourceAddress = sourceACI == null && source.isEmpty() ? Optional.absent() : Optional.of(new SignalServiceAddress(sourceACI, source));
+      Optional<SignalServiceAddress> sourceAddress = sourceACI == null && source.isEmpty() ? Optional.empty() : Optional.of(new SignalServiceAddress(sourceACI, source));
       return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
     }
   }
@@ -1476,7 +1492,7 @@ public class Manager {
   public Optional<UnidentifiedAccessPair> getAccessPairFor(Recipient recipient) {
     ProfileAndCredentialEntry recipientProfileKeyCredential = accountData.profileCredentialStore.get(recipient);
     if (recipientProfileKeyCredential == null) {
-      return Optional.absent();
+      return Optional.empty();
     }
 
     byte[] recipientUnidentifiedAccessKey = recipientProfileKeyCredential.getUnidentifiedAccessKey();
@@ -1486,7 +1502,7 @@ public class Manager {
       selfProfileKey = accountData.getProfileKey();
     } catch (InvalidInputException e) {
       logger.warn("unexpected error while getting own profile key: " + e);
-      return Optional.absent();
+      return Optional.empty();
     }
 
     byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(selfProfileKey);
@@ -1494,17 +1510,17 @@ public class Manager {
 
     if (selfUnidentifiedAccessKey == null) {
       logger.debug("cannot get unidentified access: no unidentified access key for own account");
-      return Optional.absent();
+      return Optional.empty();
     }
 
     if (selfUnidentifiedAccessCertificate == null) {
       logger.debug("cannot get unidentified access: no unidentified access certificate for own account");
-      return Optional.absent();
+      return Optional.empty();
     }
 
     if (recipientUnidentifiedAccessKey == null) {
       logger.debug("cannot get unidentified access: no unidentified access key for recipient");
-      return Optional.absent();
+      return Optional.empty();
     }
 
     try {
@@ -1512,7 +1528,7 @@ public class Manager {
                                                     new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate)));
     } catch (InvalidCertificateException e) {
       logger.debug("cannot get unidentififed access: ", e);
-      return Optional.absent();
+      return Optional.empty();
     }
   }
 
@@ -1537,7 +1553,8 @@ public class Manager {
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      dependencies.getAccountManager().setVersionedProfile(self.getACI(), accountData.getProfileKey(), name, "", "", Optional.absent(), streamDetails, new ArrayList<>());
+      dependencies.getAccountManager().setVersionedProfile((ACI)self.getServiceId(), accountData.getProfileKey(), name, "", "", Optional.empty(),
+                                                           AvatarUploadParams.forAvatar(streamDetails), new ArrayList<>());
     }
   }
 
@@ -1581,7 +1598,7 @@ public class Manager {
 
   public SignalProfile decryptProfile(final Recipient recipient, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) throws IOException {
     File localAvatarPath = null;
-    if (recipient.getACI() != null) {
+    if (recipient.getServiceId() != null) {
       localAvatarPath = getProfileAvatarFile(recipient);
       if (encryptedProfile.getAvatar() != null) {
         createPrivateDirectories(avatarsPath);
@@ -1672,14 +1689,14 @@ public class Manager {
     try {
       selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(accountData.getProfileKey());
     } catch (InvalidInputException e) {
-      return Optional.absent();
+      return Optional.empty();
     }
     byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
 
     try {
       return Optional.of(new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate));
     } catch (InvalidCertificateException e) {
-      return Optional.absent();
+      return Optional.empty();
     }
   }
 

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -40,7 +41,6 @@ import org.signal.zkgroup.groups.GroupIdentifier;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidRegistrationIdException;
 import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
@@ -209,7 +209,7 @@ public class Common {
   public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, InvalidRequestError, SQLError {
     return getAccount(getACIFromIdentifier(identifier).uuid());
   }
-  public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(accountUUID); }
+  public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(ACI.from(accountUUID)); }
 
   public static SignalDependencies getDependencies(UUID accountUUID) throws InvalidProxyError, ServerNotFoundError, InternalError, NoSuchAccountError {
     try {
@@ -239,7 +239,7 @@ public class Common {
     } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
       throw new InternalError("error getting group", e);
     }
-    if (!g.isPresent()) {
+    if (g.isEmpty()) {
       throw new UnknownGroupError();
     }
     return g.get();
@@ -267,7 +267,7 @@ public class Common {
     } catch (SQLException | InvalidProtocolBufferException | InvalidInputException e) {
       throw new InternalError("error getting group", e);
     }
-    if (!g.isPresent()) {
+    if (g.isEmpty()) {
       throw new UnknownGroupError();
     }
 
@@ -279,7 +279,7 @@ public class Common {
     } catch (InvalidGroupStateException | VerificationFailedException | IOException | InvalidInputException | SQLException e) {
       throw new InternalError("error fetching group state", e);
     }
-    if (!groupOptional.isPresent()) {
+    if (groupOptional.isEmpty()) {
       throw new UnknownGroupError();
     }
 

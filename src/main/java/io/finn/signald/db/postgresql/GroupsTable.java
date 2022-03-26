@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,7 +39,6 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -65,7 +65,7 @@ public class GroupsTable implements IGroupsTable {
       statement.setObject(1, aci.uuid());
       statement.setBytes(2, identifier.serialize());
       try (var rows = Database.executeQuery(TABLE_NAME + "_get", statement)) {
-        return rows.next() ? Optional.of(new Group(rows)) : Optional.absent();
+        return rows.next() ? Optional.of(new Group(rows)) : Optional.empty();
       }
     }
   }
@@ -118,10 +118,10 @@ public class GroupsTable implements IGroupsTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, uuid);
+      statement.setObject(1, aci);
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }
@@ -142,7 +142,7 @@ public class GroupsTable implements IGroupsTable {
     private DecryptedGroup group;
 
     private Group(ResultSet row) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
-      account = new Account(UUID.fromString(row.getString(ACCOUNT_UUID)));
+      account = new Account(ACI.parseOrThrow(row.getString(ACCOUNT_UUID)));
       rowId = row.getInt(ROWID);
       masterKey = new GroupMasterKey(row.getBytes(MASTER_KEY));
       revision = row.getInt(REVISION);

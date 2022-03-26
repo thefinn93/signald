@@ -11,8 +11,8 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IMessageQueueTable;
 import io.finn.signald.db.StoredEnvelope;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.UUID;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -33,12 +33,11 @@ public class MessageQueueTable implements IMessageQueueTable {
                               // RETURNING
                               ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      var sourceUuidString = envelope.getSourceUuid().orNull();
-      var sourceUuid = !sourceUuidString.isEmpty() ? UUID.fromString(sourceUuidString) : null;
+      var sourceUuid = envelope.getSourceUuid().isPresent() && !envelope.getSourceUuid().get().equals("") ? UUID.fromString(envelope.getSourceUuid().get()) : null;
       statement.setObject(1, aci.uuid());
       statement.setInt(2, 2); // Version is hard-coded to 2
       statement.setInt(3, envelope.getType());
-      statement.setString(4, envelope.getSourceE164().orNull());
+      statement.setString(4, envelope.getSourceE164().isPresent() ? envelope.getSourceE164().get() : null);
       statement.setObject(5, sourceUuid);
       statement.setInt(6, envelope.getSourceDevice());
       statement.setLong(7, envelope.getTimestamp());
@@ -76,7 +75,7 @@ public class MessageQueueTable implements IMessageQueueTable {
         }
         long id = rows.getLong(ID);
         int type = rows.getInt(TYPE);
-        Optional<SignalServiceAddress> sender = Optional.absent();
+        Optional<SignalServiceAddress> sender = Optional.empty();
         String senderE164 = rows.getString(SOURCE_E164);
         String senderUUIDString = rows.getString(SOURCE_UUID);
         if ((senderE164 != null && senderE164.length() > 0) || (senderUUIDString != null && senderUUIDString.length() > 0)) {

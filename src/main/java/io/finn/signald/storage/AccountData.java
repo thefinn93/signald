@@ -101,7 +101,7 @@ public class AccountData {
 
   private void initialize() throws IOException, SQLException {
     if (address != null && address.uuid != null) {
-      self = Database.Get(address.getACI()).RecipientsTable.get(address.getUUID());
+      self = Database.Get(address.getACI()).RecipientsTable.get(address.getServiceID());
       profileCredentialStore.initialize(self);
     }
   }
@@ -113,7 +113,8 @@ public class AccountData {
     Account account = new Account(registration.getAci());
     account.setDeviceId(deviceId);
     account.setPassword(password);
-    account.setIdentityKeyPair(registration.getIdentity());
+    account.setACIIdentityKeyPair(registration.getAciIdentity());
+    account.setPNIIdentityKeyPair(registration.getPniIdentity());
     account.setLocalRegistrationId(registrationId);
 
     AccountData a = new AccountData();
@@ -141,7 +142,7 @@ public class AccountData {
       profileCredentialStore.initialize(self);
       ProfileAndCredentialEntry profileKeyEntry = profileCredentialStore.get(self.getAddress());
       if (profileKeyEntry != null) {
-        if (profileKeyEntry.getServiceAddress().getAci() == null && address.uuid != null) {
+        if (profileKeyEntry.getServiceAddress().getServiceId() == null && address.uuid != null) {
           profileKeyEntry.setAddress(self.getAddress());
         }
       }
@@ -170,7 +171,7 @@ public class AccountData {
         }
         try {
           ProfileKey p = new ProfileKey(c.profileKey);
-          Recipient recipient = Database.Get(self.getACI()).RecipientsTable.get(c.recipient.getACI());
+          Recipient recipient = Database.Get((ACI)self.getServiceId()).RecipientsTable.get(c.recipient.getServiceId());
           profileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
@@ -259,7 +260,7 @@ public class AccountData {
       if (profileKeyEntry == null) {
         generateProfileKey();
       } else {
-        if (profileKeyEntry.getServiceAddress().getAci() == null && address.uuid != null) {
+        if (profileKeyEntry.getServiceAddress().getServiceId() == null && address.uuid != null) {
           profileKeyEntry.setAddress(self.getAddress());
         }
       }
@@ -280,7 +281,7 @@ public class AccountData {
   public boolean isDeleted() { return deleted; }
 
   public void delete() throws SQLException, IOException {
-    Database.DeleteAccount(self.getACI(), getUUID(), legacyUsername);
+    Database.DeleteAccount((ACI)self.getServiceId(), legacyUsername);
     try {
       Files.delete(new File(dataPath + "/" + legacyUsername).toPath());
     } catch (NoSuchFileException ignored) {
@@ -307,16 +308,16 @@ public class AccountData {
   }
 
   @JsonIgnore
-  public UUID getUUID() {
+  public ACI getACI() {
     if (address == null) {
       return null;
     }
-    return address.getUUID();
+    return ACI.parseOrThrow(address.uuid);
   }
 
   public GroupIdentifier getMigratedGroupId(String groupV1Id) throws IOException, InvalidInputException, SQLException {
     GroupIdentifier groupV2Id = new GroupIdentifier(GroupsUtil.getGroupId(GroupsUtil.deriveV2MigrationMasterKey(Base64.decode(groupV1Id))));
-    var groupsTable = Database.Get(ACI.from(getUUID())).GroupsTable;
+    var groupsTable = Database.Get(getACI()).GroupsTable;
     var groupOptional = groupsTable.get(groupV2Id);
     if (groupOptional.isPresent()) {
       groupStore.deleteGroup(groupV1Id);

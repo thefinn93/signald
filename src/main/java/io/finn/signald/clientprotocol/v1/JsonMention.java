@@ -16,8 +16,8 @@ import org.whispersystems.signalservice.api.push.ACI;
 public class JsonMention {
   @ExampleValue(ExampleValue.REMOTE_UUID) @Doc("The UUID of the account being mentioned") public String uuid;
 
-  @Doc(
-      "The number of characters in that the mention starts at. Note that due to a quirk of how signald encodes JSON, if this value is 0 (for example if the first character in the message is the mention) the field won't show up.")
+  @Doc("The number of characters in that the mention starts at. Note that due to a quirk of how signald encodes JSON, if this value is 0 "
+       + "(for example if the first character in the message is the mention) the field won't show up.")
   @ExampleValue("4") // make sure this lines up with the mention in JsonQuote
   public int start;
 
@@ -26,7 +26,7 @@ public class JsonMention {
   public JsonMention() {}
 
   public JsonMention(SignalServiceDataMessage.Mention m) {
-    uuid = m.getAci().toString();
+    uuid = m.getServiceId().toString();
     start = m.getStart();
     length = m.getLength();
   }

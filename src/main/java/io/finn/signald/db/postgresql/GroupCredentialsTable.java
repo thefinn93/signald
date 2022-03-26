@@ -11,10 +11,9 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IGroupCredentialsTable;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.UUID;
+import java.util.Optional;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.auth.AuthCredentialResponse;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class GroupCredentialsTable implements IGroupCredentialsTable {
@@ -31,7 +30,7 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
       statement.setObject(1, aci.uuid());
       statement.setInt(2, date);
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement)) {
-        return rows.next() ? Optional.of(new AuthCredentialResponse(rows.getBytes(CREDENTIAL))) : Optional.absent();
+        return rows.next() ? Optional.of(new AuthCredentialResponse(rows.getBytes(CREDENTIAL))) : Optional.empty();
       }
     }
   }
@@ -57,10 +56,10 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, uuid);
+      statement.setObject(1, aci);
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

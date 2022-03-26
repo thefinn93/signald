@@ -184,10 +184,10 @@ public class SessionsTable implements ISessionsTable {
     }
   }
 
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, uuid);
+      statement.setObject(1, aci);
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

@@ -14,9 +14,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.util.guava.Optional;
+import java.util.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
@@ -67,7 +65,7 @@ public class SendSyncMessageRequest implements RequestType<JsonSendMessageResult
 
     final SendMessageResult result;
     try {
-      result = manager.getMessageSender().sendSyncMessage(syncMessage, Optional.absent());
+      result = manager.getMessageSender().sendSyncMessage(syncMessage, Optional.empty());
     } catch (UnregisteredUserException e) {
       throw new UnregisteredUserError(e);
     } catch (RateLimitException e) {

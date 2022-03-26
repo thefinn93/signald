@@ -28,7 +28,7 @@ public class JsonMention {
   public JsonMention() {}
 
   public JsonMention(SignalServiceDataMessage.Mention m) {
-    uuid = m.getAci().toString();
+    uuid = m.getServiceId().toString();
     start = m.getStart();
     length = m.getLength();
   }

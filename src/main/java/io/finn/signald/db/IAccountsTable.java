@@ -38,7 +38,7 @@ public interface IAccountsTable {
   File getFile(ACI aci) throws SQLException, NoSuchAccountException;
   File getFile(String e164) throws SQLException, NoSuchAccountException;
   void add(String e164, ACI aci, String filename, UUID server) throws SQLException;
-  void DeleteAccount(ACI aci, UUID uuid, String legacyUsername) throws SQLException;
+  void DeleteAccount(ACI aci, String legacyUsername) throws SQLException;
   void setUUID(JsonAddress address) throws SQLException;
   ACI getACI(String e164) throws NoSuchAccountException, SQLException;
   String getE164(ACI aci) throws NoSuchAccountException, SQLException;
@@ -46,7 +46,7 @@ public interface IAccountsTable {
   void setServer(ACI aci, String server) throws SQLException;
   DynamicCredentialsProvider getCredentialsProvider(ACI aci) throws SQLException;
   boolean exists(ACI aci) throws SQLException;
-  List<UUID> getAll() throws SQLException;
+  List<ACI> getAll() throws SQLException;
 
   // Default implementations
   default boolean exists(UUID uuid) throws SQLException { return exists(ACI.from(uuid)); }
@@ -57,14 +57,14 @@ public interface IAccountsTable {
 
   default void importFromJSON(File f) throws IOException, SQLException, InvalidInputException, UnregisteredUserError, InternalError {
     AccountData accountData = AccountData.load(f);
-    if (accountData.getUUID() == null) {
+    if (accountData.getACI() == null) {
       logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
       return;
     }
     logger.info("migrating account if needed: " + accountData.address.toRedactedString());
     add(accountData.getLegacyUsername(), accountData.address.getACI(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     boolean needsSave = false;
-    Account account = new Account(accountData.getUUID());
+    Account account = new Account(accountData.getACI());
     try {
       if (accountData.legacyProtocolStore != null) {
         accountData.legacyProtocolStore.migrateToDB(account);

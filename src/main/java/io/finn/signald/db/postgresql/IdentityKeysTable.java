@@ -47,9 +47,9 @@ public class IdentityKeysTable implements IIdentityKeysTable {
     try {
       byte[] b;
       if (pendingAccountIdentifier == null) {
-        return account.getIdentityKeyPair();
+        return account.getACIIdentityKeyPair();
       } else {
-        b = Database.Get().PendingAccountDataTable.getBytes(pendingAccountIdentifier, PendingAccountDataTable.Key.OWN_IDENTITY_KEY_PAIR);
+        b = Database.Get().PendingAccountDataTable.getBytes(pendingAccountIdentifier, PendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR);
       }
       if (b == null) {
         return null;
@@ -265,10 +265,10 @@ public class IdentityKeysTable implements IIdentityKeysTable {
   }
 
   @Override
-  public void deleteAccount(UUID uuid) throws SQLException {
+  public void deleteAccount(ACI aci) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, uuid);
+      statement.setObject(1, aci);
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

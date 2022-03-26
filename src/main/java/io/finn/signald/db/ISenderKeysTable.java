@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.groups.state.SenderKeyStore;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public interface ISenderKeysTable extends SenderKeyStore {
@@ -16,5 +17,5 @@ public interface ISenderKeysTable extends SenderKeyStore {
 
   long getCreatedTime(SignalProtocolAddress address, UUID distributionId) throws SQLException;
   void deleteAllFor(String address, DistributionId distributionId) throws SQLException;
-  void deleteAccount(UUID uuid) throws SQLException;
+  void deleteAccount(ACI aci) throws SQLException;
 }

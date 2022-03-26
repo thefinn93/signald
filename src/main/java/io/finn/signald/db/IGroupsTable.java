@@ -13,14 +13,14 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
+import java.util.Optional;
 import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupIdentifier;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 public interface IGroupsTable {
@@ -36,7 +36,7 @@ public interface IGroupsTable {
   Optional<IGroup> get(GroupIdentifier identifier) throws SQLException, InvalidInputException, InvalidProtocolBufferException;
   List<IGroup> getAll() throws SQLException;
   File getGroupAvatarFile(GroupIdentifier groupId);
-  void deleteAccount(UUID uuid) throws SQLException;
+  void deleteAccount(ACI aci) throws SQLException;
   void setGroupAvatarPath(String path) throws IOException;
 
   default Optional<IGroup> get(SignalServiceGroupV2 group) throws InvalidProtocolBufferException, InvalidInputException, SQLException {

@@ -68,7 +68,7 @@ public class ProvisioningManager {
     registrationId = KeyHelper.generateRegistrationId(false);
     password = Util.getSecret(18);
     final SleepTimer timer = new UptimeSleepTimer();
-    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
+    DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     SignalServiceConfiguration serviceConfiguration = Database.Get().ServersTable.getServer(server).getSignalServiceConfiguration();
     accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
                                                      ServiceConfig.AUTOMATIC_NETWORK_RETRY);
@@ -95,7 +95,7 @@ public class ProvisioningManager {
       } catch (NoSuchAccountException | InvalidKeyException | ServerNotFoundException | InvalidProxyException ignored) {
       }
     }
-    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getIdentity().getPrivateKey());
+    String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
     int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
 
     ACI aci = newDeviceRegistration.getAci();
@@ -115,6 +115,7 @@ public class ProvisioningManager {
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED));
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONFIGURATION));
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.KEYS));
+    BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.PNI_IDENTITY));
 
     return aci;
   }

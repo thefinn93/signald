@@ -23,15 +23,17 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class Database {
   private static final Logger logger = LogManager.getLogger();
   private static final Histogram queryLatency =
       Histogram.build().name(BuildConfig.NAME + "_sqlite_query_latency_seconds").help("sqlite latency in seconds.").labelNames("query", "write").register();
 
-  private static final Map<ACI, Database> DatabaseInstances = new HashMap<>();
+  private static final Map<ServiceId, Database> DatabaseInstances = new HashMap<>();
 
-  public static Database Get() { return Get(ACI.UNKNOWN); }
+  public static Database Get() { return Get(ACI.from(UuidUtil.UNKNOWN_UUID)); }
   public static Database Get(ACI aci) {
     synchronized (DatabaseInstances) {
       if (!DatabaseInstances.containsKey(aci)) {
@@ -146,13 +148,13 @@ public class Database {
   }
 
   // Methods that require switching per connection type
-  public static void DeleteAccount(ACI aci, UUID uuid, String legacyUsername) throws SQLException {
+  public static void DeleteAccount(ACI aci, String legacyUsername) throws SQLException {
     switch (GetConnectionType()) {
     case SQLITE:
-      new io.finn.signald.db.sqlite.AccountsTable().DeleteAccount(aci, uuid, legacyUsername);
+      new io.finn.signald.db.sqlite.AccountsTable().DeleteAccount(aci, legacyUsername);
       break;
     case POSTGRESQL:
-      new io.finn.signald.db.postgresql.AccountsTable().DeleteAccount(aci, uuid, legacyUsername);
+      new io.finn.signald.db.postgresql.AccountsTable().DeleteAccount(aci, legacyUsername);
       break;
     }
   }

@@ -13,17 +13,15 @@ import io.finn.signald.db.Database;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import org.whispersystems.signalservice.api.push.ACI;
 
 @Deprecated(1641027661)
 public class JsonAccountList {
   public List<JsonAccount> accounts = new ArrayList<JsonAccount>();
 
   JsonAccountList() throws SQLException, NoSuchAccountError {
-    for (UUID account : Database.Get().AccountsTable.getAll()) {
-      if (account != null) {
-        accounts.add(new JsonAccount(new Account(account)));
-      }
+    for (ACI aci : Database.Get().AccountsTable.getAll()) {
+      accounts.add(new JsonAccount(new Account(aci)));
     }
   }
 }

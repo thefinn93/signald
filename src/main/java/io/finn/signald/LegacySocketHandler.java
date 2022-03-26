@@ -55,12 +55,10 @@ import org.signal.zkgroup.groups.GroupSecretParams;
 import org.signal.zkgroup.groups.UuidCiphertext;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
-import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -210,7 +208,7 @@ public class LegacySocketHandler {
           }
           attachments.add(new SignalServiceAttachmentStream(attachmentStream, attachment.contentType, attachmentSize, Optional.of(customFilename), attachment.voiceNote, false,
                                                             false, attachment.getPreview(), attachment.width, attachment.height, System.currentTimeMillis(),
-                                                            Optional.fromNullable(attachment.caption), Optional.fromNullable(attachment.blurhash), null, null, Optional.absent()));
+                                                            Optional.ofNullable(attachment.caption), Optional.ofNullable(attachment.blurhash), null, null, Optional.empty()));
         } catch (IOException e) {
           throw new AttachmentInvalidException(attachment.filename, e);
         }
@@ -253,7 +251,7 @@ public class LegacySocketHandler {
       request.when = System.currentTimeMillis();
     }
 
-    SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, request.when, Optional.fromNullable(groupId));
+    SignalServiceTypingMessage message = new SignalServiceTypingMessage(action, request.when, Optional.ofNullable(groupId));
 
     var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
     var recipient = recipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
@@ -325,7 +323,7 @@ public class LegacySocketHandler {
 
     logger.info("Registering (voice: " + voice + ")");
     try {
-      m.register(voice, Optional.fromNullable(request.captcha), IServersTable.DEFAULT_SERVER);
+      m.register(voice, Optional.ofNullable(request.captcha), IServersTable.DEFAULT_SERVER);
       this.reply("verification_required", new JsonAccount(m), request.id);
     } catch (CaptchaRequiredException e) {
       this.reply("captcha_required", "see https://signald.org/articles/captcha/", request.id);
@@ -361,8 +359,8 @@ public class LegacySocketHandler {
   }
 
   private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, VerificationFailedException,
-                                                       InvalidGroupStateException, InterruptedException, ExecutionException, TimeoutException, UnknownGroupException, SQLException,
-                                                       InvalidKeyException, ServerNotFoundException, InvalidProxyException, InvalidInputException {
+                                                       InterruptedException, ExecutionException, TimeoutException, SQLException, InvalidKeyException, ServerNotFoundException,
+                                                       InvalidProxyException, InvalidInputException {
     Manager m = Manager.get(request.username);
 
     byte[] groupId = null;
@@ -416,11 +414,11 @@ public class LegacySocketHandler {
             continue;
           }
           recipients.add(recipient);
-          Optional<ProfileKeyCredential> profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
-          UUID uuid = profileAndCredentialEntry.getServiceAddress().getAci().uuid();
+          Optional<ProfileKeyCredential> profileKeyCredential = Optional.ofNullable(profileAndCredentialEntry.getProfileKeyCredential());
+          UUID uuid = profileAndCredentialEntry.getServiceAddress().getServiceId().uuid();
           candidates.add(new GroupCandidate(uuid, profileKeyCredential));
         }
-        change = groupOperations.createModifyGroupMembershipChange(candidates, account.getUUID());
+        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), account.getUUID());
       } else if (request.avatar != null) {
         byte[] avatarBytes = Files.readAllBytes(new File(request.avatar).toPath());
         String cdnKey = account.getGroups().uploadNewAvatar(group.getSecretParams(), avatarBytes);
@@ -504,7 +502,7 @@ public class LegacySocketHandler {
       } else {
         Set<UUID> uuidsToRemove = new HashSet<>();
         uuidsToRemove.add(m.getUUID());
-        change = operationsForGroup.createRemoveMembersChange(uuidsToRemove);
+        change = operationsForGroup.createRemoveMembersChange(uuidsToRemove, false);
       }
 
       var output = account.getGroups().updateGroup(group, change);

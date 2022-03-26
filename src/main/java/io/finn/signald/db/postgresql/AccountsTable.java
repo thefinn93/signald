@@ -75,18 +75,11 @@ public class AccountsTable implements IAccountsTable {
   }
 
   @Override
-  public void DeleteAccount(ACI aci, java.util.UUID uuid, String legacyUsername) throws SQLException {
+  public void DeleteAccount(ACI aci, String legacyUsername) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, uuid);
+      statement.setObject(1, aci.uuid());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
-    }
-  }
-  public void deleteAccount(java.util.UUID uuid) throws SQLException {
-    var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, UUID);
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, uuid);
-      Database.executeUpdate(TABLE_NAME + "_delete", statement);
     }
   }
 
@@ -170,7 +163,7 @@ public class AccountsTable implements IAccountsTable {
           throw new AssertionError("account not found");
         }
         String e164 = rows.getString(E164);
-        return new DynamicCredentialsProvider(account.getACI(), e164, account.getPassword(), account.getDeviceId());
+        return new DynamicCredentialsProvider(account.getACI(), account.getPNI(), e164, account.getPassword(), account.getDeviceId());
       }
     }
   }
@@ -187,13 +180,13 @@ public class AccountsTable implements IAccountsTable {
   }
 
   @Override
-  public List<java.util.UUID> getAll() throws SQLException {
+  public List<ACI> getAll() throws SQLException {
     var query = String.format("SELECT %s FROM %s", UUID, TABLE_NAME);
     try (var statement = Database.getConn().prepareStatement(query)) {
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_all", statement)) {
-        List<java.util.UUID> results = new ArrayList<>();
+        List<ACI> results = new ArrayList<>();
         while (rows.next()) {
-          results.add(java.util.UUID.fromString(rows.getString(UUID)));
+          results.add(ACI.parseOrThrow(rows.getString(UUID)));
         }
         return results;
       }

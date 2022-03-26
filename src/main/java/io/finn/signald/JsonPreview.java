@@ -14,7 +14,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.SignalServicePreview;
 import org.whispersystems.signalservice.api.push.ACI;
 
 @Deprecated(1641027661)
@@ -23,7 +23,7 @@ public class JsonPreview {
   public String title;
   public JsonAttachment attachment;
 
-  public JsonPreview(SignalServiceDataMessage.Preview preview, ACI aci)
+  public JsonPreview(SignalServicePreview preview, ACI aci)
       throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
     url = preview.getUrl();
     title = preview.getTitle();

@@ -20,6 +20,6 @@ public class SharedContactEmail {
   public SharedContactEmail(SharedContact.Email e) {
     type = e.getType().name();
     value = e.getValue();
-    label = e.getLabel().orNull();
+    label = e.getLabel().orElse(null);
   }
 }

@@ -24,10 +24,7 @@ import io.finn.signald.util.GroupsUtil;
 import io.sentry.Sentry;
 import java.io.*;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.storageservice.protos.groups.GroupChange;
@@ -36,7 +33,6 @@ import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.libsignal.util.Pair;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
@@ -74,7 +70,7 @@ public class Group {
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedMember member : group.getMembersList()) {
       ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
-      l.add(new SignalServiceAddress(aci, Optional.absent()));
+      l.add(new SignalServiceAddress(aci, Optional.empty()));
     }
     return l;
   }
@@ -87,7 +83,7 @@ public class Group {
     List<SignalServiceAddress> l = new ArrayList<>();
     for (DecryptedPendingMember member : group.getPendingMembersList()) {
       ACI aci = ACI.from(DecryptedGroupUtil.toUuid(member));
-      l.add(new SignalServiceAddress(aci, Optional.absent()));
+      l.add(new SignalServiceAddress(aci, Optional.empty()));
     }
     return l;
   }

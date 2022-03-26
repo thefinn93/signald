@@ -42,7 +42,7 @@ public class JsonSentTranscriptMessage {
       if (r.getNumber().isPresent()) {
         unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
       }
-      unidentifiedStatus.put(r.getAci().toString(), s.isUnidentified(r.getAci()));
+      unidentifiedStatus.put(r.getIdentifier(), s.isUnidentified(r.getServiceId()));
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }

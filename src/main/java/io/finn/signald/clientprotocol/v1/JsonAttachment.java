@@ -16,7 +16,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import org.whispersystems.libsignal.util.guava.Optional;
+import java.util.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentStream;
@@ -98,7 +98,7 @@ public class JsonAttachment {
     if (preview != null) {
       return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   public SignalServiceAttachmentStream asStream() throws IOException {
@@ -111,8 +111,8 @@ public class JsonAttachment {
         contentType = "application/octet-stream";
       }
     }
-    return new SignalServiceAttachmentStream(
-        attachmentStream, contentType, attachmentSize, customFilename == null ? Optional.fromNullable(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false,
-        false, getPreview(), width, height, System.currentTimeMillis(), Optional.fromNullable(caption), Optional.fromNullable(blurhash), null, null, Optional.absent());
+    return new SignalServiceAttachmentStream(attachmentStream, contentType, attachmentSize,
+                                             customFilename == null ? Optional.of(attachmentFile.getName()) : Optional.of(customFilename), voiceNote, false, false, getPreview(),
+                                             width, height, System.currentTimeMillis(), Optional.ofNullable(caption), Optional.ofNullable(blurhash), null, null, Optional.empty());
   }
 }

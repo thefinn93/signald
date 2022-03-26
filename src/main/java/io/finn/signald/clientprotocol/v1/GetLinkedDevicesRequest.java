@@ -39,7 +39,7 @@ public class GetLinkedDevicesRequest implements RequestType<LinkedDevices> {
     Account a = Common.getAccount(account);
     List<DeviceInfo> devices;
     try {
-      ECPrivateKey profileKey = a.getIdentityKeyPair().getPrivateKey();
+      ECPrivateKey profileKey = a.getACIIdentityKeyPair().getPrivateKey();
       devices = new LinkedDeviceManager(a).getLinkedDevices().stream().map(x -> new DeviceInfo(x, profileKey)).collect(Collectors.toList());
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyError(e);

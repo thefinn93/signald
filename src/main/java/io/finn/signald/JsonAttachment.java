@@ -15,8 +15,8 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Optional;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -98,6 +98,6 @@ public class JsonAttachment {
     if (preview != null) {
       return Optional.of(Base64.encodeBytesToBytes(preview.getBytes()));
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 }

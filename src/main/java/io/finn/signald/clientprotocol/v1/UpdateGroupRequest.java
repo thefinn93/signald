@@ -41,7 +41,6 @@ import org.signal.storageservice.protos.groups.Member;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.util.Base64;
@@ -147,18 +146,18 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
               continue;
             }
             recipients.add(recipientsTable.get(profileAndCredentialEntry.getServiceAddress()));
-            Optional<ProfileKeyCredential> profileKeyCredential = Optional.fromNullable(profileAndCredentialEntry.getProfileKeyCredential());
-            UUID uuid = profileAndCredentialEntry.getServiceAddress().getAci().uuid();
+            Optional<ProfileKeyCredential> profileKeyCredential = Optional.ofNullable(profileAndCredentialEntry.getProfileKeyCredential());
+            UUID uuid = profileAndCredentialEntry.getServiceAddress().getServiceId().uuid();
             candidates.add(new GroupCandidate(uuid, profileKeyCredential));
           }
-          change = groupOperations.createModifyGroupMembershipChange(candidates, a.getUUID());
+          change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
         } else if (removeMembers != null && removeMembers.size() > 0) {
           Set<UUID> members = new HashSet<>();
           for (JsonAddress member : removeMembers) {
             Recipient recipient = recipientsTable.get(member);
             members.add(recipient.getUUID());
           }
-          change = groupOperations.createRemoveMembersChange(members);
+          change = groupOperations.createRemoveMembersChange(members, false);
         } else if (updateRole != null) {
           UUID uuid = UUID.fromString(updateRole.uuid);
           Member.Role role;

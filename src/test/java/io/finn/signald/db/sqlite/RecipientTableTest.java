@@ -36,7 +36,7 @@ public class RecipientTableTest {
   @BeforeEach
   void setUp() throws IOException, SQLException {
     databaseFile = TestUtil.createAndConfigureTestSQLiteDatabase();
-    recipientsTable = Database.Get(SELF_ADDRESS.getAci()).RecipientsTable;
+    recipientsTable = Database.Get((ACI)SELF_ADDRESS.getServiceId()).RecipientsTable;
     recipientsTable.get(SELF_ADDRESS);
     recipientsTable.get(ADDRESS_A);
   }
@@ -53,36 +53,37 @@ public class RecipientTableTest {
   @DisplayName("get recipient by e164")
   void get_e164() throws SQLException, IOException {
     Recipient r = recipientsTable.get(ADDRESS_A.getNumber().get());
-    assertEquals(r.getACI(), ADDRESS_A.getAci());
+    assertEquals(r.getServiceId(), ADDRESS_A.getServiceId());
   }
 
   @Test
   @DisplayName("get recipient by uuid")
   void get_uuid() throws SQLException, IOException {
-    Recipient r = recipientsTable.get(ADDRESS_A.getAci());
-    assertEquals(r.getAddress().getNumber().orNull(), ADDRESS_A.getNumber().orNull());
+    Recipient r = recipientsTable.get(ADDRESS_A.getServiceId());
+    assertTrue(r.getAddress().getNumber().isPresent());
+    assertEquals(r.getAddress().getNumber().get(), ADDRESS_A.getNumber().get());
   }
 
   @Test
   @DisplayName("get non-existent recipient by uuid")
   void get_nonExistentByUUID() throws IOException, SQLException {
-    Recipient r = recipientsTable.get(ADDRESS_B.getAci());
-    assertEquals(r.getACI(), ADDRESS_B.getAci());
+    Recipient r = recipientsTable.get(ADDRESS_B.getServiceId());
+    assertEquals(r.getServiceId(), ADDRESS_B.getServiceId());
     assertFalse(r.getAddress().getNumber().isPresent());
   }
 
   @Test
   @DisplayName("ensure all recipients are registered by default")
   void get_registered() throws SQLException, IOException {
-    assertTrue(recipientsTable.get(ADDRESS_B.getAci()).isRegistered());
+    assertTrue(recipientsTable.get(ADDRESS_B.getServiceId()).isRegistered());
   }
 
   @Test
   @DisplayName("mark a recipient as unregistered")
   void setRegistrationStatus() throws SQLException, IOException {
-    Recipient r = recipientsTable.get(ADDRESS_A.getAci());
+    Recipient r = recipientsTable.get(ADDRESS_A.getServiceId());
     recipientsTable.setRegistrationStatus(r, false);
 
-    assertFalse(recipientsTable.get(ADDRESS_A.getAci()).isRegistered());
+    assertFalse(recipientsTable.get(ADDRESS_A.getServiceId()).isRegistered());
   }
 }

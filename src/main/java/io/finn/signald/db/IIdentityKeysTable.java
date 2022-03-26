@@ -5,11 +5,11 @@ import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import org.asamk.signal.TrustLevel;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.state.IdentityKeyStore;
+import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public interface IIdentityKeysTable extends IdentityKeyStore {
@@ -22,7 +22,7 @@ public interface IIdentityKeysTable extends IdentityKeyStore {
   boolean saveIdentity(Recipient recipient, IdentityKey identityKey, TrustLevel trustLevel, Date added);
   List<IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException;
   List<IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException;
-  void deleteAccount(UUID uuid) throws SQLException;
+  void deleteAccount(ACI aci) throws SQLException;
   void trustAllKeys() throws SQLException;
 
   default boolean saveIdentity(Recipient recipient, IdentityKey identityKey, TrustLevel trustLevel) { return saveIdentity(recipient, identityKey, trustLevel, new Date()); }
