@@ -140,103 +140,100 @@ build deb armv7-unknown-linux-gnueabihf:
 
 
 .docker-buildx:
-  image: jdrouet/docker-with-buildx:stable
+  image: docker.io/library/debian:stable
   stage: build docker
   tags: [docker-builder]
   needs: []
-  before_script: # per recommendations from https://github.com/docker/buildx/issues/495#issuecomment-754200673
-    - docker login --username "${CI_DEPENDENCY_PROXY_USER}" --password "${CI_DEPENDENCY_PROXY_PASSWORD}" "${CI_DEPENDENCY_PROXY_SERVER}"
-    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-    - docker run --rm --privileged "${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/multiarch/qemu-user-static" --reset -p yes
-    - docker buildx create --name cibuilder --driver docker-container --use
-    - docker buildx inspect --bootstrap
+  before_script:
+    - sudo apt-get update && sudo apt-get install -y podman qemu-user-static
+    - podman login --username "${CI_DEPENDENCY_PROXY_USER}" --password "${CI_DEPENDENCY_PROXY_PASSWORD}" "${CI_DEPENDENCY_PROXY_SERVER}"
+    - podman login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
     - export VERSION="$(./version.sh | sed 's#+#-#g' | sed 's#/#-#g')"
     - DOCKER_PLATFORM=$(echo "${PLATFORM:6}" | sed 's#/#-#g')
   script:
-    - docker buildx build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}" --push .
+    - podman build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}-non-root" -f "${CONTAINERFILE:-Containerfile}" .
+    - sed -i "s#FROM .*#FROM ${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}-non-root#g" uid-transition.Containerfile
+    - podman build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}" -f "uid-transition.Containerfile" .
+    - podman push "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}-non-root"
+    - podman push "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}"
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
     - when: manual
       allow_failure: true
 
-docker amd64:
+container amd64:
   extends: .docker-buildx
   variables:
     PLATFORM: linux/amd64
 
-docker arm64:
+container arm64:
   extends: .docker-buildx
   variables:
     PLATFORM: linux/arm64/v8
 
-docker armv7:
+container armv7:
   extends: .docker-buildx
   variables:
     PLATFORM: linux/arm/v7
+    CONTAINERFILE: arm.Containerfile
 
-docker manifest:
+container manifest:
   stage: publish
-  image: jdrouet/docker-with-buildx:stable
-  needs: ["docker amd64", "docker arm64", "docker armv7"]
+  image: docker.io/library/debian:stable
+  needs: ["container amd64", "container arm64", "container armv7"]
   tags: [docker-builder]
   before_script:
-    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-    - if [[ "${CI_COMMIT_REF_PROTECTED}" == "true" ]]; then docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}; fi
+    - sudo apt-get update && sudo apt-get install -y podman
+    - podman login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - if [[ "${CI_COMMIT_REF_PROTECTED}" == "true" ]]; then podman login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD} docker.io; fi
     - export VERSION="$(./version.sh | sed 's#+#-#g' | sed 's#/#-#g')"
   script:
     - |
       for platform in amd64 arm64-v8 arm-v7; do
         set -x
-        docker pull --quiet "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}"
+        podman pull --quiet "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}"
+        podman pull --quiet "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}-non-root"
         set +x
       done
-    - docker manifest create "${CI_REGISTRY_IMAGE}:${VERSION}" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
-    - docker manifest push "${CI_REGISTRY_IMAGE}:${VERSION}"
+    - tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:${VERSION}" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
+    - tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:${VERSION}-non-root" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}-non-root
     - |
       if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then
         set -x
-        docker manifest create "${CI_REGISTRY_IMAGE}:latest" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
-        docker manifest push "${CI_REGISTRY_IMAGE}:latest"
+        tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:unstable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
         for platform in amd64 arm64-v8 arm-v7; do
-          docker tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
-          docker push --quiet "docker.io/signald/signald:${VERSION}-${platform}"
+          podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
+          podman push --quiet "docker.io/signald/signald:${VERSION}-${platform}"
+
+          podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}-non-root" "docker.io/signald/signald:${VERSION}-${platform}-non-root"
+          podman push --quiet "docker.io/signald/signald:${VERSION}-${platform}-non-root"
         done
 
         # count commits since last tag
         commits="$(git rev-list $(git describe --always --abbrev=0 HEAD)..HEAD --count)"
         if [ "${commits}" = "0" ]; then # an actual release
-          docker -l debug manifest create "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
-          docker -l debug manifest push "docker.io/signald/signald:${VERSION}"
-
-          docker -l debug manifest create "docker.io/signald/signald:stable" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
-          docker -l debug manifest push "docker.io/signald/signald:stable"
-
-          docker manifest create "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
-          docker manifest push "${CI_REGISTRY_IMAGE}:${VERSION}"
-
-          docker manifest create "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}-amd64" "${CI_REGISTRY_IMAGE}:${VERSION}-arm64-v8" "${CI_REGISTRY_IMAGE}:${VERSION}-arm-v7"
-          docker manifest push "${CI_REGISTRY_IMAGE}:stable"
-
-          docker -l debug manifest create "docker.io/finn/signald:${VERSION}" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
-          docker -l debug manifest push "docker.io/finn/signald:${VERSION}"
-
-          docker -l debug manifest create "docker.io/finn/signald:latest" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
-          docker -l debug manifest push "docker.io/finn/signald:latest"
+          tools/podman-multiarch-manifest.sh "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "docker.io/signald/signald:${VERSION}-non-root" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}-non-root
+          tools/podman-multiarch-manifest.sh "docker.io/signald/signald:stable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:latest" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "docker.io/finn/signald:${VERSION}"  "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "docker.io/finn/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
         fi
 
-        docker -l debug manifest create "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}-amd64" "docker.io/signald/signald:${VERSION}-arm64-v8" "docker.io/signald/signald:${VERSION}-arm-v7"
-        docker -l debug manifest push "docker.io/signald/signald:latest"
-        
+        tools/podman-multiarch-manifest.sh "docker.io/signald/signald:unstable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
+
         set +x # to avoid printing tokens
-        echo "Authenticating to docker hub..."
+        echo "Authenticating to dockerhub to delete temporary tags"
         token=$(curl -sfd "{\"username\": \"${DOCKER_HUB_USERNAME}\", \"password\": \"${DOCKER_HUB_PASSWORD}\"}" -H "Content-Type: application/json" https://hub.docker.com/v2/users/login/ | jq -r '.token')
         for platform in amd64 arm64-v8 arm-v7; do
           echo "deleting tag ${VERSION}-${platform}"
           curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/signald/signald/tags/${VERSION}-${platform}/
         done
 
-        echo "image pushed to docker.io/signald/signald:${VERSION}"
+        echo "image pushed to docker.io/signald/signald:${VERSION} and ${CI_REGISTRY_IMAGE}:${VERSION}"
       fi
   rules:
     - if: '$CI_PROJECT_PATH == "signald/signald" && $CI_COMMIT_BRANCH'
