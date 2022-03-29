@@ -146,6 +146,11 @@ public class MessageSender {
               isRecipientUpdate = true; // prevent duplicate sync messages from being sent
             }
             results.add(result);
+          } else if (result.getProofRequiredFailure() != null) {
+            // do not retry if reCAPTCHA required
+            // note: isNetworkFailure is true if proofRequiredFailure is present, hence this check must come before the
+            // isNetworkFailure branch
+            results.add(result);
           } else if (result.isNetworkFailure()) {
             // always guaranteed to have an ACI; don't use address for HashSet because of ambiguity with e164 in server
             // responses
@@ -187,6 +192,11 @@ public class MessageSender {
               if (self.getAddress().equals(result.getAddress())) {
                 isRecipientUpdate = true; // prevent duplicate sync messages from being sent
               }
+              results.add(result);
+            } else if (result.getProofRequiredFailure() != null) {
+              // do not attempt legacy send if reCAPTCHA required
+              // note: isNetworkFailure is true if proofRequiredFailure is present, hence this check must come before the
+              // isNetworkFailure branch
               results.add(result);
             } else if (result.isNetworkFailure()) {
               // don't retry with sender key again
