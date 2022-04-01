@@ -36,6 +36,8 @@ public class GroupChange {
   @JsonProperty("new_pending_members") @Doc("Represents a user that has been invited to the group by another user.") public List<GroupPendingMember> newPendingMembers;
   @JsonProperty("delete_pending_members") public List<JsonAddress> deletePendingMembers;
   @JsonProperty("promote_pending_members") public List<GroupMember> promotePendingMembers;
+  @JsonProperty("new_banned_members") public List<BannedGroupMember> newBannedMembers;
+  @JsonProperty("new_unbanned_members") public List<BannedGroupMember> newUnbannedMembers;
   @JsonProperty("new_title") public String newTitle;
   @JsonProperty("new_avatar") @Doc("Whether this group change changed the avatar.") public Boolean newAvatar;
   @JsonProperty("new_timer") @Doc("New disappearing messages timer value.") public Integer newTimer;
@@ -94,6 +96,12 @@ public class GroupChange {
     }
     if (!change.getPromotePendingMembersList().isEmpty()) {
       promotePendingMembers = change.getPromotePendingMembersList().stream().map(GroupMember::new).collect(Collectors.toList());
+    }
+    if (!change.getNewBannedMembersList().isEmpty()) {
+      newBannedMembers = change.getNewBannedMembersList().stream().map(BannedGroupMember::new).collect(Collectors.toList());
+    }
+    if (!change.getDeleteBannedMembersList().isEmpty()) {
+      newUnbannedMembers = change.getDeleteBannedMembersList().stream().map(BannedGroupMember::new).collect(Collectors.toList());
     }
     if (change.hasNewTitle()) {
       newTitle = change.getNewTitle().getValue();

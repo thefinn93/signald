@@ -61,6 +61,7 @@ public class JsonGroupV2Info {
   @JsonProperty public List<JsonAddress> members;
   public List<JsonAddress> pendingMembers;
   public List<JsonAddress> requestingMembers;
+  @JsonProperty("banned_members") public List<BannedGroupMember> bannedMembers;
   @Doc("the signal.group link, if applicable") public String inviteLink;
   @Doc("current access control settings for this group") public GroupAccessControl accessControl;
 
@@ -148,6 +149,7 @@ public class JsonGroupV2Info {
     members = decryptedGroup.getMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
     pendingMembers = decryptedGroup.getPendingMembersList().stream().map(e -> new JsonAddress(DecryptedGroupUtil.toUuid(e))).collect(Collectors.toList());
     requestingMembers = decryptedGroup.getRequestingMembersList().stream().map(e -> new JsonAddress(UuidUtil.fromByteStringOrUnknown(e.getUuid()))).collect(Collectors.toList());
+    bannedMembers = decryptedGroup.getBannedMembersList().stream().map(BannedGroupMember::new).collect(Collectors.toList());
 
     AccessControl.AccessRequired access = decryptedGroup.getAccessControl().getAddFromInviteLink();
     if (access == AccessControl.AccessRequired.ANY || access == AccessControl.AccessRequired.ADMINISTRATOR) {
@@ -197,6 +199,15 @@ public class JsonGroupV2Info {
       }
     } else {
       requestingMembers = null;
+    }
+
+    if (other.bannedMembers != null) {
+      bannedMembers = new ArrayList<>();
+      for (BannedGroupMember m : other.bannedMembers) {
+        bannedMembers.add(new BannedGroupMember(m));
+      }
+    } else {
+      bannedMembers = null;
     }
 
     // note: this doesn't make a copy

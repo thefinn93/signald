@@ -65,7 +65,9 @@ public class RequestUtil {
       IsIdentifierRegisteredRequest.class,                                                                                // v1        is_identifier_registered
       WaitForScanRequest.class,                                                                                           // v1        wait_for_scan
       GetGroupRevisionPagesRequest.class,                                                                                 // v1        get_group_revision_pages
-      SendSyncMessageRequest.class                                                                                        // v1        send_sync_message
+      SendSyncMessageRequest.class,                                                                                       // v1        send_sync_message
+      BanUserRequest.class,                                                                                               // v1        ban_user
+      UnbanUserRequest.class                                                                                              // v1        unban_user
   );
 
   public static String getVersion(Class<?> t) {
