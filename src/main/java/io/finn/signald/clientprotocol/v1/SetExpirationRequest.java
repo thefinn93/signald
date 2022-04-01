@@ -30,6 +30,8 @@ import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("set_expiration")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = "If updating a group, caused when server rejects the group update.")
 @Doc("Set the message expiration timer for a thread. Expiration must be specified in seconds, set to 0 to disable timer")
 public class SetExpirationRequest implements RequestType<SendResponse> {
   private static final Logger logger = LogManager.getLogger();
@@ -41,7 +43,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                                  InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError {
+                                                  InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError {
     List<SendMessageResult> results;
 
     if (group != null) {

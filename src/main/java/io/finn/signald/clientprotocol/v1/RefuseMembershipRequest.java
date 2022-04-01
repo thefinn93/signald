@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ErrorDoc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
@@ -30,6 +31,8 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("refuse_membership")
 @Doc("deny a request to join a group")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = GroupPatchNotAcceptedError.DEFAULT_ERROR_DOC)
 public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
@@ -41,7 +44,7 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError,
-                                                     InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError {
+                                                     InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError {
     Account a = Common.getAccount(account);
     var group = Common.getGroup(a, groupID);
 

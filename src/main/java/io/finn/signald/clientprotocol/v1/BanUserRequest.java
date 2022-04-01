@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.protobuf.ByteString;
 import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ErrorDoc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
+import io.finn.signald.clientprotocol.v1.exceptions.GroupPatchNotAcceptedError;
 import io.finn.signald.clientprotocol.v1.exceptions.GroupVerificationError;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
@@ -36,6 +38,8 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("ban_user")
 @Doc("Bans users from a group. This works even if the users aren't in the group. If they are currently in the group, they will also be removed.")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = GroupPatchNotAcceptedError.DEFAULT_ERROR_DOC)
 public class BanUserRequest implements RequestType<JsonGroupV2Info> {
   private static final Logger logger = LogManager.getLogger();
 
@@ -47,7 +51,7 @@ public class BanUserRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError,
-                                                     InvalidRequestError, AuthorizationFailedError, SQLError {
+                                                     InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
     final Account a = Common.getAccount(account);
     final var group = Common.getGroup(a, groupId);
     final var decryptedGroup = group.getDecryptedGroup();

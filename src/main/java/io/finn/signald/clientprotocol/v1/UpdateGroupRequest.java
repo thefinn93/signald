@@ -46,6 +46,8 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("update_group")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = "Caused when server rejects the group update, e.g. trying to add a user that's already in the group")
 @Doc("modify a group. Note that only one modification action may be performed at once")
 public class UpdateGroupRequest implements RequestType<GroupInfo> {
   private static final Logger logger = LogManager.getLogger();
@@ -79,7 +81,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
   @Override
   public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError {
+                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError {
     Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
     var recipientsTable = Database.Get(m.getACI()).RecipientsTable;

@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ErrorDoc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
@@ -31,6 +32,8 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("accept_invitation")
 @Doc("Accept a v2 group invitation. Note that you must have a profile name set to join groups.")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = GroupPatchNotAcceptedError.DEFAULT_ERROR_DOC)
 public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
@@ -38,7 +41,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, OwnProfileKeyDoesNotExistError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError,
-                                                     InvalidRequestError, AuthorizationFailedError, SQLError {
+                                                     InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

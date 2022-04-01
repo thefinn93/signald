@@ -3,12 +3,14 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ErrorDoc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
+import io.finn.signald.clientprotocol.v1.exceptions.GroupPatchNotAcceptedError;
 import io.finn.signald.clientprotocol.v1.exceptions.GroupVerificationError;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
@@ -31,6 +33,8 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("unban_user")
 @Doc("Unbans users from a group.")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = GroupPatchNotAcceptedError.DEFAULT_ERROR_DOC)
 public class UnbanUserRequest implements RequestType<JsonGroupV2Info> {
   private static final Logger logger = LogManager.getLogger();
 
@@ -42,7 +46,7 @@ public class UnbanUserRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, GroupVerificationError, InternalError,
-                                                     InvalidRequestError, AuthorizationFailedError, SQLError {
+                                                     InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
     final Account a = Common.getAccount(account);
     final var group = Common.getGroup(a, groupId);
     var recipientsTable = Database.Get(a.getACI()).RecipientsTable;

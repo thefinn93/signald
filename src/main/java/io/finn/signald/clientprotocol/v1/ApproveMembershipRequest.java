@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
+import io.finn.signald.annotations.ErrorDoc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
@@ -31,6 +32,8 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("approve_membership")
 @Doc("approve a request to join a group")
+@ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
+@ErrorDoc(error = GroupPatchNotAcceptedError.class, doc = GroupPatchNotAcceptedError.DEFAULT_ERROR_DOC)
 public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
   @ExampleValue(ExampleValue.LOCAL_UUID) @Doc("The account to interact with") @Required public String account;
 
@@ -40,7 +43,7 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError, GroupVerificationError,
-                                                     InvalidRequestError, AuthorizationFailedError, SQLError {
+                                                     InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

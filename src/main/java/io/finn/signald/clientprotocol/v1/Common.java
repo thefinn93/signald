@@ -50,6 +50,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+import org.whispersystems.signalservice.internal.push.exceptions.GroupPatchNotAcceptedException;
 import org.whispersystems.util.Base64;
 
 /* Common is a collection of wrapper functions that call common functions
@@ -300,7 +301,7 @@ public class Common {
   }
 
   public static List<SendMessageResult> updateGroup(Account account, IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
-      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError {
+      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, GroupPatchNotAcceptedError {
     try {
       return updateGroup(account, group, change, group.getMembers());
     } catch (IOException | SQLException e) {
@@ -309,10 +310,14 @@ public class Common {
   }
 
   public static List<SendMessageResult> updateGroup(Account account, IGroupsTable.IGroup group, GroupChange.Actions.Builder change, List<Recipient> recipients)
-      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError {
+      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, GroupPatchNotAcceptedError {
     Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateOutput;
     try {
       updateOutput = getGroups(account).updateGroup(group, change);
+    } catch (GroupPatchNotAcceptedException e) {
+      throw new GroupPatchNotAcceptedError(e);
+    } catch (AuthorizationFailedException e) {
+      throw new AuthorizationFailedError(e);
     } catch (IOException | VerificationFailedException | SQLException | InvalidInputException e) {
       throw new InternalError("error committing group change", e);
     }
