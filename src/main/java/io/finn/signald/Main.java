@@ -10,6 +10,7 @@ package io.finn.signald;
 import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.sentry.Sentry;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -98,10 +99,15 @@ public class Main {
       }
 
       for (ACI aci : Database.Get().AccountsTable.getAll()) {
-        Account account = new Account(aci);
-        AccountRepair.repairAccountIfNeeded(account);
-        if (account.getPNI() == null) {
-          account.setPNI();
+        try {
+          Account account = new Account(aci);
+          AccountRepair.repairAccountIfNeeded(account);
+          if (account.getPNI() == null) {
+            account.setPNI();
+          }
+        } catch (Exception e) {
+          logger.error("error syncing local account state with server:", e);
+          Sentry.captureException(e);
         }
       }
 
