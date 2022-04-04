@@ -23,7 +23,7 @@ public class TestUtil {
       this.testHash = testHash;
     }
 
-    public ACI getAci() { return (ACI)selfAddress.getServiceId(); }
+    public ACI getAci() { return ACI.from(selfAddress.getServiceId().uuid()); }
   }
 
   public static TestPostgresDatabase createAndConfigureTestPostgresDatabase() throws IOException, SQLException {

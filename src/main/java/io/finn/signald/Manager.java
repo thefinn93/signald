@@ -1553,7 +1553,7 @@ public class Manager {
 
   public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
     try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      dependencies.getAccountManager().setVersionedProfile((ACI)self.getServiceId(), accountData.getProfileKey(), name, "", "", Optional.empty(),
+      dependencies.getAccountManager().setVersionedProfile(ACI.from(self.getServiceId().uuid()), accountData.getProfileKey(), name, "", "", Optional.empty(),
                                                            AvatarUploadParams.forAvatar(streamDetails), new ArrayList<>());
     }
   }

@@ -28,7 +28,7 @@ public class AllIdentityKeyList {
     try {
       for (var row : entireIdentityDB) {
         if (!keyMap.containsKey(row.getAddress().toString())) {
-          var recipient = Database.Get((ACI)self.getServiceId()).RecipientsTable.get(row.getAddress());
+          var recipient = Database.Get(ACI.from(self.getServiceId().uuid())).RecipientsTable.get(row.getAddress());
           keyMap.put(row.getAddress().toString(), new IdentityKeyList(self, ownKey, recipient, null));
         }
         keyMap.get(row.getAddress().toString()).addKey(row);

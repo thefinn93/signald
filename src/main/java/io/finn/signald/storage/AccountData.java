@@ -171,7 +171,7 @@ public class AccountData {
         }
         try {
           ProfileKey p = new ProfileKey(c.profileKey);
-          Recipient recipient = Database.Get((ACI)self.getServiceId()).RecipientsTable.get(c.recipient.getServiceId());
+          Recipient recipient = Database.Get(ACI.from(self.getServiceId().uuid())).RecipientsTable.get(c.recipient.getServiceId());
           profileCredentialStore.storeProfileKey(recipient, p);
         } catch (InvalidInputException e) {
           logger.warn("Invalid profile key while migrating profile keys from contacts", e);
@@ -281,7 +281,7 @@ public class AccountData {
   public boolean isDeleted() { return deleted; }
 
   public void delete() throws SQLException, IOException {
-    Database.DeleteAccount((ACI)self.getServiceId(), legacyUsername);
+    Database.DeleteAccount(ACI.from(self.getServiceId().uuid()), legacyUsername);
     try {
       Files.delete(new File(dataPath + "/" + legacyUsername).toPath());
     } catch (NoSuchFileException ignored) {

@@ -36,7 +36,7 @@ public class RecipientTableTest {
   @BeforeEach
   void setUp() throws IOException, SQLException {
     databaseFile = TestUtil.createAndConfigureTestSQLiteDatabase();
-    recipientsTable = Database.Get((ACI)SELF_ADDRESS.getServiceId()).RecipientsTable;
+    recipientsTable = Database.Get(ACI.from(SELF_ADDRESS.getServiceId().uuid())).RecipientsTable;
     recipientsTable.get(SELF_ADDRESS);
     recipientsTable.get(ADDRESS_A);
   }

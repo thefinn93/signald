@@ -151,7 +151,7 @@ public class ProfileCredentialStore {
         final var selfProfileKeyEntry = get(self);
         if (selfProfileKeyEntry != null && !selfProfileKeyEntry.getProfileKey().equals(entry.getValue())) {
           logger.warn("Seen authoritative update for self that didn't match local, scheduling storage sync");
-          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account((ACI)self.getServiceId())));
+          BackgroundJobRunnerThread.queue(new SyncStorageDataJob(new Account(ACI.from(self.getServiceId().uuid()))));
         }
       } else {
         logger.debug("Profile key from owner for " + Util.redact(entry.getKey()));
