@@ -30,9 +30,15 @@ public class WaitForScanRequest implements RequestType<Empty> {
     }
     try {
       pm.waitForScan();
-    } catch (TimeoutException | IOException e) {
-      logger.debug("scan timeout waiting for qr code scan");
+    } catch (TimeoutException e) {
+      logger.debug("scan timeout waiting for qr code scan", e);
       throw new ScanTimeoutError(e);
+    } catch (IOException e) {
+      if (e.getMessage().equals("Connection closed!")) {
+        throw new ScanTimeoutError(e);
+      } else {
+        throw new InternalError("error finishing linking", e);
+      }
     }
 
     return new Empty();

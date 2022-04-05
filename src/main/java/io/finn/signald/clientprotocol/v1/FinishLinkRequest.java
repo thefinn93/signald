@@ -58,9 +58,15 @@ public class FinishLinkRequest implements RequestType<Account> {
       throw new ServerNotFoundError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {
       throw new InvalidProxyError(e);
-    } catch (IOException | TimeoutException e) {
-      logger.debug("scan timeout waiting for qr code scan");
+    } catch (TimeoutException e) {
+      logger.debug("scan timeout waiting for qr code scan", e);
       throw new ScanTimeoutError(e);
+    } catch (IOException e) {
+      if (e.getMessage().equals("Connection closed!")) {
+        throw new ScanTimeoutError(e);
+      } else {
+        throw new InternalError("error finishing linking", e);
+      }
     } catch (SQLException | InvalidInputException | InvalidKeyException | UntrustedIdentityException | NoSuchAccountException e) {
       throw new InternalError("error finishing linking", e);
     } catch (UserAlreadyExistsException e) {
