@@ -33,6 +33,7 @@ import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.newsclub.net.unix.AFUNIXSocketCredentials;
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -99,12 +100,14 @@ public class Main {
       }
 
       for (ACI aci : Database.Get().AccountsTable.getAll()) {
+        Account account = new Account(aci);
         try {
-          Account account = new Account(aci);
           AccountRepair.repairAccountIfNeeded(account);
           if (account.getPNI() == null) {
             account.setPNI();
           }
+        } catch (AuthorizationFailedException e) {
+          logger.error("server rejected our authorization while refreshing account {}, you may wish to remove this account from signald", account.getSelf().toRedactedString());
         } catch (Exception e) {
           logger.error("error syncing local account state with server:", e);
           Sentry.captureException(e);
