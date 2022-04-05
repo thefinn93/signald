@@ -57,7 +57,7 @@ public interface IAccountsTable {
 
   default void importFromJSON(File f) throws IOException, SQLException, InvalidInputException, UnregisteredUserError, InternalError {
     AccountData accountData = AccountData.load(f);
-    if (accountData.getACI() == null) {
+    if (accountData.address.uuid == null) {
       logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
       return;
     }
