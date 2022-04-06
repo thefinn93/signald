@@ -111,6 +111,9 @@ public class AccountData {
     logger.debug("Creating new local account by linking");
     Database.Get().AccountsTable.add(registration.getNumber(), registration.getAci(), Manager.getFileName(registration.getNumber()), server);
     Account account = new Account(registration.getAci());
+    if (registration.getPni() != null) {
+      account.setPNI(registration.getPni());
+    }
     account.setDeviceId(deviceId);
     account.setPassword(password);
     account.setACIIdentityKeyPair(registration.getAciIdentity());
