@@ -8,12 +8,9 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.protobuf.ByteString;
 import io.finn.signald.Account;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.ErrorDoc;
-import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.annotations.Required;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
@@ -22,11 +19,9 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import org.signal.storageservice.protos.groups.GroupChange;
+import org.signal.storageservice.protos.groups.local.DecryptedBannedMember;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("refuse_membership")
@@ -65,11 +60,19 @@ public class RefuseMembershipRequest implements RequestType<JsonGroupV2Info> {
     }
 
     Set<UUID> membersToRefuse = new HashSet<>();
+    List<DecryptedBannedMember> bannedMembers = new ArrayList<>();
+
     for (JsonAddress member : members) {
-      membersToRefuse.add(Common.getRecipient(a.getACI(), member).getUUID());
+      UUID memberUUID = Common.getRecipient(a.getACI(), member).getUUID();
+      membersToRefuse.add(memberUUID);
+      if (alsoBan) {
+        ByteString uuidByteString = UuidUtil.toByteString(memberUUID);
+        DecryptedBannedMember bannedMember = DecryptedBannedMember.newBuilder().setUuid(uuidByteString).build();
+        bannedMembers.add(bannedMember);
+      }
     }
 
-    GroupChange.Actions.Builder change = Common.getGroupOperations(a, group).createRefuseGroupJoinRequest(membersToRefuse, alsoBan);
+    GroupChange.Actions.Builder change = Common.getGroupOperations(a, group).createRefuseGroupJoinRequest(membersToRefuse, alsoBan, bannedMembers);
     change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);

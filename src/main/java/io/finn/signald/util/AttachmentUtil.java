@@ -17,7 +17,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.*;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidMessageException;
+import org.signal.libsignal.protocol.InvalidMessageException;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer;

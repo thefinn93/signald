@@ -28,8 +28,8 @@ import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.internal.push.LockedException;
 
 @ProtocolType("verify")

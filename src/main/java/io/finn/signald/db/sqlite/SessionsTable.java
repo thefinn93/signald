@@ -13,15 +13,19 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.util.AddressUtil;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.NoSessionException;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
-import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.libsignal.util.Pair;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.NoSessionException;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
+import org.signal.libsignal.protocol.message.CiphertextMessage;
+import org.signal.libsignal.protocol.state.SessionRecord;
+import org.signal.libsignal.protocol.util.Pair;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
@@ -51,7 +55,7 @@ public class SessionsTable implements ISessionsTable {
           return new SessionRecord(rows.getBytes(RECORD));
         }
       }
-    } catch (SQLException | IOException e) {
+    } catch (SQLException | IOException | InvalidMessageException e) {
       logger.catching(e);
     }
     return new SessionRecord();
@@ -75,7 +79,7 @@ public class SessionsTable implements ISessionsTable {
             sessions.add(new SessionRecord(rows.getBytes(RECORD)));
           }
         }
-      } catch (SQLException | IOException e) {
+      } catch (SQLException | IOException | InvalidMessageException e) {
         logger.warn("exception while loading session", e);
       }
     }
@@ -141,7 +145,7 @@ public class SessionsTable implements ISessionsTable {
           return sessionRecord.hasSenderChain() && sessionRecord.getSessionVersion() == CiphertextMessage.CURRENT_VERSION;
         }
       }
-    } catch (SQLException | IOException e) {
+    } catch (SQLException | IOException | InvalidMessageException e) {
       logger.catching(e);
       return false;
     }
@@ -220,7 +224,7 @@ public class SessionsTable implements ISessionsTable {
           return results;
         }
       }
-    } catch (SQLException | IOException e) {
+    } catch (SQLException | IOException | InvalidMessageException e) {
       logger.catching(e);
     }
     return new HashSet<>();
@@ -239,7 +243,7 @@ public class SessionsTable implements ISessionsTable {
           SessionRecord record;
           try {
             record = new SessionRecord(rows.getBytes(RECORD));
-          } catch (IOException e) {
+          } catch (InvalidMessageException e) {
             logger.warn("error loading session for {} device id {}", recipient.toRedactedString(), deviceId);
             continue;
           }

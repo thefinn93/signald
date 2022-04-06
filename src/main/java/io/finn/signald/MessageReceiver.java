@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.metadata.InvalidMetadataMessageException;
 import org.signal.libsignal.metadata.ProtocolException;
 import org.signal.libsignal.metadata.SelfSendException;
-import org.whispersystems.libsignal.*;
+import org.signal.libsignal.protocol.*;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.push.ACI;

@@ -3,36 +3,21 @@ package io.finn.signald.clientprotocol.v1;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.protobuf.ByteString;
 import io.finn.signald.Account;
-import io.finn.signald.annotations.Doc;
-import io.finn.signald.annotations.ErrorDoc;
-import io.finn.signald.annotations.ExampleValue;
-import io.finn.signald.annotations.ProtocolType;
-import io.finn.signald.annotations.Required;
+import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
-import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
-import io.finn.signald.clientprotocol.v1.exceptions.GroupPatchNotAcceptedError;
-import io.finn.signald.clientprotocol.v1.exceptions.GroupVerificationError;
+import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
-import io.finn.signald.clientprotocol.v1.exceptions.InvalidRequestError;
-import io.finn.signald.clientprotocol.v1.exceptions.NoSuchAccountError;
-import io.finn.signald.clientprotocol.v1.exceptions.SQLError;
-import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
-import io.finn.signald.clientprotocol.v1.exceptions.UnknownGroupError;
 import io.finn.signald.db.Database;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.groups.UuidCiphertext;
 import org.signal.storageservice.protos.groups.GroupChange;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.groups.UuidCiphertext;
+import org.signal.storageservice.protos.groups.local.DecryptedBannedMember;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -79,29 +64,31 @@ public class BanUserRequest implements RequestType<JsonGroupV2Info> {
     final var finalChange = GroupChange.Actions.newBuilder();
     for (UUID userToBan : allUsersToBan) {
       final ByteString userToBanUuidBytes = UuidUtil.toByteString(userToBan);
-
+      DecryptedBannedMember decryptedBannedMember = DecryptedBannedMember.newBuilder().setUuid(userToBanUuidBytes).build();
       final GroupChange.Actions.Builder thisChange;
       if (decryptedGroup.getMembersList().stream().anyMatch(member -> member.getUuid().equals(userToBanUuidBytes))) {
         // builder: addAllDeleteMembers + addAllAddBannedMembers
-        thisChange = groupOperations.createRemoveMembersChange(Collections.singleton(userToBan), true);
+        thisChange = groupOperations.createRemoveMembersChange(Collections.singleton(userToBan), true, Collections.singletonList(decryptedBannedMember));
       } else if (decryptedGroup.getRequestingMembersList().stream().anyMatch(requesting -> requesting.getUuid().equals(userToBanUuidBytes))) {
         // builder: addAllDeleteRequestingMembers + addAllAddBannedMembers
-        thisChange = groupOperations.createRefuseGroupJoinRequest(Collections.singleton(userToBan), true);
+        thisChange = groupOperations.createRefuseGroupJoinRequest(Collections.singleton(userToBan), true, Collections.singletonList(decryptedBannedMember));
       } else {
         final var pending = decryptedGroup.getPendingMembersList().stream().filter(pendingMember -> pendingMember.getUuid().equals(userToBanUuidBytes)).findFirst();
         if (pending.isPresent()) {
           // builder: addAllDeletePendingMembers + addAllAddBannedMembers
           try {
             // doesn't come with alsoBan parameter
-            thisChange = groupOperations.createRemoveInvitationChange(Collections.singleton(new UuidCiphertext(pending.get().getUuidCipherText().toByteArray())))
-                             .addAllAddBannedMembers(groupOperations.createBanUuidsChange(Collections.singleton(userToBan)).getAddBannedMembersList());
+            thisChange =
+                groupOperations.createRemoveInvitationChange(Collections.singleton(new UuidCiphertext(pending.get().getUuidCipherText().toByteArray())))
+                    .addAllAddBannedMembers(
+                        groupOperations.createBanUuidsChange(Collections.singleton(userToBan), true, Collections.singletonList(decryptedBannedMember)).getAddBannedMembersList());
           } catch (InvalidInputException e) {
             throw new InternalError("failed to get UuidCiphertext", e);
           }
         } else {
           // builder: addAllAddBannedMembers
           // ban them even though they're not in the group
-          thisChange = groupOperations.createBanUuidsChange(Collections.singleton(userToBan));
+          thisChange = groupOperations.createBanUuidsChange(Collections.singleton(userToBan), false, Collections.singletonList(decryptedBannedMember));
         }
       }
 

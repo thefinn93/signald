@@ -13,8 +13,8 @@ import java.util.HashMap;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.auth.AuthCredentialResponse;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
 import org.whispersystems.signalservice.api.push.ACI;
 

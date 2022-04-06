@@ -7,11 +7,12 @@
 
 package io.finn.signald.util;
 
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.groups.GroupIdentifier;
-import org.signal.zkgroup.groups.GroupMasterKey;
-import org.signal.zkgroup.groups.GroupSecretParams;
-import org.whispersystems.libsignal.kdf.HKDFv3;
+import io.finn.signald.ServiceConfig;
+import org.signal.libsignal.protocol.kdf.HKDFv3;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
+import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
+import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
@@ -19,7 +20,7 @@ import org.whispersystems.signalservice.internal.configuration.SignalServiceConf
 public class GroupsUtil {
 
   public static GroupsV2Operations GetGroupsV2Operations(SignalServiceConfiguration serviceConfiguration) {
-    return new GroupsV2Operations(ClientZkOperations.create(serviceConfiguration));
+    return new GroupsV2Operations(ClientZkOperations.create(serviceConfiguration), ServiceConfig.GROUP_MAX_SIZE);
   }
 
   public static GroupIdentifier GetIdentifierFromMasterKey(GroupMasterKey masterKey) {

@@ -11,7 +11,7 @@ import java.io.IOException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.signal.libsignal.protocol.InvalidKeyException;
 
 public class InternalErrorTest {
   @Test
@@ -19,7 +19,7 @@ public class InternalErrorTest {
   void TestCause() {
     InternalError err = new InternalError("test", new IOException(new InvalidKeyException("test")));
     Assertions.assertEquals("java.io.IOException", err.exceptions.get(0));
-    Assertions.assertEquals("org.whispersystems.libsignal.InvalidKeyException", err.exceptions.get(1));
+    Assertions.assertEquals("org.signal.libsignal.protocol.InvalidKeyException", err.exceptions.get(1));
     Assertions.assertEquals(2, err.exceptions.size());
   }
 }

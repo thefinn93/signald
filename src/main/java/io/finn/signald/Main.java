@@ -31,7 +31,7 @@ import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.newsclub.net.unix.AFUNIXSocketCredentials;
-import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider;
+import org.signal.libsignal.protocol.logging.SignalProtocolLoggerProvider;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import picocli.CommandLine;

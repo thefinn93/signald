@@ -14,18 +14,18 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
 import java.util.ArrayList;
 import java.util.List;
-import org.whispersystems.libsignal.fingerprint.Fingerprint;
+import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 
 @Doc("a list of identity keys associated with a particular address")
 public class IdentityKeyList {
   @JsonIgnore private final Recipient self;
-  @JsonIgnore private final org.whispersystems.libsignal.IdentityKey ownKey;
+  @JsonIgnore private final org.signal.libsignal.protocol.IdentityKey ownKey;
   @JsonIgnore private final Recipient recipient;
 
   public final JsonAddress address;
   public final List<IdentityKey> identities = new ArrayList<>();
 
-  public IdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, Recipient recipient, List<IIdentityKeysTable.IdentityKeyRow> identities) {
+  public IdentityKeyList(Recipient self, org.signal.libsignal.protocol.IdentityKey ownKey, Recipient recipient, List<IIdentityKeysTable.IdentityKeyRow> identities) {
     this.self = self;
     this.ownKey = ownKey;
     this.address = new JsonAddress(recipient);

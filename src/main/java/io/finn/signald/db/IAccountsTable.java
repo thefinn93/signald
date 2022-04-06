@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 

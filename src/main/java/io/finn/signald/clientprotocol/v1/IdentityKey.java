@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.db.IIdentityKeysTable;
-import org.whispersystems.libsignal.fingerprint.Fingerprint;
+import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 import org.whispersystems.util.Base64;
 
 public class IdentityKey {

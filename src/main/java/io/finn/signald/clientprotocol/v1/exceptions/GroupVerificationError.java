@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-import org.signal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.VerificationFailedException;
 
 public class GroupVerificationError extends ExceptionWrapper {
   public GroupVerificationError(VerificationFailedException e) { super(e); }

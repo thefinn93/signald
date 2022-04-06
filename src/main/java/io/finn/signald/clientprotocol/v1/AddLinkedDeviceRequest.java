@@ -18,8 +18,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
-import org.signal.zkgroup.InvalidInputException;
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
 
 @ProtocolType("add_device")
 @ErrorDoc(error = InvalidRequestError.class, doc = "caused by syntax errors with the provided linking URI")

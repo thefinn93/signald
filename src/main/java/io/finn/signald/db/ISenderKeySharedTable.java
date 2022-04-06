@@ -3,7 +3,7 @@ package io.finn.signald.db;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Set;
-import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 

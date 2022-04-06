@@ -12,8 +12,8 @@ import io.finn.signald.db.IGroupCredentialsTable;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Optional;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.auth.AuthCredentialResponse;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class GroupCredentialsTable implements IGroupCredentialsTable {

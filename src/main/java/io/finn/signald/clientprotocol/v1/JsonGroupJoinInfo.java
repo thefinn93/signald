@@ -10,8 +10,8 @@ package io.finn.signald.clientprotocol.v1;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.util.GroupsUtil;
+import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupJoinInfo;
-import org.signal.zkgroup.groups.GroupMasterKey;
 import org.whispersystems.util.Base64;
 
 public class JsonGroupJoinInfo {

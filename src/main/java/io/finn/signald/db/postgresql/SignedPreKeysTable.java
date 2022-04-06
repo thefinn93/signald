@@ -9,15 +9,14 @@ package io.finn.signald.db.postgresql;
 
 import io.finn.signald.db.Database;
 import io.finn.signald.db.ISignedPreKeysTable;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyIdException;
-import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import org.signal.libsignal.protocol.InvalidKeyIdException;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class SignedPreKeysTable implements ISignedPreKeysTable {
@@ -43,7 +42,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
           return new SignedPreKeyRecord(rows.getBytes(RECORD));
         }
       }
-    } catch (SQLException | IOException e) {
+    } catch (SQLException | InvalidMessageException e) {
       logger.catching(e);
       throw new AssertionError(e);
     }
@@ -63,7 +62,7 @@ public class SignedPreKeysTable implements ISignedPreKeysTable {
           return results;
         }
       }
-    } catch (SQLException | IOException e) {
+    } catch (SQLException | InvalidMessageException e) {
       logger.catching(e);
       throw new AssertionError(e);
     }

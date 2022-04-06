@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
+import org.signal.libsignal.protocol.fingerprint.FingerprintVersionMismatchException;
 
 public class FingerprintVersionMismatchError extends ExceptionWrapper {
   public FingerprintVersionMismatchError(FingerprintVersionMismatchException e) { super(e); }

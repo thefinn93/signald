@@ -18,13 +18,14 @@ import java.io.IOException;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyIdException;
-import org.whispersystems.libsignal.state.SignedPreKeyRecord;
+import org.signal.libsignal.protocol.InvalidKeyIdException;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.whispersystems.util.Base64;
 
 @JsonDeserialize(using = SignedPreKeyStore.SignedPreKeyStoreDeserializer.class)
 @JsonSerialize(using = SignedPreKeyStore.SignedPreKeyStoreSerializer.class)
-public class SignedPreKeyStore implements org.whispersystems.libsignal.state.SignedPreKeyStore {
+public class SignedPreKeyStore implements org.signal.libsignal.protocol.state.SignedPreKeyStore {
   private static final Logger logger = LogManager.getLogger();
   private final Map<Integer, byte[]> store = new HashMap<>();
 
@@ -35,7 +36,7 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
         throw new InvalidKeyIdException("No such signedprekeyrecord! " + signedPreKeyId);
       }
       return new SignedPreKeyRecord(store.get(signedPreKeyId));
-    } catch (IOException e) {
+    } catch (InvalidMessageException e) {
       throw new AssertionError(e);
     }
   }
@@ -50,7 +51,7 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
       }
 
       return results;
-    } catch (IOException e) {
+    } catch (InvalidMessageException e) {
       throw new AssertionError(e);
     }
   }
@@ -81,7 +82,7 @@ public class SignedPreKeyStore implements org.whispersystems.libsignal.state.Sig
         }
         Database.Get(account.getACI()).SignedPreKeysTable.storeSignedPreKey(entry.getKey(), new SignedPreKeyRecord(entry.getValue()));
         iterator.remove();
-      } catch (IOException e) {
+      } catch (InvalidMessageException e) {
         logger.warn("failed to migrate session record", e);
       }
     }

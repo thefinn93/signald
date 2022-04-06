@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.auth.AuthCredentialResponse;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.util.Base64;
 
 public class LegacyGroupsV2Storage {

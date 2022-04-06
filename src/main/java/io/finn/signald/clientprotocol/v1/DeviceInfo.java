@@ -10,7 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.signal.libsignal.protocol.ecc.ECPrivateKey;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 
 public class DeviceInfo {

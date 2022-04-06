@@ -21,13 +21,14 @@ import java.util.Iterator;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyIdException;
-import org.whispersystems.libsignal.state.PreKeyRecord;
+import org.signal.libsignal.protocol.InvalidKeyIdException;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.state.PreKeyRecord;
 import org.whispersystems.util.Base64;
 
 @JsonDeserialize(using = PreKeyStore.JsonPreKeyStoreDeserializer.class)
 @JsonSerialize(using = PreKeyStore.JsonPreKeyStoreSerializer.class)
-public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeyStore {
+public class PreKeyStore implements org.signal.libsignal.protocol.state.PreKeyStore {
   private static final Logger logger = LogManager.getLogger();
   private final Map<Integer, byte[]> store = new HashMap<>();
 
@@ -39,7 +40,7 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
 
     try {
       return new PreKeyRecord(store.get(preKeyId));
-    } catch (IOException e) {
+    } catch (InvalidMessageException e) {
       throw new AssertionError(e);
     }
   }
@@ -52,7 +53,7 @@ public class PreKeyStore implements org.whispersystems.libsignal.state.PreKeySto
       try {
         Database.Get(account.getACI()).PreKeysTable.storePreKey(entry.getKey(), new PreKeyRecord(entry.getValue()));
         iterator.remove();
-      } catch (IOException e) {
+      } catch (InvalidMessageException e) {
         logger.warn("failed to migrate prekey record", e);
       }
     }

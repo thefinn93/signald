@@ -1,7 +1,7 @@
 package io.finn.signald.db;
 
 import java.sql.SQLException;
-import org.whispersystems.libsignal.state.SignedPreKeyStore;
+import org.signal.libsignal.protocol.state.SignedPreKeyStore;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public interface ISignedPreKeysTable extends SignedPreKeyStore {

@@ -6,9 +6,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import org.asamk.signal.TrustLevel;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.state.IdentityKeyStore;
+import org.signal.libsignal.protocol.IdentityKey;
+import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.state.IdentityKeyStore;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 

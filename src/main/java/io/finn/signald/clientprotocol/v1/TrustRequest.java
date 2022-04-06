@@ -19,9 +19,9 @@ import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.asamk.signal.TrustLevel;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
-import org.whispersystems.libsignal.fingerprint.FingerprintVersionMismatchException;
+import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.protocol.fingerprint.FingerprintParsingException;
+import org.signal.libsignal.protocol.fingerprint.FingerprintVersionMismatchException;
 import org.whispersystems.util.Base64;
 
 @ProtocolType("trust")

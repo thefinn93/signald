@@ -22,8 +22,9 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.state.SessionRecord;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
+import org.signal.libsignal.protocol.state.SessionRecord;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 @JsonSerialize(using = SessionStore.SessionStoreSerializer.class)
@@ -50,7 +51,7 @@ public class SessionStore {
         }
         Database.Get(account.getACI()).SessionsTable.storeSession(new SignalProtocolAddress(entry.address.getIdentifier(), entry.deviceId), new SessionRecord(entry.record));
         iterator.remove();
-      } catch (IOException e) {
+      } catch (InvalidMessageException e) {
         logger.warn("failed to migrate session record", e);
       }
     }

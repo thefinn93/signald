@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1.exceptions;
 
-import org.whispersystems.libsignal.fingerprint.FingerprintParsingException;
+import org.signal.libsignal.protocol.fingerprint.FingerprintParsingException;
 
 public class InvalidFingerprintError extends ExceptionWrapper {
   public InvalidFingerprintError(FingerprintParsingException e) { super(e); }

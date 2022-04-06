@@ -46,15 +46,15 @@ import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
 import org.asamk.signal.util.Hex;
+import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
+import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
+import org.signal.libsignal.zkgroup.groups.UuidCiphertext;
+import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.VerificationFailedException;
-import org.signal.zkgroup.groups.GroupIdentifier;
-import org.signal.zkgroup.groups.GroupSecretParams;
-import org.signal.zkgroup.groups.UuidCiphertext;
-import org.signal.zkgroup.profiles.ProfileKeyCredential;
-import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
@@ -502,7 +502,7 @@ public class LegacySocketHandler {
       } else {
         Set<UUID> uuidsToRemove = new HashSet<>();
         uuidsToRemove.add(m.getUUID());
-        change = operationsForGroup.createRemoveMembersChange(uuidsToRemove, false);
+        change = operationsForGroup.createRemoveMembersChange(uuidsToRemove, false, List.of());
       }
 
       var output = account.getGroups().updateGroup(group, change);
@@ -754,8 +754,8 @@ public class LegacySocketHandler {
 
     @Override
     public void broadcastReceiveFailure(SignalServiceEnvelope envelope, Throwable exception) throws IOException {
-      if (exception instanceof org.whispersystems.libsignal.UntrustedIdentityException) {
-        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.whispersystems.libsignal.UntrustedIdentityException)exception, accountE164);
+      if (exception instanceof org.signal.libsignal.protocol.UntrustedIdentityException) {
+        JsonUntrustedIdentityException message = new JsonUntrustedIdentityException((org.signal.libsignal.protocol.UntrustedIdentityException)exception, accountE164);
         broadcast(new JsonMessageWrapper("inbound_identity_failure", message));
       } else {
         broadcast(new JsonMessageWrapper("unreadable_message", null, exception));

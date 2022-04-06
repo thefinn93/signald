@@ -23,7 +23,7 @@ import org.whispersystems.signalservice.api.push.ACI;
 public class AllIdentityKeyList {
   @JsonProperty("identity_keys") List<IdentityKeyList> identityKeys;
 
-  public AllIdentityKeyList(Recipient self, org.whispersystems.libsignal.IdentityKey ownKey, List<IIdentityKeysTable.IdentityKeyRow> entireIdentityDB) throws InternalError {
+  public AllIdentityKeyList(Recipient self, org.signal.libsignal.protocol.IdentityKey ownKey, List<IIdentityKeysTable.IdentityKeyRow> entireIdentityDB) throws InternalError {
     Map<String, IdentityKeyList> keyMap = new HashMap<>();
     try {
       for (var row : entireIdentityDB) {

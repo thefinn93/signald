@@ -24,7 +24,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.SendSyncRequestJob;
 import java.io.IOException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 

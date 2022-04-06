@@ -8,9 +8,9 @@
 package io.finn.signald.util;
 
 import io.finn.signald.db.Recipient;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.fingerprint.Fingerprint;
-import org.whispersystems.libsignal.fingerprint.NumericFingerprintGenerator;
+import org.signal.libsignal.protocol.IdentityKey;
+import org.signal.libsignal.protocol.fingerprint.Fingerprint;
+import org.signal.libsignal.protocol.fingerprint.NumericFingerprintGenerator;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 public class SafetyNumberHelper {

@@ -10,8 +10,8 @@ package io.finn.signald.db;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.state.SessionStore;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
+import org.signal.libsignal.protocol.state.SessionStore;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public interface ISessionsTable extends SessionStore {

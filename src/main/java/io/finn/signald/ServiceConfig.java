@@ -16,6 +16,7 @@ public class ServiceConfig {
   public final static long MAX_ENVELOPE_SIZE = 0;
   public final static long AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE = 10 * 1024 * 1024;
   public final static boolean AUTOMATIC_NETWORK_RETRY = true;
+  public final static int GROUP_MAX_SIZE = 1000;
   public static final AccountAttributes.Capabilities CAPABILITIES = new AccountAttributes.Capabilities(false, // UUID
                                                                                                        true,  // groups v2
                                                                                                        false, // storage

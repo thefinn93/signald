@@ -20,7 +20,7 @@ import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.db.Recipient;
 import java.sql.SQLException;
 import java.util.List;
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.signal.libsignal.protocol.InvalidKeyException;
 
 @Doc("Get information about a known keys for a particular address")
 @ProtocolType("get_identities")

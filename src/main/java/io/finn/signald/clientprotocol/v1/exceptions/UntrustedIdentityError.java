@@ -13,7 +13,7 @@ import io.finn.signald.clientprotocol.v1.Common;
 import io.finn.signald.clientprotocol.v1.IdentityKey;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.util.SafetyNumberHelper;
-import org.whispersystems.libsignal.fingerprint.Fingerprint;
+import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.ACI;
 
@@ -21,7 +21,7 @@ public class UntrustedIdentityError extends ExceptionWrapper {
   public String identifier;
   @JsonProperty("identity_key") public IdentityKey identityKey;
 
-  UntrustedIdentityError(ACI aci, String identifier, org.whispersystems.libsignal.IdentityKey libsignalIdentityKey)
+  UntrustedIdentityError(ACI aci, String identifier, org.signal.libsignal.protocol.IdentityKey libsignalIdentityKey)
       throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, AuthorizationFailedError {
     this.identifier = identifier;
     Manager m = Common.getManager(aci);
@@ -38,7 +38,7 @@ public class UntrustedIdentityError extends ExceptionWrapper {
     this(aci, e.getIdentifier(), e.getIdentityKey());
   }
 
-  public UntrustedIdentityError(ACI aci, org.whispersystems.libsignal.UntrustedIdentityException e)
+  public UntrustedIdentityError(ACI aci, org.signal.libsignal.protocol.UntrustedIdentityException e)
       throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, AuthorizationFailedError {
     this(aci, e.getName(), e.getUntrustedIdentity());
   }

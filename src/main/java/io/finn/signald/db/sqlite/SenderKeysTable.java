@@ -10,13 +10,13 @@ package io.finn.signald.db.sqlite;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.ISenderKeysTable;
 import io.sentry.Sentry;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
+import org.signal.libsignal.protocol.groups.state.SenderKeyRecord;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
@@ -61,7 +61,7 @@ public class SenderKeysTable implements ISenderKeysTable {
           return rows.next() ? new SenderKeyRecord(rows.getBytes(RECORD)) : null;
         }
       }
-    } catch (SQLException | IOException e) {
+    } catch (SQLException | InvalidMessageException e) {
       logger.error("unexpected error while trying to load sender key", e);
       Sentry.captureException(e);
       return null;

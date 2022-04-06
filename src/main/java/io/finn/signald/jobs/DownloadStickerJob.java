@@ -12,7 +12,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import org.whispersystems.libsignal.InvalidMessageException;
+import org.signal.libsignal.protocol.InvalidMessageException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 

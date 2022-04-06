@@ -10,13 +10,12 @@ package io.finn.signald.db.postgresql;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IPreKeysTable;
 import io.sentry.Sentry;
-import java.io.IOException;
 import java.sql.SQLException;
-import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.whispersystems.libsignal.InvalidKeyIdException;
-import org.whispersystems.libsignal.state.PreKeyRecord;
+import org.signal.libsignal.protocol.InvalidKeyIdException;
+import org.signal.libsignal.protocol.InvalidMessageException;
+import org.signal.libsignal.protocol.state.PreKeyRecord;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class PreKeysTable implements IPreKeysTable {
@@ -42,7 +41,7 @@ public class PreKeysTable implements IPreKeysTable {
           return new PreKeyRecord(rows.getBytes(RECORD));
         }
       }
-    } catch (SQLException | IOException t) {
+    } catch (SQLException | InvalidMessageException t) {
       throw new InvalidKeyIdException(t);
     }
   }

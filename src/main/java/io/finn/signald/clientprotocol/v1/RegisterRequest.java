@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
-import org.signal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 
 @ProtocolType("register")

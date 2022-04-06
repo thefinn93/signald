@@ -35,12 +35,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asamk.signal.GroupNotFoundException;
 import org.asamk.signal.NotAGroupMemberException;
+import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
-import org.signal.zkgroup.InvalidInputException;
-import org.signal.zkgroup.VerificationFailedException;
-import org.signal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.util.Base64;
@@ -159,7 +159,7 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
             Recipient recipient = recipientsTable.get(member);
             members.add(recipient.getUUID());
           }
-          change = groupOperations.createRemoveMembersChange(members, false);
+          change = groupOperations.createRemoveMembersChange(members, false, List.of());
         } else if (updateRole != null) {
           UUID uuid = UUID.fromString(updateRole.uuid);
           Member.Role role;
