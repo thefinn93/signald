@@ -142,7 +142,7 @@ public class ContactsTable implements IContactsTable {
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setObject(1, aci.uuid());
       var deletedCount = Database.executeUpdate(TABLE_NAME + "_clear", statement);
-      logger.info("Deleted " + deletedCount + "contacts for " + aci);
+      logger.info("Deleted {} contacts for {}", deletedCount, aci);
     }
   }
 
