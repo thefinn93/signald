@@ -128,7 +128,7 @@ public class Account {
     if (identityKeyPair == null) {
       return;
     }
-    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR, identityKeyPair.serialize());
   }
 
   public long getLastPreKeyRefresh() throws SQLException { return Database.Get().AccountDataTable.getLong(aci, IAccountDataTable.Key.LAST_PRE_KEY_REFRESH); }
