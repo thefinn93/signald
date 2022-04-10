@@ -2,7 +2,7 @@ FROM golang:1.16-bullseye as signaldctl
 
 WORKDIR /src
 RUN git clone https://gitlab.com/signald/signald-go.git . \
-    && git checkout 689d560eb17da613d057097545b8d205e32c22e4 \
+    && git checkout e8131dc92864034910703f1125f4011a5f3e6512 \
     && make signaldctl
 
 FROM gradle:6-jdk${JAVA_VERSION:-11} AS build
