@@ -225,6 +225,8 @@ container manifest:
           tools/podman-multiarch-manifest.sh "docker.io/finn/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
         fi
 
+        # TODO: Remove the following line before 0.18.0 release
+        tools/podman-multiarch-manifest.sh "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
         tools/podman-multiarch-manifest.sh "docker.io/signald/signald:unstable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
 
         set +x # to avoid printing tokens
