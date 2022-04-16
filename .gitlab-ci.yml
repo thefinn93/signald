@@ -201,6 +201,8 @@ container manifest:
     - |
       if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then
         set -x
+        # TODO: Remove the following line before 0.18.0 release
+        tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:latest" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
         tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:unstable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
         for platform in amd64 arm64-v8 arm-v7; do
           podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
