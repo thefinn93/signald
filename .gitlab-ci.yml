@@ -233,6 +233,9 @@ container manifest:
         for platform in amd64 arm64-v8 arm-v7; do
           echo "deleting tag ${VERSION}-${platform}"
           curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/signald/signald/tags/${VERSION}-${platform}/
+
+          echo "deleting tag ${VERSION}-${platform}-non-root"
+          curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/signald/signald/tags/${VERSION}-${platform}-non-root/
         done
 
         echo "image pushed to docker.io/signald/signald:${VERSION} and ${CI_REGISTRY_IMAGE}:${VERSION}"
