@@ -38,10 +38,7 @@ public class FinishLinkRequest implements RequestType<Account> {
   @JsonProperty("session_id") public String sessionID;
 
   // this doesn't work yet
-  //  @Doc("overwrite existing account data if the phone number conflicts. false by default, raises an error when there "
-  //       + "is a conflict")
-  //  public boolean overwrite = false;
-  private boolean overwrite = false;
+  @Doc("overwrite existing account data if the phone number conflicts. false by default") public boolean overwrite = false;
 
   @Override
   public Account run(Request request)
