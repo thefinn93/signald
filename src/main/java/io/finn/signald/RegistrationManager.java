@@ -109,10 +109,10 @@ public class RegistrationManager {
     PNI pni = PNI.from(UUID.fromString(result.getPni()));
     accountData.setUUID(aci);
     Account account = new Account(aci);
-    account.setPNI(pni);
 
     String server = Database.Get().PendingAccountDataTable.getString(e164, IPendingAccountDataTable.Key.SERVER_UUID);
     Database.Get().AccountsTable.add(e164, aci, getFileName(), server == null ? null : UUID.fromString(server));
+    account.setPNI(pni);
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
