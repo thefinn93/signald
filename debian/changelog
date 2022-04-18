@@ -1,3 +1,14 @@
+signald (0.18.0) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.18.0
+  * PostgresSQL database backend support, thanks @sumner
+  * Contacts moved out of JSON file into database, thanks @sumner
+  * Improved handling of profile keys from groups, thanks @inwaves
+  * Add support for banning users from a group, thanks @inwaves
+  * Assorted other bugfixes
+
+ -- Finn <finn@janky.solutions>  Mon, 18 Apr 2022 14:32:10 -0700
+
 signald (0.17.0) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.17.0
