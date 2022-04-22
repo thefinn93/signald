@@ -122,7 +122,7 @@ public class Database {
 
   private static Connection conn;
   public static Connection getConn() throws SQLException {
-    if (conn == null || !conn.isValid(5)) {
+    if (conn == null || conn.isClosed()) {
       switch (GetConnectionType()) {
       case SQLITE:
         conn = DriverManager.getConnection(Config.getDb());
