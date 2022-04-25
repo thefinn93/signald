@@ -42,7 +42,7 @@ public class JsonDataMessage {
 
   @Doc("the expiry timer on the incoming message. Clients should delete records of the message within this number of seconds") public int expiresInSeconds;
 
-  @JsonProperty("expire_in_seconds")
+  @JsonProperty("is_expiration_update")
   @Doc("whether or not this message changes the expiresInSeconds value for the whole chat. "
        + "Some messages (remote deletes, reactions, etc) will have expiresInSeconds=0 even though the chat has disappearing messages enabled.")
   public boolean isExpirationUpdate;
