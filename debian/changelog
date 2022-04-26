@@ -1,3 +1,12 @@
+signald (0.18.2) unstable; urgency=medium
+
+  * Revert a change that caused a bug with postgres connection
+  * Fix a bug in group paging (!145), thanks @inwaves!)
+  * `is_expiration_update` field added to v1 JsonDataMessage
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.18.2
+
+ -- Finn <finn@janky.solutions>  Mon, 25 Apr 2022 17:51:38 -0700
+
 signald (0.18.1) unstable; urgency=medium
 
   * This release primarily exists to fix some docker issues
