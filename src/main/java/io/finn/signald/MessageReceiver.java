@@ -97,6 +97,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         return;
       }
 
+      receiver.sockets.broadcastWebSocketConnectionStateChange(connectionState, unidentified);
+
       switch (connectionState) {
       case AUTHENTICATION_FAILED:
         receivers.get(accountUUID.toString()).sockets.removeAll();
@@ -109,8 +111,6 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         }
         break;
       }
-
-      receiver.sockets.broadcastWebSocketConnectionStateChange(connectionState, unidentified);
     }
   }
 
