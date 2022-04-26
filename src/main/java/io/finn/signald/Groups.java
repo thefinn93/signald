@@ -293,7 +293,8 @@ public class Groups {
                                                                                                              ServerNotFoundException, InvalidKeyException, InvalidProxyException {
     GroupHistoryPage currentPage = firstPage;
     final ProfileKeySet profileKeys = new ProfileKeySet();
-    while (currentPage.getPagingData().hasMorePages()) {
+    while (true) {
+      logger.info("Processing {} group revision pages for profile keys", currentPage.getResults().size());
       for (DecryptedGroupHistoryEntry entry : currentPage.getResults()) {
         if (entry.getGroup().isPresent()) {
           profileKeys.addKeysFromGroupState(entry.getGroup().get());
@@ -306,8 +307,10 @@ public class Groups {
         final int nextPageRevision = currentPage.getPagingData().getNextPageRevision();
         logger.info("Request next page from server revision: nextPageRevision: " + nextPageRevision);
         currentPage = getGroupHistoryPage(groupSecretParams, nextPageRevision, false);
+      } else {
+        break;
       }
-    }
+    };
 
     if (mostRecentGroup != null) {
       profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
