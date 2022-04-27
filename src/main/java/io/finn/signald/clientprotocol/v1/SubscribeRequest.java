@@ -36,7 +36,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.metadata.ProtocolInvalidKeyIdException;
 import org.signal.libsignal.metadata.ProtocolInvalidMessageException;
+import org.signal.libsignal.metadata.ProtocolNoSessionException;
 import org.signal.libsignal.protocol.DuplicateMessageException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.UntrustedIdentityException;
@@ -95,6 +97,8 @@ public class SubscribeRequest implements RequestType<Empty> {
       exceptions.put(DuplicateMessageException.class, DuplicateMessageError.class);
       exceptions.put(org.whispersystems.signalservice.api.crypto.UntrustedIdentityException.class, UntrustedIdentityError.class);
       exceptions.put(UntrustedIdentityException.class, UntrustedIdentityError.class);
+      exceptions.put(ProtocolInvalidKeyIdException.class, ProtocolInvalidKeyIdError.class);
+      exceptions.put(ProtocolNoSessionException.class, ProtocolNoSessionError.class);
     }
 
     private static final List<Class<?>> incomingTypes = new ArrayList<>();
