@@ -1,3 +1,11 @@
+signald (0.18.3) unstable; urgency=medium
+
+  * update libsignal-service-java to fix a contact syncing issue
+  * wrap a few incoming errors in pretty parsable wrappers
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.18.3
+
+ -- Finn <finn@janky.solutions>  Fri, 29 Apr 2022 11:16:38 -0700
+
 signald (0.18.2) unstable; urgency=medium
 
   * Revert a change that caused a bug with postgres connection
