@@ -8,8 +8,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Account;
 import io.finn.signald.Empty;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -18,6 +18,9 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 
@@ -28,19 +31,25 @@ public class SetDeviceNameRequest implements RequestType<Empty> {
 
   @JsonProperty("device_name") @Doc("The device name") public String deviceName;
   @Override
-  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError, InvalidRequestError {
+    Account a = Common.getAccount(account);
 
     try {
-      m.getAccount().setDeviceName(deviceName);
+      a.setDeviceName(deviceName);
     } catch (SQLException e) {
       throw new InternalError("error storing new device name locally", e);
     }
 
     try {
-      m.refreshAccount();
+      a.refresh();
     } catch (IOException | SQLException e) {
       throw new InternalError("error saving new device name", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
     return new Empty();
   }

@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+@Deprecated
 @JsonSerialize(using = LegacyThreadStore.ThreadStoreSerializer.class)
 @JsonDeserialize(using = LegacyThreadStore.ThreadStoreDeserializer.class)
 public class LegacyThreadStore {

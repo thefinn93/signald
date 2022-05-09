@@ -8,16 +8,16 @@
 package io.finn.signald.storage;
 
 import org.whispersystems.signalservice.api.messages.multidevice.VerifiedMessage;
-
-public class JsonVerifiedState {
-  public IdentityKeyStore.Identity identity;
+@Deprecated
+public class LegacyJsonVerifiedState {
+  public LegacyIdentityKeyStore.Identity identity;
   public long timestamp;
   public String state;
 
-  public JsonVerifiedState() {}
+  public LegacyJsonVerifiedState() {}
 
-  public JsonVerifiedState(VerifiedMessage verifiedMessage) {
-    identity = new IdentityKeyStore.Identity(verifiedMessage.getIdentityKey());
+  public LegacyJsonVerifiedState(VerifiedMessage verifiedMessage) {
+    identity = new LegacyIdentityKeyStore.Identity(verifiedMessage.getIdentityKey());
     timestamp = verifiedMessage.getTimestamp();
     state = verifiedMessage.getVerified().name();
   }

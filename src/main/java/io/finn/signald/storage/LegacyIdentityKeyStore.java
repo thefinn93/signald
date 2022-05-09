@@ -28,17 +28,17 @@ import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
-
-public class IdentityKeyStore {
+@Deprecated
+public class LegacyIdentityKeyStore {
   private static final Logger logger = LogManager.getLogger();
 
-  public List<IdentityKeyStore.Identity> trustedKeys = new ArrayList<>();
+  public List<LegacyIdentityKeyStore.Identity> trustedKeys = new ArrayList<>();
   IdentityKeyPair identityKeyPair;
   public int registrationId;
 
-  public IdentityKeyStore() {}
+  public LegacyIdentityKeyStore() {}
 
-  public IdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId) {
+  public LegacyIdentityKeyStore(IdentityKeyPair identityKeyPair, int localRegistrationId) {
     this.identityKeyPair = identityKeyPair;
     this.registrationId = localRegistrationId;
   }
@@ -68,9 +68,9 @@ public class IdentityKeyStore {
    * @param added       Added timestamp, if null and the key is newly added, the current time is used.
    */
   public boolean saveIdentity(SignalServiceAddress address, IdentityKey identityKey, TrustLevel trustLevel, Date added) {
-    List<IdentityKeyStore.Identity> identities = getKeys(address);
+    List<LegacyIdentityKeyStore.Identity> identities = getKeys(address);
 
-    for (IdentityKeyStore.Identity id : identities) {
+    for (LegacyIdentityKeyStore.Identity id : identities) {
       if (!id.identityKey.equals(identityKey)) {
         continue;
       }
@@ -92,7 +92,7 @@ public class IdentityKeyStore {
     return trustedKeys;
   }
 
-  public List<IdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
+  public List<LegacyIdentityKeyStore.Identity> getIdentities(SignalServiceAddress address) { return getKeys(address); }
 
   public void migrateToDB(Account account) throws SQLException, IOException {
     var table = Database.Get(account.getACI()).IdentityKeysTable;

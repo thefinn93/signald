@@ -185,7 +185,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         } finally {
           subscribedAccounts.dec();
         }
-        if (m.getAccountData().isDeleted()) {
+        if (!new Account(aci).exists()) {
           return; // exit the receive thread
         }
         if (backoff == 0) {

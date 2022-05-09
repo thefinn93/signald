@@ -7,8 +7,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.Account;
 import io.finn.signald.Empty;
-import io.finn.signald.Manager;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -23,6 +23,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.UnidentifiedAccessUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.LinkedList;
@@ -47,19 +48,18 @@ public class MarkReadRequest implements RequestType<Empty> {
   public Long when;
 
   @Override
-  public Empty run(Request request)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError, UnregisteredUserError,
+                                           AuthorizationFailedError, SQLError, InvalidRequestError {
     if (when == null) {
       when = System.currentTimeMillis();
     }
     SignalServiceReceiptMessage message = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, timestamps, when);
-    Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, to);
-    SignalServiceMessageSender sender = m.getMessageSender();
+    Account a = Common.getAccount(account);
+    Recipient recipient = Common.getRecipient(Database.Get(a.getACI()).RecipientsTable, to);
 
     SignalDependencies dependencies;
     try {
-      dependencies = SignalDependencies.get(m.getACI());
+      dependencies = SignalDependencies.get(a.getACI());
     } catch (SQLException | IOException e) {
       throw new InternalError("error getting account", e);
     } catch (ServerNotFoundException e) {
@@ -70,14 +70,25 @@ public class MarkReadRequest implements RequestType<Empty> {
       throw new NoSuchAccountError(e);
     }
 
+    UnidentifiedAccessUtil unidentifiedAccessUtil = new UnidentifiedAccessUtil(a.getACI());
+    SignalServiceMessageSender sender = dependencies.getMessageSender();
+
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-      sender.sendReceipt(recipient.getAddress(), m.getAccessPairFor(recipient), message);
+      sender.sendReceipt(recipient.getAddress(), unidentifiedAccessUtil.getAccessPairFor(recipient), message);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
     } catch (IOException e) {
       throw new InternalError("error sending receipt", e);
     } catch (UntrustedIdentityException e) {
-      throw new UntrustedIdentityError(m.getACI(), e);
+      throw new UntrustedIdentityError(a.getACI(), e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     List<ReadMessage> readMessages = new LinkedList<>();
@@ -86,13 +97,21 @@ public class MarkReadRequest implements RequestType<Empty> {
     }
 
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-      sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), m.getAccessPairFor(m.getOwnRecipient()));
+      sender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), unidentifiedAccessUtil.getAccessPairFor(a.getSelf()));
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
     } catch (IOException e) {
       throw new InternalError("error sending sync message", e);
     } catch (UntrustedIdentityException e) {
-      throw new UntrustedIdentityError(m.getACI(), e);
+      throw new UntrustedIdentityError(a.getACI(), e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
     return new Empty();
   }

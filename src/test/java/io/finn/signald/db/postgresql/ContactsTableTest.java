@@ -20,7 +20,7 @@ public class ContactsTableTest {
     testDatabase = TestUtil.createAndConfigureTestPostgresDatabase();
 
     // Create the account
-    Database.Get(testDatabase.getAci()).AccountsTable.add(testDatabase.selfAddress.getNumber().get(), testDatabase.getAci(), "/not/here", IServersTable.DEFAULT_SERVER);
+    Database.Get(testDatabase.getAci()).AccountsTable.add(testDatabase.selfAddress.getNumber().get(), testDatabase.getAci(), IServersTable.DEFAULT_SERVER);
   }
 
   @AfterEach

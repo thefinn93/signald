@@ -21,14 +21,11 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.exceptions.InvalidProxyException;
-import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.GroupsUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
@@ -71,15 +68,9 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     Manager m = Common.getManager(account);
     ProfileKeyCredential profileKeyCredential;
     try {
-      profileKeyCredential = m.getRecipientProfileKeyCredential(m.getOwnRecipient()).getProfileKeyCredential();
-    } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
+      profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(a.getSelf());
+    } catch (IOException | SQLException | InvalidInputException e) {
       throw new InternalError("error getting own profile key credential", e);
-    } catch (NoSuchAccountException e) {
-      throw new NoSuchAccountError(e);
-    } catch (ServerNotFoundException e) {
-      throw new ServerNotFoundError(e);
-    } catch (InvalidProxyException e) {
-      throw new InvalidProxyError(e);
     }
 
     if (profileKeyCredential == null) {

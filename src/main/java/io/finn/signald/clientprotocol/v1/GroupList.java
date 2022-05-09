@@ -7,12 +7,13 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.annotations.Doc;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GroupList {
   public List<JsonGroupV2Info> groups;
-  public List<JsonGroupInfo> legacyGroups;
+  @Doc("list of legacy (v1) groups, no longer supported (will always be empty)") public List<JsonGroupInfo> legacyGroups;
 
   public GroupList() { groups = new ArrayList<>(); }
 

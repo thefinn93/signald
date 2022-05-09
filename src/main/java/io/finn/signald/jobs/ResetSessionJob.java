@@ -1,11 +1,11 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.UnidentifiedAccessUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -32,7 +32,7 @@ public class ResetSessionJob implements Job {
     account.getProtocolStore().archiveAllSessions(recipient);
     if (!recipient.equals(account.getSelf())) {
       logger.debug("sending null message back");
-      Optional<UnidentifiedAccessPair> unidentifiedAccessPair = Manager.get(account.getACI()).getAccessPairFor(recipient);
+      Optional<UnidentifiedAccessPair> unidentifiedAccessPair = new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(recipient);
       try {
         account.getSignalDependencies().getMessageSender().sendNullMessage(recipient.getAddress(), unidentifiedAccessPair);
       } catch (UntrustedIdentityException e) {

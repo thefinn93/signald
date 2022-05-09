@@ -13,7 +13,6 @@ import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonQuote;
 import io.finn.signald.clientprotocol.v1.JsonReaction;
 import io.finn.signald.db.IContactsTable;
-import io.finn.signald.storage.ContactStore;
 import java.util.List;
 
 @Deprecated(1641027661)

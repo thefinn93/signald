@@ -15,7 +15,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.finn.signald.clientprotocol.MessageEncoder;
-import io.finn.signald.clientprotocol.v0.JsonAddress;
 import io.finn.signald.clientprotocol.v0.JsonMessageEnvelope;
 import io.finn.signald.clientprotocol.v0.JsonSendMessageResult;
 import io.finn.signald.clientprotocol.v1.GroupLinkInfoRequest;
@@ -25,8 +24,6 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IServersTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.*;
-import io.finn.signald.storage.GroupInfo;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.JSONUtil;
 import java.io.*;
@@ -52,15 +49,12 @@ import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.libsignal.zkgroup.groups.UuidCiphertext;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
-import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.*;
-import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState;
@@ -73,6 +67,9 @@ public class LegacySocketHandler {
   private ObjectMapper mpr = new ObjectMapper();
   private static final Logger logger = LogManager.getLogger();
   private Socket socket;
+
+  private static final String NOT_SUPPORTED_CODE = "no_longer_supported";
+  private static final String NOT_SUPPORTED_MESSAGE = "please upgrade to v1 requests. If you have questions please reach out at https://signald.org/articles/community";
 
   public LegacySocketHandler(Socket socket) throws IOException {
     this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -362,6 +359,7 @@ public class LegacySocketHandler {
                                                        InterruptedException, ExecutionException, TimeoutException, SQLException, InvalidKeyException, ServerNotFoundException,
                                                        InvalidProxyException, InvalidInputException {
     Manager m = Manager.get(request.username);
+    Account a = m.getAccount();
 
     byte[] groupId = null;
     if (request.recipientGroupId != null) {
@@ -389,7 +387,7 @@ public class LegacySocketHandler {
 
     if (request.recipientGroupId.length() == 44) { // v2 group
       var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
-      if (!groupOptional.isPresent()) {
+      if (groupOptional.isEmpty()) {
         throw new GroupNotFoundException(request.recipientGroupId);
       }
 
@@ -403,22 +401,8 @@ public class LegacySocketHandler {
       if (request.groupName != null) {
         change = groupOperations.createModifyGroupTitle(request.groupName);
       } else if (request.members != null) {
-        var recipientsTable = Database.Get(request.recipientAddress.getACI()).RecipientsTable;
-        List<ProfileAndCredentialEntry> members = new ArrayList<>();
-        Set<GroupCandidate> candidates = new HashSet<>();
-        for (String member : request.members) {
-          Recipient recipient = recipientsTable.get(member);
-          ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(recipient);
-          if (profileAndCredentialEntry == null) {
-            logger.warn("failed to add group member with no profile");
-            continue;
-          }
-          recipients.add(recipient);
-          Optional<ProfileKeyCredential> profileKeyCredential = Optional.ofNullable(profileAndCredentialEntry.getProfileKeyCredential());
-          UUID uuid = profileAndCredentialEntry.getServiceAddress().getServiceId().uuid();
-          candidates.add(new GroupCandidate(uuid, profileKeyCredential));
-        }
-        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), account.getUUID());
+        reply(NOT_SUPPORTED_CODE, NOT_SUPPORTED_MESSAGE, request.id);
+        return;
       } else if (request.avatar != null) {
         byte[] avatarBytes = Files.readAllBytes(new File(request.avatar).toPath());
         String cdnKey = account.getGroups().uploadNewAvatar(group.getSecretParams(), avatarBytes);
@@ -431,38 +415,27 @@ public class LegacySocketHandler {
       account.getGroups().updateGroup(group, change);
       this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
     } else {
-      GroupInfo group = m.updateGroup(groupId, groupName, groupMembers, groupAvatar);
-      if (groupId.length != group.groupId.length) {
-        this.reply("group_created", new JsonStatusMessage(5, "Created new group " + group.name + "."), request.id);
-      } else {
-        this.reply("group_updated", new JsonStatusMessage(6, "Updated group"), request.id);
-      }
+      this.reply(NOT_SUPPORTED_CODE, NOT_SUPPORTED_MESSAGE, request.id);
     }
   }
 
-  private void setExpiration(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, UnknownGroupException,
-                                                         VerificationFailedException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException,
-                                                         InvalidInputException {
+  private void setExpiration(JsonRequest request) throws IOException, NoSuchAccountException, UnknownGroupException, VerificationFailedException, SQLException, InvalidKeyException,
+                                                         ServerNotFoundException, InvalidProxyException, InvalidInputException {
     Manager m = Manager.get(request.username);
     List<SendMessageResult> results;
     if (request.recipientGroupId != null) {
-      if (request.recipientGroupId.length() == 44) {
-        Account account = m.getAccount();
-        var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
-        if (!groupOptional.isPresent()) {
-          throw new UnknownGroupException();
-        }
-        var group = groupOptional.get();
-
-        GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
-        GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(account.getServiceConfiguration()).forGroup(groupSecretParams);
-        GroupChange.Actions.Builder change = groupOperations.createModifyGroupTimerChange(request.expiresInSeconds);
-        var updateOutput = account.getGroups().updateGroup(group, change);
-        results = m.sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), group.getMembers());
-      } else {
-        byte[] groupId = Base64.decode(request.recipientGroupId);
-        results = m.setExpiration(groupId, request.expiresInSeconds);
+      Account account = m.getAccount();
+      var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
+      if (groupOptional.isEmpty()) {
+        throw new UnknownGroupException();
       }
+      var group = groupOptional.get();
+
+      GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(group.getMasterKey());
+      GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(account.getServiceConfiguration()).forGroup(groupSecretParams);
+      GroupChange.Actions.Builder change = groupOperations.createModifyGroupTimerChange(request.expiresInSeconds);
+      var updateOutput = account.getGroups().updateGroup(group, change);
+      results = m.sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), group.getMembers());
     } else {
       Recipient recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
       results = m.setExpiration(recipient, request.expiresInSeconds);
@@ -477,13 +450,13 @@ public class LegacySocketHandler {
     this.reply("group_list", new JsonGroupList(m), request.id);
   }
 
-  private void leaveGroup(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, VerificationFailedException,
-                                                      SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, InvalidInputException {
+  private void leaveGroup(JsonRequest request) throws IOException, NoSuchAccountException, VerificationFailedException, SQLException, InvalidKeyException, ServerNotFoundException,
+                                                      InvalidProxyException, InvalidInputException {
     Manager m = Manager.get(request.username);
     if (request.recipientGroupId.length() == 44) {
       Account account = m.getAccount();
       var groupOptional = Database.Get(m.getACI()).GroupsTable.get(new GroupIdentifier(Base64.decode(request.recipientGroupId)));
-      if (!groupOptional.isPresent()) {
+      if (groupOptional.isEmpty()) {
         reply("leave_group_error", "group not found", request.id);
         return;
       }
@@ -509,8 +482,8 @@ public class LegacySocketHandler {
       m.sendGroupV2Message(output.first(), output.second().getSignalServiceGroupV2(), recipients);
       group.delete();
     } else {
-      byte[] groupId = Base64.decode(request.recipientGroupId);
-      m.sendQuitGroupMessage(groupId);
+      this.reply(NOT_SUPPORTED_CODE, NOT_SUPPORTED_MESSAGE, request.id);
+      return;
     }
     this.reply("left_group", new JsonStatusMessage(7, "Successfully left group"), request.id);
   }
@@ -659,26 +632,9 @@ public class LegacySocketHandler {
     this.reply("unsubscribed", null, request.id);
   }
 
-  private void getProfile(JsonRequest request) throws IOException, NoSuchAccountException, InterruptedException, ExecutionException, TimeoutException, SQLException,
-                                                      InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(request.username);
-    Recipient recipient = Database.Get(request.recipientAddress.getACI()).RecipientsTable.get(request.recipientAddress.number, request.recipientAddress.getACI());
-    ProfileAndCredentialEntry profileEntry = m.getRecipientProfileKeyCredential(recipient);
-    if (profileEntry == null) {
-      this.reply("profile_not_available", new JsonAddress(recipient.getAddress()), request.id);
-      return;
-    }
-    m.getAccountData().saveIfNeeded();
-    SignalServiceProfile profile = m.getSignalServiceProfile(recipient, profileEntry.getProfileKey());
-    this.reply("profile", new JsonProfile(profile, profileEntry.getProfileKey(), request.recipientAddress), request.id);
-  }
+  private void getProfile(JsonRequest request) throws IOException { reply(NOT_SUPPORTED_CODE, NOT_SUPPORTED_MESSAGE, request.id); }
 
-  private void setProfile(JsonRequest request)
-      throws IOException, NoSuchAccountException, InvalidInputException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(request.username);
-    m.setProfile(request.name, null);
-    this.reply("profile_set", null, request.id);
-  }
+  private void setProfile(JsonRequest request) throws IOException { reply(NOT_SUPPORTED_CODE, NOT_SUPPORTED_MESSAGE, request.id); }
 
   private void react(JsonRequest request) throws IOException, NoSuchAccountException, InvalidRecipientException, UnknownGroupException, SQLException, InvalidKeyException,
                                                  ServerNotFoundException, InvalidProxyException, NoSendPermissionException, InvalidInputException {
@@ -700,11 +656,7 @@ public class LegacySocketHandler {
     handleSendMessage(manager.send(messageBuilder, recipient, groupIdentifier, null), request);
   }
 
-  private void refreshAccount(JsonRequest request) throws IOException, NoSuchAccountException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    Manager m = Manager.get(request.username);
-    m.refreshAccount();
-    this.reply("account_refreshed", null, request.id);
-  }
+  private void refreshAccount(JsonRequest request) throws IOException { this.reply(NOT_SUPPORTED_CODE, NOT_SUPPORTED_MESSAGE, request.id); }
 
   private void groupLinkInfo(JsonRequest request) throws IOException, InvalidRequestError, GroupVerificationError, NoSuchAccountError, GroupLinkNotActiveError, ServerNotFoundError,
                                                          InternalError, InvalidProxyError, SQLError {

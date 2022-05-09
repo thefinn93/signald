@@ -1,12 +1,12 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.UnidentifiedAccessUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -54,7 +54,7 @@ public class SendRetryMessageRequestJob implements Job {
     }
 
     DecryptionErrorMessage decryptionErrorMessage = DecryptionErrorMessage.forOriginalMessage(originalContent, envelopeType, envelope.getTimestamp(), senderDevice);
-    Optional<UnidentifiedAccessPair> unidentifiedAccessPair = Manager.get(account.getACI()).getAccessPairFor(sender);
+    Optional<UnidentifiedAccessPair> unidentifiedAccessPair = new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(sender);
     logger.info("requesting message redelivery");
     try {
       account.getSignalDependencies().getMessageSender().sendRetryReceipt(sender.getAddress(), unidentifiedAccessPair, groupId, decryptionErrorMessage);

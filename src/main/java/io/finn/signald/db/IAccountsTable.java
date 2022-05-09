@@ -7,6 +7,8 @@
 
 package io.finn.signald.db;
 
+import static io.finn.signald.storage.LegacyAccountData.DELETED_DO_NOT_SAVE;
+
 import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -15,7 +17,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.AccountData;
+import io.finn.signald.storage.LegacyAccountData;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -32,12 +34,9 @@ public interface IAccountsTable {
 
   String UUID = "uuid";
   String E164 = "e164";
-  String FILENAME = "filename";
   String SERVER = "server";
 
-  File getFile(ACI aci) throws SQLException, NoSuchAccountException;
-  File getFile(String e164) throws SQLException, NoSuchAccountException;
-  void add(String e164, ACI aci, String filename, UUID server) throws SQLException;
+  void add(String e164, ACI aci, UUID server) throws SQLException;
   void DeleteAccount(ACI aci, String legacyUsername) throws SQLException;
   void setUUID(JsonAddress address) throws SQLException;
   ACI getACI(String e164) throws NoSuchAccountException, SQLException;
@@ -55,48 +54,52 @@ public interface IAccountsTable {
     return getServer(ACI.from(uuid));
   }
 
-  default void importFromJSON(File f) throws IOException, SQLException, InvalidInputException, UnregisteredUserError, InternalError {
-    AccountData accountData = AccountData.load(f);
+  @SuppressWarnings({"deprecation"})
+  default void importFromLegacyJSON(File f) throws IOException, SQLException, InvalidInputException, UnregisteredUserError, InternalError {
+    LegacyAccountData accountData = LegacyAccountData.load(f);
     if (accountData.address.uuid == null) {
       logger.warn("unable to import account with no UUID: " + accountData.getLegacyUsername());
       return;
     }
     logger.info("migrating account if needed: " + accountData.address.toRedactedString());
-    add(accountData.getLegacyUsername(), accountData.address.getACI(), f.getAbsolutePath(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
-    boolean needsSave = false;
+    add(accountData.getLegacyUsername(), accountData.address.getACI(), java.util.UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
     Account account = new Account(accountData.getACI());
     try {
       if (accountData.legacyProtocolStore != null) {
         accountData.legacyProtocolStore.migrateToDB(account);
         accountData.legacyProtocolStore = null;
-        needsSave = true;
       }
       if (accountData.legacyRecipientStore != null) {
         accountData.legacyRecipientStore.migrateToDB(account);
         accountData.legacyRecipientStore = null;
-        needsSave = true;
       }
 
       if (accountData.legacyBackgroundActionsLastRun != null) {
         accountData.legacyBackgroundActionsLastRun.migrateToDB(account);
         accountData.legacyBackgroundActionsLastRun = null;
-        needsSave = true;
       }
 
       if (accountData.legacyGroupsV2 != null) {
-        needsSave = accountData.legacyGroupsV2.migrateToDB(account) || needsSave;
+        accountData.legacyGroupsV2.migrateToDB(account);
       }
 
       if (accountData.legacyContactStore != null) {
-        needsSave |= accountData.legacyContactStore.migrateToDB(account);
+        accountData.legacyContactStore.migrateToDB(account);
         accountData.legacyContactStore = null;
       }
 
-      needsSave = accountData.migrateToDB(account) || needsSave;
-    } finally {
-      if (needsSave) {
-        accountData.save();
+      if (accountData.legacyProfileCredentialStore != null) {
+        accountData.legacyProfileCredentialStore.migrateToDB(account);
+        accountData.legacyProfileCredentialStore = null;
       }
+
+      accountData.migrateToDB(account);
+
+      accountData.version = DELETED_DO_NOT_SAVE;
+      logger.info("account fully migrated out of legacy storage, deleting legacy storage file");
+      accountData.delete();
+    } finally {
+      accountData.save();
     }
   }
 }

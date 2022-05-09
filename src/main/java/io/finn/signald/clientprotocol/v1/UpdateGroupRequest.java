@@ -18,23 +18,14 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.exceptions.InvalidProxyException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
@@ -43,7 +34,6 @@ import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
-import org.whispersystems.util.Base64;
 
 @ProtocolType("update_group")
 @ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
@@ -81,159 +71,134 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
 
   @Override
   public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
-                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError {
+                                               InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError {
     Account a = Common.getAccount(account);
     Manager m = Common.getManager(account);
-    var recipientsTable = Database.Get(m.getACI()).RecipientsTable;
+    var recipientsTable = a.getDB().RecipientsTable;
 
     if (groupID.length() == 24) { // v1 group
-      logger.warn("v1 group support is being removed https://gitlab.com/signald/signald/-/issues/224");
-      List<Recipient> addMembersSignalServiceAddress = null;
-      if (addMembers != null) {
-        addMembersSignalServiceAddress = new ArrayList<>();
-
-        for (JsonAddress member : addMembers) {
-          addMembersSignalServiceAddress.add(Common.getRecipient(recipientsTable, member));
-        }
-      }
-      byte[] rawGroupID;
-      try {
-        rawGroupID = Base64.decode(groupID);
-      } catch (IOException e) {
-        throw new UnknownGroupError();
-      }
-      io.finn.signald.storage.GroupInfo g;
-      try {
-        g = m.sendUpdateGroupMessage(rawGroupID, title, addMembersSignalServiceAddress, avatar);
-      } catch (IOException | SQLException e) {
-        throw new InternalError("error sending group update message", e);
-      } catch (GroupNotFoundException | NotAGroupMemberException e) {
-        throw new UnknownGroupError();
-      }
-      return new GroupInfo(g);
-    } else {
-      Groups groups = Common.getGroups(a);
-      var group = Common.getGroup(a, groupID);
-
-      List<Recipient> recipients;
-      try {
-        recipients = group.getMembers();
-      } catch (IOException | SQLException e) {
-        throw new InternalError("error looking up recipients", e);
-      }
-
-      GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
-      GroupChange.Actions.Builder change;
-      try {
-        if (title != null) {
-          change = groupOperations.createModifyGroupTitle(title);
-        } else if (description != null) {
-          change = groupOperations.createModifyGroupDescription(description);
-        } else if (avatar != null) {
-          byte[] avatarBytes = Files.readAllBytes(new File(avatar).toPath());
-          String cdnKey;
-          try {
-            cdnKey = groups.uploadNewAvatar(group.getSecretParams(), avatarBytes);
-          } catch (VerificationFailedException e) {
-            throw new InternalError("error uploading avatar", e);
-          }
-          change = GroupChange.Actions.newBuilder().setModifyAvatar(GroupChange.Actions.ModifyAvatarAction.newBuilder().setAvatar(cdnKey));
-        } else if (addMembers != null && addMembers.size() > 0) {
-          Set<GroupCandidate> candidates = new HashSet<>();
-          for (JsonAddress member : addMembers) {
-            Recipient recipient = recipientsTable.get(member);
-            ProfileAndCredentialEntry profileAndCredentialEntry = m.getRecipientProfileKeyCredential(recipient);
-            if (profileAndCredentialEntry == null) {
-              logger.warn("failed to add group member with no profile");
-              continue;
-            }
-            recipients.add(recipientsTable.get(profileAndCredentialEntry.getServiceAddress()));
-            Optional<ProfileKeyCredential> profileKeyCredential = Optional.ofNullable(profileAndCredentialEntry.getProfileKeyCredential());
-            UUID uuid = profileAndCredentialEntry.getServiceAddress().getServiceId().uuid();
-            candidates.add(new GroupCandidate(uuid, profileKeyCredential));
-          }
-          change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
-        } else if (removeMembers != null && removeMembers.size() > 0) {
-          Set<UUID> members = new HashSet<>();
-          for (JsonAddress member : removeMembers) {
-            Recipient recipient = recipientsTable.get(member);
-            members.add(recipient.getUUID());
-          }
-          change = groupOperations.createRemoveMembersChange(members, false, List.of());
-        } else if (updateRole != null) {
-          UUID uuid = UUID.fromString(updateRole.uuid);
-          Member.Role role;
-          switch (updateRole.role) {
-          case "ADMINISTRATOR":
-            role = Member.Role.ADMINISTRATOR;
-            break;
-          case "DEFAULT":
-            role = Member.Role.DEFAULT;
-            break;
-          default:
-            throw new InvalidRequestError("unknown role requested");
-          }
-          change = groupOperations.createChangeMemberRole(uuid, role);
-        } else if (updateAccessControl != null) {
-          if (updateAccessControl.attributes != null) {
-            if (updateAccessControl.members != null || updateAccessControl.link != null) {
-              throw new InvalidRequestError("only one access control may be updated at once");
-            }
-            change = groupOperations.createChangeAttributesRights(getAccessRequired(updateAccessControl.attributes));
-          } else if (updateAccessControl.members != null) {
-            if (updateAccessControl.link != null) {
-              throw new InvalidRequestError("only one access control may be updated at once");
-            }
-            change = groupOperations.createChangeMembershipRights(getAccessRequired(updateAccessControl.members));
-          } else if (updateAccessControl.link != null) {
-            final AccessControl.AccessRequired access = getAccessRequired(updateAccessControl.link);
-            if (access != AccessControl.AccessRequired.ADMINISTRATOR && access != AccessControl.AccessRequired.ANY && access != AccessControl.AccessRequired.UNSATISFIABLE) {
-              throw new InvalidRequestError("unexpected value for key updateAccessControl.link: must be ADMINISTRATOR, ANY, or UNSATISFIABLE");
-            }
-
-            change = groupOperations.createChangeJoinByLinkRights(access);
-            if (access != AccessControl.AccessRequired.UNSATISFIABLE) {
-              if (group.getDecryptedGroup().getInviteLinkPassword().isEmpty()) {
-                logger.debug("First time enabling group links for group and password empty, generating");
-                change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
-              }
-            }
-          } else {
-            throw new InvalidRequestError("no known access control requested");
-          }
-        } else if (resetLink) {
-          change = groupOperations.createModifyGroupLinkPasswordChange(GroupLinkPassword.createNew().serialize());
-        } else if (updateTimer > -1) {
-          change = groupOperations.createModifyGroupTimerChange(updateTimer);
-        } else if (announcements != null) {
-          boolean announcementMode;
-          switch (announcements) {
-          case "ENABLED":
-            announcementMode = true;
-            break;
-          case "DISABLED":
-            announcementMode = false;
-            break;
-          default:
-            throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
-          }
-          change = groupOperations.createAnnouncementGroupChange(announcementMode);
-        } else {
-          throw new InvalidRequestError("no change requested");
-        }
-
-        Common.updateGroup(a, group, change);
-      } catch (IOException | SQLException | ExecutionException | InterruptedException | InvalidInputException | TimeoutException e) {
-        throw new InternalError("error updating group", e);
-      } catch (NoSuchAccountException e) {
-        throw new NoSuchAccountError(e);
-      } catch (ServerNotFoundException e) {
-        throw new ServerNotFoundError(e);
-      } catch (InvalidProxyException e) {
-        throw new InvalidProxyError(e);
-      }
-      return new GroupInfo(group.getJsonGroupV2Info());
+      throw new UnsupportedGroupError();
     }
+
+    Groups groups = Common.getGroups(a);
+    var group = Common.getGroup(a, groupID);
+
+    List<Recipient> recipients;
+    try {
+      recipients = group.getMembers();
+    } catch (IOException | SQLException e) {
+      throw new InternalError("error looking up recipients", e);
+    }
+
+    GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
+    GroupChange.Actions.Builder change;
+
+    try {
+      if (title != null) {
+        change = groupOperations.createModifyGroupTitle(title);
+      } else if (description != null) {
+        change = groupOperations.createModifyGroupDescription(description);
+      } else if (avatar != null) {
+        byte[] avatarBytes = Files.readAllBytes(new File(avatar).toPath());
+        String cdnKey;
+        try {
+          cdnKey = groups.uploadNewAvatar(group.getSecretParams(), avatarBytes);
+        } catch (VerificationFailedException e) {
+          throw new InternalError("error uploading avatar", e);
+        } catch (InvalidInputException | IOException e) {
+          throw new InternalError("error uploading new avatar: ", e);
+        } catch (SQLException e) {
+          throw new SQLError(e);
+        }
+        change = GroupChange.Actions.newBuilder().setModifyAvatar(GroupChange.Actions.ModifyAvatarAction.newBuilder().setAvatar(cdnKey));
+      } else if (addMembers != null && addMembers.size() > 0) {
+        Set<GroupCandidate> candidates = new HashSet<>();
+        for (JsonAddress member : addMembers) {
+          Recipient recipient = recipientsTable.get(member);
+          ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
+          if (profileKeyCredential == null) {
+            logger.warn("failed to add group member with no profile");
+            continue;
+          }
+          recipients.add(recipientsTable.get(recipient.getAddress()));
+          UUID uuid = recipient.getUUID();
+          candidates.add(new GroupCandidate(uuid, Optional.of(profileKeyCredential)));
+        }
+        change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
+      } else if (removeMembers != null && removeMembers.size() > 0) {
+        Set<UUID> members = new HashSet<>();
+        for (JsonAddress member : removeMembers) {
+          Recipient recipient = recipientsTable.get(member);
+          members.add(recipient.getUUID());
+        }
+        change = groupOperations.createRemoveMembersChange(members, false, List.of());
+      } else if (updateRole != null) {
+        UUID uuid = UUID.fromString(updateRole.uuid);
+        Member.Role role;
+        switch (updateRole.role) {
+        case "ADMINISTRATOR":
+          role = Member.Role.ADMINISTRATOR;
+          break;
+        case "DEFAULT":
+          role = Member.Role.DEFAULT;
+          break;
+        default:
+          throw new InvalidRequestError("unknown role requested");
+        }
+        change = groupOperations.createChangeMemberRole(uuid, role);
+      } else if (updateAccessControl != null) {
+        if (updateAccessControl.attributes != null) {
+          if (updateAccessControl.members != null || updateAccessControl.link != null) {
+            throw new InvalidRequestError("only one access control may be updated at once");
+          }
+          change = groupOperations.createChangeAttributesRights(getAccessRequired(updateAccessControl.attributes));
+        } else if (updateAccessControl.members != null) {
+          if (updateAccessControl.link != null) {
+            throw new InvalidRequestError("only one access control may be updated at once");
+          }
+          change = groupOperations.createChangeMembershipRights(getAccessRequired(updateAccessControl.members));
+        } else if (updateAccessControl.link != null) {
+          final AccessControl.AccessRequired access = getAccessRequired(updateAccessControl.link);
+          if (access != AccessControl.AccessRequired.ADMINISTRATOR && access != AccessControl.AccessRequired.ANY && access != AccessControl.AccessRequired.UNSATISFIABLE) {
+            throw new InvalidRequestError("unexpected value for key updateAccessControl.link: must be ADMINISTRATOR, ANY, or UNSATISFIABLE");
+          }
+
+          change = groupOperations.createChangeJoinByLinkRights(access);
+          if (access != AccessControl.AccessRequired.UNSATISFIABLE) {
+            if (group.getDecryptedGroup().getInviteLinkPassword().isEmpty()) {
+              logger.debug("First time enabling group links for group and password empty, generating");
+              change = groupOperations.createModifyGroupLinkPasswordAndRightsChange(GroupLinkPassword.createNew().serialize(), access);
+            }
+          }
+        } else {
+          throw new InvalidRequestError("no known access control requested");
+        }
+      } else if (resetLink) {
+        change = groupOperations.createModifyGroupLinkPasswordChange(GroupLinkPassword.createNew().serialize());
+      } else if (updateTimer > -1) {
+        change = groupOperations.createModifyGroupTimerChange(updateTimer);
+      } else if (announcements != null) {
+        boolean announcementMode;
+        switch (announcements) {
+        case "ENABLED":
+          announcementMode = true;
+          break;
+        case "DISABLED":
+          announcementMode = false;
+          break;
+        default:
+          throw new InvalidRequestError("unexpected value for key announcement: must be ENABLED or DISABLED");
+        }
+        change = groupOperations.createAnnouncementGroupChange(announcementMode);
+      } else {
+        throw new InvalidRequestError("no change requested");
+      }
+    } catch (IOException | SQLException | InvalidInputException e) {
+      throw new InternalError("error updating group: ", e);
+    }
+
+    Common.updateGroup(a, group, change);
+    return new GroupInfo(group.getJsonGroupV2Info());
   }
 
   public AccessControl.AccessRequired getAccessRequired(String name) throws InvalidRequestError {

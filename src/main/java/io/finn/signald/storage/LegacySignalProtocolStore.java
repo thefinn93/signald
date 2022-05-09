@@ -16,19 +16,19 @@ import io.finn.signald.db.ISessionsTable;
 import io.finn.signald.db.ISignedPreKeysTable;
 import java.io.IOException;
 import java.sql.SQLException;
-
-public class SignalProtocolStore {
+@Deprecated
+public class LegacySignalProtocolStore {
   @JsonIgnore public IPreKeysTable preKeys;
   @JsonIgnore public ISessionsTable sessionStore;
   @JsonIgnore public ISignedPreKeysTable signedPreKeyStore;
   @JsonIgnore public IIdentityKeysTable identityKeyStore;
 
-  @JsonProperty("preKeys") public PreKeyStore legacyPreKeys;
-  @JsonProperty("sessionStore") public SessionStore legacySessionStore;
-  @JsonProperty("signedPreKeyStore") public SignedPreKeyStore legacySignedPreKeyStore;
-  @JsonProperty("identityKeyStore") public IdentityKeyStore legacyIdentityKeyStore;
+  @JsonProperty("preKeys") public LegacyPreKeyStore legacyPreKeys;
+  @JsonProperty("sessionStore") public LegacySessionStore legacySessionStore;
+  @JsonProperty("signedPreKeyStore") public LegacySignedPreKeyStore legacySignedPreKeyStore;
+  @JsonProperty("identityKeyStore") public LegacyIdentityKeyStore legacyIdentityKeyStore;
 
-  public SignalProtocolStore() {}
+  public LegacySignalProtocolStore() {}
 
   public void migrateToDB(Account account) throws SQLException, IOException {
     legacyPreKeys.migrateToDB(account);

@@ -8,16 +8,15 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.Manager;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.clientprotocol.v1.exceptions.AuthorizationFailedError;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.clientprotocol.v1.exceptions.SQLError;
 import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
-import io.finn.signald.db.IContactsTable;
-import io.finn.signald.db.Recipient;
-import io.finn.signald.storage.SignalProfile;
-import java.io.File;
-import java.io.IOException;
+import io.finn.signald.db.*;
+import io.finn.signald.util.FileUtil;
+import java.sql.SQLException;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,36 +46,37 @@ public class Profile {
   @Doc("currently unclear how these work, as they are not available in the production Signal apps") @JsonProperty("visible_badge_ids") public List<String> visibleBadgeIds;
 
   public Profile(IContactsTable.ContactInfo contact) {
-    if (contact != null) {
-      name = contact.name;
-      color = contact.color;
-      inboxPosition = contact.inboxPosition;
-      expirationTime = contact.messageExpirationTime;
-      address = new JsonAddress(contact.recipient);
+    if (contact == null) {
+      return;
     }
+    name = contact.name;
+    color = contact.color;
+    inboxPosition = contact.inboxPosition;
+    expirationTime = contact.messageExpirationTime;
+    address = new JsonAddress(contact.recipient);
   }
 
-  public Profile(SignalProfile profile, Recipient recipient, IContactsTable.ContactInfo contact) {
+  public Profile(Database db, Recipient recipient, IContactsTable.ContactInfo contact) throws SQLError {
     this(contact);
+    try {
+      IProfilesTable.Profile profile = db.ProfilesTable.get(recipient);
+      if (profile != null) {
+        profileName = profile.getSerializedFullName();
+        IProfileCapabilitiesTable.Capabilities allCapabilities = db.ProfileCapabilitiesTable.getAll(recipient);
+        capabilities = allCapabilities == null ? null : new Capabilities(allCapabilities);
+        about = profile.getAbout();
+        emoji = profile.getEmoji();
 
-    if (profile != null) {
-      profileName = profile.getName();
-      capabilities = new Capabilities(profile.getCapabilities());
-      about = profile.getAbout();
-      emoji = profile.getEmoji();
-
-      try {
         SignalServiceProtos.PaymentAddress paymentAddress = profile.getPaymentAddress();
         if (paymentAddress != null) {
           mobileCoinAddress = Base64.encodeBytes(paymentAddress.getMobileCoinAddress().getAddress().toByteArray());
         }
-      } catch (IOException e) {
-        logger.warn("error decrypting payment profile address: " + e.getMessage());
+
+        visibleBadgeIds = IProfilesTable.StoredBadge.getVisibleIds(profile.getBadges());
       }
-
-      visibleBadgeIds = profile.getVisibleBadgesIds();
+    } catch (SQLException e) {
+      throw new SQLError(e);
     }
-
     if (address == null) {
       address = new JsonAddress(recipient);
     } else {
@@ -88,12 +88,8 @@ public class Profile {
     }
   }
 
-  public void populateAvatar(Manager m) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
-    Recipient recipient = Common.getRecipient(m.getACI(), address);
-    File f = m.getProfileAvatarFile(recipient);
-    if (f == null || !f.exists()) {
-      return;
-    }
-    avatar = f.getAbsolutePath();
+  public void populateAvatar(Account account) throws InternalError, UnregisteredUserError, AuthorizationFailedError {
+    Recipient recipient = Common.getRecipient(account.getACI(), address);
+    avatar = FileUtil.getProfileAvatarPath(recipient);
   }
 }

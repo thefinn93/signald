@@ -9,18 +9,13 @@ package io.finn.signald;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupJoinInfo;
-import io.finn.signald.db.Database;
-import io.finn.signald.db.IGroupCredentialsTable;
-import io.finn.signald.db.IGroupsTable;
-import io.finn.signald.db.Recipient;
+import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.GetProfileKeysFromGroupHistoryJob;
 import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
-import io.finn.signald.storage.ProfileCredentialStore;
 import io.finn.signald.util.GroupProtoUtil;
 import io.finn.signald.util.GroupsUtil;
 import io.reactivex.rxjava3.annotations.NonNull;
@@ -79,14 +74,14 @@ public class Groups {
   private final GroupsV2Api groupsV2Api;
   private final IGroupCredentialsTable credentials;
   private final IGroupsTable groupsTable;
-  private final ACI aci;
+  private final Account account;
   private final GroupsV2Operations groupsV2Operations;
 
   public Groups(ACI aci) throws SQLException, ServerNotFoundException, IOException, InvalidProxyException, NoSuchAccountException {
-    this.aci = aci;
+    account = new Account(aci);
     groupsV2Api = SignalDependencies.get(aci).getAccountManager().getGroupsV2Api();
-    groupsTable = Database.Get(aci).GroupsTable;
-    credentials = Database.Get(aci).GroupCredentialsTable;
+    groupsTable = account.getDB().GroupsTable;
+    credentials = account.getDB().GroupCredentialsTable;
     SignalServiceConfiguration serviceConfiguration = Database.Get().AccountsTable.getServer(aci).getSignalServiceConfiguration();
     groupsV2Operations = GroupsUtil.GetGroupsV2Operations(serviceConfiguration);
   }
@@ -113,10 +108,10 @@ public class Groups {
       throws IOException, InvalidInputException, SQLException, VerificationFailedException, InvalidGroupStateException {
     final Optional<IGroupsTable.IGroup> localGroup = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
 
-    if (!localGroup.isPresent() || localGroup.get().getRevision() < revision || revision < 0) {
+    if (localGroup.isEmpty() || localGroup.get().getRevision() < revision || revision < 0) {
       int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
       AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-      GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
+      GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
 
       Optional<IGroupsTable.IGroup> latestServerGroup;
       try {
@@ -198,7 +193,7 @@ public class Groups {
           mostRecentGroupState.getRevision() == signedGroupChange.get().getRevision()) {
         // unlike the Android app, we've already updated to the latest server revision, so we don't have to apply anything
         logger.info("Getting profile keys from P2P group change for " + groupId);
-        final ProfileKeySet profileKeys = new ProfileKeySet();
+        final ProfileKeySet profileKeys = new ProfileKeySet(account.getDB().RecipientsTable);
         profileKeys.addKeysFromGroupChange(signedGroupChange.get());
         // note: Android app ALWAYS adds keys from the entire new group state, but probably just a left over from trying
         // to reuse code and using group states to perform local updates. We don't need to do that, since P2P group
@@ -209,7 +204,7 @@ public class Groups {
     }
 
     final GroupHistoryPage firstGroupHistoryPage;
-    if (!GroupProtoUtil.isMember(aci.uuid(), mostRecentGroupState.getDecryptedGroup().getMembersList())) {
+    if (!GroupProtoUtil.isMember(account.getUUID(), mostRecentGroupState.getDecryptedGroup().getMembersList())) {
       logger.info("Not a member, use latest only for " + groupId);
       firstGroupHistoryPage = new GroupHistoryPage(
           Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.empty())), GroupHistoryPage.PagingData.NONE);
@@ -255,7 +250,7 @@ public class Groups {
       firstGroupHistoryPage = new GroupHistoryPage(
           Collections.singletonList(new DecryptedGroupHistoryEntry(Optional.of(mostRecentGroupState.getDecryptedGroup()), Optional.empty())), GroupHistoryPage.PagingData.NONE);
     } else {
-      int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroupState.getDecryptedGroup(), aci.uuid());
+      int revisionWeWereAdded = GroupProtoUtil.findRevisionWeWereAdded(mostRecentGroupState.getDecryptedGroup(), account.getUUID());
       int logsNeededFrom = Math.max(previousGroupState.get().getRevision(), revisionWeWereAdded);
 
       if (mostRecentGroupState.getRevision() - logsNeededFrom > MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS) {
@@ -266,7 +261,7 @@ public class Groups {
         logger.info("Too many group history pages for " + groupId + " (limit: " + MAX_NON_BACKGROUND_THREAD_GROUP_REVISIONS_FOR_PROFILE_KEYS +
                     "); enqueuing job to persist profile keys from pages starting from revision " + logsNeededFrom + " (mostRecentGroupState revision " +
                     mostRecentGroupState.getRevision() + ")");
-        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(aci, groupSecretParams, logsNeededFrom, mostRecentGroupState.getRevision()));
+        BackgroundJobRunnerThread.queue(new GetProfileKeysFromGroupHistoryJob(account, groupSecretParams, logsNeededFrom, mostRecentGroupState.getRevision()));
         return;
       }
 
@@ -288,11 +283,10 @@ public class Groups {
    * @param mostRecentGroup The most recent group to use to fill in missing profile keys, if available.
    */
   public void persistProfileKeysFromServerGroupHistory(@NonNull final GroupSecretParams groupSecretParams, @NonNull final GroupHistoryPage firstPage,
-                                                       @Nullable IGroupsTable.IGroup mostRecentGroup) throws InvalidGroupStateException, IOException, VerificationFailedException,
-                                                                                                             InvalidInputException, SQLException, NoSuchAccountException,
-                                                                                                             ServerNotFoundException, InvalidKeyException, InvalidProxyException {
+                                                       @Nullable IGroupsTable.IGroup mostRecentGroup)
+      throws InvalidGroupStateException, IOException, VerificationFailedException, InvalidInputException, SQLException {
     GroupHistoryPage currentPage = firstPage;
-    final ProfileKeySet profileKeys = new ProfileKeySet();
+    final ProfileKeySet profileKeys = new ProfileKeySet(account.getDB().RecipientsTable);
     while (true) {
       logger.info("Processing {} group revision pages for profile keys", currentPage.getResults().size());
       for (DecryptedGroupHistoryEntry entry : currentPage.getResults()) {
@@ -310,7 +304,7 @@ public class Groups {
       } else {
         break;
       }
-    };
+    }
 
     if (mostRecentGroup != null) {
       profileKeys.addKeysFromGroupState(mostRecentGroup.getDecryptedGroup());
@@ -319,19 +313,17 @@ public class Groups {
     persistLearnedGroupProfileKeys(profileKeys);
   }
 
-  private void persistLearnedGroupProfileKeys(@NonNull ProfileKeySet profileKeys)
-      throws NoSuchAccountException, SQLException, IOException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
-    final ProfileCredentialStore profileCredentialStore = Manager.get(aci).getAccountData().profileCredentialStore;
-    final var updated = profileCredentialStore.persistProfileKeySet(profileKeys);
+  private void persistLearnedGroupProfileKeys(@NonNull ProfileKeySet profileKeys) throws SQLException, IOException {
+    final var updated = account.getDB().ProfileKeysTable.persistProfileKeySet(profileKeys);
 
     if (!updated.isEmpty()) {
       logger.info("Learned " + updated.size() + " new profile keys, fetching profiles");
-      for (ProfileAndCredentialEntry updatedEntry : updated) {
+      for (Recipient recipient : updated) {
         // Since the key was updated, the check in queueIfNeeded will check against a lastUpdateTimestamp of 0.
         // Note: Android app does this refresh synchronously. This will slow down message processing perf, so we don't
         // do it (plus we already use RefreshProfileJob for individual profile key updates anyway). However, not running
         // this job synchronously means profile keys can be out of date for a time.
-        RefreshProfileJob.queueIfNeeded(Manager.get(aci), updatedEntry);
+        RefreshProfileJob.queueIfNeeded(account, recipient);
       }
     }
   }
@@ -365,11 +357,21 @@ public class Groups {
       avatarBytes = Optional.of(Files.readAllBytes(avatar.toPath()));
     }
 
-    ProfileCredentialStore profileCredentialStore = Manager.get(aci).getAccountData().profileCredentialStore;
-    GroupCandidate groupCandidateSelf = new GroupCandidate(aci.uuid(), Optional.of(profileCredentialStore.getProfileKeyCredential(aci)));
+    IProfileKeysTable profileKeysTable = account.getDB().ProfileKeysTable;
+    IRecipientsTable recipientsTable = account.getDB().RecipientsTable;
+    ProfileKeyCredential selfProfileKeyCredential = profileKeysTable.getProfileKeyCredential(account.getSelf());
+    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfProfileKeyCredential));
     Set<GroupCandidate> candidates = members.stream()
                                          .map(x -> {
-                                           ProfileKeyCredential profileCredential = profileCredentialStore.getProfileKeyCredential(x.getServiceId());
+                                           ProfileKeyCredential profileCredential = null;
+                                           try {
+                                             Recipient recipient = recipientsTable.get(x.getServiceId());
+                                             profileCredential = profileKeysTable.getProfileKeyCredential(recipient);
+                                           } catch (SQLException | IOException | InvalidInputException e) {
+                                             logger.error("error looking up recipient: ", e);
+                                             Sentry.captureException(e);
+                                           }
+
                                            return new GroupCandidate(x.getUUID(), Optional.ofNullable(profileCredential));
                                          })
                                          .collect(Collectors.toSet());
@@ -384,12 +386,12 @@ public class Groups {
       throws IOException, VerificationFailedException, InvalidInputException, SQLException {
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-    return groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
+    return groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
   }
 
   public Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateGroup(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
       throws SQLException, VerificationFailedException, InvalidInputException, IOException {
-    change.setSourceUuid(aci.toByteString());
+    change.setSourceUuid(account.getACI().toByteString());
     Pair<DecryptedGroup, GroupChange> groupChangePair = commitChange(group, change);
 
     GroupMasterKey masterKey = group.getMasterKey();
@@ -409,7 +411,7 @@ public class Groups {
     final GroupChange.Actions changeActions = change.setRevision(nextRevision).build();
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
     GroupChange signedGroupChange = groupsV2Api.patchGroup(changeActions, authString, Optional.empty());
 
     final DecryptedGroup decryptedGroupState;
@@ -423,7 +425,7 @@ public class Groups {
       } else {
         logger.warn("Unable to apply server's change for group {} (server change epoch {}); falling back to local change", Base64.encodeBytes(group.getId().serialize()),
                     signedGroupChange.getChangeEpoch());
-        decryptedChange = groupOperations.decryptChange(changeActions, aci.uuid());
+        decryptedChange = groupOperations.decryptChange(changeActions, account.getUUID());
       }
 
       decryptedGroupState = DecryptedGroupUtil.apply(previousGroupState, decryptedChange);
@@ -448,7 +450,7 @@ public class Groups {
       throws IOException, VerificationFailedException, InvalidInputException, SQLException {
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredentialResponse = credentials.getCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredentialResponse);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredentialResponse);
     return groupsV2Api.patchGroup(changeActions, authString, Optional.ofNullable(password));
   }
 
@@ -462,7 +464,7 @@ public class Groups {
       throws InvalidGroupStateException, IOException, VerificationFailedException, InvalidInputException, SQLException {
     int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
     AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(aci, today, groupSecretParams, authCredential);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
 
     return groupsV2Api.getGroupHistoryPage(groupSecretParams, fromRevision, authString, includeFirstState);
   }

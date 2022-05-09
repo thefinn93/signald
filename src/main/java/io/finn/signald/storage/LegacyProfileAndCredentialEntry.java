@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
+import io.finn.signald.db.IProfileKeysTable;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
@@ -26,9 +27,10 @@ import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.util.Base64;
 
-@JsonDeserialize(using = ProfileAndCredentialEntry.ProfileAndCredentialEntryDeserializer.class)
-@JsonSerialize(using = ProfileAndCredentialEntry.ProfileAndCredentialEntrySerializer.class)
-public class ProfileAndCredentialEntry {
+@Deprecated
+@JsonDeserialize(using = LegacyProfileAndCredentialEntry.ProfileAndCredentialEntryDeserializer.class)
+@JsonSerialize(using = LegacyProfileAndCredentialEntry.ProfileAndCredentialEntrySerializer.class)
+public class LegacyProfileAndCredentialEntry {
   private static final Logger logger = LogManager.getLogger();
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
 
@@ -40,14 +42,14 @@ public class ProfileAndCredentialEntry {
 
   private final long lastUpdateTimestamp;
 
-  private final SignalProfile profile;
+  private final LegacySignalProfile profile;
 
   private final ProfileKeyCredential profileKeyCredential;
 
   private boolean requestPending;
 
-  public ProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final ProfileKey profileKey, final long lastUpdateTimestamp, final SignalProfile profile,
-                                   final ProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
+  public LegacyProfileAndCredentialEntry(final SignalServiceAddress serviceAddress, final ProfileKey profileKey, final long lastUpdateTimestamp, final LegacySignalProfile profile,
+                                         final ProfileKeyCredential profileKeyCredential, UnidentifiedAccessMode unidentifiedAccessMode) {
     this.serviceAddress = serviceAddress;
     this.profileKey = profileKey;
     this.lastUpdateTimestamp = lastUpdateTimestamp;
@@ -62,7 +64,7 @@ public class ProfileAndCredentialEntry {
 
   public long getLastUpdateTimestamp() { return lastUpdateTimestamp; }
 
-  public SignalProfile getProfile() { return profile; }
+  public LegacySignalProfile getProfile() { return profile; }
 
   public ProfileKeyCredential getProfileKeyCredential() { return profileKeyCredential; }
 
@@ -99,9 +101,9 @@ public class ProfileAndCredentialEntry {
 
   public UnidentifiedAccessMode getUnidentifiedAccessMode() { return unidentifiedAccessMode; }
 
-  public static class ProfileAndCredentialEntryDeserializer extends JsonDeserializer<ProfileAndCredentialEntry> {
+  public static class ProfileAndCredentialEntryDeserializer extends JsonDeserializer<LegacyProfileAndCredentialEntry> {
     @Override
-    public ProfileAndCredentialEntry deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
+    public LegacyProfileAndCredentialEntry deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
       JsonNode node = p.getCodec().readTree(p);
 
       SignalServiceAddress address = null;
@@ -125,9 +127,9 @@ public class ProfileAndCredentialEntry {
 
       long lastUpdateTimestamp = node.get("lastUpdateTimestamp").asLong();
 
-      SignalProfile profile = null;
+      LegacySignalProfile profile = null;
       if (node.has("profile")) {
-        profile = mapper.treeToValue(node.get("profile"), SignalProfile.class);
+        profile = mapper.treeToValue(node.get("profile"), LegacySignalProfile.class);
       }
 
       ProfileKeyCredential profileKeyCredential = null;
@@ -144,13 +146,13 @@ public class ProfileAndCredentialEntry {
         unidentifiedAccessMode = UnidentifiedAccessMode.fromMode(node.get("unidentifiedAccessMode").asInt());
       }
 
-      return new ProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, profileKeyCredential, unidentifiedAccessMode);
+      return new LegacyProfileAndCredentialEntry(address, profileKey, lastUpdateTimestamp, profile, profileKeyCredential, unidentifiedAccessMode);
     }
   }
 
-  public static class ProfileAndCredentialEntrySerializer extends JsonSerializer<ProfileAndCredentialEntry> {
+  public static class ProfileAndCredentialEntrySerializer extends JsonSerializer<LegacyProfileAndCredentialEntry> {
     @Override
-    public void serialize(ProfileAndCredentialEntry value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(LegacyProfileAndCredentialEntry value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
       ObjectNode node = JsonNodeFactory.instance.objectNode();
       if (value.serviceAddress != null) {
         node.set("address", mapper.valueToTree(new JsonAddress(value.serviceAddress)));
@@ -191,5 +193,7 @@ public class ProfileAndCredentialEntry {
     public int getMode() { return mode; }
 
     public static UnidentifiedAccessMode fromMode(int mode) { return values()[mode]; }
+
+    public IProfileKeysTable.UnidentifiedAccessMode migrate() { return IProfileKeysTable.UnidentifiedAccessMode.fromMode(getMode()); }
   }
 }

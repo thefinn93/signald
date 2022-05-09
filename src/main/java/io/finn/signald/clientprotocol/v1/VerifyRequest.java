@@ -54,7 +54,7 @@ public class VerifyRequest implements RequestType<Account> {
     if (server == null) {
       server = BuildConfig.DEFAULT_SERVER_UUID;
     }
-    RegistrationManager rm = null;
+    RegistrationManager rm;
     try {
       rm = RegistrationManager.get(account, UUID.fromString(server));
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {

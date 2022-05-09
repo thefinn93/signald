@@ -20,7 +20,6 @@ import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSendPermissionException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.prometheus.client.Histogram;
 import java.io.IOException;
@@ -106,14 +105,6 @@ public class Common {
       throw new InternalError("error getting manager", e);
     }
     return m;
-  }
-
-  static void saveAccount(AccountData a) throws InternalError {
-    try {
-      a.save();
-    } catch (IOException e) {
-      throw new InternalError("error saving state to disk", e);
-    }
   }
 
   static Recipient getRecipient(ACI aci, SignalServiceAddress address) throws InternalError { return getRecipient(Database.Get(aci).RecipientsTable, address); }
@@ -207,9 +198,10 @@ public class Common {
     }
   }
 
-  public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, InvalidRequestError, SQLError {
+  public static io.finn.signald.Account getAccount(String identifier) throws InternalError, NoSuchAccountError, SQLError {
     return getAccount(getACIFromIdentifier(identifier).uuid());
   }
+
   public static io.finn.signald.Account getAccount(UUID accountUUID) { return new Account(ACI.from(accountUUID)); }
 
   public static SignalDependencies getDependencies(UUID accountUUID) throws InvalidProxyError, ServerNotFoundError, InternalError, NoSuchAccountError {

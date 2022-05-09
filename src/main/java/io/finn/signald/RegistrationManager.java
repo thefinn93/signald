@@ -13,7 +13,6 @@ import io.finn.signald.db.IPendingAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
 import java.io.IOException;
@@ -48,7 +47,7 @@ public class RegistrationManager {
   private static final ConcurrentHashMap<String, RegistrationManager> registrationManagers = new ConcurrentHashMap<>();
 
   private final SignalServiceAccountManager accountManager;
-  private final AccountData accountData;
+  //  @Deprecated private final LegacyAccountData accountData;
   private final String e164;
 
   public static RegistrationManager get(String e164, UUID server) throws IOException, SQLException, ServerNotFoundException, InvalidProxyException {
@@ -66,8 +65,6 @@ public class RegistrationManager {
     this.e164 = e164;
     var server = Database.Get().ServersTable.getServer(serverUUID);
     SignalServiceConfiguration serviceConfiguration = server.getSignalServiceConfiguration();
-    accountData = new AccountData(e164);
-    accountData.registered = false;
 
     String password = Util.getSecret(18);
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.PASSWORD, password);
@@ -90,9 +87,6 @@ public class RegistrationManager {
       r = accountManager.requestSmsVerificationCode(false, captcha, Optional.empty(), Optional.empty());
     }
     handleResponseException(r);
-
-    accountData.init();
-    accountData.save();
   }
 
   public Manager verifyAccount(String verificationCode)
@@ -107,11 +101,10 @@ public class RegistrationManager {
     VerifyAccountResponse result = r.getResult().get();
     ACI aci = ACI.from(UUID.fromString(result.getUuid()));
     PNI pni = PNI.from(UUID.fromString(result.getPni()));
-    accountData.setUUID(aci);
     Account account = new Account(aci);
 
     String server = Database.Get().PendingAccountDataTable.getString(e164, IPendingAccountDataTable.Key.SERVER_UUID);
-    Database.Get().AccountsTable.add(e164, aci, getFileName(), server == null ? null : UUID.fromString(server));
+    Database.Get().AccountsTable.add(e164, aci, server == null ? null : UUID.fromString(server));
     account.setPNI(pni);
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
@@ -125,30 +118,35 @@ public class RegistrationManager {
     IdentityKeyPair pniIdentityKeyPair = new IdentityKeyPair(Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR));
     account.setPNIIdentityKeyPair(pniIdentityKeyPair);
 
-    Database.Get(aci).IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), aciIdentityKeyPair.getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
+    account.getDB().IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), aciIdentityKeyPair.getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
     account.setLocalRegistrationId(registrationID);
     account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
 
     Database.Get().PendingAccountDataTable.clear(e164);
-    accountData.registered = true;
-    accountData.init();
-    accountData.setProfileKey(profileKey);
-    accountData.save();
+
+    account.getDB().ProfileKeysTable.setProfileKey(account.getSelf(), profileKey);
 
     return Manager.get(aci);
   }
 
   public String getE164() { return e164; }
 
-  private String getFileName() { return Manager.getFileName(e164); }
-
   public boolean hasPendingKeys() throws SQLException {
     return Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR) != null &&
         Database.Get().PendingAccountDataTable.getBytes(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR) != null;
   }
 
-  public boolean isRegistered() { return accountData.registered; }
+  public boolean isRegistered() {
+    try {
+      Database.Get().AccountsTable.getACI(e164);
+      return true;
+    } catch (NoSuchAccountException e) {
+      return false;
+    } catch (SQLException e) {
+      throw new AssertionError(e);
+    }
+  }
 
   private void handleResponseException(final ServiceResponse<?> response) throws IOException {
     final Optional<Throwable> throwableOptional = response.getExecutionError().or(response::getApplicationError);

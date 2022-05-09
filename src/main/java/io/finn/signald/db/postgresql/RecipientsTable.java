@@ -154,6 +154,8 @@ public class RecipientsTable implements IRecipientsTable {
     return new Recipient(accountUUID, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered);
   }
 
+  public Recipient self() throws SQLException, IOException { return get(accountUUID); }
+
   private int storeNew(ServiceId serviceId, String e164) throws SQLException {
     logger.trace("storing new recipient {}/{}", e164, serviceId);
     var query = String.format("INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?) RETURNING %s", TABLE_NAME, ACCOUNT_UUID, UUID, E164, ROW_ID);

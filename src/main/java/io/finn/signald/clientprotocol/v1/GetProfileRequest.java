@@ -8,7 +8,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.finn.signald.Manager;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -19,17 +19,16 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IContactsTable;
+import io.finn.signald.db.IProfilesTable;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import org.signal.libsignal.protocol.InvalidKeyException;
 
 @Doc("Get all information available about a user")
 @ProtocolType("get_profile")
@@ -44,34 +43,44 @@ public class GetProfileRequest implements RequestType<Profile> {
   public boolean async;
 
   @Override
-  public Profile run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getACI(), requestedAddress);
-    ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(recipient);
-    IContactsTable.ContactInfo contact;
+  public Profile run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, ProfileUnavailableError, UnregisteredUserError,
+                                             AuthorizationFailedError, SQLError, InvalidRequestError {
+    Account a = Common.getAccount(account);
+    Recipient recipient = Common.getRecipient(a.getACI(), requestedAddress);
+
+    IProfilesTable.Profile profile;
     try {
-      contact = Database.Get(m.getACI()).ContactsTable.get(recipient);
+      profile = a.getDB().ProfilesTable.get(recipient);
     } catch (SQLException e) {
       throw new SQLError(e);
     }
-    if (profileEntry == null) {
+
+    IContactsTable.ContactInfo contact;
+    try {
+      contact = Database.Get(a.getACI()).ContactsTable.get(recipient);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    }
+
+    if (profile == null) {
       if (contact == null) {
         throw new ProfileUnavailableError();
       }
       Profile p = new Profile(contact);
-      p.populateAvatar(m);
+      p.populateAvatar(a);
       return p;
     }
 
-    RefreshProfileJob action = new RefreshProfileJob(m, profileEntry);
+    RefreshProfileJob action = new RefreshProfileJob(a, recipient);
     if (async) {
       BackgroundJobRunnerThread.queue(action);
     } else {
       try {
         action.run();
-      } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
+      } catch (InvalidKeyException | IOException e) {
         throw new InternalError("error refreshing profile", e);
+      } catch (SQLException e) {
+        throw new SQLError(e);
       } catch (NoSuchAccountException e) {
         throw new NoSuchAccountError(e);
       } catch (ServerNotFoundException e) {
@@ -81,8 +90,8 @@ public class GetProfileRequest implements RequestType<Profile> {
       }
     }
 
-    Profile profile = new Profile(profileEntry.getProfile(), recipient, contact);
-    profile.populateAvatar(m);
-    return profile;
+    Profile p = new Profile(a.getDB(), recipient, contact);
+    p.populateAvatar(a);
+    return p;
   }
 }

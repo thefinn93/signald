@@ -60,7 +60,7 @@ public class SyncStorageDataJob implements Job {
       return;
     }
 
-    if (!manifestOptional.isPresent()) {
+    if (manifestOptional.isEmpty()) {
       logger.debug("manifest is up to date, does not exist or couldn't be decrypted, ignoring.");
       return;
     }
@@ -79,22 +79,18 @@ public class SyncStorageDataJob implements Job {
     readAccountRecord(manifest);
 
     logger.debug("reading all records");
-    try {
-      for (SignalStorageRecord record : getSignalStorageRecords(manifest.getStorageIds())) {
-        if (record.isUnknown() || record.getType() == ManifestRecord.Identifier.Type.ACCOUNT_VALUE) {
-          continue;
-        }
-
-        if (record.getType() == ManifestRecord.Identifier.Type.GROUPV2_VALUE) {
-          readGroupV2Record(record);
-        } else if (record.getType() == ManifestRecord.Identifier.Type.CONTACT_VALUE) {
-          readContactRecord(record);
-        } else {
-          logger.debug("Ignoring storage record of unknown type {}", ManifestRecord.Identifier.Type.forNumber(record.getType()).name());
-        }
+    for (SignalStorageRecord record : getSignalStorageRecords(manifest.getStorageIds())) {
+      if (record.isUnknown() || record.getType() == ManifestRecord.Identifier.Type.ACCOUNT_VALUE) {
+        continue;
       }
-    } finally {
-      account.getAccountData().save();
+
+      if (record.getType() == ManifestRecord.Identifier.Type.GROUPV2_VALUE) {
+        readGroupV2Record(record);
+      } else if (record.getType() == ManifestRecord.Identifier.Type.CONTACT_VALUE) {
+        readContactRecord(record);
+      } else {
+        logger.debug("Ignoring storage record of unknown type {}", ManifestRecord.Identifier.Type.forNumber(record.getType()).name());
+      }
     }
     logger.debug("Done reading data from remote storage");
     MessageReceiver.broadcastStorageStateChange(account.getUUID(), manifest.getVersion());
@@ -103,7 +99,7 @@ public class SyncStorageDataJob implements Job {
   private void readAccountRecord(final SignalStorageManifest manifest)
       throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException, InvalidKeyException {
     Optional<StorageId> accountId = manifest.getAccountStorageId();
-    if (!accountId.isPresent()) {
+    if (accountId.isEmpty()) {
       logger.warn("Manifest has no account record, ignoring.");
       return;
     }
@@ -149,7 +145,7 @@ public class SyncStorageDataJob implements Job {
         profileKey = null;
       }
       if (profileKey != null) {
-        account.getAccountData().setProfileKey(profileKey);
+        account.getDB().ProfileKeysTable.setProfileKey(account.getSelf(), profileKey);
       }
     }
   }
@@ -179,7 +175,7 @@ public class SyncStorageDataJob implements Job {
     if (contactRecord.getProfileKey().isPresent()) {
       try {
         ProfileKey profileKey = new ProfileKey(contactRecord.getProfileKey().get());
-        account.getAccountData().profileCredentialStore.storeProfileKey(recipient, profileKey);
+        account.getDB().ProfileKeysTable.setProfileKey(recipient, profileKey);
       } catch (InvalidInputException e) {
         logger.warn("Received invalid contact profile key from storage");
       }

@@ -19,13 +19,17 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class ContactStore {
+@Deprecated
+public class LegacyContactStore {
   private static final Logger logger = LogManager.getLogger();
   public final List<IContactsTable.JsonContactInfo> contacts = new ArrayList<>();
 
   public boolean migrateToDB(Account account) throws SQLException, UnregisteredUserError, InternalError, IOException {
-    boolean needsSave = contacts.size() > 0;
-    logger.info("migrating {} contacts to the database", contacts.size());
+    boolean needsSave = false;
+    if (contacts.size() > 0) {
+      logger.info("migrating {} contacts to the database", contacts.size());
+      needsSave = true;
+    }
     List<IContactsTable.ContactInfo> list = new ArrayList<>();
     for (var ci : contacts) {
       list.add(new IContactsTable.ContactInfo(account.getACI(), ci));

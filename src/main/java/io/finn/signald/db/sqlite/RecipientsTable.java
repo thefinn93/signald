@@ -142,6 +142,8 @@ public class RecipientsTable implements IRecipientsTable {
     return new Recipient(uuid, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered);
   }
 
+  public Recipient self() throws SQLException, IOException { return get(uuid); }
+
   private int storeNew(ServiceId serviceId, String e164) throws SQLException {
     var query = "INSERT INTO " + TABLE_NAME + "(" + ACCOUNT_UUID + "," + UUID + "," + E164 + ") VALUES (?, ?, ?)";
     try (var statement = Database.getConn().prepareStatement(query)) {

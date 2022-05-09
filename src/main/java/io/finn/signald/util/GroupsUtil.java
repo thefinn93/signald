@@ -8,8 +8,6 @@
 package io.finn.signald.util;
 
 import io.finn.signald.ServiceConfig;
-import org.signal.libsignal.protocol.kdf.HKDFv3;
-import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
@@ -30,13 +28,5 @@ public class GroupsUtil {
   public static byte[] getGroupId(GroupMasterKey groupMasterKey) {
     final GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(groupMasterKey);
     return groupSecretParams.getPublicParams().getGroupIdentifier().serialize();
-  }
-
-  public static GroupMasterKey deriveV2MigrationMasterKey(byte[] groupId) {
-    try {
-      return new GroupMasterKey(new HKDFv3().deriveSecrets(groupId, "GV2 Migration".getBytes(), GroupMasterKey.SIZE));
-    } catch (InvalidInputException e) {
-      throw new AssertionError(e);
-    }
   }
 }

@@ -9,6 +9,7 @@ package io.finn.signald.db;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.storage.LegacyGroup;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -49,7 +50,8 @@ public interface IGroupsTable {
     upsert(masterKey, decryptedGroup, null, -1);
   }
 
-  default void upsert(io.finn.signald.storage.Group groupFromLegacyStorage) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
+  @Deprecated
+  default void upsert(LegacyGroup groupFromLegacyStorage) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
     upsert(groupFromLegacyStorage.getMasterKey(), groupFromLegacyStorage.getGroup(), groupFromLegacyStorage.getDistributionId(), groupFromLegacyStorage.getLastAvatarFetch());
   }
 

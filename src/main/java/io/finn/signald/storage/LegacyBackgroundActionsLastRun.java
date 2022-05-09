@@ -10,6 +10,7 @@ package io.finn.signald.storage;
 import io.finn.signald.Account;
 import java.sql.SQLException;
 
+@Deprecated
 public class LegacyBackgroundActionsLastRun {
   public long lastPreKeyRefresh;
 

@@ -10,6 +10,7 @@ package io.finn.signald;
 import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.util.FileUtil;
 import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.BufferedReader;
@@ -59,8 +60,9 @@ public class Main {
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
       Security.addProvider(new BouncyCastleProvider());
+      FileUtil.setDataPath();
+      FileUtil.createPrivateDirectories(Config.getDataPath());
       Manager.setDataPath();
-      Manager.createPrivateDirectories(Config.getDataPath());
 
       sdnotify("STATUS=migrating database " + Config.getDb());
       var flyway = Flyway.configure().baselineOnMigrate(true).baselineVersion("0.0");
@@ -95,7 +97,7 @@ public class Main {
             continue;
           }
           if (e164Pattern.matcher(f.getName()).matches()) {
-            Database.Get().AccountsTable.importFromJSON(f);
+            Database.Get().AccountsTable.importFromLegacyJSON(f);
           } else {
             logger.warn("account file {} does NOT appear to have a valid phone number in the filename!", f.getAbsolutePath());
           }

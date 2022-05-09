@@ -8,11 +8,11 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.UnidentifiedAccessUtil;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -44,7 +44,7 @@ public class SendSyncRequestJob implements Job {
     SignalServiceProtos.SyncMessage.Request request = SignalServiceProtos.SyncMessage.Request.newBuilder().setType(type).build();
     SignalServiceSyncMessage message = SignalServiceSyncMessage.forRequest(new RequestMessage(request));
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
-    Optional<UnidentifiedAccessPair> access = Manager.get(account.getACI()).getAccessPairFor(account.getSelf());
+    Optional<UnidentifiedAccessPair> access = new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(account.getSelf());
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       messageSender.sendSyncMessage(message, access);
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {

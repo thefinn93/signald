@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
-
-public class SignalProfile {
+@Deprecated
+public class LegacySignalProfile {
 
   @JsonProperty private final String identityKey;
 
@@ -38,12 +38,12 @@ public class SignalProfile {
 
   @JsonProperty private final String emoji;
 
-  @JsonProperty private final PaymentAddress paymentAddress;
+  @JsonProperty private final LegacyPaymentAddress paymentAddress;
 
   @JsonProperty private final List<SignalServiceProfile.Badge> badges;
 
-  public SignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess,
-                       final SignalServiceProtos.PaymentAddress paymentAddress, List<SignalServiceProfile.Badge> badges) {
+  public LegacySignalProfile(final SignalServiceProfile encryptedProfile, String name, String about, String aboutEmoji, final File avatarFile, final String unidentifiedAccess,
+                             final SignalServiceProtos.PaymentAddress paymentAddress, List<SignalServiceProfile.Badge> badges) {
     this.identityKey = encryptedProfile.getIdentityKey();
     this.name = name;
     this.avatarFile = avatarFile;
@@ -53,7 +53,7 @@ public class SignalProfile {
     this.about = about;
     this.emoji = aboutEmoji;
     if (paymentAddress != null) {
-      this.paymentAddress = new PaymentAddress(paymentAddress);
+      this.paymentAddress = new LegacyPaymentAddress(paymentAddress);
     } else {
       this.paymentAddress = null;
     }
@@ -64,11 +64,11 @@ public class SignalProfile {
     }
   }
 
-  public SignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
-                       @JsonProperty("unidentifiedAccess") final String unidentifiedAccess,
-                       @JsonProperty("unrestrictedUnidentifiedAccess") final boolean unrestrictedUnidentifiedAccess, @JsonProperty("capabilities") final Capabilities capabilities,
-                       @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji, @JsonProperty("paymentAddress") final PaymentAddress paymentAddress,
-                       @JsonProperty("badge") List<SignalServiceProfile.Badge> badges) {
+  public LegacySignalProfile(@JsonProperty("identityKey") final String identityKey, @JsonProperty("name") final String name,
+                             @JsonProperty("unidentifiedAccess") final String unidentifiedAccess,
+                             @JsonProperty("unrestrictedUnidentifiedAccess") final boolean unrestrictedUnidentifiedAccess,
+                             @JsonProperty("capabilities") final Capabilities capabilities, @JsonProperty("about") final String about, @JsonProperty("emoji") final String emoji,
+                             @JsonProperty("paymentAddress") final LegacyPaymentAddress paymentAddress, @JsonProperty("badge") List<SignalServiceProfile.Badge> badges) {
     this.identityKey = identityKey;
     this.name = name;
     this.avatarFile = null;
@@ -137,7 +137,7 @@ public class SignalProfile {
   }
 
   // Returns true if the name, avatar and capabilities are equal.
-  public boolean matches(SignalProfile other) {
+  public boolean matches(LegacySignalProfile other) {
     if (!other.name.equals(name)) {
       return false;
     }

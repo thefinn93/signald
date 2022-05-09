@@ -6,7 +6,7 @@ import io.finn.signald.Config;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import io.finn.signald.db.Database;
-import io.finn.signald.storage.ContactStore;
+import io.finn.signald.storage.LegacyContactStore;
 import io.finn.signald.util.JSONUtil;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +39,7 @@ public class ContactsTableMigrationTest {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   @DisplayName("migrate from JSON store to Database")
   void migrateFromJsonToDatabase() throws IOException, SQLException, UnregisteredUserError, InternalError {
@@ -67,7 +68,7 @@ public class ContactsTableMigrationTest {
                               + "    \"inboxPosition\" : 5"
                               + "  }"
                               + "]}";
-    var contactStore = mapper.readValue(testContactsJson, ContactStore.class);
+    var contactStore = mapper.readValue(testContactsJson, LegacyContactStore.class);
 
     var account = new Account(ACI.from(UUID.randomUUID()));
     contactStore.migrateToDB(account);

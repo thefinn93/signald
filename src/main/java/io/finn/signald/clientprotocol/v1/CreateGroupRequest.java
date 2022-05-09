@@ -8,6 +8,7 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.Account;
 import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
@@ -23,13 +24,12 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.jobs.RefreshProfileJob;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
@@ -59,23 +59,25 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
              GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError {
     Manager m = Common.getManager(account);
+    Account a = Common.getAccount(account);
     List<Recipient> recipients = new ArrayList<>();
-    if (m.getAccountData().profileCredentialStore.getProfileKeyCredential(m.getACI()) == null) {
-      throw new OwnProfileKeyDoesNotExistError();
+
+    try {
+      if (a.getDB().ProfileKeysTable.getProfileKey(a.getSelf()) == null) {
+        throw new OwnProfileKeyDoesNotExistError();
+      }
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (IOException e) {
+      throw new InternalError("unexpected error verifying own profile key exists", e);
     }
     var recipientsTable = Database.Get(m.getACI()).RecipientsTable;
     for (JsonAddress member : members) {
       Recipient recipient = Common.getRecipient(recipientsTable, member);
       try {
-        m.getRecipientProfileKeyCredential(recipient);
-      } catch (InterruptedException | ExecutionException | TimeoutException | IOException | SQLException e) {
-        throw new InternalError("error getting recipient profile key", e);
-      } catch (NoSuchAccountException e) {
-        throw new NoSuchAccountError(e);
-      } catch (ServerNotFoundException e) {
-        throw new ServerNotFoundError(e);
-      } catch (InvalidProxyException e) {
-        throw new InvalidProxyError(e);
+        RefreshProfileJob.queueIfNeeded(a, recipient);
+      } catch (SQLException e) {
+        throw new SQLError(e);
       }
       recipients.add(recipient);
       if (recipient.getUUID() == null) {
@@ -116,7 +118,6 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
       throw new InvalidProxyError(e);
     }
 
-    Common.saveAccount(m.getAccountData());
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.getRevision()).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
     try {

@@ -11,7 +11,6 @@ import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.storage.AccountData;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -21,16 +20,21 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.StorageKey;
+import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.WhoAmIResponse;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
+import org.whispersystems.util.Base64;
 
 public class Account {
   private static final Logger logger = LogManager.getLogger();
+  private final static int ACCOUNT_REFRESH_VERSION = 6;
   private final ACI aci;
 
   public Account(ACI aci) { this.aci = aci; }
@@ -87,7 +91,7 @@ public class Account {
       Boolean isMultidevice = Database.Get().AccountDataTable.getBoolean(aci, IAccountDataTable.Key.MULTI_DEVICE);
       if (isMultidevice == null) {
         isMultidevice = getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID;
-        Database.Get(aci).AccountDataTable.set(aci, IAccountDataTable.Key.MULTI_DEVICE, isMultidevice);
+        getDB().AccountDataTable.set(aci, IAccountDataTable.Key.MULTI_DEVICE, isMultidevice);
         return false;
       }
       return isMultidevice;
@@ -183,7 +187,7 @@ public class Account {
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.NEXT_SIGNED_PRE_KEY_ID, nextSignedPreKeyId);
   }
 
-  public Recipient getSelf() throws SQLException, IOException { return Database.Get(aci).RecipientsTable.get(aci); }
+  public Recipient getSelf() throws SQLException, IOException { return getDB().RecipientsTable.get(aci); }
 
   public void setStorageKey(StorageKey storageKey) throws SQLException { Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.STORAGE_KEY, storageKey.serialize()); }
 
@@ -199,7 +203,47 @@ public class Account {
 
   public long getStorageManifestVersion() throws SQLException { return Database.Get().AccountDataTable.getLong(aci, IAccountDataTable.Key.STORAGE_MANIFEST_VERSION); }
 
-  public AccountData getAccountData() throws NoSuchAccountException, SQLException, IOException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
-    return Manager.get(aci).getAccountData();
+  public Database getDB() { return Database.Get(aci); }
+
+  public boolean exists() throws SQLException { return Database.Get().AccountsTable.exists(aci); }
+
+  public void delete(boolean remote)throws IOException, SQLException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PENDING_DELETION, true);
+
+    if (remote) {
+      getSignalDependencies().getAccountManager().deleteAccount();
+    }
+
+    SignalDependencies.delete(aci);
+
+    try {
+      Manager.get(aci).deleteAccount();
+    } catch (InvalidKeyException e) {
+      logger.error("unexpected error while deleting account: ", e);
+    }
+
+    logger.debug("deleting account from database");
+    Database.DeleteAccount(aci, getE164());
+  }
+
+  public void refreshIfNeeded() throws SQLException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidProxyException {
+    if (getLastAccountRefresh() < ACCOUNT_REFRESH_VERSION) {
+      refresh();
+    }
+  }
+
+  public void refresh() throws SQLException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidProxyException {
+    String deviceName = getDeviceName();
+    if (deviceName == null) {
+      deviceName = "signald";
+      setDeviceName(deviceName);
+    }
+    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, getProtocolStore().getIdentityKeyPair().getPrivateKey());
+    ProfileKey ownProfileKey = getDB().ProfileKeysTable.getProfileKey(getSelf());
+    byte[] ownUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(ownProfileKey);
+    int localRegistrationId = getLocalRegistrationId();
+    getSignalDependencies().getAccountManager().setAccountAttributes(null, localRegistrationId, true, null, null, ownUnidentifiedAccessKey, true, ServiceConfig.CAPABILITIES, true,
+                                                                     Base64.decode(deviceName));
+    setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
   }
 }

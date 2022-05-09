@@ -1,16 +1,14 @@
 package io.finn.signald;
 
-import io.finn.signald.db.Database;
-import io.finn.signald.db.IRecipientsTable;
-import io.finn.signald.db.Recipient;
+import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
 import io.finn.signald.util.SenderKeyUtil;
+import io.finn.signald.util.UnidentifiedAccessUtil;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -28,14 +26,17 @@ import org.signal.libsignal.protocol.NoSessionException;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.SignalSessionLock;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
+import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.DistributionId;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -56,7 +57,7 @@ public class MessageSender {
       throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
              InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
     var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
-    if (!groupOptional.isPresent()) {
+    if (groupOptional.isEmpty()) {
       throw new UnknownGroupException();
     }
     var group = groupOptional.get();
@@ -79,14 +80,19 @@ public class MessageSender {
 
     List<UnidentifiedAccess> access = new LinkedList<>();
 
-    Manager m = Manager.get(account.getACI());
-    IRecipientsTable recipientsTable = Database.Get(account.getACI()).RecipientsTable;
+    Database db = account.getDB();
+    IRecipientsTable recipientsTable = db.RecipientsTable;
+    IProfileKeysTable profileKeysTable = db.ProfileKeysTable;
+    IProfilesTable profilesTable = db.ProfilesTable;
+    IProfileCapabilitiesTable profileCapabilitiesTable = db.ProfileCapabilitiesTable;
+    UnidentifiedAccessUtil ua = new UnidentifiedAccessUtil(account.getACI());
 
     // check our own profile first
-    ProfileAndCredentialEntry selfProfileAndCredentialEntry = m.getRecipientProfileKeyCredential(self);
-    if (selfProfileAndCredentialEntry == null || selfProfileAndCredentialEntry.getProfile() == null || !selfProfileAndCredentialEntry.getProfile().getCapabilities().senderKey) {
+    IProfilesTable.Profile selfProfile = profilesTable.get(self);
+    ProfileKey selfProfileKey = profileKeysTable.getProfileKey(self);
+    if (selfProfileKey == null || selfProfile == null || !profileCapabilitiesTable.get(self, IProfileCapabilitiesTable.SENDER_KEY)) {
       logger.debug("not all linked devices support sender keys, using legacy send");
-      RefreshProfileJob.queueIfNeeded(m, selfProfileAndCredentialEntry);
+      RefreshProfileJob.queueIfNeeded(account, self);
       legacyTargets.addAll(members);
     } else {
       for (Recipient member : members) {
@@ -95,25 +101,39 @@ public class MessageSender {
           logger.debug("refusing to send to {} using sender keys because we think they're no longer registered on Signal", member.toRedactedString());
           continue;
         }
-        ProfileAndCredentialEntry profileAndCredentialEntry = m.getAccountData().profileCredentialStore.get(member);
-        RefreshProfileJob.queueIfNeeded(m, profileAndCredentialEntry);
-        Optional<UnidentifiedAccessPair> accessPairs = m.getAccessPairFor(member);
-        if (profileAndCredentialEntry == null) {
+
+        ProfileKey profileKey = profileKeysTable.getProfileKey(member);
+        if (profileKey == null) {
           legacyTargets.add(member);
+          RefreshProfileJob.queueIfNeeded(account, member);
           logger.debug("cannot send to {} using sender keys: no profile available", member.toRedactedString());
-        } else if (profileAndCredentialEntry.getProfile() == null) {
+          continue;
+        }
+
+        IProfilesTable.Profile profile = profilesTable.get(member);
+        if (profile == null) {
           legacyTargets.add(member);
-          BackgroundJobRunnerThread.queue(new RefreshProfileJob(m, profileAndCredentialEntry));
+          BackgroundJobRunnerThread.queue(new RefreshProfileJob(account, member));
           logger.debug("cannot send to {} using sender keys: profile not yet available", member.toRedactedString());
-        } else if (!profileAndCredentialEntry.getProfile().getCapabilities().senderKey) {
+          continue;
+        }
+
+        if (!profileCapabilitiesTable.get(member, IProfileCapabilitiesTable.SENDER_KEY)) {
           legacyTargets.add(member);
-          BackgroundJobRunnerThread.queue(new RefreshProfileJob(m, profileAndCredentialEntry));
+          BackgroundJobRunnerThread.queue(new RefreshProfileJob(account, member));
           logger.debug("cannot send to {} using sender keys: profile indicates no support for sender key", member.toRedactedString());
-        } else if (!accessPairs.isPresent()) {
+          continue;
+        }
+
+        Optional<UnidentifiedAccessPair> accessPairs = ua.getAccessPairFor(member);
+        if (accessPairs.isEmpty()) {
           legacyTargets.add(member);
           logger.debug("cannot send to {} using sender keys: cannot get unidentified access", member.toRedactedString());
-        } else {
-          senderKeyTargets.add(member);
+          continue;
+        }
+
+        senderKeyTargets.add(member);
+        if (accessPairs.get().getTargetUnidentifiedAccess().isPresent()) {
           access.add(accessPairs.get().getTargetUnidentifiedAccess().get());
         }
       }
@@ -233,7 +253,7 @@ public class MessageSender {
       logger.debug("sending group message to {} members without sender keys", legacyTargets.size());
       List<SignalServiceAddress> recipientAddresses = legacyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
       try {
-        results.addAll(messageSender.sendDataMessage(recipientAddresses, m.getAccessPairFor(legacyTargets), isRecipientUpdate, ContentHint.DEFAULT, message.build(),
+        results.addAll(messageSender.sendDataMessage(recipientAddresses, ua.getAccessPairFor(legacyTargets), isRecipientUpdate, ContentHint.DEFAULT, message.build(),
                                                      SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
                                                      sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false));
       } catch (UntrustedIdentityException e) {
@@ -273,5 +293,17 @@ public class MessageSender {
   private long getCreateTimeForOurKey(DistributionId distributionId) throws SQLException {
     SignalProtocolAddress address = new SignalProtocolAddress(account.getACI().toString(), account.getDeviceId());
     return Database.Get(account.getACI()).SenderKeysTable.getCreatedTime(address, distributionId.asUuid());
+  }
+
+  public void sendSyncMessage(SignalServiceSyncMessage message)
+      throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException, UntrustedIdentityException {
+    SignalServiceMessageSender messageSender = account.getSignalDependencies().getMessageSender();
+    Optional<UnidentifiedAccessPair> ownUnidentifiedAccess = new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(self);
+    try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+      messageSender.sendSyncMessage(message, ownUnidentifiedAccess);
+    } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+      account.getProtocolStore().handleUntrustedIdentityException(e);
+      throw e;
+    }
   }
 }

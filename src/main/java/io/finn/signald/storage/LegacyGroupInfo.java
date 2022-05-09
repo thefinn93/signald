@@ -17,8 +17,8 @@ import java.util.List;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceGroup;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
-
-public class GroupInfo {
+@Deprecated
+public class LegacyGroupInfo {
   @JsonProperty public byte[] groupId;
 
   @JsonProperty public String name;
@@ -77,11 +77,11 @@ public class GroupInfo {
     }
   }
 
-  public GroupInfo() {}
+  public LegacyGroupInfo() {}
 
-  public GroupInfo(byte[] groupId) { this.groupId = groupId; }
+  public LegacyGroupInfo(byte[] groupId) { this.groupId = groupId; }
 
-  public GroupInfo(DeviceGroup g) {
+  public LegacyGroupInfo(DeviceGroup g) {
     groupId = g.getId();
     if (g.getName().isPresent()) {
       name = g.getName().get();

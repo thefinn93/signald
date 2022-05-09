@@ -16,13 +16,13 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UserAlreadyExistsException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.SendSyncRequestJob;
-import io.finn.signald.storage.AccountData;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,8 +36,6 @@ import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
-import org.whispersystems.signalservice.api.util.SleepTimer;
-import org.whispersystems.signalservice.api.util.UptimeSleepTimer;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
@@ -67,7 +65,6 @@ public class ProvisioningManager {
     identityKey = KeyUtil.generateIdentityKeyPair();
     registrationId = KeyHelper.generateRegistrationId(false);
     password = Util.getSecret(18);
-    final SleepTimer timer = new UptimeSleepTimer();
     DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     SignalServiceConfiguration serviceConfiguration = Database.Get().ServersTable.getServer(server).getSignalServiceConfiguration();
     accountManager = new SignalServiceAccountManager(serviceConfiguration, credentialProvider, BuildConfig.SIGNAL_AGENT, GroupsUtil.GetGroupsV2Operations(serviceConfiguration),
@@ -77,7 +74,7 @@ public class ProvisioningManager {
   public URI getDeviceLinkUri() throws TimeoutException, IOException, URISyntaxException {
     String deviceUuid = accountManager.getNewDeviceUuid();
     String deviceKey = Base64.encodeBytesWithoutPadding(identityKey.getPublicKey().getPublicKey().serialize());
-    return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, "utf-8") + "&pub_key=" + URLEncoder.encode(deviceKey, "utf-8"));
+    return new URI("sgnl://linkdevice?uuid=" + URLEncoder.encode(deviceUuid, StandardCharsets.UTF_8) + "&pub_key=" + URLEncoder.encode(deviceKey, StandardCharsets.UTF_8));
   }
 
   public void waitForScan() throws IOException, TimeoutException { newDeviceRegistration = accountManager.getNewDeviceRegistration(identityKey); }
@@ -89,11 +86,8 @@ public class ProvisioningManager {
       waitForScan();
     }
 
-    if (overwrite) {
-      try {
-        Manager.get(newDeviceRegistration.getNumber()).deleteAccount(false);
-      } catch (NoSuchAccountException | InvalidKeyException | ServerNotFoundException | InvalidProxyException ignored) {
-      }
+    if (overwrite && Database.Get().AccountsTable.exists(newDeviceRegistration.getAci())) {
+      new Account(newDeviceRegistration.getAci()).delete(false);
     }
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
     int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
@@ -103,9 +97,27 @@ public class ProvisioningManager {
       throw new UserAlreadyExistsException(aci);
     }
 
-    Manager m = new Manager(newDeviceRegistration.getAci(), AccountData.createLinkedAccount(newDeviceRegistration, password, registrationId, deviceId, server));
-    Account account = m.getAccount();
+    Database.Get().AccountsTable.add(newDeviceRegistration.getNumber(), newDeviceRegistration.getAci(), server);
+
+    Account account = new Account(aci);
     account.setDeviceName(deviceName);
+    if (newDeviceRegistration.getPni() != null) {
+      account.setPNI(newDeviceRegistration.getPni());
+    }
+    account.setDeviceId(deviceId);
+    account.setPassword(password);
+    account.setACIIdentityKeyPair(newDeviceRegistration.getAciIdentity());
+    account.setPNIIdentityKeyPair(newDeviceRegistration.getPniIdentity());
+    account.setLocalRegistrationId(registrationId);
+
+    // store all known identifiers in the recipients table
+    account.getDB().RecipientsTable.get(newDeviceRegistration.getNumber(), newDeviceRegistration.getAci());
+
+    if (newDeviceRegistration.getProfileKey() != null) {
+      account.getDB().ProfileKeysTable.setProfileKey(account.getSelf(), newDeviceRegistration.getProfileKey());
+    }
+
+    Manager m = new Manager(newDeviceRegistration.getAci());
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 

@@ -1,7 +1,11 @@
 package io.finn.signald;
 
 import com.google.protobuf.ByteString;
+import io.finn.signald.db.IRecipientsTable;
+import io.finn.signald.db.Recipient;
 import io.reactivex.rxjava3.annotations.NonNull;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -14,7 +18,6 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroup;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.storageservice.protos.groups.local.DecryptedMember;
 import org.signal.storageservice.protos.groups.local.DecryptedRequestingMember;
-import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 /**
@@ -28,8 +31,11 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 public final class ProfileKeySet {
   private final static Logger logger = LogManager.getLogger();
 
-  private final Map<ACI, ProfileKey> profileKeys = new LinkedHashMap<>();
-  private final Map<ACI, ProfileKey> authoritativeProfileKeys = new LinkedHashMap<>();
+  private final Map<Recipient, ProfileKey> profileKeys = new LinkedHashMap<>();
+  private final Map<Recipient, ProfileKey> authoritativeProfileKeys = new LinkedHashMap<>();
+  private final IRecipientsTable recipientsTable;
+
+  public ProfileKeySet(IRecipientsTable recipientsTable) { this.recipientsTable = recipientsTable; }
 
   /**
    * Add new profile keys from a group change.
@@ -37,7 +43,7 @@ public final class ProfileKeySet {
    * If the change came from the member whose profile key is changing then it is regarded as
    * authoritative.
    */
-  public void addKeysFromGroupChange(@NonNull DecryptedGroupChange change) {
+  public void addKeysFromGroupChange(@NonNull DecryptedGroupChange change) throws SQLException, IOException {
     UUID editor = UuidUtil.fromByteStringOrNull(change.getEditor());
 
     for (DecryptedMember member : change.getNewMembersList()) {
@@ -64,15 +70,17 @@ public final class ProfileKeySet {
    * attributed to a member and it's possible that the group is out of date. So profile keys
    * gathered from a group state can only be used to fill in gaps in knowledge.
    */
-  public void addKeysFromGroupState(@NonNull DecryptedGroup group) {
+  public void addKeysFromGroupState(@NonNull DecryptedGroup group) throws SQLException, IOException {
     for (DecryptedMember member : group.getMembersList()) {
       addMemberKey(member, null);
     }
   }
 
-  private void addMemberKey(@NonNull DecryptedMember member, @Nullable UUID changeSource) { addMemberKey(changeSource, member.getUuid(), member.getProfileKey()); }
+  private void addMemberKey(@NonNull DecryptedMember member, @Nullable UUID changeSource) throws SQLException, IOException {
+    addMemberKey(changeSource, member.getUuid(), member.getProfileKey());
+  }
 
-  private void addMemberKey(@Nullable UUID changeSource, @NonNull ByteString memberUuidBytes, @NonNull ByteString profileKeyBytes) {
+  private void addMemberKey(@Nullable UUID changeSource, @NonNull ByteString memberUuidBytes, @NonNull ByteString profileKeyBytes) throws SQLException, IOException {
     UUID memberUuid = UuidUtil.fromByteString(memberUuidBytes);
 
     if (UuidUtil.UNKNOWN_UUID.equals(memberUuid)) {
@@ -88,17 +96,20 @@ public final class ProfileKeySet {
       return;
     }
 
+    Recipient recipient = recipientsTable.get(memberUuid);
     if (memberUuid.equals(changeSource)) {
-      authoritativeProfileKeys.put(ACI.from(memberUuid), profileKey);
-      profileKeys.remove(ACI.from(memberUuid));
+      authoritativeProfileKeys.put(recipient, profileKey);
+      profileKeys.remove(recipient);
     } else {
-      if (!authoritativeProfileKeys.containsKey(ACI.from(memberUuid))) {
-        profileKeys.put(ACI.from(memberUuid), profileKey);
+      if (!authoritativeProfileKeys.containsKey(recipient)) {
+        profileKeys.put(recipient, profileKey);
       }
     }
   }
 
-  public Map<ACI, ProfileKey> getProfileKeys() { return profileKeys; }
+  public Map<Recipient, ProfileKey> getProfileKeys() { return profileKeys; }
 
-  public Map<ACI, ProfileKey> getAuthoritativeProfileKeys() { return authoritativeProfileKeys; }
+  public Map<Recipient, ProfileKey> getAuthoritativeProfileKeys() { return authoritativeProfileKeys; }
+
+  public Recipient getSelf() throws SQLException, IOException { return recipientsTable.self(); }
 }

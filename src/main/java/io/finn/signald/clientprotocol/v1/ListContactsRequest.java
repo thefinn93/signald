@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.Manager;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -18,19 +18,18 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IContactsTable;
+import io.finn.signald.db.IProfilesTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 
@@ -44,31 +43,40 @@ public class ListContactsRequest implements RequestType<ProfileList> {
   public boolean async;
 
   @Override
-  public ProfileList run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
+  public ProfileList run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError, InvalidRequestError {
+    Account a = Common.getAccount(account);
     ProfileList list = new ProfileList();
+    Database db = a.getDB();
 
     ArrayList<IContactsTable.ContactInfo> contacts;
     try {
-      contacts = Database.Get(m.getACI()).ContactsTable.getAll();
+      contacts = db.ContactsTable.getAll();
     } catch (SQLException e) {
       throw new InternalError("failed to get all contacts", e);
     }
 
     for (var c : contacts) {
-      ProfileAndCredentialEntry profileEntry = m.getAccountData().profileCredentialStore.get(c.recipient);
-      if (profileEntry == null) {
+      IProfilesTable.Profile profile;
+      try {
+        profile = db.ProfilesTable.get(c.recipient);
+      } catch (SQLException e) {
+        throw new SQLError(e);
+      }
+
+      if (profile == null) {
+        // no local profile, return details just from contact list
         list.profiles.add(new Profile(c));
         continue;
       }
 
-      RefreshProfileJob action = new RefreshProfileJob(m, profileEntry);
+      RefreshProfileJob action = new RefreshProfileJob(a, c.recipient);
       if (async) {
         BackgroundJobRunnerThread.queue(action);
       } else {
         try {
           action.run();
-        } catch (InterruptedException | ExecutionException | TimeoutException | NotFoundException | AuthorizationFailedException e) {
+        } catch (NotFoundException | AuthorizationFailedException | InvalidKeyException e) {
           logger.warn("error refreshing profile:", e);
         } catch (SQLException | IOException e) {
           throw new InternalError("error refreshing profile", e);
@@ -82,10 +90,10 @@ public class ListContactsRequest implements RequestType<ProfileList> {
       }
 
       try {
-        var recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, c.recipient.getAddress());
-        Profile profile = new Profile(profileEntry.getProfile(), recipient, c);
-        profile.populateAvatar(m);
-        list.profiles.add(profile);
+        var recipient = Common.getRecipient(db.RecipientsTable, c.recipient.getAddress());
+        Profile p = new Profile(db, recipient, c);
+        p.populateAvatar(a);
+        list.profiles.add(p);
       } catch (UnregisteredUserError e) {
         logger.debug("ignoring unregistered user in contact list");
       }

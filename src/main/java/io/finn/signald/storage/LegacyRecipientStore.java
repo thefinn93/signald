@@ -23,15 +23,15 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-@JsonSerialize(using = RecipientStore.RecipientStoreSerializer.class)
-@JsonDeserialize(using = RecipientStore.RecipientStoreDeserializer.class)
-public class RecipientStore {
+@Deprecated
+@JsonSerialize(using = LegacyRecipientStore.RecipientStoreSerializer.class)
+@JsonDeserialize(using = LegacyRecipientStore.RecipientStoreDeserializer.class)
+public class LegacyRecipientStore {
   private static final Logger logger = LogManager.getLogger();
   private static final ObjectMapper mapper = JSONUtil.GetMapper();
   private List<JsonAddress> addresses = new ArrayList<>();
 
-  public RecipientStore() {}
+  public LegacyRecipientStore() {}
 
   public void migrateToDB(Account account) throws SQLException {
     logger.info("migrating " + addresses.size() + " recipients to the database");
@@ -48,12 +48,12 @@ public class RecipientStore {
     }
   }
 
-  public static class RecipientStoreDeserializer extends JsonDeserializer<RecipientStore> {
+  public static class RecipientStoreDeserializer extends JsonDeserializer<LegacyRecipientStore> {
 
     @Override
-    public RecipientStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public LegacyRecipientStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
       JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-      RecipientStore store = new RecipientStore();
+      LegacyRecipientStore store = new LegacyRecipientStore();
       if (node.isArray()) {
         for (JsonNode recipient : node) {
           JsonAddress jsonAddress = mapper.treeToValue(recipient, JsonAddress.class);
@@ -64,10 +64,10 @@ public class RecipientStore {
     }
   }
 
-  public static class RecipientStoreSerializer extends JsonSerializer<RecipientStore> {
+  public static class RecipientStoreSerializer extends JsonSerializer<LegacyRecipientStore> {
 
     @Override
-    public void serialize(RecipientStore store, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(LegacyRecipientStore store, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
       json.writeStartArray();
       for (JsonAddress address : store.addresses) {
         json.writeObject(address);

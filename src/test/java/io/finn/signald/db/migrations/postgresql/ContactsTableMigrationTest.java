@@ -7,7 +7,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.UnregisteredUserError;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IServersTable;
 import io.finn.signald.db.TestUtil;
-import io.finn.signald.storage.ContactStore;
+import io.finn.signald.storage.LegacyContactStore;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -22,7 +22,7 @@ public class ContactsTableMigrationTest {
     testDatabase = TestUtil.createAndConfigureTestPostgresDatabase();
 
     // Create the account
-    Database.Get(testDatabase.getAci()).AccountsTable.add(testDatabase.selfAddress.getNumber().get(), testDatabase.getAci(), "/not/here", IServersTable.DEFAULT_SERVER);
+    Database.Get(testDatabase.getAci()).AccountsTable.add(testDatabase.selfAddress.getNumber().get(), testDatabase.getAci(), IServersTable.DEFAULT_SERVER);
   }
 
   @AfterEach
@@ -31,6 +31,7 @@ public class ContactsTableMigrationTest {
     TestUtil.cleanupTestPostgresDatabase(testDatabase);
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   @DisplayName("migrate from JSON store to Database")
   @EnabledIfEnvironmentVariable(named = "SIGNALD_POSTGRES_TEST_DATABASE", matches = ".*")
@@ -60,7 +61,7 @@ public class ContactsTableMigrationTest {
                               + "    \"inboxPosition\" : 5"
                               + "  }"
                               + "]}";
-    var contactStore = mapper.readValue(testContactsJson, ContactStore.class);
+    var contactStore = mapper.readValue(testContactsJson, LegacyContactStore.class);
 
     var account = new Account(testDatabase.getAci());
     contactStore.migrateToDB(account);

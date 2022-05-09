@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.annotations.Doc;
-import io.finn.signald.storage.SignalProfile;
+import io.finn.signald.db.IProfileCapabilitiesTable;
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 
 public class Capabilities {
@@ -21,14 +21,14 @@ public class Capabilities {
   @JsonProperty("change_number") public boolean changeNumber;
   public boolean stories;
 
-  public Capabilities(SignalServiceProfile.Capabilities c) { this(new SignalProfile.Capabilities(c)); }
+  public Capabilities(SignalServiceProfile.Capabilities c) { this(new IProfileCapabilitiesTable.Capabilities(c)); }
 
-  public Capabilities(SignalProfile.Capabilities c) {
-    storage = c.storage;
-    gv1Migration = c.gv1Migration;
-    senderKey = c.senderKey;
-    announcementGroup = c.announcementGroup;
-    changeNumber = c.changeNumber;
-    stories = c.stories;
+  public Capabilities(IProfileCapabilitiesTable.Capabilities c) {
+    storage = c.isStorage();
+    gv1Migration = c.isGv1Migration();
+    senderKey = c.isSenderKey();
+    announcementGroup = c.isAnnouncementGroup();
+    changeNumber = c.isChangeNumber();
+    stories = c.isStories();
   }
 }

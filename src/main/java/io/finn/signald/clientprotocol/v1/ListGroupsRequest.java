@@ -8,7 +8,6 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
 import io.finn.signald.annotations.Required;
@@ -35,11 +34,6 @@ public class ListGroupsRequest implements RequestType<GroupList> {
       }
     } catch (SQLException e) {
       throw new InternalError("error listing groups", e);
-    }
-
-    Manager m = Common.getManager(account);
-    for (io.finn.signald.storage.GroupInfo g : m.getAccountData().groupStore.getGroups()) {
-      groups.add(new JsonGroupInfo(g));
     }
 
     return groups;

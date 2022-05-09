@@ -11,7 +11,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.protobuf.ByteString;
 import io.finn.signald.Account;
 import io.finn.signald.Empty;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -20,17 +19,23 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.storage.SignalProfile;
+import io.finn.signald.db.IProfilesTable;
+import io.finn.signald.db.Recipient;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.AttachmentUtil;
+import io.finn.signald.util.FileUtil;
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.IdentityKeyPair;
-import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -61,22 +66,33 @@ public class SetProfile implements RequestType<Empty> {
   @Override
   public Empty run(Request request)
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRequestError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
+    Account a = Common.getAccount(account);
 
-    SignalProfile existing = m.getAccountData().profileCredentialStore.get(m.getOwnRecipient()).getProfile();
+    Recipient self;
+    try {
+      self = a.getSelf();
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (IOException e) {
+      throw new InternalError("unexpected error getting own recipient", e);
+    }
 
-    File avatar = null;
+    IProfilesTable.Profile existing;
+    try {
+      existing = a.getDB().ProfilesTable.get(self);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    }
+
+    String avatar = null;
     if (avatarFile != null) {
-      avatar = new File(avatarFile);
+      avatar = new File(avatarFile).getAbsolutePath();
     } else {
-      File a = m.getProfileAvatarFile(m.getOwnRecipient());
-      if (a.exists()) {
-        avatar = a;
-      }
+      FileUtil.getProfileAvatarPath(self);
     }
 
     if (name == null) {
-      name = existing == null ? "" : existing.getName();
+      name = existing == null ? "" : existing.getSerializedFullName();
     }
 
     if (about == null) {
@@ -88,14 +104,8 @@ public class SetProfile implements RequestType<Empty> {
     }
 
     Optional<SignalServiceProtos.PaymentAddress> paymentAddress;
-
     if (existing != null) {
-      try {
-        paymentAddress = Optional.ofNullable(existing.getPaymentAddress());
-      } catch (IOException e) {
-        logger.warn("error getting current payment address while setting profile: {}", e.getMessage());
-        paymentAddress = Optional.empty();
-      }
+      paymentAddress = Optional.ofNullable(existing.getPaymentAddress());
     } else {
       paymentAddress = Optional.empty();
     }
@@ -107,7 +117,6 @@ public class SetProfile implements RequestType<Empty> {
       } catch (IOException e) {
         throw new InvalidBase64Error();
       }
-      Account a = Common.getAccount(account);
       IdentityKeyPair identityKeyPair = a.getProtocolStore().getIdentityKeyPair();
       SignalServiceProtos.PaymentAddress signedAddress = signPaymentsAddress(decodedAddress, identityKeyPair);
 
@@ -118,16 +127,31 @@ public class SetProfile implements RequestType<Empty> {
     }
 
     if (visibleBadgeIds == null) {
-      visibleBadgeIds = existing == null ? new ArrayList<>() : existing.getVisibleBadgesIds();
+      visibleBadgeIds = existing == null ? new ArrayList<>() : IProfilesTable.StoredBadge.getVisibleIds(existing.getBadges());
     }
 
-    try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
+    ProfileKey ownProfileKey;
+    try {
+      ownProfileKey = a.getDB().ProfileKeysTable.getProfileKey(a.getSelf());
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (IOException e) {
+      throw new InternalError("unexpected error getting own profile key: ", e);
+    }
+
+    try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(new File(avatar))) {
       AvatarUploadParams avatarUploadParams = AvatarUploadParams.forAvatar(streamDetails);
-      m.getAccountManager().setVersionedProfile(m.getACI(), m.getAccountData().getProfileKey(), name, about, emoji, paymentAddress, avatarUploadParams, visibleBadgeIds);
+      a.getSignalDependencies().getAccountManager().setVersionedProfile(a.getACI(), ownProfileKey, name, about, emoji, paymentAddress, avatarUploadParams, visibleBadgeIds);
     } catch (IOException e) {
       throw new InternalError("error reading avatar file", e);
-    } catch (InvalidInputException e) {
-      throw new InternalError("error getting own profile key", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     return new Empty();

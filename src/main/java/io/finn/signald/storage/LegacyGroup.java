@@ -42,10 +42,10 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.NonSuccessfulResponseCodeException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.util.Base64;
-
-@JsonSerialize(using = Group.GroupSerializer.class)
-@JsonDeserialize(using = Group.GroupDeserializer.class)
-public class Group {
+@Deprecated
+@JsonSerialize(using = LegacyGroup.GroupSerializer.class)
+@JsonDeserialize(using = LegacyGroup.GroupDeserializer.class)
+public class LegacyGroup {
   private static final Logger logger = LogManager.getLogger();
 
   public GroupMasterKey masterKey;
@@ -54,7 +54,7 @@ public class Group {
   private int lastAvatarFetch;
   private DistributionId distributionId;
 
-  public Group(GroupMasterKey m, int r, DecryptedGroup d, DistributionId dist, int l) {
+  public LegacyGroup(GroupMasterKey m, int r, DecryptedGroup d, DistributionId dist, int l) {
     masterKey = m;
     revision = r;
     group = d;
@@ -139,7 +139,7 @@ public class Group {
 
   public String getID() { return Base64.encodeBytes(GroupsUtil.GetIdentifierFromMasterKey(masterKey).serialize()); }
 
-  public void update(Group g) {
+  public void update(LegacyGroup g) {
     this.masterKey = g.masterKey;
     this.revision = g.revision;
     this.group = g.group;
@@ -186,9 +186,9 @@ public class Group {
 
   public int getLastAvatarFetch() { return lastAvatarFetch; }
 
-  public static class GroupDeserializer extends JsonDeserializer<Group> {
+  public static class GroupDeserializer extends JsonDeserializer<LegacyGroup> {
     @Override
-    public Group deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
+    public LegacyGroup deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
       JsonNode node = p.getCodec().readTree(p);
       try {
         GroupMasterKey masterKey = new GroupMasterKey(Base64.decode(node.get("masterKey").textValue()));
@@ -255,7 +255,7 @@ public class Group {
         if (node.has("distributionId")) {
           distributionId = DistributionId.from(node.get("distributionId").asText());
         }
-        return new Group(masterKey, revision, group, distributionId, lastAvatarFetch);
+        return new LegacyGroup(masterKey, revision, group, distributionId, lastAvatarFetch);
       } catch (InvalidInputException e) {
         logger.error("error deserializing group from legacy storage", e);
         Sentry.captureException(e);
@@ -264,9 +264,9 @@ public class Group {
     }
   }
 
-  public static class GroupSerializer extends JsonSerializer<Group> {
+  public static class GroupSerializer extends JsonSerializer<LegacyGroup> {
     @Override
-    public void serialize(Group value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(LegacyGroup value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
       ObjectNode node = JsonNodeFactory.instance.objectNode();
       node.put("masterKey", Base64.encodeBytes(value.masterKey.serialize()));
       node.put("revision", value.revision);

@@ -37,7 +37,8 @@ public interface IAccountDataTable {
     LAST_ACCOUNT_REPAIR, // fixes to historical signald bugs (see ../AccountRepair.java)
     STORAGE_KEY,
     STORAGE_MANIFEST_VERSION,
-    PNI
+    PNI,
+    PENDING_DELETION, // indicates the account is about to be deleted
   }
 
   // Default implementations for setting values

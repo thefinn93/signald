@@ -8,7 +8,7 @@
 package io.finn.signald.storage;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+@Deprecated
 public class LegacyThreadInfo {
   @JsonProperty public String id;
 

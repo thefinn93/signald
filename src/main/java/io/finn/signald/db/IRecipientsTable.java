@@ -18,6 +18,7 @@ public interface IRecipientsTable {
   String REGISTERED = "registered";
 
   Recipient get(String e164, ServiceId aci) throws SQLException, IOException;
+  Recipient self() throws SQLException, IOException;
   void setRegistrationStatus(Recipient recipient, boolean registered) throws SQLException, IOException;
   void deleteAccount(ACI aci) throws SQLException;
 

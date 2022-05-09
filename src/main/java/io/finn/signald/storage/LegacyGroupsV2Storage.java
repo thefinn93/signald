@@ -30,11 +30,11 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.whispersystems.util.Base64;
-
+@Deprecated
 public class LegacyGroupsV2Storage {
   private static final Logger logger = LogManager.getLogger();
   @JsonProperty private Map<Integer, JsonAuthCredential> credentials;
-  @JsonProperty private List<Group> groups;
+  @JsonProperty private List<LegacyGroup> groups;
 
   public LegacyGroupsV2Storage() {
     credentials = new HashMap<>();
@@ -56,7 +56,7 @@ public class LegacyGroupsV2Storage {
 
     if (groups != null) {
       var groupsTable = Database.Get(account.getACI()).GroupsTable;
-      for (Group g : groups) {
+      for (LegacyGroup g : groups) {
         groupsTable.upsert(g);
       }
       groups = null;

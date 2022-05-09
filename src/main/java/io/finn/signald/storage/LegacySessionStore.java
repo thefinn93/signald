@@ -26,17 +26,17 @@ import org.signal.libsignal.protocol.InvalidMessageException;
 import org.signal.libsignal.protocol.SignalProtocolAddress;
 import org.signal.libsignal.protocol.state.SessionRecord;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-
-@JsonSerialize(using = SessionStore.SessionStoreSerializer.class)
-@JsonDeserialize(using = SessionStore.SessionStoreDeserializer.class)
-public class SessionStore {
+@Deprecated
+@JsonSerialize(using = LegacySessionStore.SessionStoreSerializer.class)
+@JsonDeserialize(using = LegacySessionStore.SessionStoreDeserializer.class)
+public class LegacySessionStore {
   private static final Logger logger = LogManager.getLogger();
 
   private static ObjectMapper mapper = JSONUtil.GetMapper();
 
   public List<SessionInfo> sessions = new ArrayList<>();
 
-  public SessionStore() {}
+  public LegacySessionStore() {}
 
   public synchronized List<SessionInfo> getSessions() { return sessions; }
 
@@ -57,12 +57,12 @@ public class SessionStore {
     }
   }
 
-  public static class SessionStoreDeserializer extends JsonDeserializer<SessionStore> {
+  public static class SessionStoreDeserializer extends JsonDeserializer<LegacySessionStore> {
 
     @Override
-    public SessionStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public LegacySessionStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
       JsonNode tree = jsonParser.getCodec().readTree(jsonParser);
-      SessionStore sessionStore = new SessionStore();
+      LegacySessionStore sessionStore = new LegacySessionStore();
       if (tree.isArray()) {
         for (JsonNode node : tree) {
           SessionInfo sessionInfo = mapper.treeToValue(node, SessionInfo.class);
@@ -74,10 +74,10 @@ public class SessionStore {
     }
   }
 
-  public static class SessionStoreSerializer extends JsonSerializer<SessionStore> {
+  public static class SessionStoreSerializer extends JsonSerializer<LegacySessionStore> {
 
     @Override
-    public void serialize(SessionStore jsonSessionStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(LegacySessionStore jsonSessionStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
       json.writeStartArray();
       for (SessionInfo sessionInfo : jsonSessionStore.sessions) {
         json.writeObject(sessionInfo);

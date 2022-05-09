@@ -11,13 +11,13 @@ import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.db.Database;
+import io.finn.signald.db.IAccountDataTable;
 import io.finn.signald.db.IAccountsTable;
 import io.finn.signald.db.IServersTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.AddressUtil;
-import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -30,45 +30,16 @@ public class AccountsTable implements IAccountsTable {
   private static final String TABLE_NAME = "signald_accounts";
 
   @Override
-  public File getFile(ACI aci) throws SQLException, NoSuchAccountException {
-    var query = String.format("SELECT %s FROM %s WHERE %s=?", FILENAME, TABLE_NAME, UUID);
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci.uuid());
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_file_aci", statement)) {
-        if (!rows.next()) {
-          throw new NoSuchAccountException(aci.toString());
-        }
-        return new File(rows.getString(FILENAME));
-      }
-    }
-  }
-
-  @Override
-  public File getFile(String e164) throws SQLException, NoSuchAccountException {
-    var query = String.format("SELECT %s FROM %s WHERE %s=?", FILENAME, TABLE_NAME, E164);
-    try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, e164);
-      try (var rows = Database.executeQuery(TABLE_NAME + "_get_file_e164", statement)) {
-        if (!rows.next()) {
-          throw new NoSuchAccountException(e164);
-        }
-        return new File(rows.getString(FILENAME));
-      }
-    }
-  }
-
-  @Override
-  public void add(String e164, ACI aci, String filename, java.util.UUID server) throws SQLException {
-    var query = String.format("INSERT INTO %s (%s, %s, %s, %s) VALUES (?, ?, ?, ?) ON CONFLICT (%s, %s, %s, %s) DO NOTHING", TABLE_NAME,
+  public void add(String e164, ACI aci, java.util.UUID server) throws SQLException {
+    var query = String.format("INSERT INTO %s (%s, %s, %s) VALUES (?, ?, ?) ON CONFLICT (%s, %s, %s) DO NOTHING", TABLE_NAME,
                               // FIELDS
-                              UUID, E164, FILENAME, SERVER,
+                              UUID, E164, SERVER,
                               // ON CONFLICT
-                              UUID, E164, FILENAME, SERVER);
+                              UUID, E164, SERVER);
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setObject(1, aci.uuid());
       statement.setString(2, e164);
-      statement.setString(3, filename);
-      statement.setObject(4, server);
+      statement.setObject(3, server);
       Database.executeUpdate(TABLE_NAME + "_add", statement);
       AddressUtil.addKnownAddress(new SignalServiceAddress(aci, e164));
     }
@@ -174,9 +145,17 @@ public class AccountsTable implements IAccountsTable {
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setObject(1, aci.uuid());
       try (var rows = Database.executeQuery(TABLE_NAME + "_check_exists", statement)) {
-        return rows.next();
+        if (!rows.next()) {
+          return false;
+        }
       }
     }
+
+    Boolean result = Database.Get().AccountDataTable.getBoolean(aci, IAccountDataTable.Key.PENDING_DELETION);
+    if (result == null) {
+      return true;
+    }
+    return !result;
   }
 
   @Override

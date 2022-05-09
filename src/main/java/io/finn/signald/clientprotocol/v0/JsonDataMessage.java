@@ -84,7 +84,7 @@ public class JsonDataMessage {
     if (dataMessage.getGroupContext().isPresent()) {
       SignalServiceGroupContext groupContext = dataMessage.getGroupContext().get();
       if (groupContext.getGroupV1().isPresent()) {
-        group = new JsonGroupInfo(groupContext.getGroupV1().get(), aci);
+        group = new JsonGroupInfo(groupContext.getGroupV1().get());
       }
       if (groupContext.getGroupV2().isPresent()) {
         groupV2 = new JsonGroupV2Info(groupContext.getGroupV2().get(), null).sanitized();

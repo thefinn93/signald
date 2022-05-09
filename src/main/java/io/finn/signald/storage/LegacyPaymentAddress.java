@@ -11,13 +11,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.IOException;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.util.Base64;
-
-public class PaymentAddress {
+@Deprecated
+public class LegacyPaymentAddress {
   @JsonProperty private String address;
 
-  private PaymentAddress() {}
+  private LegacyPaymentAddress() {}
 
-  public PaymentAddress(SignalServiceProtos.PaymentAddress a) { address = Base64.encodeBytes(a.toByteArray()); }
+  public LegacyPaymentAddress(SignalServiceProtos.PaymentAddress a) { address = Base64.encodeBytes(a.toByteArray()); }
 
   public SignalServiceProtos.PaymentAddress get() throws IOException { return SignalServiceProtos.PaymentAddress.parseFrom(Base64.decode(address)); }
 }

@@ -9,18 +9,13 @@ package io.finn.signald;
 import static java.nio.file.attribute.PosixFilePermission.*;
 import static org.whispersystems.signalservice.internal.util.Util.isEmpty;
 
-import io.finn.signald.clientprotocol.v1.JsonAddress;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
-import io.finn.signald.storage.AccountData;
-import io.finn.signald.storage.GroupInfo;
-import io.finn.signald.storage.ProfileAndCredentialEntry;
-import io.finn.signald.storage.SignalProfile;
-import io.finn.signald.util.AttachmentUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
+import io.finn.signald.util.UnidentifiedAccessUtil;
 import io.prometheus.client.Histogram;
 import io.sentry.Sentry;
 import java.io.*;
@@ -29,22 +24,20 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asamk.signal.GroupNotFoundException;
-import org.asamk.signal.NotAGroupMemberException;
 import org.asamk.signal.TrustLevel;
 import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
-import org.signal.libsignal.metadata.certificate.InvalidCertificateException;
 import org.signal.libsignal.protocol.*;
 import org.signal.libsignal.protocol.ecc.Curve;
 import org.signal.libsignal.protocol.ecc.ECKeyPair;
@@ -65,32 +58,27 @@ import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.signalservice.api.*;
-import org.whispersystems.signalservice.api.crypto.*;
+import org.whispersystems.signalservice.api.crypto.ContentHint;
+import org.whispersystems.signalservice.api.crypto.SignalServiceCipher;
+import org.whispersystems.signalservice.api.crypto.UnidentifiedAccessPair;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
-import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
-import org.whispersystems.signalservice.api.profiles.ProfileAndCredential;
-import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.storage.StorageKey;
-import org.whispersystems.signalservice.api.util.DeviceNameUtil;
-import org.whispersystems.signalservice.api.util.StreamDetails;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.push.UnsupportedDataMessageException;
-import org.whispersystems.signalservice.internal.util.concurrent.ListenableFuture;
 import org.whispersystems.util.Base64;
 
 public class Manager {
   private final Logger logger;
   private final SignalServiceConfiguration serviceConfiguration;
   private final ECPublicKey unidentifiedSenderTrustRoot;
-  private final static int ACCOUNT_REFRESH_VERSION = 6;
 
   private static final ConcurrentHashMap<String, Manager> managers = new ConcurrentHashMap<>();
   private static final Histogram messageDecryptionTime =
@@ -101,7 +89,6 @@ public class Manager {
   private static String avatarsPath;
   private static String stickersPath;
 
-  private final AccountData accountData;
   private final ACI aci;
   private final Account account;
   private final Recipient self;
@@ -115,24 +102,20 @@ public class Manager {
   }
   public static Manager get(ACI aci, boolean offline)
       throws SQLException, NoSuchAccountException, IOException, InvalidKeyException, ServerNotFoundException, InvalidProxyException {
-    AccountData accountData;
     Manager m;
     synchronized (managers) {
       if (managers.containsKey(aci.toString())) {
         return managers.get(aci.toString());
       }
-      accountData = AccountData.load(Database.Get().AccountsTable.getFile(aci));
-      m = new Manager(aci, accountData);
+      m = new Manager(aci);
       managers.put(aci.toString(), m);
     }
 
     if (!offline) {
       RefreshPreKeysJob.runIfNeeded(aci, m);
-      m.refreshAccountIfNeeded();
-      try {
-        m.getRecipientProfileKeyCredential(m.self);
-      } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
-      }
+      Account account = new Account(aci);
+      account.refreshIfNeeded();
+      RefreshProfileJob.queueIfNeeded(account, account.getSelf());
     }
     return m;
   }
@@ -162,29 +145,25 @@ public class Manager {
     return allManagers;
   }
 
-  Manager(ACI aci, AccountData accountData) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
+  Manager(ACI aci) throws IOException, SQLException, InvalidKeyException, ServerNotFoundException, InvalidProxyException, NoSuchAccountException {
     this.aci = aci;
     account = new Account(aci);
-    this.accountData = accountData;
-    self = Database.Get(aci).RecipientsTable.get(aci);
+    self = account.getSelf();
     logger = LogManager.getLogger("manager-" + Util.redact(aci.toString()));
     var server = Database.Get().AccountsTable.getServer(aci);
     serviceConfiguration = server.getSignalServiceConfiguration();
     unidentifiedSenderTrustRoot = server.getUnidentifiedSenderRoot();
-    dependencies = SignalDependencies.get(aci);
+    dependencies = account.getSignalDependencies();
     logger.info("Created a manager for " + Util.redact(aci.toString()));
     synchronized (managers) { managers.put(aci.toString(), this); }
   }
 
-  public static void setDataPath() throws IOException {
+  public static void setDataPath() {
     LogManager.getLogger().debug("Using data folder {}", Config.getDataPath());
     dataPath = Config.getDataPath() + "/data";
-    AccountData.setDataPath(dataPath);
     attachmentsPath = Config.getDataPath() + "/attachments";
     avatarsPath = Config.getDataPath() + "/avatars";
     stickersPath = Config.getDataPath() + "/stickers";
-    Database.Get().GroupsTable.setGroupAvatarPath(avatarsPath);
-    createPrivateDirectories(dataPath);
   }
 
   public Account getAccount() { return account; }
@@ -197,9 +176,7 @@ public class Manager {
 
   public IdentityKey getIdentity() { return account.getProtocolStore().getIdentityKeyPair().getPublicKey(); }
 
-  public static String getFileName(String username) { return dataPath + "/" + username; }
-
-  private String getMessageCachePath() { return dataPath + "/" + accountData.getLegacyUsername() + ".d/msg-cache"; }
+  private String getMessageCachePath() throws NoSuchAccountException, SQLException { return dataPath + "/" + account.getE164() + ".d/msg-cache"; }
 
   public static void createPrivateDirectories(String path) throws IOException {
     final Path file = new File(path).toPath();
@@ -237,10 +214,11 @@ public class Manager {
 
     SignalServiceAccountManager accountManager = dependencies.getAccountManager();
     String verificationCode = accountManager.getNewDeviceVerificationCode();
-    accountManager.addDevice(deviceIdentifier, deviceKey, account.getACIIdentityKeyPair(), account.getPNIIdentityKeyPair(), accountData.getProfileKey(), verificationCode);
+    ProfileKey profileKey = account.getDB().ProfileKeysTable.getProfileKey(account.getSelf());
+    accountManager.addDevice(deviceIdentifier, deviceKey, account.getACIIdentityKeyPair(), account.getPNIIdentityKeyPair(), profileKey, verificationCode);
   }
 
-  private List<PreKeyRecord> generatePreKeys() throws IOException, SQLException {
+  private List<PreKeyRecord> generatePreKeys() throws SQLException {
     List<PreKeyRecord> records = new LinkedList<>();
 
     DatabaseAccountDataStore protocolStore = account.getProtocolStore();
@@ -254,7 +232,6 @@ public class Manager {
     }
 
     account.setPreKeyIdOffset((account.getPreKeyIdOffset() + ServiceConfig.PREKEY_BATCH_SIZE + 1) % Medium.MAX_VALUE);
-    accountData.save();
 
     return records;
   }
@@ -284,50 +261,6 @@ public class Manager {
     IdentityKeyPair identityKeyPair = account.getACIIdentityKeyPair();
     dependencies.getAccountManager().setPreKeys(serviceIdType, identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
-
-  private static SignalServiceAttachmentStream createAttachment(File attachmentFile) throws IOException {
-    InputStream attachmentStream = new FileInputStream(attachmentFile);
-    final long attachmentSize = attachmentFile.length();
-    String mime = Files.probeContentType(attachmentFile.toPath());
-    if (mime == null) {
-      mime = "application/octet-stream";
-    }
-    return new SignalServiceAttachmentStream(attachmentStream, mime, attachmentSize, Optional.of(attachmentFile.getName()), false, false, false, Optional.empty(), 0, 0,
-                                             System.currentTimeMillis(), Optional.empty(), Optional.empty(), null, null, Optional.empty());
-  }
-
-  public Optional<SignalServiceAttachmentStream> createGroupAvatarAttachment(byte[] groupId) throws IOException {
-    File file = getGroupAvatarFile(groupId);
-    if (!file.exists()) {
-      return Optional.empty();
-    }
-
-    return Optional.of(createAttachment(file));
-  }
-
-  public Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(Recipient recipient) throws IOException {
-    File file = getContactAvatarFile(recipient);
-    if (!file.exists()) {
-      return Optional.empty();
-    }
-
-    return Optional.of(createAttachment(file));
-  }
-
-  private GroupInfo getGroupForSending(byte[] groupId) throws GroupNotFoundException, NotAGroupMemberException {
-    GroupInfo g = accountData.groupStore.getGroup(groupId);
-    if (g == null) {
-      throw new GroupNotFoundException(groupId);
-    }
-
-    if (!g.isMember(self.getAddress())) {
-      throw new NotAGroupMemberException(groupId, g.name);
-    }
-
-    return g;
-  }
-
-  public List<GroupInfo> getV1Groups() { return accountData.groupStore.getGroups(); }
 
   public List<JsonGroupV2Info> getGroupsV2Info() throws SQLException {
     List<JsonGroupV2Info> groups = new ArrayList<>();
@@ -361,92 +294,6 @@ public class Manager {
     return sendMessage(message, membersSend);
   }
 
-  public List<SendMessageResult> sendQuitGroupMessage(byte[] groupId) throws GroupNotFoundException, IOException, NotAGroupMemberException, SQLException {
-    SignalServiceGroup group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.QUIT).withId(groupId).build();
-
-    SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asGroupMessage(group);
-
-    final GroupInfo g = getGroupForSending(groupId);
-    g.members.remove(accountData.address);
-    accountData.groupStore.updateGroup(g);
-
-    List<Recipient> members = Database.Get(aci).RecipientsTable.get(g.getMembers());
-    return sendMessage(messageBuilder, members);
-  }
-
-  public GroupInfo sendUpdateGroupMessage(byte[] groupId, String name, Collection<Recipient> members, String avatarFile)
-      throws IOException, GroupNotFoundException, NotAGroupMemberException, SQLException {
-    GroupInfo g;
-    if (groupId == null) {
-      // Create new group
-      g = new GroupInfo(Util.getSecretBytes(16));
-      g.addMember(accountData.address);
-    } else {
-      g = getGroupForSending(groupId);
-    }
-
-    if (name != null) {
-      g.name = name;
-    }
-
-    if (members != null) {
-      for (Recipient member : members) {
-        for (JsonAddress m : g.members) {
-          if (m.matches(member.getAddress())) {
-            continue;
-          }
-          g.addMember(new JsonAddress(member.getAddress()));
-        }
-      }
-    }
-
-    if (avatarFile != null) {
-      createPrivateDirectories(avatarsPath);
-      File aFile = getGroupAvatarFile(g.groupId);
-      Files.copy(Paths.get(avatarFile), aFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    accountData.groupStore.updateGroup(g);
-
-    SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
-
-    // Don't send group message to ourself
-    final List<Recipient> membersSend = Database.Get(aci).RecipientsTable.get(g.getMembers());
-    membersSend.remove(self);
-    sendMessage(messageBuilder, membersSend);
-    return g;
-  }
-
-  public SignalServiceDataMessage.Builder getGroupUpdateMessageBuilder(GroupInfo g) {
-    SignalServiceGroup.Builder group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.UPDATE).withId(g.groupId).withName(g.name).withMembers(g.getMembers());
-
-    File aFile = getGroupAvatarFile(g.groupId);
-    if (aFile.exists()) {
-      try {
-        group.withAvatar(createAttachment(aFile));
-      } catch (IOException e) {
-        logger.warn("Unable to attach group avatar:" + aFile.toString(), e);
-      }
-    }
-
-    return SignalServiceDataMessage.newBuilder().asGroupMessage(group.build());
-  }
-
-  // set expiration for a v1 group
-  public List<SendMessageResult> setExpiration(byte[] groupId, int expiresInSeconds) throws IOException, GroupNotFoundException, NotAGroupMemberException, SQLException {
-    if (groupId == null) {
-      return null;
-    }
-    GroupInfo g = getGroupForSending(groupId);
-    g.messageExpirationTime = expiresInSeconds;
-    accountData.groupStore.updateGroup(g);
-    accountData.save();
-    SignalServiceDataMessage.Builder messageBuilder = getGroupUpdateMessageBuilder(g);
-    messageBuilder.asExpirationUpdate().withExpiration(expiresInSeconds);
-    List<Recipient> members = Database.Get(aci).RecipientsTable.get(g.getMembers());
-    return sendMessage(messageBuilder, members);
-  }
-
   // set expiration for a 1-to-1 conversation
   public List<SendMessageResult> setExpiration(Recipient recipient, int expiresInSeconds) throws IOException, SQLException {
     Database.Get(aci).ContactsTable.update(recipient, null, null, null, expiresInSeconds, null);
@@ -455,39 +302,6 @@ public class Manager {
     var recipients = new ArrayList<Recipient>(1);
     recipients.add(recipient);
     return sendMessage(messageBuilder, recipients);
-  }
-
-  private List<SendMessageResult> sendGroupInfoRequest(byte[] groupId, Recipient recipient) throws IOException, SQLException {
-    if (groupId == null) {
-      return null;
-    }
-
-    SignalServiceGroup.Builder group = SignalServiceGroup.newBuilder(SignalServiceGroup.Type.REQUEST_INFO).withId(groupId);
-
-    SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asGroupMessage(group.build());
-
-    // Send group info request message to the recipient who sent us a message with this groupId
-    final List<Recipient> membersSend = new ArrayList<>();
-    membersSend.add(recipient);
-    return sendMessage(messageBuilder, membersSend);
-  }
-
-  public GroupInfo updateGroup(byte[] groupId, String name, List<String> stringMembers, String avatar)
-      throws IOException, GroupNotFoundException, NotAGroupMemberException, SQLException {
-    if (groupId.length == 0) {
-      groupId = null;
-    }
-    if (name.isEmpty()) {
-      name = null;
-    }
-    if (avatar.isEmpty()) {
-      avatar = null;
-    }
-    List<Recipient> members = new ArrayList<>();
-    for (String stringMember : stringMembers) {
-      members.add(Database.Get(aci).RecipientsTable.get(stringMember));
-    }
-    return sendUpdateGroupMessage(groupId, name, members, avatar);
   }
 
   public void requestSyncGroups() throws IOException, SQLException, UntrustedIdentityException {
@@ -518,7 +332,7 @@ public class Manager {
     }
   }
 
-  public SendMessageResult sendTypingMessage(SignalServiceTypingMessage message, Recipient recipient) throws IOException, SQLException {
+  public SendMessageResult sendTypingMessage(SignalServiceTypingMessage message, Recipient recipient) throws IOException {
     SignalServiceMessageSender messageSender = dependencies.getMessageSender();
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       messageSender.sendTyping(List.of(recipient.getAddress()), getAccessPairFor(List.of(recipient)), message, null);
@@ -551,20 +365,16 @@ public class Manager {
 
   public List<SendMessageResult> sendMessage(SignalServiceDataMessage.Builder messageBuilder, Collection<Recipient> recipients) throws IOException, SQLException {
 
-    try {
-      ProfileAndCredentialEntry profile = getRecipientProfileKeyCredential(self);
-      if (profile.getProfile() != null) {
-        messageBuilder.withProfileKey(profile.getProfileKey().serialize());
-      }
-    } catch (InterruptedException | ExecutionException | TimeoutException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
-      logger.warn("Failed to get own profile key", e);
+    ProfileKey profileKey = account.getDB().ProfileKeysTable.getProfileKey(self);
+    if (profileKey != null) {
+      messageBuilder.withProfileKey(profileKey.serialize());
     }
 
     SignalServiceDataMessage message = null;
+
     try {
       SignalServiceMessageSender messageSender = dependencies.getMessageSender();
       message = messageBuilder.build();
-
       if (message.getGroupContext().isPresent()) {
         try {
           final boolean isRecipientUpdate = false;
@@ -611,7 +421,7 @@ public class Manager {
           messageBuilder.withExpiration(contact != null ? contact.messageExpirationTime : 0);
           message = messageBuilder.build();
           try {
-            if (self.equals(recipient)) { // sending to ourself
+            if (self.equals(recipient)) { // sending to self
               final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
               SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), message, message.getExpiresInSeconds(),
                                                                            Collections.singletonMap(recipient.getAddress(), unidentifiedAccess.isPresent()), false);
@@ -648,9 +458,8 @@ public class Manager {
 
   private SignalServiceContent decryptMessage(SignalServiceEnvelope envelope)
       throws InvalidMetadataMessageException, InvalidMetadataVersionException, ProtocolInvalidKeyIdException, ProtocolUntrustedIdentityException, ProtocolLegacyMessageException,
-             ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, ProtocolDuplicateMessageException,
-             UnsupportedDataMessageException, org.signal.libsignal.protocol.UntrustedIdentityException, InvalidMessageStructureException, IOException, SQLException,
-             InterruptedException {
+             ProtocolNoSessionException, ProtocolInvalidVersionException, ProtocolInvalidMessageException, ProtocolInvalidKeyException, UnsupportedDataMessageException,
+             org.signal.libsignal.protocol.UntrustedIdentityException, InvalidMessageStructureException, IOException, SQLException, InterruptedException {
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
       CertificateValidator certificateValidator = new CertificateValidator(unidentifiedSenderTrustRoot);
       SignalServiceCipher cipher =
@@ -660,7 +469,7 @@ public class Manager {
       if (watchdogTime > 0) {
         sem.acquire();
         Thread t = new Thread(() -> {
-          // a watchdog thread that will make signald exit if decryption takes too long. This behavior is sub-optimal, but
+          // a watchdog thread that will make signald exit if decryption takes too long. This behavior is suboptimal, but
           // without this it just hangs and breaks in difficult to detect ways.
           try {
             boolean decryptFinished = sem.tryAcquire(watchdogTime, TimeUnit.SECONDS);
@@ -693,11 +502,11 @@ public class Manager {
         return null;
       } catch (ProtocolInvalidKeyIdException | ProtocolInvalidKeyException | ProtocolNoSessionException | ProtocolInvalidMessageException e) {
         logger.debug("Failed to decrypt incoming message: {}", e.getMessage());
-        Recipient sender = Database.Get(aci).RecipientsTable.get(e.getSender());
-        ProfileAndCredentialEntry senderProfile = accountData.profileCredentialStore.get(sender);
-        ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
-        if (e.getSenderDevice() != account.getDeviceId() && senderProfile != null && senderProfile.getProfile() != null && senderProfile.getProfile().getCapabilities().senderKey &&
-            selfProfile != null && selfProfile.getProfile().getCapabilities().senderKey) {
+        Database db = account.getDB();
+        Recipient sender = db.RecipientsTable.get(e.getSender());
+        boolean senderCapability = db.ProfileCapabilitiesTable.get(sender, IProfileCapabilitiesTable.SENDER_KEY);
+        boolean selfCapability = db.ProfileCapabilitiesTable.get(account.getSelf(), IProfileCapabilitiesTable.SENDER_KEY);
+        if (e.getSenderDevice() != account.getDeviceId() && senderCapability && selfCapability) {
           logger.debug("Received invalid message, requesting message resend.");
           BackgroundJobRunnerThread.queue(new SendRetryMessageRequestJob(account, e, envelope));
         } else {
@@ -752,7 +561,10 @@ public class Manager {
     }
   }
 
-  public SignalServiceMessageReceiver getMessageReceiver() { return dependencies.getMessageReceiver(); }
+  @Deprecated
+  public SignalServiceMessageReceiver getMessageReceiver() {
+    return dependencies.getMessageReceiver();
+  }
 
   public SignalServiceMessageSender getMessageSender() { return dependencies.getMessageSender(); }
 
@@ -765,14 +577,12 @@ public class Manager {
 
     List<Job> jobs = new ArrayList<>();
     if (message.getGroupContext().isPresent()) {
-      SignalServiceGroup groupInfo;
       SignalServiceGroupContext groupContext = message.getGroupContext().get();
-
       if (groupContext.getGroupV2().isPresent()) {
         SignalServiceGroupV2 group = message.getGroupContext().get().getGroupV2().get();
         var localState = Database.Get(account.getACI()).GroupsTable.get(group);
 
-        if (!localState.isPresent() || localState.get().getRevision() < group.getRevision()) {
+        if (localState.isEmpty() || localState.get().getRevision() < group.getRevision()) {
           try {
             account.getGroups().getGroup(group);
           } catch (InvalidGroupStateException | InvalidProxyException | NoSuchAccountException | ServerNotFoundException e) {
@@ -780,79 +590,8 @@ public class Manager {
           }
         }
       }
-
-      if (groupContext.getGroupV1().isPresent()) {
-        logger.warn("v1 group support is being removed https://gitlab.com/signald/signald/-/issues/224");
-        groupInfo = groupContext.getGroupV1().get();
-        GroupInfo group = accountData.groupStore.getGroup(groupInfo.getGroupId());
-
-        if (message.isExpirationUpdate()) {
-          if (group.messageExpirationTime != message.getExpiresInSeconds()) {
-            group.messageExpirationTime = message.getExpiresInSeconds();
-          }
-          accountData.groupStore.updateGroup(group);
-          accountData.save();
-        }
-
-        switch (groupInfo.getType()) {
-        case UPDATE:
-          if (group == null) {
-            group = new GroupInfo(groupInfo.getGroupId());
-          }
-
-          if (groupInfo.getAvatar().isPresent()) {
-            SignalServiceAttachment avatar = groupInfo.getAvatar().get();
-            if (avatar.isPointer()) {
-              try {
-                retrieveGroupAvatarAttachment(avatar.asPointer(), group.groupId);
-              } catch (IOException | InvalidMessageException e) {
-                logger.warn("Failed to retrieve group avatar (" + avatar.asPointer().getRemoteId() + "): " + e.getMessage());
-              }
-            }
-          }
-
-          if (groupInfo.getName().isPresent()) {
-            group.name = groupInfo.getName().get();
-          }
-
-          if (groupInfo.getMembers().isPresent()) {
-            List<SignalServiceAddress> members =
-                Database.Get(aci).RecipientsTable.get(groupInfo.getMembers().get()).stream().map(Recipient::getAddress).collect(Collectors.toList());
-            group.addMembers(members);
-          }
-
-          accountData.groupStore.updateGroup(group);
-          break;
-        case DELIVER:
-          if (group == null) {
-            try {
-              sendGroupInfoRequest(groupInfo.getGroupId(), source);
-            } catch (IOException e) {
-              logger.catching(e);
-            }
-          }
-          break;
-        case QUIT:
-          if (group == null) {
-            try {
-              sendGroupInfoRequest(groupInfo.getGroupId(), source);
-            } catch (IOException e) {
-              logger.catching(e);
-            }
-          } else {
-            group.removeMember(source);
-            accountData.groupStore.updateGroup(group);
-          }
-          break;
-        case REQUEST_INFO:
-          if (group != null) {
-            jobs.add(new SendLegacyGroupUpdateJob(this, groupInfo.getGroupId(), source));
-          }
-          break;
-        }
-      }
     } else {
-      Database.Get(aci).ContactsTable.update(isSync ? destination : source, null, null, null, message.getExpiresInSeconds(), null);
+      account.getDB().ContactsTable.update(isSync ? destination : source, null, null, null, message.getExpiresInSeconds(), null);
     }
 
     if (message.isEndSession()) {
@@ -893,8 +632,8 @@ public class Manager {
       } catch (InvalidInputException e) {
         throw new AssertionError(e);
       }
-      ProfileAndCredentialEntry entry = accountData.profileCredentialStore.storeProfileKey(source, profileKey);
-      RefreshProfileJob.queueIfNeeded(this, entry);
+      account.getDB().ProfileKeysTable.setProfileKey(source, profileKey);
+      RefreshProfileJob.queueIfNeeded(account, source);
     }
 
     if (message.getSticker().isPresent()) {
@@ -913,7 +652,9 @@ public class Manager {
   }
 
   public void retryFailedReceivedMessages(ReceiveMessageHandler handler, boolean ignoreAttachments)
-      throws IOException, MissingConfigurationException, SQLException, InvalidInputException {
+      throws IOException, MissingConfigurationException, SQLException, InvalidInputException, NoSuchAccountException {
+
+    // Attempt to load messages from legacy on-disk storage
     final File cachePath = new File(getMessageCachePath());
     if (!cachePath.exists()) {
       return;
@@ -969,7 +710,7 @@ public class Manager {
     }
 
     while (true) {
-      var storedEnvelope = Database.Get(accountData.address.getACI()).MessageQueueTable.nextEnvelope();
+      var storedEnvelope = account.getDB().MessageQueueTable.nextEnvelope();
       if (storedEnvelope == null) {
         break;
       }
@@ -997,15 +738,14 @@ public class Manager {
           handler.handleMessage(envelope, content, exception);
         }
       } finally {
-        Database.Get(accountData.address.getACI()).MessageQueueTable.deleteEnvelope(storedEnvelope.databaseId);
+        account.getDB().MessageQueueTable.deleteEnvelope(storedEnvelope.databaseId);
       }
     }
   }
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
-      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException {
+      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException, NoSuchAccountException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
-    accountData.saveIfNeeded();
 
     SignalWebSocket websocket = dependencies.getWebSocket();
 
@@ -1136,10 +876,7 @@ public class Manager {
       if (syncMessage.getRequest().isPresent() && account.getDeviceId() == SignalServiceAddress.DEFAULT_DEVICE_ID) {
         RequestMessage rm = syncMessage.getRequest().get();
         if (rm.isContactsRequest()) {
-          jobs.add(new SendContactsSyncJob(this));
-        }
-        if (rm.isGroupsRequest()) {
-          jobs.add(new SendGroupSyncJob(this));
+          jobs.add(new SendContactsSyncJob(account));
         }
       }
 
@@ -1166,10 +903,9 @@ public class Manager {
                 retrieveContactAvatarAttachment(c.getAvatar().get(), recipient);
               }
               if (c.getProfileKey().isPresent()) {
-                accountData.profileCredentialStore.storeProfileKey(recipient, c.getProfileKey().get());
+                account.getDB().ProfileKeysTable.setProfileKey(recipient, c.getProfileKey().get());
               }
             }
-            accountData.save();
           }
           logger.info("received contacts from device " + content.getSenderDevice());
         } catch (Exception e) {
@@ -1205,8 +941,7 @@ public class Manager {
       if (syncMessage.getFetchType().isPresent()) {
         switch (syncMessage.getFetchType().get()) {
         case LOCAL_PROFILE:
-          ProfileAndCredentialEntry selfProfile = accountData.profileCredentialStore.get(self);
-          BackgroundJobRunnerThread.queue(new RefreshProfileJob(this, selfProfile));
+          BackgroundJobRunnerThread.queue(new RefreshProfileJob(account, self));
           break;
         case STORAGE_MANIFEST:
           BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
@@ -1293,13 +1028,6 @@ public class Manager {
     return new File(avatarsPath, "contact-" + address.getIdentifier());
   }
 
-  public File getProfileAvatarFile(Recipient recipient) {
-    if (recipient.getUUID() == null) {
-      return null;
-    }
-    return new File(avatarsPath, recipient.getUUID().toString());
-  }
-
   private File retrieveContactAvatarAttachment(SignalServiceAttachment attachment, Recipient recipient) throws IOException, InvalidMessageException, MissingConfigurationException {
     createPrivateDirectories(avatarsPath);
     if (attachment.isPointer()) {
@@ -1311,20 +1039,7 @@ public class Manager {
     }
   }
 
-  public File getGroupAvatarFile(GroupIdentifier group) { return getGroupAvatarFile(group.serialize()); }
-
   public File getGroupAvatarFile(byte[] groupId) { return new File(avatarsPath, "group-" + Base64.encodeBytes(groupId).replace("/", "_")); }
-
-  private File retrieveGroupAvatarAttachment(SignalServiceAttachment attachment, byte[] groupId) throws IOException, InvalidMessageException, MissingConfigurationException {
-    createPrivateDirectories(avatarsPath);
-    if (attachment.isPointer()) {
-      SignalServiceAttachmentPointer pointer = attachment.asPointer();
-      return retrieveAttachment(pointer, getGroupAvatarFile(groupId), false);
-    } else {
-      SignalServiceAttachmentStream stream = attachment.asStream();
-      return retrieveAttachment(stream, getGroupAvatarFile(groupId));
-    }
-  }
 
   public File getAttachmentFile(String attachmentId) { return new File(attachmentsPath, attachmentId); }
 
@@ -1405,8 +1120,6 @@ public class Manager {
     sendSyncMessage(SignalServiceSyncMessage.forVerified(verifiedMessage));
   }
 
-  public GroupInfo getGroup(byte[] groupId) { return accountData.groupStore.getGroup(groupId); }
-
   public List<IIdentityKeysTable.IdentityKeyRow> getIdentities() throws SQLException, InvalidKeyException { return account.getProtocolStore().getIdentities(); }
 
   public List<IIdentityKeysTable.IdentityKeyRow> getIdentities(Recipient recipient) throws SQLException, InvalidKeyException {
@@ -1481,7 +1194,7 @@ public class Manager {
     return false;
   }
 
-  public List<Optional<UnidentifiedAccessPair>> getAccessPairFor(Collection<Recipient> recipients) {
+  private List<Optional<UnidentifiedAccessPair>> getAccessPairFor(Collection<Recipient> recipients) {
     List<Optional<UnidentifiedAccessPair>> result = new ArrayList<>(recipients.size());
     for (Recipient recipient : recipients) {
       result.add(getAccessPairFor(recipient));
@@ -1489,215 +1202,18 @@ public class Manager {
     return result;
   }
 
-  public Optional<UnidentifiedAccessPair> getAccessPairFor(Recipient recipient) {
-    ProfileAndCredentialEntry recipientProfileKeyCredential = accountData.profileCredentialStore.get(recipient);
-    if (recipientProfileKeyCredential == null) {
-      return Optional.empty();
-    }
-
-    byte[] recipientUnidentifiedAccessKey = recipientProfileKeyCredential.getUnidentifiedAccessKey();
-
-    ProfileKey selfProfileKey;
+  private Optional<UnidentifiedAccessPair> getAccessPairFor(Recipient recipient) {
     try {
-      selfProfileKey = accountData.getProfileKey();
-    } catch (InvalidInputException e) {
-      logger.warn("unexpected error while getting own profile key: " + e);
-      return Optional.empty();
-    }
-
-    byte[] selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(selfProfileKey);
-    byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
-
-    if (selfUnidentifiedAccessKey == null) {
-      logger.debug("cannot get unidentified access: no unidentified access key for own account");
-      return Optional.empty();
-    }
-
-    if (selfUnidentifiedAccessCertificate == null) {
-      logger.debug("cannot get unidentified access: no unidentified access certificate for own account");
-      return Optional.empty();
-    }
-
-    if (recipientUnidentifiedAccessKey == null) {
-      logger.debug("cannot get unidentified access: no unidentified access key for recipient");
-      return Optional.empty();
-    }
-
-    try {
-      return Optional.of(new UnidentifiedAccessPair(new UnidentifiedAccess(recipientUnidentifiedAccessKey, selfUnidentifiedAccessCertificate),
-                                                    new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate)));
-    } catch (InvalidCertificateException e) {
-      logger.debug("cannot get unidentififed access: ", e);
+      return new UnidentifiedAccessUtil(aci).getAccessPairFor(recipient);
+    } catch (SQLException | IOException | NoSuchAccountException | ServerNotFoundException | InvalidProxyException e) {
+      logger.error("unexpected error getting UnidentifiedAccessPair: ", e);
+      Sentry.captureException(e);
       return Optional.empty();
     }
   }
 
-  private byte[] getSenderCertificate() {
-    try {
-      long lastRefresh = account.getLastSenderCertificateRefreshTime();
-      byte[] cert;
-      if (System.currentTimeMillis() - lastRefresh > TimeUnit.DAYS.toMillis(1)) {
-        logger.debug("refreshing unidentified access sender certificate");
-        cert = dependencies.getAccountManager().getSenderCertificateForPhoneNumberPrivacy();
-        account.setSenderCertificate(cert);
-        account.setSenderCertificateRefreshTimeNow();
-      } else {
-        cert = account.getSenderCertificate();
-      }
-      return cert;
-    } catch (IOException | SQLException e) {
-      logger.warn("Failed to get sealed sender certificate, ignoring: {}", e.getMessage());
-      return null;
-    }
-  }
-
-  public void setProfile(String name, File avatar) throws IOException, InvalidInputException {
-    try (final StreamDetails streamDetails = avatar == null ? null : AttachmentUtil.createStreamDetailsFromFile(avatar)) {
-      dependencies.getAccountManager().setVersionedProfile(ACI.from(self.getServiceId().uuid()), accountData.getProfileKey(), name, "", "", Optional.empty(),
-                                                           AvatarUploadParams.forAvatar(streamDetails), new ArrayList<>());
-    }
-  }
-
-  public SignalServiceProfile getSignalServiceProfile(Recipient recipient, ProfileKey profileKey) throws InterruptedException, ExecutionException, TimeoutException {
-    final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
-    ListenableFuture<ProfileAndCredential> profile =
-        messageReceiver.retrieveProfile(recipient.getAddress(), Optional.of(profileKey), getUnidentifiedAccess(), SignalServiceProfile.RequestType.PROFILE, Locale.getDefault());
-    return profile.get(10, TimeUnit.SECONDS).getProfile();
-  }
-
-  public void refreshAccount() throws IOException, SQLException {
-    String deviceName = account.getDeviceName();
-    if (deviceName == null) {
-      deviceName = "signald";
-      account.setDeviceName(deviceName);
-    }
-    deviceName = DeviceNameUtil.encryptDeviceName(deviceName, account.getProtocolStore().getIdentityKeyPair().getPrivateKey());
-    int localRegistrationId = account.getLocalRegistrationId();
-    dependencies.getAccountManager().setAccountAttributes(null, localRegistrationId, true, null, null, accountData.getSelfUnidentifiedAccessKey(), true, ServiceConfig.CAPABILITIES,
-                                                          true, Base64.decode(deviceName));
-    account.setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
-  }
-
-  private void refreshAccountIfNeeded() throws IOException, SQLException {
-    if (account.getLastAccountRefresh() < ACCOUNT_REFRESH_VERSION) {
-      refreshAccount();
-    }
-  }
-
-  public AccountData getAccountData() { return accountData; }
-
-  public ProfileAndCredentialEntry getRecipientProfileKeyCredential(Recipient recipient)
-      throws InterruptedException, ExecutionException, TimeoutException, IOException, SQLException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException {
-    ProfileAndCredentialEntry profileEntry = accountData.profileCredentialStore.get(recipient);
-    if (profileEntry == null) {
-      return null;
-    }
-    RefreshProfileJob.queueIfNeeded(this, profileEntry);
-    return profileEntry;
-  }
-
-  public SignalProfile decryptProfile(final Recipient recipient, final ProfileKey profileKey, final SignalServiceProfile encryptedProfile) throws IOException {
-    File localAvatarPath = null;
-    if (recipient.getServiceId() != null) {
-      localAvatarPath = getProfileAvatarFile(recipient);
-      if (encryptedProfile.getAvatar() != null) {
-        createPrivateDirectories(avatarsPath);
-        try (OutputStream outputStream = new FileOutputStream(localAvatarPath)) {
-          retrieveProfileAvatar(encryptedProfile.getAvatar(), profileKey, outputStream);
-        } catch (IOException e) {
-          logger.info("Failed to retrieve profile avatar, ignoring: " + e.getMessage());
-        }
-      }
-    }
-
-    ProfileCipher profileCipher = new ProfileCipher(profileKey);
-
-    String name;
-    try {
-      name = encryptedProfile.getName() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getName()));
-    } catch (InvalidCiphertextException e) {
-      name = null;
-      logger.debug("error decrypting profile name.", e);
-    }
-
-    String about;
-    try {
-      about = encryptedProfile.getAbout() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getAbout()));
-    } catch (InvalidCiphertextException e) {
-      about = null;
-      logger.debug("error decrypting profile about text.", e);
-    }
-
-    String aboutEmoji;
-    try {
-      aboutEmoji = encryptedProfile.getAboutEmoji() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getAboutEmoji()));
-    } catch (InvalidCiphertextException e) {
-      aboutEmoji = null;
-      logger.debug("error decrypting profile emoji.", e);
-    }
-
-    String unidentifiedAccess;
-    try {
-      unidentifiedAccess = encryptedProfile.getUnidentifiedAccess() == null || !profileCipher.verifyUnidentifiedAccess(Base64.decode(encryptedProfile.getUnidentifiedAccess()))
-                               ? null
-                               : encryptedProfile.getUnidentifiedAccess();
-    } catch (IOException e) {
-      unidentifiedAccess = null;
-    }
-
-    SignalServiceProtos.PaymentAddress paymentAddress = null;
-    byte[] encryptedPaymentsAddress = encryptedProfile.getPaymentAddress();
-    if (encryptedPaymentsAddress != null) {
-      try {
-        byte[] decrypted = profileCipher.decryptWithLength(encryptedPaymentsAddress);
-        paymentAddress = SignalServiceProtos.PaymentAddress.parseFrom(decrypted);
-      } catch (InvalidCiphertextException ignored) {
-      }
-    }
-
-    List<SignalServiceProfile.Badge> badges = encryptedProfile.getBadges();
-
-    return new SignalProfile(encryptedProfile, name, about, aboutEmoji, localAvatarPath, unidentifiedAccess, paymentAddress, badges);
-  }
-
-  private void retrieveProfileAvatar(String avatarsPath, ProfileKey profileKey, OutputStream outputStream) throws IOException {
-    File tmpFile = Util.createTempFile();
-    try (InputStream input = dependencies.getMessageReceiver().retrieveProfileAvatar(avatarsPath, tmpFile, profileKey, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
-      Util.copyStream(input, outputStream, (int)ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE);
-    } finally {
-      try {
-        Files.delete(tmpFile.toPath());
-      } catch (IOException e) {
-        logger.warn("Failed to delete received profile avatar temp file “{}”, ignoring: {}", tmpFile, e.getMessage());
-      }
-    }
-  }
-
-  public void deleteAccount(boolean remote) throws IOException, SQLException {
-    accountData.markForDeletion();
-    if (remote) {
-      dependencies.getAccountManager().deleteAccount();
-    }
-    SignalDependencies.delete(aci);
-    accountData.delete();
+  public void deleteAccount() throws IOException, SQLException {
     synchronized (managers) { managers.remove(aci.toString()); }
-    logger.info("deleted all local account data");
-  }
-
-  public Optional<UnidentifiedAccess> getUnidentifiedAccess() {
-    byte[] selfUnidentifiedAccessKey;
-    try {
-      selfUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(accountData.getProfileKey());
-    } catch (InvalidInputException e) {
-      return Optional.empty();
-    }
-    byte[] selfUnidentifiedAccessCertificate = getSenderCertificate();
-
-    try {
-      return Optional.of(new UnidentifiedAccess(selfUnidentifiedAccessKey, selfUnidentifiedAccessCertificate));
-    } catch (InvalidCertificateException e) {
-      return Optional.empty();
-    }
   }
 
   public SignalServiceConfiguration getServiceConfiguration() { return serviceConfiguration; }

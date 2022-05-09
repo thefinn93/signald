@@ -25,10 +25,10 @@ import org.signal.libsignal.protocol.InvalidKeyIdException;
 import org.signal.libsignal.protocol.InvalidMessageException;
 import org.signal.libsignal.protocol.state.PreKeyRecord;
 import org.whispersystems.util.Base64;
-
-@JsonDeserialize(using = PreKeyStore.JsonPreKeyStoreDeserializer.class)
-@JsonSerialize(using = PreKeyStore.JsonPreKeyStoreSerializer.class)
-public class PreKeyStore implements org.signal.libsignal.protocol.state.PreKeyStore {
+@Deprecated
+@JsonDeserialize(using = LegacyPreKeyStore.JsonPreKeyStoreDeserializer.class)
+@JsonSerialize(using = LegacyPreKeyStore.JsonPreKeyStoreSerializer.class)
+public class LegacyPreKeyStore implements org.signal.libsignal.protocol.state.PreKeyStore {
   private static final Logger logger = LogManager.getLogger();
   private final Map<Integer, byte[]> store = new HashMap<>();
 
@@ -74,9 +74,9 @@ public class PreKeyStore implements org.signal.libsignal.protocol.state.PreKeySt
     store.remove(preKeyId);
   }
 
-  public static class JsonPreKeyStoreDeserializer extends JsonDeserializer<PreKeyStore> {
+  public static class JsonPreKeyStoreDeserializer extends JsonDeserializer<LegacyPreKeyStore> {
     @Override
-    public PreKeyStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public LegacyPreKeyStore deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
       JsonNode node = jsonParser.getCodec().readTree(jsonParser);
       Map<Integer, byte[]> preKeyMap = new HashMap<>();
       if (node.isArray()) {
@@ -90,15 +90,15 @@ public class PreKeyStore implements org.signal.libsignal.protocol.state.PreKeySt
           }
         }
       }
-      PreKeyStore keyStore = new PreKeyStore();
+      LegacyPreKeyStore keyStore = new LegacyPreKeyStore();
       keyStore.store.putAll(preKeyMap);
       return keyStore;
     }
   }
 
-  public static class JsonPreKeyStoreSerializer extends JsonSerializer<PreKeyStore> {
+  public static class JsonPreKeyStoreSerializer extends JsonSerializer<LegacyPreKeyStore> {
     @Override
-    public void serialize(PreKeyStore jsonPreKeyStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(LegacyPreKeyStore jsonPreKeyStore, JsonGenerator json, SerializerProvider serializerProvider) throws IOException {
       json.writeStartArray();
       for (Map.Entry<Integer, byte[]> preKey : jsonPreKeyStore.store.entrySet()) {
         json.writeStartObject();

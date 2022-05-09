@@ -29,7 +29,6 @@ class JsonAccount {
       throw new NoSuchAccountError(e);
     }
     this.deviceId = account.getDeviceId();
-    this.filename = Manager.getFileName(username);
     if (account.getUUID() != null) {
       this.uuid = account.getUUID().toString();
     }
@@ -38,7 +37,6 @@ class JsonAccount {
 
   JsonAccount(RegistrationManager m) {
     this.username = m.getE164();
-    this.filename = Manager.getFileName(username);
     this.registered = false;
   }
 
