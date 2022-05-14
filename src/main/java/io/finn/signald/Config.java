@@ -62,7 +62,7 @@ public class Config {
       CommandLine.usage(new Config(), System.out);
       System.exit(2);
     }
-    if(version) {
+    if (version) {
       System.out.println(JSONUtil.GetWriter().writeValueAsString(new JsonVersionMessage()));
       System.exit(0);
     }
