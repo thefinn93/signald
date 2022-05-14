@@ -1,6 +1,7 @@
 package io.finn.signald;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.finn.signald.clientprotocol.v1.JsonVersionMessage;
 import io.finn.signald.clientprotocol.v1.ProtocolRequest;
 import io.finn.signald.util.JSONUtil;
 import io.prometheus.client.exporter.HTTPServer;
@@ -23,6 +24,7 @@ public class Config {
   private static Logger logger = LogManager.getLogger();
   private static final String SYSTEM_SOCKET_PATH = "/var/run/signald/signald.sock";
 
+  @CommandLine.Option(names = {"-V", "--version"}) private static boolean version = false;
   @CommandLine.Option(names = {"-v", "--verbose"}, description = "Verbose mode. Helpful for troubleshooting (env SIGNALD_VERBOSE_LOGGING)") private static boolean verbose = false;
   @CommandLine.Option(names = {"-h", "--help"}, usageHelp = true, description = "display this help message") private static boolean usageHelpRequested;
   @CommandLine.Option(names = {"-s", "--socket"}, description = "The path to the socket file") private static String socketPath = null;
@@ -59,6 +61,10 @@ public class Config {
     if (usageHelpRequested) {
       CommandLine.usage(new Config(), System.out);
       System.exit(2);
+    }
+    if(version) {
+      System.out.println(JSONUtil.GetWriter().writeValueAsString(new JsonVersionMessage()));
+      System.exit(0);
     }
     if (System.getenv("SIGNALD_VERBOSE_LOGGING") != null) {
       verbose = Boolean.parseBoolean(System.getenv("SIGNALD_VERBOSE_LOGGING"));
