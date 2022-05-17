@@ -123,6 +123,12 @@ public class Main {
         }
       }
 
+      logger.info("all data migrations complete");
+      if (Config.isMigrateData()) {
+        logger.info("exiting as requested");
+        System.exit(0);
+      }
+
       BackgroundJobRunnerThread.start();
 
       // Spins up one thread per inbound connection to the control socket

@@ -56,6 +56,9 @@ public class Config {
   @CommandLine.Option(names = {"--log-database-transactions"}, description = "log when DB transactions occur and how long they took. Note that db logs are at the debug "
                                                                              + "level, so --verbose should also be used. (env SIGNALD_LOG_DB_TRANSACTIONS=true)")
   private static boolean logDatabaseTransactions;
+  @CommandLine.Option(names = {"--migrate-data"}, description = "complete all required data migrations and exit. This includes applying database migrations, moving "
+                                                                + "any data found in the legacy JSON files to the database and trusting identity keys if requested")
+  private static boolean migrateData;
 
   public static void init() throws IOException {
     if (usageHelpRequested) {
@@ -220,4 +223,6 @@ public class Config {
   public static boolean getLogDatabaseTransactions() { return logDatabaseTransactions; }
 
   public static boolean getTrustAllKeys() { return trustAllKeys; }
+
+  public static boolean isMigrateData() { return migrateData; }
 }
