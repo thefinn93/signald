@@ -1,3 +1,11 @@
+signald (0.18.4) unstable; urgency=medium
+
+  * Release is primarily to fix docker issues
+  * Fix primary device not generating or syncing PNI identity
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.18.4
+
+ -- Finn <finn@janky.solutions>  Mon, 16 May 2022 23:22:03 -0700
+
 signald (0.18.3) unstable; urgency=medium
 
   * update libsignal-service-java to fix a contact syncing issue
