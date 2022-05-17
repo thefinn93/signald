@@ -201,9 +201,6 @@ container manifest:
     - |
       if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then
         set -x
-
-        tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:unstable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
-        tools/podman-multiarch-manifest.sh "docker.io/signald/signald:unstable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
       
         for platform in amd64 arm64-v8 arm-v7; do
           podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
@@ -212,6 +209,9 @@ container manifest:
           podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}-non-root" "docker.io/signald/signald:${VERSION}-${platform}-non-root"
           podman push --quiet "docker.io/signald/signald:${VERSION}-${platform}-non-root"
         done
+
+        tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:unstable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
+        tools/podman-multiarch-manifest.sh "docker.io/signald/signald:unstable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
 
         # count commits since last tag
         commits="$(git rev-list $(git describe --always --abbrev=0 HEAD)..HEAD --count)"
