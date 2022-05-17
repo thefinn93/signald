@@ -220,7 +220,6 @@ container manifest:
           tools/podman-multiarch-manifest.sh "docker.io/signald/signald:stable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
           tools/podman-multiarch-manifest.sh "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
           tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
-          tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:latest" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
           tools/podman-multiarch-manifest.sh "docker.io/finn/signald:${VERSION}"  "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
           tools/podman-multiarch-manifest.sh "docker.io/finn/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
         fi
