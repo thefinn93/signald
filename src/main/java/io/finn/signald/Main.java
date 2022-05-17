@@ -10,6 +10,7 @@ package io.finn.signald;
 import io.finn.signald.clientprotocol.ClientConnection;
 import io.finn.signald.db.Database;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.util.KeyUtil;
 import io.sentry.Sentry;
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,8 +32,10 @@ import org.newsclub.net.unix.AFUNIXServerSocket;
 import org.newsclub.net.unix.AFUNIXSocket;
 import org.newsclub.net.unix.AFUNIXSocketAddress;
 import org.newsclub.net.unix.AFUNIXSocketCredentials;
+import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.logging.SignalProtocolLoggerProvider;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -105,6 +108,10 @@ public class Main {
           AccountRepair.repairAccountIfNeeded(account);
           if (account.getPNI() == null) {
             account.setPNI();
+          }
+          if (account.getPNIIdentityKeyPair() == null && account.getDeviceId() == SignalServiceAddress.DEFAULT_DEVICE_ID) {
+            // Generate a PNI identity keypair if we're the primary device on the account and a PNI identity keypair doesn't exist
+            account.setPNIIdentityKeyPair(new IdentityKeyPair(KeyUtil.generateIdentityKeyPair().serialize()));
           }
         } catch (AuthorizationFailedException e) {
           logger.error("server rejected our authorization while refreshing account {}, you may wish to remove this account from signald", account.getSelf().toRedactedString());
