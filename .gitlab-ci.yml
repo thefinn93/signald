@@ -151,8 +151,11 @@ build deb armv7-unknown-linux-gnueabihf:
     - export VERSION="$(./version.sh | sed 's#+#-#g' | sed 's#/#-#g')"
     - DOCKER_PLATFORM=$(echo "${PLATFORM:6}" | sed 's#/#-#g')
   script:
-    - podman build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}" -f "${CONTAINERFILE:-Containerfile}" .
-    - podman push --quiet "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}"
+    - podman build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}-non-root" -f "${CONTAINERFILE:-Containerfile}" .
+    - sed -i "s#FROM .*#FROM ${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}-non-root#g" uid-transition.Containerfile
+    - podman build --platform "${PLATFORM}" --build-arg "CI_BUILD_REF_NAME=${CI_BUILD_REF_NAME}" --build-arg "CI_COMMIT_SHA=${CI_COMMIT_SHA}" -t "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}" -f "uid-transition.Containerfile" .
+    - podman push "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}-non-root"
+    - podman push "${CI_REGISTRY_IMAGE}:${VERSION}-${DOCKER_PLATFORM}"
   rules:
     - if: '$CI_PROJECT_NAMESPACE == "signald" && $CI_COMMIT_REF_PROTECTED == "true"'
       when: on_success
@@ -190,23 +193,30 @@ container manifest:
       for platform in amd64 arm64-v8 arm-v7; do
         set -x
         podman pull --quiet "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}"
+        podman pull --quiet "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}-non-root"
         set +x
       done
     - tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:${VERSION}" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
+    - tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:${VERSION}-non-root" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}-non-root
     - |
       if [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then
         set -x
-
+        # TODO: Remove the following line before 0.18.0 release
+        tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:latest" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
         tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:unstable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
         for platform in amd64 arm64-v8 arm-v7; do
           podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}" "docker.io/signald/signald:${VERSION}-${platform}"
           podman push --quiet "docker.io/signald/signald:${VERSION}-${platform}"
+
+          podman tag "${CI_REGISTRY_IMAGE}:${VERSION}-${platform}-non-root" "docker.io/signald/signald:${VERSION}-${platform}-non-root"
+          podman push --quiet "docker.io/signald/signald:${VERSION}-${platform}-non-root"
         done
 
         # count commits since last tag
         commits="$(git rev-list $(git describe --always --abbrev=0 HEAD)..HEAD --count)"
         if [ "${commits}" = "0" ]; then # an actual release
           tools/podman-multiarch-manifest.sh "docker.io/signald/signald:${VERSION}" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
+          tools/podman-multiarch-manifest.sh "docker.io/signald/signald:${VERSION}-non-root" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}-non-root
           tools/podman-multiarch-manifest.sh "docker.io/signald/signald:stable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
           tools/podman-multiarch-manifest.sh "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
           tools/podman-multiarch-manifest.sh "${CI_REGISTRY_IMAGE}:stable" "${CI_REGISTRY_IMAGE}:${VERSION}"-{amd64,arm64-v8,arm-v7}
@@ -215,6 +225,8 @@ container manifest:
           tools/podman-multiarch-manifest.sh "docker.io/finn/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
         fi
 
+        # TODO: Remove the following line before 0.18.0 release
+        tools/podman-multiarch-manifest.sh "docker.io/signald/signald:latest" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
         tools/podman-multiarch-manifest.sh "docker.io/signald/signald:unstable" "docker.io/signald/signald:${VERSION}"-{amd64,arm64-v8,arm-v7}
 
         set +x # to avoid printing tokens
@@ -223,6 +235,9 @@ container manifest:
         for platform in amd64 arm64-v8 arm-v7; do
           echo "deleting tag ${VERSION}-${platform}"
           curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/signald/signald/tags/${VERSION}-${platform}/
+
+          echo "deleting tag ${VERSION}-${platform}-non-root"
+          curl --fail -s -X DELETE -H "Authorization: JWT ${token}" https://hub.docker.com/v2/repositories/signald/signald/tags/${VERSION}-${platform}-non-root/
         done
 
         echo "image pushed to docker.io/signald/signald:${VERSION} and ${CI_REGISTRY_IMAGE}:${VERSION}"
