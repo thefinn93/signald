@@ -35,6 +35,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.api.push.exceptions.ProofRequiredException;
 
 @ProtocolType("mark_read")
 public class MarkReadRequest implements RequestType<Empty> {
@@ -49,7 +50,7 @@ public class MarkReadRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError, UnregisteredUserError,
-                                           AuthorizationFailedError, SQLError, InvalidRequestError {
+                                           AuthorizationFailedError, SQLError, InvalidRequestError, ProofRequiredError {
     if (when == null) {
       when = System.currentTimeMillis();
     }
@@ -77,6 +78,8 @@ public class MarkReadRequest implements RequestType<Empty> {
       sender.sendReceipt(recipient.getAddress(), unidentifiedAccessUtil.getAccessPairFor(recipient), message);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
+    } catch (ProofRequiredException e) {
+      throw new ProofRequiredError(e);
     } catch (IOException e) {
       throw new InternalError("error sending receipt", e);
     } catch (UntrustedIdentityException e) {

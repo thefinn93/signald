@@ -16,6 +16,7 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
+import org.whispersystems.signalservice.api.push.exceptions.ProofRequiredException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 
 public class SendDeliveryReceiptJob implements Job {
@@ -44,6 +45,8 @@ public class SendDeliveryReceiptJob implements Job {
       m.sendReceipt(message, recipient);
     } catch (UnregisteredUserException e) {
       logger.debug("tried to send a receipt to an unregistered user {}", recipient.toRedactedString());
+    } catch (ProofRequiredException e) {
+      logger.warn("ProofRequiredException while sending delivery receipt job to {}", recipient.toRedactedString());
     }
   }
 }
