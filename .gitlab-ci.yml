@@ -385,13 +385,6 @@ signald.org:
   only:
     - main
 
-signald-go:
-  stage: downstreams
-  needs: ["container manifest"]
-  trigger: signald/signald-go
-  only:
-    - main
-
 release:
   stage: release
   image: debian:latest
