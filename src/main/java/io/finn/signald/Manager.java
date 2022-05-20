@@ -893,6 +893,7 @@ public class Manager {
           try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
             if (contactsMessage.isComplete()) {
+              logger.debug("contact sync includes complete set of contacts, clearly local contact list before processing");
               Database.Get(aci).ContactsTable.clear();
             }
             DeviceContact c;
