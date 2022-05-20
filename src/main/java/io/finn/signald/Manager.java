@@ -824,7 +824,8 @@ public class Manager {
       return;
     }
 
-    var source = Database.Get(aci).RecipientsTable.get((envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender());
+    Database db = Database.Get(aci);
+    var source = db.RecipientsTable.get((envelope.isUnidentifiedSender() && envelope.hasSourceUuid()) ? envelope.getSourceAddress() : content.getSender());
     if (content.getSenderKeyDistributionMessage().isPresent()) {
       logger.debug("handling sender key distribution message from {}", content.getSender().getIdentifier());
       getMessageSender().processSenderKeyDistributionMessage(new SignalProtocolAddress(content.getSender().getIdentifier(), content.getSenderDevice()),
@@ -842,7 +843,7 @@ public class Manager {
         }
       } else {
         logger.debug("Reset shared sender keys with this recipient");
-        Database.Get(account.getACI()).SenderKeySharedTable.deleteSharedWith(source);
+        db.SenderKeySharedTable.deleteSharedWith(source);
       }
     }
 
@@ -868,7 +869,7 @@ public class Manager {
 
         Recipient sendMessageRecipient = null;
         if (syncMessage.getSent().get().getDestination().isPresent()) {
-          sendMessageRecipient = Database.Get(aci).RecipientsTable.get(syncMessage.getSent().get().getDestination().get());
+          sendMessageRecipient = db.RecipientsTable.get(syncMessage.getSent().get().getDestination().get());
         }
         jobs.addAll(handleSignalServiceDataMessage(message, true, source, sendMessageRecipient, ignoreAttachments));
       }
@@ -894,17 +895,17 @@ public class Manager {
             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
             if (contactsMessage.isComplete()) {
               logger.debug("contact sync includes complete set of contacts, clearly local contact list before processing");
-              Database.Get(aci).ContactsTable.clear();
+              db.ContactsTable.clear();
             }
             DeviceContact c;
             while ((c = s.read()) != null) {
-              Recipient recipient = Database.Get(aci).RecipientsTable.get(c.getAddress());
-              Database.Get(aci).ContactsTable.update(c);
+              Recipient recipient = db.RecipientsTable.get(c.getAddress());
+              db.ContactsTable.update(c);
               if (c.getAvatar().isPresent()) {
                 retrieveContactAvatarAttachment(c.getAvatar().get(), recipient);
               }
               if (c.getProfileKey().isPresent()) {
-                account.getDB().ProfileKeysTable.setProfileKey(recipient, c.getProfileKey().get());
+                db.ProfileKeysTable.setProfileKey(recipient, c.getProfileKey().get());
               }
             }
           }
@@ -924,7 +925,7 @@ public class Manager {
 
       if (syncMessage.getVerified().isPresent()) {
         VerifiedMessage verifiedMessage = syncMessage.getVerified().get();
-        Recipient destination = Database.Get(aci).RecipientsTable.get(verifiedMessage.getDestination());
+        Recipient destination = db.RecipientsTable.get(verifiedMessage.getDestination());
         TrustLevel trustLevel = TrustLevel.fromVerifiedState(verifiedMessage.getVerified());
         account.getProtocolStore().saveIdentity(destination, verifiedMessage.getIdentityKey(), trustLevel);
         logger.info("received verified state update from device {}", content.getSenderDevice());
