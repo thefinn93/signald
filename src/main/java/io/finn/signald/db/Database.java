@@ -135,13 +135,18 @@ public class Database {
   private static Connection conn;
   public static Connection getConn() throws SQLException {
     if (conn == null || conn.isClosed()) {
+      close();
+
       switch (GetConnectionType()) {
       case SQLITE:
         conn = DriverManager.getConnection(Config.getDb());
         break;
       case POSTGRESQL:
         conn = DriverManager.getConnection(Config.getDb(), Config.getDbUser(), Config.getDbPassword());
+        conn.setNetworkTimeout(null, 5000); // per this one-vote non-accepted answer on stackoverflow, pg ignores the first param: https://stackoverflow.com/a/56257826
         break;
+      default:
+        throw new AssertionError("unsupported database type");
       }
     }
     return conn;
