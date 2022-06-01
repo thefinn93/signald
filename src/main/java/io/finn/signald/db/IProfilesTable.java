@@ -44,10 +44,10 @@ public interface IProfilesTable {
 
     public Profile(ResultSet rows) throws SQLException {
       lastUpdate = rows.getLong(LAST_UPDATE);
-      givenName = rows.getString(GIVEN_NAME);
-      familyName = rows.getString(FAMILY_NAME);
-      about = rows.getString(ABOUT);
-      emoji = rows.getString(EMOJI);
+      givenName = getOrEmptyString(rows, GIVEN_NAME);
+      familyName = getOrEmptyString(rows, FAMILY_NAME);
+      about = getOrEmptyString(rows, ABOUT);
+      emoji = getOrEmptyString(rows, EMOJI);
 
       byte[] paymentAddressBytes = rows.getBytes(PAYMENT_ADDRESS);
       if (paymentAddressBytes != null) {
@@ -98,6 +98,14 @@ public interface IProfilesTable {
     public SignalServiceProtos.PaymentAddress getPaymentAddress() { return paymentAddress; }
 
     public List<StoredBadge> getBadges() { return badges; }
+
+    private static String getOrEmptyString(ResultSet rows, String column) throws SQLException {
+      String value = rows.getString(column);
+      if (value == null) {
+        return "";
+      }
+      return value;
+    }
   }
 
   class StoredBadge {
