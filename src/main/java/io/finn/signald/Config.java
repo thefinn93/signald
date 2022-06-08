@@ -35,6 +35,9 @@ public class Config {
   @CommandLine.Option(names = {"-d", "--data"}, description = "Data storage location") private static String dataPath = System.getProperty("user.home") + "/.config/signald";
   @CommandLine.Option(names = {"--database"}, description = "jdbc connection string. Defaults to sqlite:~/.config/signald/signald.db (sqlite and postgres supported)")
   private static String db;
+  @CommandLine.Option(names = {"--db-timeout"},
+                      description = "configure the database network timeout in milliseconds, only works for postgres databases. Environment variable SIGNALD_DB_TIMEOUT.")
+  private static int dbTimeout = 10000;
   @CommandLine.Option(names = {"--dump-protocol"}, description = "print a machine-readable description of the client protocol to stdout and exit "
                                                                  + "(https://signald.org/articles/protocol/documentation/)")
   private static boolean dumpProtocol = false;
@@ -127,6 +130,10 @@ public class Config {
 
     if (System.getenv("SIGNALD_ENABLE_METRICS") != null) {
       metrics = Boolean.parseBoolean(System.getenv("SIGNALD_ENABLE_METRICS"));
+    }
+
+    if (System.getenv("SIGNALD_DB_TIMEOUT") != null) {
+      dbTimeout = Integer.parseInt(System.getenv("SIGNALD_DB_TIMEOUT"));
     }
 
     if (metrics) {
@@ -225,4 +232,6 @@ public class Config {
   public static boolean getTrustAllKeys() { return trustAllKeys; }
 
   public static boolean isMigrateData() { return migrateData; }
+
+  public static int getDBTimeout() { return dbTimeout; }
 }

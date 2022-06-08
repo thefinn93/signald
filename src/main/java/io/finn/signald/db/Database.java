@@ -143,7 +143,8 @@ public class Database {
         break;
       case POSTGRESQL:
         conn = DriverManager.getConnection(Config.getDb(), Config.getDbUser(), Config.getDbPassword());
-        conn.setNetworkTimeout(null, 5000); // per this one-vote non-accepted answer on stackoverflow, pg ignores the first param: https://stackoverflow.com/a/56257826
+        conn.setNetworkTimeout(null,
+                               Config.getDBTimeout()); // per this one-vote non-accepted answer on stackoverflow, pg ignores the first param: https://stackoverflow.com/a/56257826
         break;
       default:
         throw new AssertionError("unsupported database type");
