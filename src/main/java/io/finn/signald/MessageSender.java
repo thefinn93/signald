@@ -250,7 +250,8 @@ public class MessageSender {
     // note: senderKeyTargets and access may have been mutated from the original beyond this point
 
     if (legacyTargets.size() > 0) {
-      logger.debug("sending group message to {} members without sender keys", legacyTargets.size());
+      logger.debug("sending group message to {} members without sender keys (isMultiDevice: {}, isRecipientUpdate: {})", legacyTargets.size(), account.getMultiDevice(),
+                   isRecipientUpdate);
       List<SignalServiceAddress> recipientAddresses = legacyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
       try {
         results.addAll(messageSender.sendDataMessage(recipientAddresses, ua.getAccessPairFor(legacyTargets), isRecipientUpdate, ContentHint.DEFAULT, message.build(),

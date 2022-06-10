@@ -92,7 +92,6 @@ public class Account {
       if (isMultidevice == null) {
         isMultidevice = getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID;
         getDB().AccountDataTable.set(aci, IAccountDataTable.Key.MULTI_DEVICE, isMultidevice);
-        return false;
       }
       return isMultidevice;
     } catch (SQLException e) {
