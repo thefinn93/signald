@@ -401,8 +401,9 @@ public class Manager {
         }
       } else if (recipients.size() == 1 && recipients.contains(self)) {
         final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(self);
-        SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(self.getAddress()), message.getTimestamp(), message, message.getExpiresInSeconds(),
-                                                                     Collections.singletonMap(self.getAddress(), unidentifiedAccess.isPresent()), false);
+        SentTranscriptMessage transcript =
+            new SentTranscriptMessage(Optional.of(self.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
+                                      Collections.singletonMap(self.getAddress(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
@@ -423,8 +424,9 @@ public class Manager {
           try {
             if (self.equals(recipient)) { // sending to self
               final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
-              SentTranscriptMessage transcript = new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), message, message.getExpiresInSeconds(),
-                                                                           Collections.singletonMap(recipient.getAddress(), unidentifiedAccess.isPresent()), false);
+              SentTranscriptMessage transcript =
+                  new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
+                                            Collections.singletonMap(recipient.getAddress(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
                 messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
@@ -865,13 +867,16 @@ public class Manager {
       SignalServiceSyncMessage syncMessage = content.getSyncMessage().get();
 
       if (syncMessage.getSent().isPresent()) {
-        SignalServiceDataMessage message = syncMessage.getSent().get().getMessage();
+        SentTranscriptMessage sentMessage = syncMessage.getSent().get();
+        if (sentMessage.getDataMessage().isPresent()) {
+          SignalServiceDataMessage message = sentMessage.getDataMessage().get();
 
-        Recipient sendMessageRecipient = null;
-        if (syncMessage.getSent().get().getDestination().isPresent()) {
-          sendMessageRecipient = db.RecipientsTable.get(syncMessage.getSent().get().getDestination().get());
+          Recipient sendMessageRecipient = null;
+          if (syncMessage.getSent().get().getDestination().isPresent()) {
+            sendMessageRecipient = db.RecipientsTable.get(syncMessage.getSent().get().getDestination().get());
+          }
+          jobs.addAll(handleSignalServiceDataMessage(message, true, source, sendMessageRecipient, ignoreAttachments));
         }
-        jobs.addAll(handleSignalServiceDataMessage(message, true, source, sendMessageRecipient, ignoreAttachments));
       }
 
       if (syncMessage.getRequest().isPresent() && account.getDeviceId() == SignalServiceAddress.DEFAULT_DEVICE_ID) {
@@ -1018,7 +1023,7 @@ public class Manager {
         serverDeliveredTimestamp = in.readLong();
       }
       Optional<SignalServiceAddress> sourceAddress = sourceACI == null && source.isEmpty() ? Optional.empty() : Optional.of(new SignalServiceAddress(sourceACI, source));
-      return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
+      return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, null);
     }
   }
 

@@ -51,6 +51,7 @@ class MessageQueueTableTest {
   @DisplayName("nextEnvelope() with unidentified sender type")
   void nextEnvelope_withUnidentifiedSender() throws SQLException {
     int type = TYPE_UNIDENTIFIED_SENDER;
+
     Optional<SignalServiceAddress> sender = Optional.empty();
     int senderDevice = 0;
     long timestamp = 100L;
@@ -61,7 +62,7 @@ class MessageQueueTableTest {
     String uuid = UUID.randomUUID().toString();
 
     SignalServiceEnvelope originalEnvelope =
-        new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
+        new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, ACCOUNT_ACI.toString());
     messageQueue.storeEnvelope(originalEnvelope);
 
     StoredEnvelope storedEnvelope = messageQueue.nextEnvelope();
@@ -111,6 +112,7 @@ class MessageQueueTableTest {
     long serverDeliveredTimestamp = 300L;
     String uuid = UUID.randomUUID().toString();
 
-    return new SignalServiceEnvelope(TYPE_UNIDENTIFIED_SENDER, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
+    return new SignalServiceEnvelope(TYPE_UNIDENTIFIED_SENDER, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
+                                     ACCOUNT_ACI.toString());
   }
 }

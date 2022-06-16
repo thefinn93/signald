@@ -7,7 +7,6 @@
 
 package io.finn.signald.clientprotocol.v0;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.finn.signald.JsonQuotedAttachment;
 import io.finn.signald.annotations.Deprecated;
 import io.finn.signald.annotations.Doc;
@@ -43,22 +42,5 @@ public class JsonQuote {
         mentions.add(new JsonMention(mention));
       }
     }
-  }
-
-  @JsonIgnore
-  public SignalServiceDataMessage.Quote getQuote() {
-    ArrayList<SignalServiceDataMessage.Quote.QuotedAttachment> quotedAttachments = new ArrayList<>();
-
-    if (attachments != null) {
-      for (JsonQuotedAttachment attachment : this.attachments) {
-        quotedAttachments.add(attachment.getAttachment());
-      }
-    }
-
-    List<SignalServiceDataMessage.Mention> signalMentions = new ArrayList<>();
-    for (JsonMention mention : mentions) {
-      signalMentions.add(mention.asMention());
-    }
-    return new SignalServiceDataMessage.Quote(this.id, this.author.getSignalServiceAddress(), this.text, quotedAttachments, signalMentions);
   }
 }

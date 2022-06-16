@@ -18,6 +18,7 @@ public interface IMessageQueueTable {
   String SERVER_RECEIVED_TIMESTAMP = "server_received_timestamp";
   String SERVER_UUID = "server_uuid";
   String SERVER_DELIVERED_TIMESTAMP = "server_delivered_timestamp";
+  String DESTINATION_UUID = "destination_uuid";
 
   long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException;
   void deleteEnvelope(long id) throws SQLException;

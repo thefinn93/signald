@@ -24,6 +24,7 @@ public class ServiceConfig {
                                                                                                        true,  // sender key
                                                                                                        true,  // announcement groups
                                                                                                        true,  // change number
-                                                                                                       true   // stories
+                                                                                                       true,  // stories
+                                                                                                       true   // gift badges
   );
 }

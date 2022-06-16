@@ -146,7 +146,7 @@ public interface IServersTable {
           new SignalContactDiscoveryUrl[] {new SignalContactDiscoveryUrl(contactDiscoveryURL, trustStore)}, // SignalContactDiscoveryUrl[] signalContactDiscoveryUrls
           new SignalKeyBackupServiceUrl[] {new SignalKeyBackupServiceUrl(keyBackupURL, trustStore)},        // SignalKeyBackupServiceUrl[] signalKeyBackupServiceUrls
           new SignalStorageUrl[] {new SignalStorageUrl(storageURL, trustStore)},                            // SignalStorageUrl[] signalStorageUrls
-          new SignalCdshUrl[] {new SignalCdshUrl(cdshURL, trustStore)},                                     // SignalCdshUrl[] signalCdshUrls
+          new SignalCdsiUrl[] {new SignalCdsiUrl("", trustStore)},                                          // SignalCdsiUrl[] signalCdsiUrls left blank for now
           getInterceptors(),                                                                                // List<Interceptor> networkInterceptors
           Optional.empty(),                                                                                 // Optional<Dns> dns
           proxyOptional,                                                                                    // Optional<SignalProxy> proxy

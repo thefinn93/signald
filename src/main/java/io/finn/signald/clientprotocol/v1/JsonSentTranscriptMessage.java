@@ -21,6 +21,7 @@ public class JsonSentTranscriptMessage {
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   public long expirationStartTimestamp;
   public JsonDataMessage message;
+  public StoryMessage story;
   public Map<String, String> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
@@ -30,7 +31,12 @@ public class JsonSentTranscriptMessage {
     }
     timestamp = s.getTimestamp();
     expirationStartTimestamp = s.getExpirationStartTimestamp();
-    message = new JsonDataMessage(s.getMessage(), aci);
+    if (s.getDataMessage().isPresent()) {
+      message = new JsonDataMessage(s.getDataMessage().get(), aci);
+    }
+    if (s.getStoryMessage().isPresent()) {
+      story = new StoryMessage(s.getStoryMessage().get(), aci);
+    }
     for (SignalServiceAddress r : s.getRecipients()) {
       if (r.getNumber().isPresent()) {
         unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()) ? "true" : "false");

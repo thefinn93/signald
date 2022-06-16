@@ -37,7 +37,9 @@ public class JsonSentTranscriptMessage {
     }
     timestamp = s.getTimestamp();
     expirationStartTimestamp = s.getExpirationStartTimestamp();
-    message = new JsonDataMessage(s.getMessage(), aci);
+    if (s.getDataMessage().isPresent()) {
+      message = new JsonDataMessage(s.getDataMessage().get(), aci);
+    }
     for (SignalServiceAddress r : s.getRecipients()) {
       if (r.getNumber().isPresent()) {
         unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));

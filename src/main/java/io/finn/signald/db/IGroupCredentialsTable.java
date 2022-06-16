@@ -31,9 +31,9 @@ public interface IGroupCredentialsTable {
 
   default AuthCredentialResponse getCredential(GroupsV2Api groupsV2Api, int today) throws InvalidInputException, SQLException, IOException {
     Optional<AuthCredentialResponse> todaysCredentials = getCredential(today);
-    if (!todaysCredentials.isPresent()) {
+    if (todaysCredentials.isEmpty()) {
       logger.debug("refreshing group credentials");
-      setCredentials(groupsV2Api.getCredentials(today));
+      setCredentials(groupsV2Api.getCredentials(today, true));
       todaysCredentials = getCredential(today);
     }
     return todaysCredentials.get();

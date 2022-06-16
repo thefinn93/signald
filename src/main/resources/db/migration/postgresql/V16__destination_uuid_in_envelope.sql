@@ -1,0 +1,1 @@
+ALTER TABLE signald_message_queue ADD COLUMN destination_uuid TEXT;

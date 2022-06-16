@@ -26,10 +26,10 @@ public class MessageQueueTable implements IMessageQueueTable {
 
   @Override
   public long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
-    var query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING %s", TABLE_NAME,
+    var query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING %s", TABLE_NAME,
                               // FIELDS
                               ACCOUNT, VERSION, TYPE, SOURCE_E164, SOURCE_UUID, SOURCE_DEVICE, TIMESTAMP, CONTENT, LEGACY_MESSAGE, SERVER_RECEIVED_TIMESTAMP,
-                              SERVER_DELIVERED_TIMESTAMP, SERVER_UUID,
+                              SERVER_DELIVERED_TIMESTAMP, SERVER_UUID, DESTINATION_UUID,
                               // RETURNING
                               ID);
     try (var statement = Database.getConn().prepareStatement(query)) {
@@ -46,6 +46,7 @@ public class MessageQueueTable implements IMessageQueueTable {
       statement.setLong(10, envelope.getServerReceivedTimestamp());
       statement.setLong(11, envelope.getServerDeliveredTimestamp());
       statement.setObject(12, UUID.fromString(envelope.getServerGuid()));
+      statement.setString(13, envelope.getDestinationUuid());
       try (var envelopeIdReturn = Database.executeQuery(TABLE_NAME + "_store_name", statement)) {
         if (!envelopeIdReturn.next()) {
           throw new AssertionError("error fetching ID of last row inserted while storing envelope");
@@ -89,8 +90,9 @@ public class MessageQueueTable implements IMessageQueueTable {
         long serverReceivedTimestamp = rows.getLong(SERVER_RECEIVED_TIMESTAMP);
         long serverDeliveredTimestamp = rows.getLong(SERVER_DELIVERED_TIMESTAMP);
         String uuid = rows.getString(SERVER_UUID);
+        String destinationUUID = rows.getString(DESTINATION_UUID);
         SignalServiceEnvelope signalServiceEnvelope =
-            new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid);
+            new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, destinationUUID);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }
