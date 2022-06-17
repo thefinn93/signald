@@ -898,10 +898,10 @@ public class Manager {
           final ContactsMessage contactsMessage = syncMessage.getContacts().get();
           try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
-            if (contactsMessage.isComplete()) {
-              logger.debug("contact sync includes complete set of contacts, clearly local contact list before processing");
-              db.ContactsTable.clear();
-            }
+            //            if (contactsMessage.isComplete()) {
+            //                logger.debug("contact sync includes complete set of contacts, clearly local contact list before processing");
+            //                db.ContactsTable.clear();
+            //            }
             DeviceContact c;
             while ((c = s.read()) != null) {
               Recipient recipient = db.RecipientsTable.get(c.getAddress());
