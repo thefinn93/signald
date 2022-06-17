@@ -14,6 +14,7 @@ import io.finn.signald.BuildConfig;
 import io.finn.signald.Config;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.prometheus.client.Histogram;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.sql.*;
 import java.util.HashMap;
@@ -197,6 +198,9 @@ public class Database {
     Histogram.Timer timer = queryLatency.labels(name, "false").startTimer();
     try {
       return statement.executeQuery();
+    } catch (SQLException e) {
+      handleSQLException(e);
+      throw e;
     } finally {
       double seconds = timer.observeDuration();
       if (Config.getLogDatabaseTransactions()) {
@@ -209,6 +213,9 @@ public class Database {
     Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
     try {
       return statement.executeUpdate();
+    } catch (SQLException e) {
+      handleSQLException(e);
+      throw e;
     } finally {
       double seconds = timer.observeDuration();
       if (Config.getLogDatabaseTransactions()) {
@@ -221,6 +228,9 @@ public class Database {
     Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
     try {
       return statement.getGeneratedKeys();
+    } catch (SQLException e) {
+      handleSQLException(e);
+      throw e;
     } finally {
       double seconds = timer.observeDuration();
       if (Config.getLogDatabaseTransactions()) {
@@ -233,11 +243,21 @@ public class Database {
     Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
     try {
       return statement.executeBatch();
+    } catch (SQLException e) {
+      handleSQLException(e);
+      throw e;
     } finally {
       double seconds = timer.observeDuration();
       if (Config.getLogDatabaseTransactions()) {
         logger.debug("executed query {} in {} ms", name, seconds * 1000);
       }
+    }
+  }
+
+  private static void handleSQLException(SQLException e) {
+    if (e.getCause() instanceof SocketTimeoutException) {
+      logger.fatal("socket timeout exception while talking to postgres, exploding \uD83D\uDCA5");
+      System.exit(10);
     }
   }
 }
