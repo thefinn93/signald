@@ -12,7 +12,6 @@ import static io.finn.signald.annotations.ExactlyOneOfRequired.GROUP_MODIFICATIO
 import io.finn.signald.Account;
 import io.finn.signald.GroupLinkPassword;
 import io.finn.signald.Groups;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
@@ -73,7 +72,6 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
   public GroupInfo run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
                                                InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError {
     Account a = Common.getAccount(account);
-    Manager m = Common.getManager(account);
     var recipientsTable = a.getDB().RecipientsTable;
 
     if (groupID.length() == 24) { // v1 group

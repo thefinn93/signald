@@ -25,7 +25,6 @@ import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
-import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.SignalSessionLock;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
@@ -51,20 +50,21 @@ public class MessageSender {
     self = Database.Get(account.getACI()).RecipientsTable.get(account.getACI());
   }
 
+  public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
+      throws SQLException, IOException, InvalidInputException, NoSuchAccountException, InvalidRegistrationIdException, InvalidKeyException, InterruptedException,
+             UnknownGroupException, ServerNotFoundException, ExecutionException, InvalidProxyException, InvalidCertificateException, TimeoutException {
+    return sendGroupMessage(message, group.getId(), group.getMembers());
+  }
+
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
-             InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException, NoSendPermissionException {
+             InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
     var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
     if (groupOptional.isEmpty()) {
       throw new UnknownGroupException();
     }
 
     var group = groupOptional.get();
-
-    if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
-      logger.warn("refusing to send to an announcement only group that we're not an admin in.");
-      throw new NoSendPermissionException();
-    }
 
     if (members == null) {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());

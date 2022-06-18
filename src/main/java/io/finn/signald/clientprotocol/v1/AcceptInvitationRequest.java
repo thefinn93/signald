@@ -8,7 +8,6 @@
 package io.finn.signald.clientprotocol.v1;
 
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
@@ -34,7 +33,6 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, OwnProfileKeyDoesNotExistError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError,
                                                      InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
-    Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 
     ProfileKeyCredential ownProfileKeyCredential;
@@ -52,7 +50,7 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
 
     GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
     GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownProfileKeyCredential);
-    change.setSourceUuid(UuidUtil.toByteString(m.getUUID()));
+    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);
 

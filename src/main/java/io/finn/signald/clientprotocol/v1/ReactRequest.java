@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-import io.finn.signald.Manager;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
@@ -31,23 +31,24 @@ public class ReactRequest implements RequestType<SendResponse> {
   @Doc("Optionally set to a sub-set of group members. Ignored if recipientGroupId isn't specified") public List<JsonAddress> members;
 
   @Override
-  public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InternalError, InvalidRecipientError,
-                                                  UnknownGroupError, InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(username);
+  public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, InvalidRecipientError, UnknownGroupError,
+                                                  InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+    Account a = Common.getAccount(username);
+
     if (timestamp > 0) {
       timestamp = System.currentTimeMillis();
     }
     Recipient recipient = null;
     if (recipientAddress != null) {
-      recipient = Common.getRecipient(m.getACI(), recipientAddress);
+      recipient = Common.getRecipient(a.getACI(), recipientAddress);
     }
 
-    Recipient reactionTarget = Common.getRecipient(m.getACI(), reaction.targetAuthor);
+    Recipient reactionTarget = Common.getRecipient(a.getACI(), reaction.targetAuthor);
     reaction.targetAuthor = new JsonAddress(reactionTarget);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withReaction(reaction.getReaction());
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, recipientGroupId, members);
+    List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, recipientGroupId, members);
     return new SendResponse(results, timestamp);
   }
 }

@@ -7,7 +7,7 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.Manager;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -30,16 +30,16 @@ public class ResetSessionRequest implements RequestType<SendResponse> {
   public Long timestamp;
 
   @Override
-  public SendResponse run(Request request) throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, InvalidRequestError, NoSendPermissionError,
-                                                  UnknownGroupError, RateLimitError, InvalidRecipientError, UnregisteredUserError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
-    Recipient recipient = Common.getRecipient(m.getACI(), address);
+  public SendResponse run(Request request) throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, InvalidRequestError, UnknownGroupError, RateLimitError,
+                                                  InvalidRecipientError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+    Account a = Common.getAccount(account);
+    Recipient recipient = Common.getRecipient(a.getACI(), address);
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asEndSessionMessage();
     if (timestamp == null) {
       timestamp = System.currentTimeMillis();
     }
     messageBuilder.withTimestamp(timestamp);
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, null, null);
+    List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, null, null);
     return new SendResponse(results, timestamp);
   }
 }

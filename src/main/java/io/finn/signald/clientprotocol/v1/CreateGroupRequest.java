@@ -9,7 +9,6 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -58,7 +57,6 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
   public JsonGroupV2Info run(Request request)
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
              GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
     List<Recipient> recipients = new ArrayList<>();
 
@@ -71,7 +69,8 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     } catch (IOException e) {
       throw new InternalError("unexpected error verifying own profile key exists", e);
     }
-    var recipientsTable = Database.Get(m.getACI()).RecipientsTable;
+
+    var recipientsTable = Database.Get(a.getACI()).RecipientsTable;
     for (JsonAddress member : members) {
       Recipient recipient = Common.getRecipient(recipientsTable, member);
       try {
@@ -120,11 +119,9 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.getRevision()).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
-    try {
-      m.sendGroupV2Message(message, group);
-    } catch (SQLException | IOException e) {
-      throw new InternalError("error notifying new members of group", e);
-    }
+
+    Common.sendGroupMessage(a, message, group);
+
     return new JsonGroupV2Info(group);
   }
 }

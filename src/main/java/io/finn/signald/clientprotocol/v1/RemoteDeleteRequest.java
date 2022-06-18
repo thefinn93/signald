@@ -9,7 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
-import io.finn.signald.Manager;
+import io.finn.signald.Account;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
@@ -40,17 +40,17 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
   @Doc("Optionally set to a sub-set of group members. Ignored if group isn't specified") public List<JsonAddress> members;
 
   @Override
-  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, NoSendPermissionError,
-                                                  UnknownGroupError, InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError {
-    Manager m = Common.getManager(account);
+  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, UnknownGroupError,
+                                                  InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+    Account a = Common.getAccount(account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
     messageBuilder.withRemoteDelete(new SignalServiceDataMessage.RemoteDelete(timestamp));
     Recipient recipient = null;
     if (address != null) {
-      recipient = Common.getRecipient(Database.Get(m.getACI()).RecipientsTable, address);
+      recipient = Common.getRecipient(Database.Get(a.getACI()).RecipientsTable, address);
     }
-    List<SendMessageResult> results = Common.send(m, messageBuilder, recipient, group, members);
+    List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, group, members);
     return new SendResponse(results, timestamp);
   }
 }

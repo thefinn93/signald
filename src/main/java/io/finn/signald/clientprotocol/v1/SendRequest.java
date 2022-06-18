@@ -12,7 +12,6 @@ import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.Account;
-import io.finn.signald.Manager;
 import io.finn.signald.SignalDependencies;
 import io.finn.signald.annotations.*;
 import io.finn.signald.clientprotocol.Request;
@@ -65,14 +64,14 @@ public class SendRequest implements RequestType<SendResponse> {
   public SendResponse run(Request request)
       throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, NoSendPermissionError, InvalidAttachmentError, InternalError, InvalidRequestError, UnknownGroupError,
              RateLimitError, InvalidRecipientError, AttachmentTooLargeError, AuthorizationFailedError, SQLError {
-    Manager manager = account == null ? Common.getManager(username) : Common.getManager(account);
+    Account a = Common.getAccount(account == null ? username : account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
 
     Recipient recipient = null;
     if (recipientAddress != null) {
       try {
-        recipient = Database.Get(manager.getACI()).RecipientsTable.get(recipientAddress);
+        recipient = Database.Get(a.getACI()).RecipientsTable.get(recipientAddress);
       } catch (IOException | SQLException e) {
         throw new InternalError("error looking up recipient", e);
       }
@@ -85,7 +84,7 @@ public class SendRequest implements RequestType<SendResponse> {
     if (attachments != null) {
       SignalServiceMessageSender sender;
       try {
-        sender = SignalDependencies.get(manager.getACI()).getMessageSender();
+        sender = SignalDependencies.get(a.getACI()).getMessageSender();
       } catch (SQLException | IOException e) {
         throw new InternalError("unexpected error getting message sender to upload attachments", e);
       } catch (ServerNotFoundException e) {
@@ -145,11 +144,9 @@ public class SendRequest implements RequestType<SendResponse> {
         throw new InvalidRequestError(e.getMessage());
       }
 
-      Account account = manager.getAccount();
-
       Optional<IGroupsTable.IGroup> groupOptional;
       try {
-        groupOptional = Database.Get(account.getACI()).GroupsTable.get(groupIdentifier);
+        groupOptional = Database.Get(a.getACI()).GroupsTable.get(groupIdentifier);
       } catch (SQLException | InvalidInputException | InvalidProtocolBufferException e) {
         throw new InternalError("unexpected error looking up group to send to", e);
       }
@@ -158,7 +155,7 @@ public class SendRequest implements RequestType<SendResponse> {
         var group = groupOptional.get();
         Recipient self;
         try {
-          self = account.getSelf();
+          self = a.getSelf();
         } catch (SQLException | IOException e) {
           throw new InternalError("error verifying own capabilities before sending", e);
         }
@@ -169,7 +166,7 @@ public class SendRequest implements RequestType<SendResponse> {
       }
     }
 
-    List<SendMessageResult> results = Common.send(manager, messageBuilder, recipient, recipientGroupId, members);
+    List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, recipientGroupId, members);
     return new SendResponse(results, timestamp);
   }
 }

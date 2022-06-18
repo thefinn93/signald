@@ -77,13 +77,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
       throw new InternalError("error committing group change", e);
     }
 
-    try {
-      Common.getManager(account).sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), recipients);
-    } catch (IOException e) {
-      throw new InternalError("error sending group update", e);
-    } catch (SQLException e) {
-      throw new SQLError(e);
-    }
+    Common.sendGroupMessage(a, updateOutput.first(), group);
 
     try {
       group.delete();

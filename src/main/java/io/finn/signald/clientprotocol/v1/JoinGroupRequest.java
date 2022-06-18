@@ -7,10 +7,8 @@
 
 package io.finn.signald.clientprotocol.v1;
 
+import io.finn.signald.*;
 import io.finn.signald.Account;
-import io.finn.signald.GroupInviteLinkUrl;
-import io.finn.signald.Groups;
-import io.finn.signald.Manager;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -65,7 +63,6 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new InvalidInviteURIError();
     }
 
-    Manager m = Common.getManager(account);
     ProfileKeyCredential profileKeyCredential;
     try {
       profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(a.getSelf());
@@ -109,7 +106,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     } else {
       change = groupOperations.createGroupJoinDirect(profileKeyCredential);
     }
-    change.setSourceUuid(UuidUtil.toByteString(m.getUUID()));
+    change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
 
     int revision = groupJoinInfo.getRevision() + 1;
 
@@ -144,13 +141,9 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     var group = groupOptional.get();
 
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
-    SignalServiceDataMessage.Builder updateMessage =
-        SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build()).withExpiration(group.getDecryptedGroup().getDisappearingMessagesTimer().getDuration());
-    try {
-      m.sendGroupV2Message(updateMessage, group);
-    } catch (SQLException | IOException e) {
-      throw new InternalError("error sending group update message", e);
-    }
+    SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
+
+    Common.sendGroupMessage(a, message, group);
 
     return new JsonGroupJoinInfo(groupJoinInfo, groupInviteLinkUrl.getGroupMasterKey());
   }

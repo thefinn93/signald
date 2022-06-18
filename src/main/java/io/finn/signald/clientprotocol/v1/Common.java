@@ -16,10 +16,7 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.exceptions.InvalidProxyException;
-import io.finn.signald.exceptions.NoSendPermissionException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.*;
 import io.finn.signald.util.GroupsUtil;
 import io.prometheus.client.Histogram;
 import java.io.IOException;
@@ -141,10 +138,9 @@ public class Common {
     }
   }
 
-  public static List<SendMessageResult> send(Manager manager, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
-                                             List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, NoSendPermissionError, InternalError, RateLimitError,
-                                                                               InvalidRequestError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError,
-                                                                               AuthorizationFailedError {
+  public static List<SendMessageResult> send(Account account, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
+                                             List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, InternalError, RateLimitError, InvalidRequestError,
+                                                                               NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
     GroupIdentifier groupIdentifier = null;
     List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
@@ -155,7 +151,7 @@ public class Common {
       }
       if (members != null) {
         memberRecipients = new ArrayList<>();
-        var recipientsTable = Database.Get(manager.getACI()).RecipientsTable;
+        var recipientsTable = Database.Get(account.getACI()).RecipientsTable;
         for (JsonAddress member : members) {
           try {
             memberRecipients.add(getRecipient(recipientsTable, member));
@@ -166,9 +162,9 @@ public class Common {
       }
     }
 
-    Histogram.Timer timer = messageSendTime.labels(manager.getACI().toString()).startTimer();
+    Histogram.Timer timer = messageSendTime.labels(account.getACI().toString()).startTimer();
     try {
-      MessageSender messageSender = new MessageSender(manager.getAccount());
+      MessageSender messageSender = new MessageSender(account);
       if (recipientGroupId != null) {
         return messageSender.sendGroupMessage(messageBuilder, groupIdentifier, memberRecipients);
       } else {
@@ -176,8 +172,6 @@ public class Common {
       }
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupError();
-    } catch (NoSendPermissionException e) {
-      throw new NoSendPermissionError();
     } catch (RateLimitException e) {
       throw new RateLimitError(e);
     } catch (NoSuchAccountException e) {
@@ -193,6 +187,35 @@ public class Common {
       throw new InternalError("error sending message", e);
     } finally {
       timer.observeDuration();
+    }
+  }
+
+  public static List<SendMessageResult> sendGroupMessage(Account account, SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
+      throws SQLError, InternalError, NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError {
+    MessageSender messageSender;
+    try {
+      messageSender = new MessageSender(account);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (IOException e) {
+      throw new InternalError("error getting message sender", e);
+    }
+
+    try {
+      return messageSender.sendGroupMessage(message, group);
+    } catch (SQLException e) {
+      throw new SQLError(e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (UnknownGroupException e) {
+      throw new UnknownGroupError();
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
+    } catch (InvalidInputException | TimeoutException | InterruptedException | InvalidCertificateException | ExecutionException | InvalidKeyException |
+             InvalidRegistrationIdException | IOException e) {
+      throw new InternalError("error notifying new members of group", e);
     }
   }
 
@@ -291,16 +314,7 @@ public class Common {
   }
 
   public static List<SendMessageResult> updateGroup(Account account, IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
-      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, GroupPatchNotAcceptedError {
-    try {
-      return updateGroup(account, group, change, group.getMembers());
-    } catch (IOException | SQLException e) {
-      throw new InternalError("error getting group members", e);
-    }
-  }
-
-  public static List<SendMessageResult> updateGroup(Account account, IGroupsTable.IGroup group, GroupChange.Actions.Builder change, List<Recipient> recipients)
-      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, GroupPatchNotAcceptedError {
+      throws InternalError, InvalidProxyError, NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, GroupPatchNotAcceptedError, UnknownGroupError, SQLError {
     Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateOutput;
     try {
       updateOutput = getGroups(account).updateGroup(group, change);
@@ -312,11 +326,7 @@ public class Common {
       throw new InternalError("error committing group change", e);
     }
 
-    try {
-      return getManager(account.getACI()).sendGroupV2Message(updateOutput.first(), group.getSignalServiceGroupV2(), recipients);
-    } catch (IOException | SQLException e) {
-      throw new InternalError("error sending group update", e);
-    }
+    return sendGroupMessage(account, updateOutput.first(), group);
   }
 
   public static Groups getGroups(Account account) throws InvalidProxyError, NoSuchAccountError, ServerNotFoundError, InternalError {

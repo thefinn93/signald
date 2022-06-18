@@ -270,17 +270,6 @@ public class Manager {
     return groups;
   }
 
-  public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group) throws IOException, SQLException {
-
-    DecryptedTimer timer = group.getDecryptedGroup().getDisappearingMessagesTimer();
-
-    if (timer != null && timer.getDuration() != 0) {
-      message.withExpiration(timer.getDuration());
-    }
-
-    return sendGroupV2Message(message, group.getSignalServiceGroupV2(), group.getMembers());
-  }
-
   public List<SendMessageResult> sendGroupV2Message(SignalServiceDataMessage.Builder message, SignalServiceGroupV2 group, List<Recipient> recipients)
       throws IOException, SQLException {
     message.asGroupMessage(group);
