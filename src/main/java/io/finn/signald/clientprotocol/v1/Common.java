@@ -168,14 +168,12 @@ public class Common {
 
     Histogram.Timer timer = messageSendTime.labels(manager.getACI().toString()).startTimer();
     try {
+      MessageSender messageSender = new MessageSender(manager.getAccount());
       if (recipientGroupId != null) {
-        MessageSender messageSender = new MessageSender(manager.getAccount());
         return messageSender.sendGroupMessage(messageBuilder, groupIdentifier, memberRecipients);
       } else {
-        return manager.send(messageBuilder, recipient, groupIdentifier, memberRecipients);
+        return messageSender.send(messageBuilder, recipient);
       }
-    } catch (io.finn.signald.exceptions.InvalidRecipientException e) {
-      throw new InvalidRecipientError();
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupError();
     } catch (NoSendPermissionException e) {

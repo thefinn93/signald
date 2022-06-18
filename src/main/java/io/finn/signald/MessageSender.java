@@ -1,10 +1,7 @@
 package io.finn.signald;
 
 import io.finn.signald.db.*;
-import io.finn.signald.exceptions.InvalidProxyException;
-import io.finn.signald.exceptions.NoSuchAccountException;
-import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.exceptions.UnknownGroupException;
+import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import io.finn.signald.util.SenderKeyUtil;
@@ -28,6 +25,7 @@ import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.storageservice.protos.groups.local.DecryptedTimer;
+import org.signal.storageservice.protos.groups.local.EnabledState;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.SignalSessionLock;
 import org.whispersystems.signalservice.api.crypto.ContentHint;
@@ -55,12 +53,19 @@ public class MessageSender {
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
-             InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
+             InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException, NoSendPermissionException {
     var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
     if (groupOptional.isEmpty()) {
       throw new UnknownGroupException();
     }
+
     var group = groupOptional.get();
+
+    if (group.getDecryptedGroup().getIsAnnouncementGroup() == EnabledState.ENABLED && !group.isAdmin(self)) {
+      logger.warn("refusing to send to an announcement only group that we're not an admin in.");
+      throw new NoSendPermissionException();
+    }
+
     if (members == null) {
       members = group.getMembers().stream().filter(x -> !self.equals(x)).collect(Collectors.toList());
     }
@@ -305,6 +310,54 @@ public class MessageSender {
     } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
       account.getProtocolStore().handleUntrustedIdentityException(e);
       throw e;
+    }
+  }
+
+  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, Recipient recipient)
+      throws SQLException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidProxyException {
+    return send(messageBuilder, List.of(recipient));
+  }
+
+  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, List<Recipient> recipients)
+      throws SQLException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidProxyException {
+    ProfileKey profileKey = account.getDB().ProfileKeysTable.getProfileKey(self);
+    if (profileKey != null) {
+      messageBuilder.withProfileKey(profileKey.serialize());
+    }
+
+    SignalServiceDataMessage message = null;
+
+    try {
+      SignalServiceMessageSender messageSender = account.getSignalDependencies().getMessageSender();
+      message = messageBuilder.build();
+
+      // Send to all individually, so sync messages are sent correctly
+      List<SendMessageResult> results = new ArrayList<>(recipients.size());
+      for (Recipient recipient : recipients) {
+        var contact = Database.Get(account.getACI()).ContactsTable.get(recipient);
+        messageBuilder.withExpiration(contact != null ? contact.messageExpirationTime : 0);
+        message = messageBuilder.build();
+        try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
+          results.add(messageSender.sendDataMessage(recipient.getAddress(), new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(recipient), ContentHint.DEFAULT, message,
+                                                    IndividualSendEventsLogger.INSTANCE));
+
+        } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
+          if (e.getIdentityKey() != null) {
+            account.getProtocolStore().handleUntrustedIdentityException(e);
+          }
+          results.add(SendMessageResult.identityFailure(recipient.getAddress(), e.getIdentityKey()));
+        } finally {
+          logger.debug("send complete");
+        }
+      }
+      return results;
+    } finally {
+      if (message != null && message.isEndSession()) {
+        DatabaseAccountDataStore protocolStore = account.getProtocolStore();
+        for (Recipient recipient : recipients) {
+          protocolStore.deleteAllSessions(recipient);
+        }
+      }
     }
   }
 }
