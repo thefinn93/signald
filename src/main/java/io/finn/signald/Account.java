@@ -216,7 +216,7 @@ public class Account {
     SignalDependencies.delete(aci);
 
     try {
-      Manager.get(aci).deleteAccount();
+      Manager.get(aci, true).deleteAccount();
     } catch (InvalidKeyException e) {
       logger.error("unexpected error while deleting account: ", e);
     }

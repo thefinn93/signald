@@ -40,16 +40,12 @@ import org.signal.libsignal.metadata.*;
 import org.signal.libsignal.metadata.certificate.CertificateValidator;
 import org.signal.libsignal.protocol.*;
 import org.signal.libsignal.protocol.ecc.Curve;
-import org.signal.libsignal.protocol.ecc.ECKeyPair;
 import org.signal.libsignal.protocol.ecc.ECPrivateKey;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
 import org.signal.libsignal.protocol.fingerprint.Fingerprint;
 import org.signal.libsignal.protocol.fingerprint.FingerprintParsingException;
 import org.signal.libsignal.protocol.fingerprint.FingerprintVersionMismatchException;
 import org.signal.libsignal.protocol.message.DecryptionErrorMessage;
-import org.signal.libsignal.protocol.state.PreKeyRecord;
-import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
-import org.signal.libsignal.protocol.util.Medium;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupIdentifier;
@@ -66,7 +62,6 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.push.ServiceIdType;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.storage.StorageKey;
@@ -112,8 +107,8 @@ public class Manager {
     }
 
     if (!offline) {
-      RefreshPreKeysJob.runIfNeeded(aci, m);
       Account account = new Account(aci);
+      RefreshPreKeysJob.runIfNeeded(account);
       account.refreshIfNeeded();
       RefreshProfileJob.queueIfNeeded(account, account.getSelf());
     }
@@ -216,50 +211,6 @@ public class Manager {
     String verificationCode = accountManager.getNewDeviceVerificationCode();
     ProfileKey profileKey = account.getDB().ProfileKeysTable.getProfileKey(account.getSelf());
     accountManager.addDevice(deviceIdentifier, deviceKey, account.getACIIdentityKeyPair(), account.getPNIIdentityKeyPair(), profileKey, verificationCode);
-  }
-
-  private List<PreKeyRecord> generatePreKeys() throws SQLException {
-    List<PreKeyRecord> records = new LinkedList<>();
-
-    DatabaseAccountDataStore protocolStore = account.getProtocolStore();
-    for (int i = 0; i < ServiceConfig.PREKEY_BATCH_SIZE; i++) {
-      int preKeyId = (account.getPreKeyIdOffset() + i) % Medium.MAX_VALUE;
-      ECKeyPair keyPair = Curve.generateKeyPair();
-      PreKeyRecord record = new PreKeyRecord(preKeyId, keyPair);
-
-      protocolStore.storePreKey(preKeyId, record);
-      records.add(record);
-    }
-
-    account.setPreKeyIdOffset((account.getPreKeyIdOffset() + ServiceConfig.PREKEY_BATCH_SIZE + 1) % Medium.MAX_VALUE);
-
-    return records;
-  }
-
-  private SignedPreKeyRecord generateSignedPreKey(IdentityKeyPair identityKey) throws SQLException, InvalidKeyException {
-    ECKeyPair keyPair = Curve.generateKeyPair();
-    byte[] signature = Curve.calculateSignature(identityKey.getPrivateKey(), keyPair.getPublicKey().serialize());
-    int signedPreKeyId = account.getNextSignedPreKeyId();
-    SignedPreKeyRecord record = new SignedPreKeyRecord(signedPreKeyId, System.currentTimeMillis(), keyPair, signature);
-    account.getProtocolStore().storeSignedPreKey(signedPreKeyId, record);
-    account.setNextSignedPreKeyId((signedPreKeyId + 1) % Medium.MAX_VALUE);
-    return record;
-  }
-
-  public void refreshPreKeys() throws IOException, SQLException, InvalidKeyException {
-    refreshPreKeys(ServiceIdType.ACI);
-    refreshPreKeys(ServiceIdType.PNI);
-  }
-
-  public void refreshPreKeys(ServiceIdType serviceIdType) throws IOException, SQLException, InvalidKeyException {
-    if (serviceIdType != ServiceIdType.ACI) {
-      // TODO implement
-      return;
-    }
-    List<PreKeyRecord> oneTimePreKeys = generatePreKeys();
-    SignedPreKeyRecord signedPreKeyRecord = generateSignedPreKey(account.getACIIdentityKeyPair());
-    IdentityKeyPair identityKeyPair = account.getACIIdentityKeyPair();
-    dependencies.getAccountManager().setPreKeys(serviceIdType, identityKeyPair.getPublicKey(), signedPreKeyRecord, oneTimePreKeys);
   }
 
   public List<JsonGroupV2Info> getGroupsV2Info() throws SQLException {
@@ -847,7 +798,7 @@ public class Manager {
     }
 
     if (envelope.isPreKeySignalMessage()) {
-      jobs.add(new RefreshPreKeysJob(aci));
+      jobs.add(new RefreshPreKeysJob(account));
     }
 
     if (content.getSyncMessage().isPresent()) {

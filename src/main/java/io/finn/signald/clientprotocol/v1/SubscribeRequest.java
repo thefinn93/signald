@@ -9,6 +9,7 @@ package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.finn.signald.Account;
 import io.finn.signald.Empty;
 import io.finn.signald.MessageReceiver;
 import io.finn.signald.annotations.Doc;
@@ -20,6 +21,9 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.RefreshPreKeysJob;
 import io.finn.signald.util.JSONUtil;
 import java.io.IOException;
@@ -56,19 +60,25 @@ public class SubscribeRequest implements RequestType<Empty> {
   @Override
   public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
 
-    ACI aci = Common.getACIFromIdentifier(account);
+    Account a = Common.getAccount(account);
 
     try {
-      RefreshPreKeysJob.runIfNeeded(aci, Common.getManager(aci));
+      RefreshPreKeysJob.runIfNeeded(a);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
     } catch (SQLException | IOException | InvalidKeyException e) {
       throw new InternalError("error preparing account", e);
+    } catch (NoSuchAccountException e) {
+      throw new NoSuchAccountError(e);
+    } catch (ServerNotFoundException e) {
+      throw new ServerNotFoundError(e);
+    } catch (InvalidProxyException e) {
+      throw new InvalidProxyError(e);
     }
 
     EmptyWithCallback reply = new EmptyWithCallback();
     try {
-      MessageReceiver.subscribe(aci, new IncomingMessageEncoder(request.getSocket(), aci, account, reply.lock));
+      MessageReceiver.subscribe(a.getACI(), new IncomingMessageEncoder(request.getSocket(), a.getACI(), account, reply.lock));
     } catch (io.finn.signald.exceptions.NoSuchAccountException e) {
       throw new NoSuchAccountError(e);
     } catch (io.finn.signald.exceptions.InvalidProxyException e) {

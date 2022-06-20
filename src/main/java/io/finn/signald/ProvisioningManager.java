@@ -15,6 +15,7 @@ import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.exceptions.UserAlreadyExistsException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.RefreshPreKeysJob;
 import io.finn.signald.jobs.SendSyncRequestJob;
 import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
@@ -121,7 +122,7 @@ public class ProvisioningManager {
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
 
-    m.refreshPreKeys();
+    new RefreshPreKeysJob(account).run();
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS));
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED));
