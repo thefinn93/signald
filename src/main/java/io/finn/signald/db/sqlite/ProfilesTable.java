@@ -60,6 +60,11 @@ public class ProfilesTable implements IProfilesTable {
 
   @Override
   public void setSerializedName(Recipient recipient, String name) throws SQLException {
+    if (name == null) {
+      set(recipient, GIVEN_NAME, "");
+      set(recipient, FAMILY_NAME, "");
+      return;
+    }
     String[] parts = name.split("\0");
     if (parts.length == 0) {
       set(recipient, GIVEN_NAME, "");

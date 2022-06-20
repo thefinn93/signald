@@ -90,7 +90,7 @@ public class RefreshProfileJob implements Job {
     SignalServiceProfile encryptedProfile = profileAndCredential.getProfile();
 
     try {
-      String name = encryptedProfile.getName() == null ? null : profileCipher.decryptString(Base64.decode(encryptedProfile.getName()));
+      String name = encryptedProfile.getName() == null ? "" : profileCipher.decryptString(Base64.decode(encryptedProfile.getName()));
       db.ProfilesTable.setSerializedName(recipient, name);
     } catch (InvalidCiphertextException e) {
       logger.debug("error decrypting profile name.", e);
