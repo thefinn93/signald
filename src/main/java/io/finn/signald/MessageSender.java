@@ -146,7 +146,6 @@ public class MessageSender {
 
     List<SendMessageResult> results = new ArrayList<>();
 
-    // disable sender keys for groups of mixed targets until we can figure out how to avoid the duplicate sync messages
     if (senderKeyTargets.size() > 0) {
       DistributionId distributionId = group.getOrCreateDistributionId();
       long keyCreateTime = getCreateTimeForOurKey(distributionId);
@@ -160,15 +159,16 @@ public class MessageSender {
       List<SignalServiceAddress> recipientAddresses = senderKeyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
 
       logger.debug("sending group message to {} members via a distribution group", recipientAddresses.size());
+      SenderKeyGroupEventsLogger sendEvents = new SenderKeyGroupEventsLogger();
       try {
-        List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
-                                                                                 message.build(), SenderKeyGroupEventsLogger.INSTANCE);
+        List<SendMessageResult> skdmResults =
+            messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEvents);
         Set<ServiceId> networkFailAddressesForRetry = new HashSet<>();
+        if (sendEvents.isSyncMessageSent()) {
+          isRecipientUpdate = true; // prevent duplicate sync messages from being sent
+        }
         for (var result : skdmResults) {
           if (result.isSuccess()) {
-            if (self.getAddress().equals(result.getAddress())) {
-              isRecipientUpdate = true; // prevent duplicate sync messages from being sent
-            }
             results.add(result);
           } else if (result.getProofRequiredFailure() != null) {
             // do not retry if reCAPTCHA required
@@ -208,8 +208,13 @@ public class MessageSender {
 
           List<SignalServiceAddress> retryRecipientAddresses = senderKeyTargets.stream().map(Recipient::getAddress).collect(Collectors.toList());
 
-          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
-                                                                                             ContentHint.DEFAULT, message.build(), SenderKeyGroupEventsLogger.INSTANCE);
+          SenderKeyGroupEventsLogger sendEventsRetry = new SenderKeyGroupEventsLogger();
+
+          List<SendMessageResult> senderKeyRetryResults =
+              messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEventsRetry);
+          if (!isRecipientUpdate && sendEventsRetry.isSyncMessageSent()) {
+            isRecipientUpdate = true;
+          }
 
           for (var result : senderKeyRetryResults) {
             if (result.isSuccess()) {

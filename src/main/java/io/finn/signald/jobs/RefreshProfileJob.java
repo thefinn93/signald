@@ -8,10 +8,7 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
-import io.finn.signald.db.Database;
-import io.finn.signald.db.IProfileKeysTable;
-import io.finn.signald.db.IProfilesTable;
-import io.finn.signald.db.Recipient;
+import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
@@ -132,6 +129,8 @@ public class RefreshProfileJob implements Job {
     }
 
     db.ProfilesTable.setBadges(recipient, encryptedProfile.getBadges());
+
+    db.ProfileCapabilitiesTable.set(recipient, new IProfileCapabilitiesTable.Capabilities(encryptedProfile.getCapabilities()));
   }
 
   private IProfileKeysTable.UnidentifiedAccessMode getUnidentifiedAccessMode(String unidentifiedAccessVerifier, boolean unrestrictedUnidentifiedAccess) throws SQLException {
