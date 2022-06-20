@@ -6,7 +6,6 @@ import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 
 public class SenderKeyGroupEventsLogger implements SignalServiceMessageSender.SenderKeyGroupEvents {
   private static final Logger logger = LogManager.getLogger();
-  public static final SenderKeyGroupEventsLogger INSTANCE = new SenderKeyGroupEventsLogger();
   private boolean syncMessageSent = false;
 
   @Override
