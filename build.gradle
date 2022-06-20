@@ -103,7 +103,7 @@ dependencies {
     implementation 'io.prometheus:simpleclient_hotspot:0.15.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.15.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3'
-    implementation 'io.sentry:sentry:5.7.4'
+    implementation 'io.sentry:sentry:6.1.2'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
 }
 
