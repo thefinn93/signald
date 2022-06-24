@@ -57,6 +57,7 @@ public class RefreshProfileJob implements Job {
     IProfilesTable.Profile profile = db.ProfilesTable.get(recipient);
     if (profile != null && System.currentTimeMillis() - profile.getLastUpdate() < MIN_REFRESH_INTERVAL) {
       logger.debug("refusing to refresh the same profile too frequently");
+      return;
     }
 
     ProfileKey profileKey = db.ProfileKeysTable.getProfileKey(recipient);
