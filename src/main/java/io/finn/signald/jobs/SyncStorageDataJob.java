@@ -2,7 +2,6 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
 import io.finn.signald.MessageReceiver;
-import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -70,7 +69,7 @@ public class SyncStorageDataJob implements Job {
     account.setStorageManifestVersion(manifest.getVersion());
 
     Optional<StorageId> accountId = manifest.getAccountStorageId();
-    if (!accountId.isPresent()) {
+    if (accountId.isEmpty()) {
       logger.warn("Manifest has no account record, ignoring.");
       return;
     }
@@ -78,18 +77,21 @@ public class SyncStorageDataJob implements Job {
     logger.debug("reading account record");
     readAccountRecord(manifest);
 
-    logger.debug("reading all records");
-    for (SignalStorageRecord record : getSignalStorageRecords(manifest.getStorageIds())) {
+    List<SignalStorageRecord> records = getSignalStorageRecords(manifest.getStorageIds());
+    logger.debug("reading all {} records", records.size());
+    for (SignalStorageRecord record : records) {
       if (record.isUnknown() || record.getType() == ManifestRecord.Identifier.Type.ACCOUNT_VALUE) {
         continue;
       }
 
       if (record.getType() == ManifestRecord.Identifier.Type.GROUPV2_VALUE) {
+        logger.debug("reading groupv2 record");
         readGroupV2Record(record);
       } else if (record.getType() == ManifestRecord.Identifier.Type.CONTACT_VALUE) {
+        logger.debug("reading contact record");
         readContactRecord(record);
       } else {
-        logger.debug("Ignoring storage record of unknown type {}", ManifestRecord.Identifier.Type.forNumber(record.getType()).name());
+        logger.debug("ignoring record of unknown type {}", ManifestRecord.Identifier.Type.forNumber(record.getType()).name());
       }
     }
     logger.debug("Done reading data from remote storage");
@@ -150,9 +152,8 @@ public class SyncStorageDataJob implements Job {
     }
   }
 
-  private void readContactRecord(final SignalStorageRecord record)
-      throws SQLException, IOException, NoSuchAccountException, ServerNotFoundException, InvalidKeyException, InvalidProxyException {
-    if (record == null || !record.getContact().isPresent()) {
+  private void readContactRecord(final SignalStorageRecord record) throws SQLException, IOException {
+    if (record == null || record.getContact().isEmpty()) {
       return;
     }
 
@@ -161,7 +162,7 @@ public class SyncStorageDataJob implements Job {
 
     Recipient recipient;
     try {
-      recipient = Database.Get(account.getACI()).RecipientsTable.get(address);
+      recipient = account.getDB().RecipientsTable.get(address);
     } catch (SQLException e) {
       logger.error("error getting recipient for storage sync", e);
       Sentry.captureException(e);
@@ -169,10 +170,12 @@ public class SyncStorageDataJob implements Job {
     }
 
     if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
-      Database.Get(account.getACI()).ContactsTable.update(contactRecord);
+      logger.debug("storing contact in local database");
+      account.getDB().ContactsTable.update(contactRecord);
     }
 
     if (contactRecord.getProfileKey().isPresent()) {
+      logger.debug("storing profile key in local database");
       try {
         ProfileKey profileKey = new ProfileKey(contactRecord.getProfileKey().get());
         account.getDB().ProfileKeysTable.setProfileKey(recipient, profileKey);
@@ -181,6 +184,7 @@ public class SyncStorageDataJob implements Job {
       }
     }
     if (contactRecord.getIdentityKey().isPresent()) {
+      logger.debug("storing identity key in local database");
       try {
         IdentityKey identityKey = new IdentityKey(contactRecord.getIdentityKey().get());
         TrustLevel trustLevel = TrustLevel.fromIdentityState(contactRecord.getIdentityState());
@@ -193,12 +197,13 @@ public class SyncStorageDataJob implements Job {
 
   private void readGroupV2Record(final SignalStorageRecord record) throws NoSuchAccountException, SQLException, ServerNotFoundException, IOException, InvalidProxyException,
                                                                           InvalidInputException, InvalidGroupStateException, VerificationFailedException {
-    if (record == null || !record.getGroupV2().isPresent()) {
+    if (record == null || record.getGroupV2().isEmpty()) {
       return;
     }
 
     SignalGroupV2Record groupV2Record = record.getGroupV2().get();
     if (groupV2Record.isArchived()) {
+      logger.debug("skipping archived group");
       return;
     }
 
@@ -210,6 +215,7 @@ public class SyncStorageDataJob implements Job {
       return;
     }
 
+    logger.debug("refreshing group received from storage");
     account.getGroups().getGroup(GroupSecretParams.deriveFromMasterKey(groupMasterKey), -1);
   }
 
@@ -222,13 +228,12 @@ public class SyncStorageDataJob implements Job {
   private List<SignalStorageRecord> getSignalStorageRecords(final List<StorageId> storageIds)
       throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
     SignalServiceAccountManager accountManager = account.getSignalDependencies().getAccountManager();
-    List<SignalStorageRecord> records;
+    logger.debug("reading {} storage record(s)", storageIds.size());
     try {
-      records = accountManager.readStorageRecords(account.getStorageKey(), storageIds);
+      return accountManager.readStorageRecords(account.getStorageKey(), storageIds);
     } catch (InvalidKeyException e) {
       logger.warn("Failed to read storage records, ignoring.");
       return List.of();
     }
-    return records;
   }
 }

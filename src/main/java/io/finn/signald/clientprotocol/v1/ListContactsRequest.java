@@ -53,7 +53,7 @@ public class ListContactsRequest implements RequestType<ProfileList> {
     try {
       contacts = db.ContactsTable.getAll();
     } catch (SQLException e) {
-      throw new InternalError("failed to get all contacts", e);
+      throw new SQLError(e);
     }
 
     for (var c : contacts) {

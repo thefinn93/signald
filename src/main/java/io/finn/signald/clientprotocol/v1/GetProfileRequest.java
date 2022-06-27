@@ -17,7 +17,6 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
-import io.finn.signald.db.Database;
 import io.finn.signald.db.IContactsTable;
 import io.finn.signald.db.IProfilesTable;
 import io.finn.signald.db.Recipient;
@@ -57,7 +56,7 @@ public class GetProfileRequest implements RequestType<Profile> {
 
     IContactsTable.ContactInfo contact;
     try {
-      contact = Database.Get(a.getACI()).ContactsTable.get(recipient);
+      contact = a.getDB().ContactsTable.get(recipient);
     } catch (SQLException e) {
       throw new SQLError(e);
     }
