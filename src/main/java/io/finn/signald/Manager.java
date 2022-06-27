@@ -832,40 +832,7 @@ public class Manager {
       }
 
       if (syncMessage.getContacts().isPresent()) {
-        File tmpFile = null;
-        try {
-          tmpFile = Util.createTempFile();
-          final ContactsMessage contactsMessage = syncMessage.getContacts().get();
-          try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
-            DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
-            //            if (contactsMessage.isComplete()) {
-            //                logger.debug("contact sync includes complete set of contacts, clearly local contact list before processing");
-            //                db.ContactsTable.clear();
-            //            }
-            DeviceContact c;
-            while ((c = s.read()) != null) {
-              Recipient recipient = db.RecipientsTable.get(c.getAddress());
-              db.ContactsTable.update(c);
-              if (c.getAvatar().isPresent()) {
-                retrieveContactAvatarAttachment(c.getAvatar().get(), recipient);
-              }
-              if (c.getProfileKey().isPresent()) {
-                db.ProfileKeysTable.setProfileKey(recipient, c.getProfileKey().get());
-              }
-            }
-          }
-          logger.info("received contacts from device " + content.getSenderDevice());
-        } catch (Exception e) {
-          logger.catching(e);
-        } finally {
-          if (tmpFile != null) {
-            try {
-              Files.delete(tmpFile.toPath());
-            } catch (IOException e) {
-              logger.warn("Failed to delete received contacts temp file “" + tmpFile + "”: " + e.getMessage());
-            }
-          }
-        }
+        logger.debug("received contact sync, ignoring");
       }
 
       if (syncMessage.getVerified().isPresent()) {
