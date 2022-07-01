@@ -27,6 +27,7 @@ import org.whispersystems.util.Base64;
 public class Profile {
   private static final Logger logger = LogManager.getLogger();
   @Doc("The user's name from local contact names if available, or if not in contact list their Signal profile name") public String name;
+  @Doc("The user's name from local contact names") @JsonProperty("contact_name") public String contactName;
   @Doc("The user's Signal profile name") @JsonProperty("profile_name") public String profileName;
   @Doc("path to avatar on local disk") public String avatar;
   public JsonAddress address;
@@ -50,6 +51,7 @@ public class Profile {
       return;
     }
     name = contact.name;
+    contactName = contact.name;
     color = contact.color;
     inboxPosition = contact.inboxPosition;
     expirationTime = contact.messageExpirationTime;
