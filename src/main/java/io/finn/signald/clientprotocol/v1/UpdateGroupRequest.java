@@ -114,13 +114,9 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         for (JsonAddress member : addMembers) {
           Recipient recipient = recipientsTable.get(member);
           ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
-          if (profileKeyCredential == null) {
-            logger.warn("failed to add group member with no profile");
-            continue;
-          }
           recipients.add(recipientsTable.get(recipient.getAddress()));
           UUID uuid = recipient.getUUID();
-          candidates.add(new GroupCandidate(uuid, Optional.of(profileKeyCredential)));
+          candidates.add(new GroupCandidate(uuid, Optional.ofNullable(profileKeyCredential)));
         }
         change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
       } else if (removeMembers != null && removeMembers.size() > 0) {
