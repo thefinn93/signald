@@ -39,6 +39,7 @@ public interface IContactsTable {
   default ContactInfo update(JsonContactInfo contactInfo) throws UnregisteredUserError, InternalError, SQLException, IOException {
     return update(new ContactInfo(getACI(), contactInfo));
   }
+
   default ContactInfo update(DeviceContact c) throws SQLException, IOException {
     Recipient recipient = Database.Get(getACI()).RecipientsTable.get(c.getAddress());
     return update(recipient, c.getName().orElse(null), c.getColor().orElse(null), c.getProfileKey().isPresent() ? c.getProfileKey().get().serialize() : null,
@@ -55,6 +56,7 @@ public interface IContactsTable {
     }
     return update(recipient, name, null, contactRecord.getProfileKey().orElse(null), null, null);
   }
+
   default ContactInfo update(ContactInfo contactInfo) throws SQLException {
     return update(contactInfo.recipient, contactInfo.name, contactInfo.color, contactInfo.profileKey, contactInfo.messageExpirationTime, contactInfo.inboxPosition);
   }

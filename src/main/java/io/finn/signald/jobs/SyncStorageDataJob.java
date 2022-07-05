@@ -2,6 +2,7 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
 import io.finn.signald.MessageReceiver;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
@@ -152,6 +153,7 @@ public class SyncStorageDataJob implements Job {
     }
   }
 
+  // "contact" records appear to contain PROFILE information, not contact information
   private void readContactRecord(final SignalStorageRecord record) throws SQLException, IOException {
     if (record == null || record.getContact().isEmpty()) {
       return;
@@ -170,8 +172,17 @@ public class SyncStorageDataJob implements Job {
     }
 
     if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
-      logger.debug("storing contact in local database");
-      account.getDB().ContactsTable.update(contactRecord);
+      logger.debug("storing profile in local database");
+      Database db = account.getDB();
+      if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
+        String name;
+        if (contactRecord.getGivenName().isPresent() && contactRecord.getFamilyName().isPresent()) {
+          name = contactRecord.getGivenName().get() + "\0" + contactRecord.getFamilyName().get();
+        } else {
+          name = contactRecord.getGivenName().orElse("") + contactRecord.getFamilyName().orElse("");
+        }
+        db.ProfilesTable.setSerializedName(recipient, name);
+      }
     }
 
     if (contactRecord.getProfileKey().isPresent()) {
@@ -183,6 +194,7 @@ public class SyncStorageDataJob implements Job {
         logger.warn("Received invalid contact profile key from storage");
       }
     }
+
     if (contactRecord.getIdentityKey().isPresent()) {
       logger.debug("storing identity key in local database");
       try {
