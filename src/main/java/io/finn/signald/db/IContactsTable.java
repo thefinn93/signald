@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.whispersystems.signalservice.api.messages.multidevice.DeviceContact;
 import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.storage.SignalContactRecord;
 import org.whispersystems.util.Base64;
 
 public interface IContactsTable {
@@ -44,17 +43,6 @@ public interface IContactsTable {
     Recipient recipient = Database.Get(getACI()).RecipientsTable.get(c.getAddress());
     return update(recipient, c.getName().orElse(null), c.getColor().orElse(null), c.getProfileKey().isPresent() ? c.getProfileKey().get().serialize() : null,
                   c.getExpirationTimer().orElse(null), c.getInboxPosition().orElse(null));
-  }
-
-  default ContactInfo update(SignalContactRecord contactRecord) throws SQLException, IOException {
-    Recipient recipient = Database.Get(getACI()).RecipientsTable.get(contactRecord.getAddress());
-    String name = null;
-    if (contactRecord.getGivenName().isPresent() && contactRecord.getFamilyName().isPresent()) {
-      name = contactRecord.getGivenName().get() + " " + contactRecord.getFamilyName().get();
-    } else if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
-      name = contactRecord.getGivenName().orElse("") + contactRecord.getFamilyName().orElse("");
-    }
-    return update(recipient, name, null, contactRecord.getProfileKey().orElse(null), null, null);
   }
 
   default ContactInfo update(ContactInfo contactInfo) throws SQLException {
