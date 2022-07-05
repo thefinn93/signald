@@ -53,7 +53,12 @@ public class MessageSender {
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
       throws SQLException, IOException, InvalidInputException, NoSuchAccountException, InvalidRegistrationIdException, InvalidKeyException, InterruptedException,
              UnknownGroupException, ServerNotFoundException, ExecutionException, InvalidProxyException, InvalidCertificateException, TimeoutException {
-    return sendGroupMessage(message, group.getId(), group.getMembers());
+    List <Recipient> allTargets = group.getMembers();
+    List <Recipient> pendingMembers = group.getPendingMembers();
+    if (pendingMembers != null) {
+      allTargets.addAll(pendingMembers);
+    }
+    return sendGroupMessage(message, group.getId(), allTargets);
   }
 
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
@@ -134,6 +139,12 @@ public class MessageSender {
         if (accessPairs.isEmpty()) {
           legacyTargets.add(member);
           logger.debug("cannot send to {} using sender keys: cannot get unidentified access", member.toRedactedString());
+          continue;
+        }
+
+        if (!group.getMembers().contains(member)) {
+          legacyTargets.add(member);
+          logger.debug("cannot send to {} using sender keys: member not yet in group", member.toRedactedString());
           continue;
         }
 

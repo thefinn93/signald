@@ -27,12 +27,14 @@ import io.finn.signald.jobs.RefreshProfileJob;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.Member;
+import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
@@ -55,8 +57,8 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
-             GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+          throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
+          GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError, InvalidInputException, SQLException, IOException {
     Account a = Common.getAccount(account);
     List<Recipient> recipients = new ArrayList<>();
 
@@ -71,17 +73,13 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     }
 
     var recipientsTable = Database.Get(a.getACI()).RecipientsTable;
+    Set<GroupCandidate> candidates = new HashSet<>();
     for (JsonAddress member : members) {
-      Recipient recipient = Common.getRecipient(recipientsTable, member);
-      try {
-        RefreshProfileJob.queueIfNeeded(a, recipient);
-      } catch (SQLException e) {
-        throw new SQLError(e);
-      }
-      recipients.add(recipient);
-      if (recipient.getUUID() == null) {
-        throw new NoKnownUUIDError(recipient.getAddress().getNumber().orElse(null));
-      }
+      Recipient recipient = recipientsTable.get(member);
+      ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
+      recipients.add(recipientsTable.get(recipient.getAddress()));
+      UUID uuid = recipient.getUUID();
+      candidates.add(new GroupCandidate(uuid, Optional.ofNullable(profileKeyCredential)));
     }
 
     Member.Role role = Member.Role.DEFAULT;
@@ -102,7 +100,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
     IGroupsTable.IGroup group;
     try {
-      group = Common.getGroups(Common.getAccount(account)).createGroup(title, avatarFile, recipients, role, timer);
+      group = Common.getGroups(Common.getAccount(account)).createGroup(title, avatarFile, candidates, role, timer);
     } catch (IOException | SQLException | InvalidInputException | InvalidKeyException e) {
       throw new InternalError("error creating group", e);
     } catch (VerificationFailedException e) {

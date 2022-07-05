@@ -347,7 +347,7 @@ public class Groups {
     return groupsV2Api.getGroupJoinInfo(groupSecretParams, Optional.of(password), getAuthorizationForToday(groupSecretParams));
   }
 
-  public IGroupsTable.IGroup createGroup(String title, File avatar, List<Recipient> members, Member.Role memberRole, int timer)
+  public IGroupsTable.IGroup createGroup(String title, File avatar, Set<GroupCandidate> candidates, Member.Role memberRole, int timer)
       throws IOException, VerificationFailedException, InvalidGroupStateException, InvalidInputException, SQLException, NoSuchAccountException, ServerNotFoundException,
              InvalidKeyException, InvalidProxyException {
     GroupSecretParams groupSecretParams = GroupSecretParams.generate();
@@ -361,20 +361,6 @@ public class Groups {
     IRecipientsTable recipientsTable = account.getDB().RecipientsTable;
     ProfileKeyCredential selfProfileKeyCredential = profileKeysTable.getProfileKeyCredential(account.getSelf());
     GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfProfileKeyCredential));
-    Set<GroupCandidate> candidates = members.stream()
-                                         .map(x -> {
-                                           ProfileKeyCredential profileCredential = null;
-                                           try {
-                                             Recipient recipient = recipientsTable.get(x.getServiceId());
-                                             profileCredential = profileKeysTable.getProfileKeyCredential(recipient);
-                                           } catch (SQLException | IOException | InvalidInputException e) {
-                                             logger.error("error looking up recipient: ", e);
-                                             Sentry.captureException(e);
-                                           }
-
-                                           return new GroupCandidate(x.getUUID(), Optional.ofNullable(profileCredential));
-                                         })
-                                         .collect(Collectors.toSet());
 
     GroupsV2Operations.NewGroup newGroup = groupsV2Operations.createNewGroup(groupSecretParams, title, avatarBytes, groupCandidateSelf, candidates, memberRole, timer);
     groupsV2Api.putNewGroup(newGroup, getAuthorizationForToday(groupSecretParams));
