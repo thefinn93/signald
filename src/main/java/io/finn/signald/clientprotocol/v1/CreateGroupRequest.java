@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
-
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
@@ -57,8 +56,8 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request)
-          throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
-          GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError, InvalidInputException, SQLException, IOException {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError, NoKnownUUIDError, InvalidRequestError,
+             GroupVerificationError, InvalidGroupStateError, UnknownGroupError, UnregisteredUserError, AuthorizationFailedError, SQLError {
     Account a = Common.getAccount(account);
     List<Recipient> recipients = new ArrayList<>();
 
@@ -75,11 +74,15 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     var recipientsTable = Database.Get(a.getACI()).RecipientsTable;
     Set<GroupCandidate> candidates = new HashSet<>();
     for (JsonAddress member : members) {
-      Recipient recipient = recipientsTable.get(member);
-      ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
-      recipients.add(recipientsTable.get(recipient.getAddress()));
-      UUID uuid = recipient.getUUID();
-      candidates.add(new GroupCandidate(uuid, Optional.ofNullable(profileKeyCredential)));
+      try {
+        Recipient recipient = recipientsTable.get(member);
+        ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
+        recipients.add(recipientsTable.get(recipient.getAddress()));
+        UUID uuid = recipient.getUUID();
+        candidates.add(new GroupCandidate(uuid, Optional.ofNullable(profileKeyCredential)));
+      } catch (InvalidInputException | SQLException | IOException e) {
+        throw new InternalError("error adding member to group", e);
+      }
     }
 
     Member.Role role = Member.Role.DEFAULT;

@@ -53,8 +53,8 @@ public class MessageSender {
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
       throws SQLException, IOException, InvalidInputException, NoSuchAccountException, InvalidRegistrationIdException, InvalidKeyException, InterruptedException,
              UnknownGroupException, ServerNotFoundException, ExecutionException, InvalidProxyException, InvalidCertificateException, TimeoutException {
-    List <Recipient> allTargets = group.getMembers();
-    List <Recipient> pendingMembers = group.getPendingMembers();
+    List<Recipient> allTargets = group.getMembers();
+    List<Recipient> pendingMembers = group.getPendingMembers();
     if (pendingMembers != null) {
       allTargets.addAll(pendingMembers);
     }
