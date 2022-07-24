@@ -50,17 +50,6 @@ public class MessageSender {
     self = Database.Get(account.getACI()).RecipientsTable.get(account.getACI());
   }
 
-  public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
-      throws SQLException, IOException, InvalidInputException, NoSuchAccountException, InvalidRegistrationIdException, InvalidKeyException, InterruptedException,
-             UnknownGroupException, ServerNotFoundException, ExecutionException, InvalidProxyException, InvalidCertificateException, TimeoutException {
-    List<Recipient> allTargets = group.getMembers();
-    List<Recipient> pendingMembers = group.getPendingMembers();
-    if (pendingMembers != null) {
-      allTargets.addAll(pendingMembers);
-    }
-    return sendGroupMessage(message, group.getId(), allTargets);
-  }
-
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
       throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
              InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {

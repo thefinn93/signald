@@ -200,9 +200,13 @@ public class Common {
     } catch (IOException e) {
       throw new InternalError("error getting message sender", e);
     }
-
     try {
-      return messageSender.sendGroupMessage(message, group);
+      List<Recipient> allTargets = group.getMembers();
+      List<Recipient> pendingMembers = group.getPendingMembers();
+      if (pendingMembers != null) {
+        allTargets.addAll(pendingMembers);
+      }
+      return messageSender.sendGroupMessage(message, group.getId(), allTargets);
     } catch (SQLException e) {
       throw new SQLError(e);
     } catch (NoSuchAccountException e) {
