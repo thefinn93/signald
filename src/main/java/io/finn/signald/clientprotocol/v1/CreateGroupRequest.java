@@ -23,7 +23,6 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
-import io.finn.signald.jobs.RefreshProfileJob;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -121,7 +120,7 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     SignalServiceGroupV2 signalServiceGroupV2 = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(group.getRevision()).build();
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(signalServiceGroupV2);
 
-    Common.sendGroupMessage(a, message, group);
+    Common.sendGroupUpdateMessage(a, message, group);
 
     return new JsonGroupV2Info(group);
   }

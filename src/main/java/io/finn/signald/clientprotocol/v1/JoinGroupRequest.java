@@ -143,7 +143,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     SignalServiceGroupV2.Builder groupBuilder = SignalServiceGroupV2.newBuilder(group.getMasterKey()).withRevision(revision).withSignedGroupChange(groupChange.toByteArray());
     SignalServiceDataMessage.Builder message = SignalServiceDataMessage.newBuilder().asGroupMessage(groupBuilder.build());
 
-    Common.sendGroupMessage(a, message, group);
+    Common.sendGroupUpdateMessage(a, message, group);
 
     return new JsonGroupJoinInfo(groupJoinInfo, groupInviteLinkUrl.getGroupMasterKey());
   }

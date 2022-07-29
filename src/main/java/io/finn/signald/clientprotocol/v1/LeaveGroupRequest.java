@@ -77,7 +77,7 @@ public class LeaveGroupRequest implements RequestType<GroupInfo> {
       throw new InternalError("error committing group change", e);
     }
 
-    Common.sendGroupMessage(a, updateOutput.first(), group);
+    Common.sendGroupUpdateMessage(a, updateOutput.first(), group);
 
     try {
       group.delete();

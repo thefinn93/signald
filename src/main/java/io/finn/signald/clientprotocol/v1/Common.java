@@ -190,7 +190,7 @@ public class Common {
     }
   }
 
-  public static List<SendMessageResult> sendGroupMessage(Account account, SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
+  public static List<SendMessageResult> sendGroupUpdateMessage(Account account, SignalServiceDataMessage.Builder message, IGroupsTable.IGroup group)
       throws SQLError, InternalError, NoSuchAccountError, UnknownGroupError, ServerNotFoundError, InvalidProxyError {
     MessageSender messageSender;
     try {
@@ -205,6 +205,10 @@ public class Common {
       List<Recipient> pendingMembers = group.getPendingMembers();
       if (pendingMembers != null) {
         allTargets.addAll(pendingMembers);
+      }
+      List<Recipient> requestingMembers = group.getRequestingMembers();
+      if (requestingMembers != null) {
+        allTargets.addAll(requestingMembers);
       }
       return messageSender.sendGroupMessage(message, group.getId(), allTargets);
     } catch (SQLException e) {
@@ -330,7 +334,7 @@ public class Common {
       throw new InternalError("error committing group change", e);
     }
 
-    return sendGroupMessage(account, updateOutput.first(), group);
+    return sendGroupUpdateMessage(account, updateOutput.first(), group);
   }
 
   public static Groups getGroups(Account account) throws InvalidProxyError, NoSuchAccountError, ServerNotFoundError, InternalError {
