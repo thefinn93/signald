@@ -19,7 +19,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil;
 public class GroupMember {
   @ExampleValue(ExampleValue.REMOTE_UUID) public String uuid;
   @ExampleValue("\"DEFAULT\"") @Doc("possible values are: UNKNOWN, DEFAULT, ADMINISTRATOR and UNRECOGNIZED") public String role;
-  @JsonProperty("joined_revision") public int joinedAtRevision;
+  @JsonProperty("joined_revision") public Integer joinedAtRevision;
 
   public GroupMember(@JsonProperty("uuid") String u, @JsonProperty("role") String r) {
     uuid = u;
