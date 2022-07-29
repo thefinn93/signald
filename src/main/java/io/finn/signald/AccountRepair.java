@@ -5,6 +5,8 @@ import io.finn.signald.db.IAccountDataTable;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.jobs.BackgroundJobRunnerThread;
+import io.finn.signald.jobs.SendSyncRequestJob;
 import io.sentry.Sentry;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -13,12 +15,15 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 
 public class AccountRepair {
   private final static Logger logger = LogManager.getLogger();
   public final static int ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS = 1;
   public final static int ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED = 2;
+  public final static int ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE = 3;
 
   public static void repairAccountIfNeeded(Account account) throws SQLException {
     int lastAccountRepair = Database.Get().AccountDataTable.getInt(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR);
@@ -29,6 +34,10 @@ public class AccountRepair {
 
     if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED) {
       clearSenderKeyShared(account);
+    }
+
+    if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE) {
+      clearContactsTableIfNonPrimaryDevice(account);
     }
   }
 
@@ -60,5 +69,16 @@ public class AccountRepair {
       logger.error("error repairing groups for account {}", account.getACI().toString());
       Sentry.captureException(e);
     }
+  }
+
+  private static void clearContactsTableIfNonPrimaryDevice(Account account) throws SQLException {
+    // primary device can't get contacts via sync from other devices, so dont wipe out the contacts table
+    if (account.getDeviceId() != SignalServiceAddress.DEFAULT_DEVICE_ID) {
+      logger.info("clearing local contact list to fix potential data corruption. A contact sync from the primary device will be requested");
+      account.getDB().ContactsTable.clear();
+      BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
+    }
+
+    Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE);
   }
 }
