@@ -190,6 +190,8 @@ public class ProtocolRequest implements RequestType<JsonNode> {
       String typeName = type.getRawClass().getSimpleName();
       if ("byte[]".equals(type.getRawClass().getSimpleName())) {
         property.put("type", "String");
+      } else if ("Integer".equals(type.getRawClass().getSimpleName())) {
+        property.put("type", "int");
       } else {
         property.put("type", typeName);
         String version = RequestUtil.getVersion(type.getRawClass());

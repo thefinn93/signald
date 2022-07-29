@@ -75,7 +75,7 @@ func checkDiff() (response checkOutputs, err error) {
 						response.warnings = append(response.warnings, result.warnings...)
 					}
 				} else {
-					if field.Type != currentField.Type {
+					if field.Type != currentField.Type && !(field.Type == "int" && currentField.Type == "Integer") {
 						msg := version + "." + typeName + " field " + fieldName + " changed types"
 						fmt.Println(aurora.Red(msg))
 						stringDiff(currentField.Type, field.Type)
