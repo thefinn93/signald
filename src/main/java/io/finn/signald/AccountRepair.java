@@ -25,6 +25,8 @@ public class AccountRepair {
   public final static int ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED = 2;
   public final static int ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE = 3;
 
+  public static int getLatestVersion() { return ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE; }
+
   public static void repairAccountIfNeeded(Account account) throws SQLException {
     int lastAccountRepair = Database.Get().AccountDataTable.getInt(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR);
 

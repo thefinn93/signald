@@ -107,7 +107,7 @@ public class RegistrationManager {
     Database.Get().AccountsTable.add(e164, aci, server == null ? null : UUID.fromString(server));
     account.setPNI(pni);
 
-    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED);
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.getLatestVersion());
 
     String password = Database.Get().PendingAccountDataTable.getString(e164, IPendingAccountDataTable.Key.PASSWORD);
     account.setPassword(password);
