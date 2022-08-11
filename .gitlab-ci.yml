@@ -145,7 +145,6 @@ build deb armv7-unknown-linux-gnueabihf:
   tags: [docker-builder]
   needs: []
   before_script:
-    - sudo apt-get update && sudo apt-get install -y podman qemu-user-static
     - podman login --username "${CI_DEPENDENCY_PROXY_USER}" --password "${CI_DEPENDENCY_PROXY_PASSWORD}" "${CI_DEPENDENCY_PROXY_SERVER}"
     - podman login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
     - export VERSION="$(./version.sh | sed 's#+#-#g' | sed 's#/#-#g')"
