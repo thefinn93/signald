@@ -56,8 +56,8 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
     synchronized (receivers) {
       if (!receivers.containsKey(aci.toString())) {
         MessageReceiver r = new MessageReceiver(aci);
-        new Thread(r).start();
         receivers.put(aci.toString(), r);
+        new Thread(r).start();
       }
       receivers.get(aci.toString()).sockets.add(receiver);
     }
@@ -150,9 +150,9 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
 
   public void run() {
     boolean notifyOnConnect = true;
+    Thread.currentThread().setName(Util.redact(aci) + "-receiver");
     logger.debug("starting message receiver for " + Util.redact(aci));
     try {
-      Thread.currentThread().setName(Util.redact(aci) + "-receiver");
       while (sockets.size() > 0) {
         double timeout = 3600;
         boolean returnOnTimeout = true;
@@ -200,7 +200,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
           TimeUnit.SECONDS.sleep(backoff);
         }
       }
-      logger.debug("shutting down message receiver for " + Util.redact(aci));
+      logger.debug("final subscriber disconnected, shutting down message receiver for " + Util.redact(aci));
     } catch (Exception e) {
       logger.error("shutting down message receiver for " + Util.redact(aci), e);
       Sentry.captureException(e);
