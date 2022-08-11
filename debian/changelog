@@ -1,3 +1,13 @@
+signald (0.21.0) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.21.0
+  * fix adding members without a known profile key to a group
+  * fix bug where profile information was stored in contacts table
+    * to clean up incorrect storage, linked accounts (accounts where device id is not 1) will have their contact list wiped and a new contact list sync will be requested
+
+
+ -- Finn <finn@janky.solutions>  Thu, 11 Aug 2022 13:44:08 -0700
+
 signald (0.20.0) unstable; urgency=medium
 
   * fix duplicate sync messages (#319, #323)
