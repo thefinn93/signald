@@ -94,6 +94,7 @@ public class MessageSender {
       RefreshProfileJob.queueIfNeeded(account, self);
       legacyTargets.addAll(members);
     } else {
+      List<Recipient> currentMembers = group.getMembers();
       for (Recipient member : members) {
         if (!member.isRegistered()) {
           legacyTargets.add(member);
@@ -131,7 +132,15 @@ public class MessageSender {
           continue;
         }
 
-        if (!group.getMembers().contains(member)) {
+        boolean isCurrent = false;
+        for (Recipient m : currentMembers) {
+          if (m.equals(member)) {
+            isCurrent = true;
+            break;
+          }
+        }
+
+        if (!isCurrent) {
           legacyTargets.add(member);
           logger.debug("cannot send to {} using sender keys: member not yet in group", member.toRedactedString());
           continue;
