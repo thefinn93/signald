@@ -61,14 +61,16 @@ public class RefreshProfileJob implements Job {
     }
 
     ProfileKey profileKey = db.ProfileKeysTable.getProfileKey(recipient);
+    if (profileKey == null) {
+      return;
+    }
     SignalServiceAddress address = recipient.getAddress();
     Optional<UnidentifiedAccess> unidentifiedAccess = new UnidentifiedAccessUtil(account.getACI()).getUnidentifiedAccess();
     Locale locale = Locale.getDefault();
     ProfileService profileService = account.getSignalDependencies().getProfileService();
     ProfileAndCredential profileAndCredential;
     try {
-      Single<ServiceResponse<ProfileAndCredential>> profileServiceResponse =
-          profileService.getProfile(address, Optional.ofNullable(profileKey), unidentifiedAccess, requestType, locale);
+      Single<ServiceResponse<ProfileAndCredential>> profileServiceResponse = profileService.getProfile(address, Optional.of(profileKey), unidentifiedAccess, requestType, locale);
       profileAndCredential = new ProfileService.ProfileResponseProcessor(profileServiceResponse.blockingGet()).getResultOrThrow();
     } catch (NonSuccessfulResponseCodeException e) {
       if (e instanceof RateLimitException) {
