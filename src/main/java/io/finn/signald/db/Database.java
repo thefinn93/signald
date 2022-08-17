@@ -33,7 +33,6 @@ public class Database {
       Histogram.build().name(BuildConfig.NAME + "_sqlite_query_latency_seconds").help("sqlite latency in seconds.").labelNames("query", "write").register();
 
   private static final Map<ServiceId, Database> DatabaseInstances = new HashMap<>();
-  private static final int MAX_QUERY_ATTEMPTS = 5;
 
   public static Database Get() { return Get(ACI.from(UuidUtil.UNKNOWN_UUID)); }
   public static Database Get(ACI aci) {
@@ -196,29 +195,18 @@ public class Database {
 
   // Helpers for executing queries
   public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException {
-    int attempt = 0;
-    while (attempt < MAX_QUERY_ATTEMPTS) {
-      Histogram.Timer timer = queryLatency.labels(name, "false").startTimer();
-      try {
-        return statement.executeQuery();
-      } catch (SQLException e) {
-        if (!(e.getCause() instanceof SocketTimeoutException)) {
-          throw e;
-        }
-        if (++attempt == MAX_QUERY_ATTEMPTS) {
-          logger.fatal("socket timeout exception while talking to postgres, exiting \uD83D\uDCA5");
-          System.exit(10);
-        }
-        logger.warn("socket timeout exception while querying database, retry ({}/{})", attempt, MAX_QUERY_ATTEMPTS);
-      } finally {
-        double seconds = timer.observeDuration();
-        if (Config.getLogDatabaseTransactions()) {
-          logger.debug("executed query {} in {} ms", name, seconds * 1000);
-        }
+    Histogram.Timer timer = queryLatency.labels(name, "false").startTimer();
+    try {
+      return statement.executeQuery();
+    } catch (SQLException e) {
+      handleSQLException(e);
+      throw e;
+    } finally {
+      double seconds = timer.observeDuration();
+      if (Config.getLogDatabaseTransactions()) {
+        logger.debug("executed query {} in {} ms", name, seconds * 1000);
       }
     }
-    logger.fatal("exited query retry loop without returning, this should never happen");
-    return null;
   }
 
   public static int executeUpdate(String name, PreparedStatement statement) throws SQLException {
