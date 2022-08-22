@@ -194,12 +194,17 @@ public class Database {
   }
 
   // Helpers for executing queries
-  public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException {
+
+  public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException { return executeQuery(name, statement, true); }
+
+  public static ResultSet executeQuery(String name, PreparedStatement statement, boolean explodeOnTimeout) throws SQLException {
     Histogram.Timer timer = queryLatency.labels(name, "false").startTimer();
     try {
       return statement.executeQuery();
     } catch (SQLException e) {
-      handleSQLException(e);
+      if (explodeOnTimeout) {
+        handleSQLException(e);
+      }
       throw e;
     } finally {
       double seconds = timer.observeDuration();

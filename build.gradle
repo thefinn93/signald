@@ -87,7 +87,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_50'
+    implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_50_signald_1'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.4.0'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.4.0'
@@ -99,11 +99,11 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.3.4'
     implementation 'org.flywaydb:flyway-core:8.5.2'
     implementation 'com.google.protobuf:protobuf-javalite:3.19.4'
-    implementation 'io.prometheus:simpleclient:0.15.0'
-    implementation 'io.prometheus:simpleclient_hotspot:0.15.0'
-    implementation 'io.prometheus:simpleclient_httpserver:0.15.0'
+    implementation 'io.prometheus:simpleclient:0.16.0'
+    implementation 'io.prometheus:simpleclient_hotspot:0.16.0'
+    implementation 'io.prometheus:simpleclient_httpserver:0.16.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3'
-    implementation 'io.sentry:sentry:6.1.2'
+    implementation 'io.sentry:sentry:6.4.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
 }
 

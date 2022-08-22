@@ -686,7 +686,7 @@ public class Manager {
   }
 
   public void receiveMessages(long timeout, TimeUnit unit, boolean returnOnTimeout, boolean ignoreAttachments, ReceiveMessageHandler handler)
-      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException, NoSuchAccountException {
+      throws IOException, MissingConfigurationException, VerificationFailedException, SQLException, InvalidInputException, NoSuchAccountException, NotSavedException {
     retryFailedReceivedMessages(handler, ignoreAttachments);
 
     SignalWebSocket websocket = dependencies.getWebSocket();
@@ -707,7 +707,8 @@ public class Manager {
               long id = messageQueueTable.storeEnvelope(encryptedEnvelope);
               databaseId.setValue(id);
             } catch (SQLException e) {
-              logger.warn("Failed to store encrypted message in database, ignoring: " + e.getMessage());
+              logger.warn("Failed to store encrypted message in database: " + e.getMessage());
+              throw new NotSavedException();
             }
           });
           if (result.isPresent()) {

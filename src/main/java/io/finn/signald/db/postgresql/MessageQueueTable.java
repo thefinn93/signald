@@ -47,7 +47,7 @@ public class MessageQueueTable implements IMessageQueueTable {
       statement.setLong(11, envelope.getServerDeliveredTimestamp());
       statement.setObject(12, UUID.fromString(envelope.getServerGuid()));
       statement.setString(13, envelope.getDestinationUuid());
-      try (var envelopeIdReturn = Database.executeQuery(TABLE_NAME + "_store_name", statement)) {
+      try (var envelopeIdReturn = Database.executeQuery(TABLE_NAME + "_store_name", statement, false)) {
         if (!envelopeIdReturn.next()) {
           throw new AssertionError("error fetching ID of last row inserted while storing envelope");
         }
