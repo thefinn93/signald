@@ -1,3 +1,13 @@
+signald (0.21.1) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.21.1
+  * don't ack incoming messages to the server when sqlexception occurs storing them (postgres)
+  * fix ProofRequiredErrors becoming InternalErrors
+  * fix checking group membership list for pending members
+  * fix subscribe race condition
+
+ -- Finn <finn@janky.solutions>  Mon, 22 Aug 2022 16:14:49 -0700
+
 signald (0.21.0) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.21.0
