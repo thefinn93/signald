@@ -32,7 +32,7 @@ public class ReactRequest implements RequestType<SendResponse> {
 
   @Override
   public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, InvalidRecipientError, UnknownGroupError,
-                                                  InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+                                                  InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError, ProofRequiredError {
     Account a = Common.getAccount(username);
 
     if (timestamp > 0) {

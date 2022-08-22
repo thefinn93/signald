@@ -44,6 +44,7 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
+import org.whispersystems.signalservice.api.push.exceptions.ProofRequiredException;
 import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupPatchNotAcceptedException;
@@ -140,7 +141,8 @@ public class Common {
 
   public static List<SendMessageResult> send(Account account, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
                                              List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, InternalError, RateLimitError, InvalidRequestError,
-                                                                               NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
+                                                                               NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError,
+                                                                               ProofRequiredError {
     GroupIdentifier groupIdentifier = null;
     List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
@@ -182,6 +184,8 @@ public class Common {
       throw new InvalidProxyError(e);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
+    } catch (ProofRequiredException e) {
+      throw new ProofRequiredError(e);
     } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | TimeoutException |
              ExecutionException | InterruptedException e) {
       throw new InternalError("error sending message", e);

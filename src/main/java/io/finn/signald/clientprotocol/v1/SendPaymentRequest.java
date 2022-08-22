@@ -33,8 +33,9 @@ public class SendPaymentRequest implements RequestType<SendResponse> {
   public Long when;
 
   @Override
-  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError,
-                                                  UnknownGroupError, InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+  public SendResponse run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidBase64Error, InvalidRecipientError, UnknownGroupError, InvalidRequestError,
+             RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError, ProofRequiredError {
     Account a = Common.getAccount(account);
 
     Recipient recipient = Common.getRecipient(a.getACI(), address);
