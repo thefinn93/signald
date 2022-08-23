@@ -449,10 +449,10 @@ public class Manager {
         boolean senderCapability = db.ProfileCapabilitiesTable.get(sender, IProfileCapabilitiesTable.SENDER_KEY);
         boolean selfCapability = db.ProfileCapabilitiesTable.get(account.getSelf(), IProfileCapabilitiesTable.SENDER_KEY);
         if (e.getSenderDevice() != account.getDeviceId() && senderCapability && selfCapability) {
-          logger.debug("Received invalid message, requesting message resend.");
+          logger.info("incoming message could not be decrypted, asking sender to retry.");
           BackgroundJobRunnerThread.queue(new SendRetryMessageRequestJob(account, e, envelope));
         } else {
-          logger.debug("Received invalid message, queuing reset session action.");
+          logger.info("incoming message could not be decrypted, queuing session reset with sender");
           BackgroundJobRunnerThread.queue(new ResetSessionJob(account, sender));
         }
         throw e;
