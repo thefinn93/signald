@@ -261,7 +261,7 @@ public class Database {
 
   private static void handleSQLException(SQLException e) {
     if (e.getCause() instanceof SocketTimeoutException) {
-      logger.fatal("socket timeout exception while talking to postgres, exploding \uD83D\uDCA5");
+      logger.fatal("socket timeout exception while talking to postgres. signald will exit \uD83D\uDCA5");
       System.exit(10);
     }
   }

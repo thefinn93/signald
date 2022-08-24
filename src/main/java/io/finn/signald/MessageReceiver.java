@@ -181,7 +181,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
             this.sockets.broadcastListenStopped(e);
           }
         } catch (NotSavedException e) {
-          logger.fatal("error saving incoming message, signald will exit");
+          logger.fatal("error saving incoming message, signald will exit \uD83D\uDCA5");
           System.exit(10);
         } catch (AssertionError e) {
           this.sockets.broadcastListenStopped(e);
