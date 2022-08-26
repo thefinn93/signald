@@ -7,8 +7,9 @@
 
 package io.finn.signald.clientprotocol.v1;
 
-import io.finn.signald.*;
 import io.finn.signald.Account;
+import io.finn.signald.GroupInviteLinkUrl;
+import io.finn.signald.Groups;
 import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.annotations.ProtocolType;
@@ -37,6 +38,7 @@ import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
+import org.whispersystems.signalservice.api.push.exceptions.ContactManifestMismatchException;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 @ProtocolType("join_group")
@@ -51,7 +53,6 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throws InvalidRequestError, InvalidInviteURIError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, OwnProfileKeyDoesNotExistError,
              GroupVerificationError, GroupNotActiveError, UnknownGroupError, InvalidGroupStateError, AuthorizationFailedError, SQLError {
     Account a = Common.getAccount(account);
-    Groups groups = Common.getGroups(a);
 
     GroupInviteLinkUrl groupInviteLinkUrl;
     try {
@@ -59,6 +60,7 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     } catch (GroupInviteLinkUrl.InvalidGroupLinkException | GroupInviteLinkUrl.UnknownGroupLinkVersionException e) {
       throw new InvalidRequestError(e.getMessage());
     }
+
     if (groupInviteLinkUrl == null) {
       throw new InvalidInviteURIError();
     }
@@ -88,6 +90,8 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new InvalidProxyError(e);
     }
 
+    Groups groups = Common.getGroups(a);
+
     DecryptedGroupJoinInfo groupJoinInfo;
     try {
       groupJoinInfo = groups.getGroupJoinInfo(groupSecretParams, groupInviteLinkUrl.getPassword().serialize());
@@ -115,6 +119,8 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     try {
       groupChange = groups.commitJoinToServer(change.build(), groupInviteLinkUrl);
       decryptedChange = groupOperations.decryptChange(groupChange, false).get();
+    } catch (ContactManifestMismatchException e) {
+      throw new InternalError("joining groups from signald is currently broken, see https://gitlab.com/signald/signald/-/issues/246", e);
     } catch (IOException | SQLException | InvalidInputException e) {
       throw new InternalError("error committing group join change", e);
     } catch (VerificationFailedException e) {
