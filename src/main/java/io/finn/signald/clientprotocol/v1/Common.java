@@ -16,7 +16,10 @@ import io.finn.signald.db.Database;
 import io.finn.signald.db.IGroupsTable;
 import io.finn.signald.db.IRecipientsTable;
 import io.finn.signald.db.Recipient;
-import io.finn.signald.exceptions.*;
+import io.finn.signald.exceptions.InvalidProxyException;
+import io.finn.signald.exceptions.NoSuchAccountException;
+import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.util.GroupsUtil;
 import io.prometheus.client.Histogram;
 import java.io.IOException;
@@ -43,10 +46,7 @@ import org.whispersystems.signalservice.api.messages.SendMessageResult;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
-import org.whispersystems.signalservice.api.push.exceptions.ProofRequiredException;
-import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
-import org.whispersystems.signalservice.api.push.exceptions.UnregisteredUserException;
+import org.whispersystems.signalservice.api.push.exceptions.*;
 import org.whispersystems.signalservice.internal.push.exceptions.GroupPatchNotAcceptedException;
 import org.whispersystems.util.Base64;
 
@@ -142,7 +142,7 @@ public class Common {
   public static List<SendMessageResult> send(Account account, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
                                              List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, InternalError, RateLimitError, InvalidRequestError,
                                                                                NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError,
-                                                                               ProofRequiredError {
+                                                                               ProofRequiredError, SignalServerError {
     GroupIdentifier groupIdentifier = null;
     List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
@@ -186,6 +186,12 @@ public class Common {
       throw new AuthorizationFailedError(e);
     } catch (ProofRequiredException e) {
       throw new ProofRequiredError(e);
+    } catch (NonSuccessfulResponseCodeException e) {
+      if (e.is5xx()) {
+        throw new SignalServerError(e);
+      } else {
+        throw new InternalError(String.format("unexpected %s status code from server", e.getCode()), e);
+      }
     } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | TimeoutException |
              ExecutionException | InterruptedException e) {
       throw new InternalError("error sending message", e);

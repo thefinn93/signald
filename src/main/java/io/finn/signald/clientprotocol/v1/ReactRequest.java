@@ -31,8 +31,9 @@ public class ReactRequest implements RequestType<SendResponse> {
   @Doc("Optionally set to a sub-set of group members. Ignored if recipientGroupId isn't specified") public List<JsonAddress> members;
 
   @Override
-  public SendResponse run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, InvalidRecipientError, UnknownGroupError,
-                                                  InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError, ProofRequiredError {
+  public SendResponse run(Request request)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, InvalidRecipientError, UnknownGroupError, InvalidRequestError, RateLimitError,
+             UnregisteredUserError, AuthorizationFailedError, SQLError, ProofRequiredError, SignalServerError {
     Account a = Common.getAccount(username);
 
     if (timestamp > 0) {

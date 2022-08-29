@@ -40,8 +40,9 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
   @Doc("Optionally set to a sub-set of group members. Ignored if group isn't specified") public List<JsonAddress> members;
 
   @Override
-  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, UnknownGroupError,
-                                                  InvalidRequestError, RateLimitError, UnregisteredUserError, AuthorizationFailedError, SQLError, ProofRequiredError {
+  public SendResponse run(Request request)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, InvalidRecipientError, UnknownGroupError, InvalidRequestError, RateLimitError,
+             UnregisteredUserError, AuthorizationFailedError, SQLError, ProofRequiredError, SignalServerError {
     Account a = Common.getAccount(account);
 
     SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder();
