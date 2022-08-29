@@ -11,7 +11,7 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.UUID;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.util.Base64;
 
 public class Util {
@@ -36,7 +36,7 @@ public class Util {
 
   public static File createTempFile() throws IOException { return File.createTempFile("signald_tmp_", ".tmp"); }
 
-  public static String redact(ACI aci) { return redact(aci.toString()); }
+  public static String redact(ServiceId serviceId) { return redact(serviceId.toString()); }
 
   public static String redact(UUID uuid) { return redact(uuid.toString()); }
 
@@ -44,11 +44,11 @@ public class Util {
     if (in == null) {
       return "[null]";
     }
-    if (in.length() < 2) {
-      return new String(new char[in.length()]).replace("\0", "*");
-    }
-    int unredactAfter = in.length() - 2;
-    return new String(new char[unredactAfter]).replace("\0", "*") + in.substring(unredactAfter);
+
+    int plaintextSize = 3;
+    int redactedSize = in.length() <= plaintextSize ? in.length() : in.length() - plaintextSize;
+
+    return String.format("[redacted %s char]", redactedSize) + in.substring(redactedSize);
   }
 
   public static void copyStream(InputStream input, OutputStream output, int bufferSize) throws IOException {

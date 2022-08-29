@@ -28,6 +28,8 @@ import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.IdentityKeyPair;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.util.KeyHelper;
@@ -36,6 +38,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -44,6 +47,7 @@ import org.whispersystems.util.Base64;
 
 public class ProvisioningManager {
   private final static ConcurrentHashMap<String, ProvisioningManager> provisioningManagers = new ConcurrentHashMap<>();
+  private final static Logger logger = LogManager.getLogger();
 
   private final SignalServiceAccountManager accountManager;
   private final IdentityKeyPair identityKey;
@@ -88,8 +92,10 @@ public class ProvisioningManager {
     }
 
     if (overwrite && Database.Get().AccountsTable.exists(newDeviceRegistration.getAci())) {
+      logger.info("linking to a new account but we already have data for this account uuid locally. overwriting as requested");
       new Account(newDeviceRegistration.getAci()).delete(false);
     }
+
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
     int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
 
@@ -122,7 +128,14 @@ public class ProvisioningManager {
 
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, AccountRepair.getLatestVersion());
 
-    new RefreshPreKeysJob(account).run();
+    try {
+      new RefreshPreKeysJob(account).run();
+    } catch (AuthorizationFailedException e) {
+      logger.error("error setting up new account. See https://gitlab.com/signald/signald/-/issues/336");
+      logger.info("some things that might be useful: overwrite={} database={} password matches={} aci={} pni={}", overwrite, Database.GetConnectionType().name(),
+                  account.getPassword().equals(password), Util.redact(newDeviceRegistration.getAci()), Util.redact(newDeviceRegistration.getPni()));
+      throw e;
+    }
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.GROUPS));
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.CONTACTS));
     BackgroundJobRunnerThread.queue(new SendSyncRequestJob(account, SignalServiceProtos.SyncMessage.Request.Type.BLOCKED));

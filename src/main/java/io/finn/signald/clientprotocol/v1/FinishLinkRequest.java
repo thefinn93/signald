@@ -36,8 +36,6 @@ public class FinishLinkRequest implements RequestType<Account> {
   private static final Logger logger = LogManager.getLogger();
   @JsonProperty("device_name") public String deviceName = "signald";
   @JsonProperty("session_id") public String sessionID;
-
-  // this doesn't work yet
   @Doc("overwrite existing account data if the phone number conflicts. false by default") public boolean overwrite = false;
 
   @Override
