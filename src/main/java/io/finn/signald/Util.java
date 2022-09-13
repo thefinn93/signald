@@ -48,7 +48,7 @@ public class Util {
     int plaintextSize = 3;
     int redactedSize = in.length() <= plaintextSize ? in.length() : in.length() - plaintextSize;
 
-    return String.format("[redacted %s char]", redactedSize) + in.substring(redactedSize);
+    return String.format("[redacted %s]", redactedSize) + in.substring(redactedSize);
   }
 
   public static void copyStream(InputStream input, OutputStream output, int bufferSize) throws IOException {
