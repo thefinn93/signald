@@ -51,9 +51,12 @@ public class Config {
   @CommandLine.Option(names = {"--decrypt-timeout"}, description = "decryption timeout (in seconds). if signald detects that decryption has taken longer than this, "
                                                                    + "it will exit with code 101")
   private static int decryptionTimeout = 30;
-  @CommandLine.Option(names = {"--trust-new-keys"}, description = "when a remote key changes, set trust level to TRUSTED_UNVERIFIED instead of UNTRUSTED "
-                                                                  + "(env SIGNALD_TRUST_NEW_KEYS=true)")
+  @CommandLine.Option(names = {"--trust-new-keys"}, description = "deprecated (enabled by default now): when a remote key changes, set trust level to TRUSTED_UNVERIFIED "
+                                                                  + "instead of UNTRUSTED")
   private static boolean trustNewKeys;
+  @CommandLine.Option(names = {"--distrust-new-keys"}, description = "when a remote key changes, set trust level to UNTRUSTED instead of TRUSTED_UNVERIFIED. "
+                                                                     + "Previously the default behavior (env SIGNALD_DISTRUST_NEW_KEYS=true)")
+  private static boolean distrustNewKeys;
   @CommandLine.Option(names = {"--trust-all-keys-on-start"}, description = "mark all known keys as trusted on startup (env SIGNALD_TRUST_ALL_KEYS=true)")
   private static boolean trustAllKeys;
   @CommandLine.Option(names = {"--log-database-transactions"}, description = "log when DB transactions occur and how long they took. Note that db logs are at the debug "
@@ -117,11 +120,11 @@ public class Config {
     }
 
     if (System.getenv("SIGNALD_TRUST_NEW_KEYS") != null) {
-      trustNewKeys = Boolean.parseBoolean(System.getenv("SIGNALD_TRUST_NEW_KEYS"));
+      distrustNewKeys = Boolean.parseBoolean(System.getenv("SIGNALD_DISTRUST_NEW_KEYS"));
     }
 
-    if (trustNewKeys) {
-      logger.info("new keys will be marked as TRUSTED_UNVERIFIED instead of UNTRUSTED");
+    if (distrustNewKeys) {
+      logger.info("new keys will be marked as UNTRUSTED instead of TRUSTED_UNVERIFIED");
     }
 
     if (System.getenv("SIGNALD_TRUST_ALL_KEYS") != null) {
@@ -225,7 +228,7 @@ public class Config {
 
   public static String getSocketPath() { return socketPath; }
 
-  public static TrustLevel getNewKeyTrustLevel() { return trustNewKeys ? TrustLevel.TRUSTED_UNVERIFIED : TrustLevel.UNTRUSTED; }
+  public static TrustLevel getNewKeyTrustLevel() { return distrustNewKeys ? TrustLevel.UNTRUSTED : TrustLevel.TRUSTED_UNVERIFIED; }
 
   public static boolean getLogDatabaseTransactions() { return logDatabaseTransactions; }
 
