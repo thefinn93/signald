@@ -29,7 +29,6 @@ import org.whispersystems.util.Base64;
 public class ServersTable implements IServersTable {
   private static final String TABLE_NAME = "servers";
 
-  private static final Interceptor userAgentInterceptor = chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", BuildConfig.USER_AGENT).build());
   private static final Logger logger = LogManager.getLogger();
 
   @Override

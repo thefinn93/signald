@@ -14,6 +14,7 @@ import io.finn.signald.Config;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.util.JSONUtil;
+import io.prometheus.client.Counter;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -22,9 +23,12 @@ import java.security.cert.CertificateException;
 import java.sql.SQLException;
 import java.util.*;
 import okhttp3.Interceptor;
+import okhttp3.Request;
+import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ecc.Curve;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
@@ -157,6 +161,7 @@ public interface IServersTable {
     private List<Interceptor> getInterceptors() {
       List<Interceptor> interceptors = new ArrayList<>();
       interceptors.add(userAgentInterceptor);
+      interceptors.add(new MetricsInterceptor());
       if (Config.getLogHttpRequests()) {
         HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
         httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
@@ -221,5 +226,19 @@ public interface IServersTable {
     public String getCdsMrenclave() { return cdsMrenclave; }
 
     public byte[] getIasCa() { return iasCa; }
+  }
+
+  class MetricsInterceptor implements Interceptor {
+    static final Counter requests =
+        Counter.build().name(BuildConfig.NAME + "_http_requests_total").help("number http requests sent to the server").labelNames("domain", "status").register();
+
+    @NotNull
+    @Override
+    public Response intercept(@NotNull Chain chain) throws IOException {
+      Request request = chain.request();
+      Response response = chain.proceed(request);
+      requests.labels(request.url().host(), String.valueOf(response.code())).inc();
+      return response;
+    }
   }
 }
