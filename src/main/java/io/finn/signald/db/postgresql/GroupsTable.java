@@ -18,6 +18,7 @@ import io.finn.signald.db.Recipient;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.FileUtil;
 import io.finn.signald.util.GroupsUtil;
 import io.sentry.Sentry;
 import java.io.*;
@@ -233,7 +234,7 @@ public class GroupsTable implements IGroupsTable {
       GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
       GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(account.getServiceConfiguration()).forGroup(groupSecretParams);
 
-      File tmpFile = Util.createTempFile();
+      File tmpFile = FileUtil.createTempFile();
       try (InputStream input =
                account.getSignalDependencies().getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
         byte[] encryptedData = Util.readFully(input);

@@ -9,7 +9,6 @@ package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
 import io.finn.signald.MessageSender;
-import io.finn.signald.Util;
 import io.finn.signald.db.Database;
 import io.finn.signald.db.IIdentityKeysTable;
 import io.finn.signald.exceptions.InvalidAddressException;
@@ -39,7 +38,7 @@ public class SendContactsSyncJob implements Job {
   @Override
   public void run() throws IOException, UntrustedIdentityException, SQLException, InvalidKeyException, InvalidAddressException, NoSuchAccountException, ServerNotFoundException,
                            InvalidProxyException {
-    File contactsFile = Util.createTempFile();
+    File contactsFile = FileUtil.createTempFile();
     var protocolStore = account.getProtocolStore();
 
     try {

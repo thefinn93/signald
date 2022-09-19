@@ -59,12 +59,18 @@ public class FileUtil {
     if (recipient.getUUID() == null) {
       return null;
     }
-    File f = new File(avatarsPath, recipient.getUUID().toString());
+
+    File f = getProfileAvatarFile(recipient);
     if (!f.exists()) {
       return null;
     }
+
     return f.getAbsolutePath();
   }
+
+  public static File getProfileAvatarFile(Recipient recipient) { return new File(avatarsPath, recipient.getUUID().toString()); }
+
+  public static File createTempFile() throws IOException { return File.createTempFile("signald_tmp_", ".tmp"); }
 
   public static Optional<SignalServiceAttachmentStream> createContactAvatarAttachment(Recipient recipient) throws IOException {
     File file = getContactAvatarFile(recipient);

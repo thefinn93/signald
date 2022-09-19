@@ -88,7 +88,7 @@ public class SetProfile implements RequestType<Empty> {
     if (avatarFile != null) {
       avatar = new File(avatarFile).getAbsolutePath();
     } else {
-      FileUtil.getProfileAvatarPath(self);
+      avatar = FileUtil.getProfileAvatarPath(self);
     }
 
     if (name == null) {

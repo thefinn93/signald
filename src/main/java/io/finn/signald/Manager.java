@@ -13,6 +13,7 @@ import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.*;
 import io.finn.signald.jobs.*;
+import io.finn.signald.util.FileUtil;
 import io.finn.signald.util.MutableLong;
 import io.finn.signald.util.SafetyNumberHelper;
 import io.finn.signald.util.UnidentifiedAccessUtil;
@@ -835,7 +836,7 @@ public class Manager {
       if (syncMessage.getContacts().isPresent()) {
         File tmpFile = null;
         try {
-          tmpFile = Util.createTempFile();
+          tmpFile = FileUtil.createTempFile();
           final ContactsMessage contactsMessage = syncMessage.getContacts().get();
           try (InputStream attachmentAsStream = retrieveAttachmentAsStream(contactsMessage.getContactsStream().asPointer(), tmpFile)) {
             DeviceContactsInputStream s = new DeviceContactsInputStream(attachmentAsStream);
@@ -1034,7 +1035,7 @@ public class Manager {
 
     final SignalServiceMessageReceiver messageReceiver = dependencies.getMessageReceiver();
 
-    File tmpFile = Util.createTempFile();
+    File tmpFile = FileUtil.createTempFile();
     try (InputStream input = messageReceiver.retrieveAttachment(pointer, tmpFile, ServiceConfig.MAX_ATTACHMENT_SIZE)) {
       try (OutputStream output = new FileOutputStream(outputFile)) {
         byte[] buffer = new byte[4096];

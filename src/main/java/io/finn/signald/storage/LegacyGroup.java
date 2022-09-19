@@ -20,6 +20,7 @@ import io.finn.signald.Manager;
 import io.finn.signald.ServiceConfig;
 import io.finn.signald.Util;
 import io.finn.signald.clientprotocol.v1.JsonGroupV2Info;
+import io.finn.signald.util.FileUtil;
 import io.finn.signald.util.GroupsUtil;
 import io.sentry.Sentry;
 import java.io.*;
@@ -161,7 +162,7 @@ public class LegacyGroup {
     GroupSecretParams groupSecretParams = GroupSecretParams.deriveFromMasterKey(masterKey);
     GroupsV2Operations.GroupOperations groupOperations = GroupsUtil.GetGroupsV2Operations(m.getServiceConfiguration()).forGroup(groupSecretParams);
 
-    File tmpFile = Util.createTempFile();
+    File tmpFile = FileUtil.createTempFile();
     try (InputStream input = m.getMessageReceiver().retrieveGroupsV2ProfileAvatar(group.getAvatar(), tmpFile, ServiceConfig.AVATAR_DOWNLOAD_FAILSAFE_MAX_SIZE)) {
       byte[] encryptedData = Util.readFully(input);
       byte[] decryptedData = groupOperations.decryptAvatar(encryptedData);

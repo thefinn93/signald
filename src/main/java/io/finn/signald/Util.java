@@ -34,8 +34,6 @@ public class Util {
     }
   }
 
-  public static File createTempFile() throws IOException { return File.createTempFile("signald_tmp_", ".tmp"); }
-
   public static String redact(ServiceId serviceId) { return redact(serviceId.toString()); }
 
   public static String redact(UUID uuid) { return redact(uuid.toString()); }

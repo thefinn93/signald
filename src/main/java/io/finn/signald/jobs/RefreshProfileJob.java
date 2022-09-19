@@ -8,13 +8,15 @@
 package io.finn.signald.jobs;
 
 import io.finn.signald.Account;
+import io.finn.signald.Util;
 import io.finn.signald.db.*;
 import io.finn.signald.exceptions.InvalidProxyException;
 import io.finn.signald.exceptions.NoSuchAccountException;
 import io.finn.signald.exceptions.ServerNotFoundException;
+import io.finn.signald.util.FileUtil;
 import io.finn.signald.util.UnidentifiedAccessUtil;
 import io.reactivex.rxjava3.core.Single;
-import java.io.IOException;
+import java.io.*;
 import java.sql.SQLException;
 import java.util.Locale;
 import java.util.Optional;
@@ -24,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
+import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.ProfileCipher;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
@@ -41,6 +44,7 @@ public class RefreshProfileJob implements Job {
   private static final Logger logger = LogManager.getLogger();
   public static final long PROFILE_REFRESH_INTERVAL = TimeUnit.HOURS.toMillis(4);
   public static final long MIN_REFRESH_INTERVAL = TimeUnit.MINUTES.toMillis(30);
+  public static final int AVATAR_MAX_SIZE = 10 * 1024 * 1024;
 
   private final Account account;
   private final Recipient recipient;
@@ -134,6 +138,20 @@ public class RefreshProfileJob implements Job {
     db.ProfilesTable.setBadges(recipient, encryptedProfile.getBadges());
 
     db.ProfileCapabilitiesTable.set(recipient, new IProfileCapabilitiesTable.Capabilities(encryptedProfile.getCapabilities()));
+
+    String avatarPath = encryptedProfile.getAvatar();
+    if (avatarPath != null) {
+      SignalServiceMessageReceiver receiver = account.getSignalDependencies().getMessageReceiver();
+      File tempFile = FileUtil.createTempFile();
+      try (InputStream input = receiver.retrieveProfileAvatar(avatarPath, tempFile, profileKey, AVATAR_MAX_SIZE)) {
+        File dest = FileUtil.getProfileAvatarFile(recipient);
+        try (OutputStream output = new FileOutputStream(dest)) {
+          Util.copyStream(input, output);
+        }
+      } finally {
+        tempFile.delete();
+      }
+    }
   }
 
   private IProfileKeysTable.UnidentifiedAccessMode getUnidentifiedAccessMode(String unidentifiedAccessVerifier, boolean unrestrictedUnidentifiedAccess) throws SQLException {
