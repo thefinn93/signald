@@ -1,3 +1,14 @@
+signald (0.22.0) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.22.0
+  * Trust new keys by default, to conform to most other Signal client's behavior
+  * New metrics to track response codes from server
+  * Add `SignalServerError` response error for HTTP 500s from the Signal server
+  * Assorted logging improvements
+
+
+ -- Finn <finn@janky.solutions>  Mon, 19 Sep 2022 13:29:15 -0700
+
 signald (0.21.1) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.21.1

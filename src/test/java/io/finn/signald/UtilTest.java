@@ -11,14 +11,14 @@ public class UtilTest {
   @Test
   @DisplayName("redaction tests")
   void redact() {
-    Assertions.assertEquals("[redacted 1 char]est", Util.redact("test"));
-    Assertions.assertEquals("[redacted 3 char]", Util.redact("aaa"));
-    Assertions.assertEquals("[redacted 1 char]", Util.redact("a"));
-    Assertions.assertEquals("[redacted 0 char]", Util.redact(""));
+    Assertions.assertEquals("[redacted 1]est", Util.redact("test"));
+    Assertions.assertEquals("[redacted 3]", Util.redact("aaa"));
+    Assertions.assertEquals("[redacted 1]", Util.redact("a"));
+    Assertions.assertEquals("[redacted 0]", Util.redact(""));
 
     UUID u = UUID.fromString("a59eef85-fd26-4f4f-bf7b-d4948e28b230");
-    Assertions.assertEquals("[redacted 33 char]230", Util.redact(u));
-    Assertions.assertEquals("[redacted 33 char]230", Util.redact(ACI.from(u)));
-    Assertions.assertEquals("[redacted 33 char]230", Util.redact(PNI.from(u)));
+    Assertions.assertEquals("[redacted 33]230", Util.redact(u));
+    Assertions.assertEquals("[redacted 33]230", Util.redact(ACI.from(u)));
+    Assertions.assertEquals("[redacted 33]230", Util.redact(PNI.from(u)));
   }
 }
