@@ -55,12 +55,12 @@ public class IncomingMessage {
 
     if (!envelope.isUnidentifiedSender()) {
       source = new JsonAddress(Common.getRecipient(aci, envelope.getSourceAddress()));
+      if (envelope.hasSourceDevice()) {
+        sourceDevice = envelope.getSourceDevice();
+      }
     } else if (content != null) {
       source = new JsonAddress(Common.getRecipient(aci, content.getSender()));
-    }
-
-    if (envelope.hasSourceDevice()) {
-      sourceDevice = envelope.getSourceDevice();
+      sourceDevice = content.getSenderDevice();
     }
 
     type = SignalServiceProtos.Envelope.Type.forNumber(envelope.getType()).toString();
