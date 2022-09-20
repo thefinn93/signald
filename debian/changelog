@@ -1,3 +1,11 @@
+signald (0.22.1) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.22.1
+  * fix downloading profile avatar images
+  * fix source device value for incoming messages
+
+ -- Finn <finn@janky.solutions>  Tue, 20 Sep 2022 11:57:55 -0700
+
 signald (0.22.0) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.22.0
