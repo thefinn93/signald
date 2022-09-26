@@ -22,7 +22,8 @@ public class TextAttachment {
   @JsonProperty("background_gradient") public Gradient backgroundGradient;
   @JsonProperty("background_color") public String backgroundColor;
 
-  public TextAttachment(SignalServiceTextAttachment t, ACI aci) throws NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, InternalError, InvalidProxyError {
+  public TextAttachment(SignalServiceTextAttachment t, ACI aci)
+      throws NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, InternalError, InvalidProxyError, NetworkError {
     if (t.getText().isPresent()) {
       text = t.getText().get();
     }

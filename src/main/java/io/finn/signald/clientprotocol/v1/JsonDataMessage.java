@@ -74,7 +74,8 @@ public class JsonDataMessage {
 
   @JsonProperty("story_context") public StoryContext storyContext;
 
-  public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  public JsonDataMessage(SignalServiceDataMessage dataMessage, ACI aci)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, NetworkError {
     timestamp = dataMessage.getTimestamp();
 
     if (dataMessage.getAttachments().isPresent()) {

@@ -26,7 +26,8 @@ public class JsonPreview {
 
   public JsonPreview() {}
 
-  public JsonPreview(SignalServicePreview preview, ACI aci) throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError {
+  public JsonPreview(SignalServicePreview preview, ACI aci)
+      throws InternalError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError, NetworkError {
     url = preview.getUrl();
     title = preview.getTitle();
     description = preview.getDescription();

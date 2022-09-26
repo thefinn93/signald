@@ -14,6 +14,7 @@ import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.util.Optional;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
@@ -47,7 +48,7 @@ public class SendSyncMessageRequest implements RequestType<JsonSendMessageResult
 
   @Override
   public JsonSendMessageResult run(Request request) throws InvalidRequestError, RateLimitError, InternalError, UnregisteredUserError, NoSuchAccountError, ServerNotFoundError,
-                                                           InvalidProxyError, AuthorizationFailedError, SQLError {
+                                                           InvalidProxyError, AuthorizationFailedError, SQLError, NetworkError {
     Manager manager = Common.getManager(account);
 
     final SignalServiceSyncMessage syncMessage;
@@ -72,6 +73,8 @@ public class SendSyncMessageRequest implements RequestType<JsonSendMessageResult
       throw new RateLimitError(e);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
+    } catch (UnknownHostException e) {
+      throw new NetworkError(e);
     } catch (IOException e) {
       throw new InternalError("error sending message", e);
     } catch (UntrustedIdentityException e) {

@@ -83,7 +83,8 @@ public class JsonAttachment {
     }
   }
 
-  public JsonAttachment(SignalServiceAttachment attachment, ACI aci) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
+  public JsonAttachment(SignalServiceAttachment attachment, ACI aci)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, NetworkError {
     this(attachment);
     if (attachment.isPointer()) {
       File file = Common.getManager(aci).getAttachmentFile(id);

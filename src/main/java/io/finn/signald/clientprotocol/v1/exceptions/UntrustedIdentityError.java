@@ -22,7 +22,7 @@ public class UntrustedIdentityError extends ExceptionWrapper {
   @JsonProperty("identity_key") public IdentityKey identityKey;
 
   UntrustedIdentityError(ACI aci, String identifier, org.signal.libsignal.protocol.IdentityKey libsignalIdentityKey)
-      throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, AuthorizationFailedError {
+      throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, AuthorizationFailedError, NetworkError {
     this.identifier = identifier;
     Manager m = Common.getManager(aci);
     Recipient recipient = Common.getRecipient(aci, identifier);
@@ -34,12 +34,8 @@ public class UntrustedIdentityError extends ExceptionWrapper {
     }
   }
 
-  public UntrustedIdentityError(ACI aci, UntrustedIdentityException e) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError {
+  public UntrustedIdentityError(ACI aci, UntrustedIdentityException e)
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, NetworkError {
     this(aci, e.getIdentifier(), e.getIdentityKey());
-  }
-
-  public UntrustedIdentityError(ACI aci, org.signal.libsignal.protocol.UntrustedIdentityException e)
-      throws InternalError, ServerNotFoundError, InvalidProxyError, NoSuchAccountError, AuthorizationFailedError {
-    this(aci, e.getName(), e.getUntrustedIdentity());
   }
 }

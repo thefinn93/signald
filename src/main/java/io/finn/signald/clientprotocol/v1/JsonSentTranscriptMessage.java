@@ -25,7 +25,8 @@ public class JsonSentTranscriptMessage {
   public Map<String, String> unidentifiedStatus = new HashMap<>();
   public boolean isRecipientUpdate;
 
-  JsonSentTranscriptMessage(SentTranscriptMessage s, ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  JsonSentTranscriptMessage(SentTranscriptMessage s, ACI aci)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, NetworkError {
     if (s.getDestination().isPresent()) {
       destination = new JsonAddress(s.getDestination().get());
     }

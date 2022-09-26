@@ -47,8 +47,9 @@ public class TrustRequest implements RequestType<Empty> {
   public String trustLevel = "TRUSTED_VERIFIED";
 
   @Override
-  public Empty run(Request request) throws InvalidRequestError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, FingerprintVersionMismatchError,
-                                           InvalidBase64Error, UnknownIdentityKeyError, InvalidFingerprintError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+  public Empty run(Request request)
+      throws InvalidRequestError, InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, FingerprintVersionMismatchError, InvalidBase64Error,
+             UnknownIdentityKeyError, InvalidFingerprintError, UnregisteredUserError, AuthorizationFailedError, SQLError, NetworkError {
     TrustLevel level;
     try {
       level = TrustLevel.valueOf(trustLevel.toUpperCase());

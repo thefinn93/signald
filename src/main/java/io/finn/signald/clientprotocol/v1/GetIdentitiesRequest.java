@@ -31,7 +31,7 @@ public class GetIdentitiesRequest implements RequestType<IdentityKeyList> {
 
   @Override
   public IdentityKeyList run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError, SQLError {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnregisteredUserError, AuthorizationFailedError, SQLError, NetworkError {
     Manager m = Common.getManager(account);
     Recipient recipient = Common.getRecipient(m.getACI(), address);
     List<IIdentityKeysTable.IdentityKeyRow> identities = null;

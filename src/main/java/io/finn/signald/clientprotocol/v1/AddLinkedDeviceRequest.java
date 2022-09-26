@@ -17,6 +17,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
@@ -30,10 +31,13 @@ public class AddLinkedDeviceRequest implements RequestType<Empty> {
   @ExampleValue(ExampleValue.LINKING_URI) @Doc("the sgnl://linkdevice uri provided (typically in qr code form) by the new device") @Required public String uri;
 
   @Override
-  public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InvalidRequestError, InternalError, AuthorizationFailedError, SQLError {
+  public Empty run(Request request)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InvalidRequestError, InternalError, AuthorizationFailedError, SQLError, NetworkError {
     Manager m = Common.getManager(account);
     try {
       m.addDeviceLink(new URI(uri));
+    } catch (UnknownHostException e) {
+      throw new NetworkError(e);
     } catch (IOException | InvalidKeyException | SQLException e) {
       throw new InternalError("error adding device", e);
     } catch (InvalidInputException | URISyntaxException e) {

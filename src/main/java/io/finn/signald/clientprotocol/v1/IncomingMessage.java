@@ -42,7 +42,7 @@ public class IncomingMessage {
   @JsonProperty("server_guid") public String serverGuid;
 
   public IncomingMessage(SignalServiceEnvelope envelope, SignalServiceContent content, ACI aci)
-      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError, SQLException {
+      throws NoSuchAccountError, InternalError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError, SQLException, NetworkError {
     try {
       account = Database.Get().AccountsTable.getE164(aci);
     } catch (NoSuchAccountException e) {

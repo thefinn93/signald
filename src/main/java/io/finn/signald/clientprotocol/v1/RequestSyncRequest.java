@@ -39,8 +39,8 @@ public class RequestSyncRequest implements RequestType<Empty> {
   @Doc("request storage service keys") public boolean keys = true;
 
   @Override
-  public Empty run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UntrustedIdentityError, InvalidRequestError, AuthorizationFailedError, SQLError {
+  public Empty run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UntrustedIdentityError, InvalidRequestError,
+                                           AuthorizationFailedError, SQLError, NetworkError {
     Account account = Common.getAccount(accountIdentifier);
 
     if (groups) {
@@ -67,7 +67,7 @@ public class RequestSyncRequest implements RequestType<Empty> {
   }
 
   private void sendSyncRequest(Account account, SignalServiceProtos.SyncMessage.Request.Type type)
-      throws ServerNotFoundError, InvalidProxyError, NoSuchAccountError, InternalError, UntrustedIdentityError, AuthorizationFailedError {
+      throws ServerNotFoundError, InvalidProxyError, NoSuchAccountError, InternalError, UntrustedIdentityError, AuthorizationFailedError, NetworkError {
     try {
       new SendSyncRequestJob(account, type).run();
     } catch (NoSuchAccountException e) {

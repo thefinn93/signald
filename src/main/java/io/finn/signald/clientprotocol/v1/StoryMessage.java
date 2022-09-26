@@ -20,7 +20,8 @@ public class StoryMessage {
   public TextAttachment text;
   @JsonProperty("allow_replies") public Boolean allowReplies;
 
-  public StoryMessage(SignalServiceStoryMessage m, ACI aci) throws NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, InternalError, InvalidProxyError {
+  public StoryMessage(SignalServiceStoryMessage m, ACI aci)
+      throws NoSuchAccountError, ServerNotFoundError, AuthorizationFailedError, InternalError, InvalidProxyError, NetworkError {
     if (m.getGroupContext().isPresent()) {
       group = new JsonGroupV2Info(m.getGroupContext().get(), aci);
     }

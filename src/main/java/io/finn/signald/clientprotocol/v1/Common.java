@@ -23,6 +23,7 @@ import io.finn.signald.exceptions.UnknownGroupException;
 import io.finn.signald.util.GroupsUtil;
 import io.prometheus.client.Histogram;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,20 +75,21 @@ public class Common {
     }
   }
 
-  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
+  static Manager getManager(String identifier) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError, NetworkError {
     return getManager(identifier, false);
   }
 
   static Manager getManager(String identifier, boolean offline)
-      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError, NetworkError {
     return getManager(getACIFromIdentifier(identifier), offline);
   }
 
-  public static Manager getManager(ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  public static Manager getManager(ACI aci) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, NetworkError {
     return getManager(aci, false);
   }
 
-  public static Manager getManager(ACI aci, boolean offline) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError {
+  public static Manager getManager(ACI aci, boolean offline)
+      throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, NetworkError {
     Manager m;
     try {
       m = Manager.get(aci, offline);
@@ -99,6 +101,8 @@ public class Common {
       throw new ServerNotFoundError(e);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
+    } catch (UnknownHostException e) {
+      throw new NetworkError(e);
     } catch (IOException | SQLException | InvalidKeyException e) {
       throw new InternalError("error getting manager", e);
     }

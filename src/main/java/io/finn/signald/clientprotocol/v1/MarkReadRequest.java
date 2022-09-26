@@ -50,7 +50,7 @@ public class MarkReadRequest implements RequestType<Empty> {
 
   @Override
   public Empty run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, UntrustedIdentityError, UnregisteredUserError,
-                                           AuthorizationFailedError, SQLError, InvalidRequestError, ProofRequiredError {
+                                           AuthorizationFailedError, SQLError, InvalidRequestError, ProofRequiredError, NetworkError {
     if (when == null) {
       when = System.currentTimeMillis();
     }

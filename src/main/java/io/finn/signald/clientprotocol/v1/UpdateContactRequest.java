@@ -32,9 +32,10 @@ public class UpdateContactRequest implements RequestType<Profile> {
   @JsonProperty("inbox_position") public Integer inboxPosition;
 
   @Override
-  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError {
+  public Profile run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, InternalError, AuthorizationFailedError, SQLError, NetworkError {
+    Manager m = Common.getManager(account);
+
     try {
-      Manager m = Common.getManager(account);
       var c = new IContactsTable.ContactInfo();
       c.recipient = Database.Get(m.getACI()).RecipientsTable.get(address);
       c.name = name;

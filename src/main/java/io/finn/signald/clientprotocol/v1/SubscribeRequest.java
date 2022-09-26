@@ -31,6 +31,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -109,6 +110,7 @@ public class SubscribeRequest implements RequestType<Empty> {
       exceptions.put(UntrustedIdentityException.class, UntrustedIdentityError.class);
       exceptions.put(ProtocolInvalidKeyIdException.class, ProtocolInvalidKeyIdError.class);
       exceptions.put(ProtocolNoSessionException.class, ProtocolNoSessionError.class);
+      exceptions.put(UnknownHostException.class, NetworkError.class);
     }
 
     private static final List<Class<?>> incomingTypes = new ArrayList<>();
@@ -142,7 +144,7 @@ public class SubscribeRequest implements RequestType<Empty> {
       try {
         IncomingMessage message = new IncomingMessage(envelope, content, aci);
         broadcast(new ClientMessageWrapper(account, message));
-      } catch (NoSuchAccountError | ServerNotFoundError | InvalidProxyError | InternalError | AuthorizationFailedError e) {
+      } catch (NoSuchAccountError | ServerNotFoundError | InvalidProxyError | InternalError | AuthorizationFailedError | NetworkError e) {
         logger.warn("Exception while broadcasting incoming message: " + e);
       }
     }

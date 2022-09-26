@@ -25,7 +25,8 @@ public class GetAllIdentities implements RequestType<AllIdentityKeyList> {
   @ExampleValue(ExampleValue.LOCAL_PHONE_NUMBER) @Doc("The account to interact with") @Required public String account;
 
   @Override
-  public AllIdentityKeyList run(Request request) throws InvalidProxyError, NoSuchAccountError, ServerNotFoundError, InternalError, AuthorizationFailedError, SQLError {
+  public AllIdentityKeyList run(Request request)
+      throws InvalidProxyError, NoSuchAccountError, ServerNotFoundError, InternalError, AuthorizationFailedError, SQLError, NetworkError {
     Manager m = Common.getManager(account);
     try {
       return new AllIdentityKeyList(m.getOwnRecipient(), m.getIdentity(), m.getIdentities());

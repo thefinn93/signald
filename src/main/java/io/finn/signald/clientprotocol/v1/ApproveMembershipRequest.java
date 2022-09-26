@@ -43,7 +43,7 @@ public class ApproveMembershipRequest implements RequestType<JsonGroupV2Info> {
 
   @Override
   public JsonGroupV2Info run(Request request) throws NoSuchAccountError, ServerNotFoundError, InvalidProxyError, UnknownGroupError, InternalError, GroupVerificationError,
-                                                     InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
+                                                     InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError, NetworkError {
     Manager m = Common.getManager(account);
     Account a = Common.getAccount(account);
 

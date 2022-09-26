@@ -18,6 +18,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.List;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
@@ -37,7 +38,7 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
   @Override
   public SendResponse run(Request request)
       throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError,
-             UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError {
+             UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError, NetworkError {
     List<SendMessageResult> results;
 
     if (group != null) {
@@ -54,6 +55,8 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
       Recipient recipient = Common.getRecipient(m.getACI(), address);
       try {
         results = m.setExpiration(recipient, expiration);
+      } catch (UnknownHostException e) {
+        throw new NetworkError(e);
       } catch (IOException | SQLException e) {
         throw new InternalError("error setting expiration", e);
       }

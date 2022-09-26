@@ -25,6 +25,7 @@ import io.finn.signald.exceptions.ServerNotFoundException;
 import io.finn.signald.jobs.BackgroundJobRunnerThread;
 import io.finn.signald.jobs.RefreshProfileJob;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import org.apache.logging.log4j.LogManager;
@@ -44,7 +45,7 @@ public class ListContactsRequest implements RequestType<ProfileList> {
 
   @Override
   public ProfileList run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError, InvalidRequestError {
+      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, AuthorizationFailedError, SQLError, InvalidRequestError, NetworkError {
     Account a = Common.getAccount(account);
     ProfileList list = new ProfileList();
     Database db = a.getDB();
@@ -78,14 +79,16 @@ public class ListContactsRequest implements RequestType<ProfileList> {
           action.run();
         } catch (NotFoundException | AuthorizationFailedException | InvalidKeyException e) {
           logger.warn("error refreshing profile:", e);
-        } catch (SQLException | IOException e) {
-          throw new InternalError("error refreshing profile", e);
         } catch (NoSuchAccountException e) {
           throw new NoSuchAccountError(e);
         } catch (ServerNotFoundException e) {
           throw new ServerNotFoundError(e);
         } catch (InvalidProxyException e) {
           throw new InvalidProxyError(e);
+        } catch (UnknownHostException e) {
+          throw new NetworkError(e);
+        } catch (SQLException | IOException e) {
+          throw new InternalError("error refreshing profile", e);
         }
       }
 
