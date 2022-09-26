@@ -148,6 +148,8 @@ public class RefreshProfileJob implements Job {
         try (OutputStream output = new FileOutputStream(dest)) {
           Util.copyStream(input, output);
         }
+      } catch (NonSuccessfulResponseCodeException e) {
+        logger.info("error downloading profile avatar: {}", e.getCode());
       } finally {
         tempFile.delete();
       }
