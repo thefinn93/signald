@@ -1,3 +1,10 @@
+signald (0.22.2) unstable; urgency=medium
+
+  * a small patch release convert several catch InternalErrors and convert them to more appropriate error types
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.22.2
+
+ -- Finn <finn@janky.solutions>  Wed, 05 Oct 2022 14:16:24 -0700
+
 signald (0.22.1) unstable; urgency=medium
 
   * Full release notes at https://gitlab.com/signald/signald/-/releases/0.22.1
