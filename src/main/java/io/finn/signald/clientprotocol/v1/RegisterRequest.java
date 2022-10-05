@@ -17,6 +17,7 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.CaptchaRequiredError;
 import io.finn.signald.clientprotocol.v1.exceptions.InvalidProxyError;
+import io.finn.signald.clientprotocol.v1.exceptions.RateLimitError;
 import io.finn.signald.clientprotocol.v1.exceptions.ServerNotFoundError;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.whispersystems.signalservice.api.push.exceptions.CaptchaRequiredException;
+import org.whispersystems.signalservice.api.push.exceptions.RateLimitException;
 
 @ProtocolType("register")
 @Doc("begin the account registration process by requesting a phone number verification code. when the code is received, submit it with a verify request")
@@ -38,7 +40,7 @@ public class RegisterRequest implements RequestType<Account> {
   public String server = BuildConfig.DEFAULT_SERVER_UUID;
 
   @Override
-  public Account run(Request request) throws CaptchaRequiredError, ServerNotFoundError, InvalidProxyError {
+  public Account run(Request request) throws CaptchaRequiredError, ServerNotFoundError, InvalidProxyError, RateLimitError {
     RegistrationManager m;
     try {
       m = RegistrationManager.get(account, UUID.fromString(server));
@@ -54,6 +56,8 @@ public class RegisterRequest implements RequestType<Account> {
       m.register(voice, Optional.ofNullable(captcha), UUID.fromString(server));
     } catch (CaptchaRequiredException e) {
       throw new CaptchaRequiredError();
+    } catch (RateLimitException e) {
+      throw new RateLimitError(e);
     } catch (InvalidInputException | IOException | SQLException e) {
       throw new InternalError("error registering with server", e);
     }
