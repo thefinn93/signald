@@ -10,6 +10,7 @@ WORKDIR /tmp/src
 
 ARG CI_BUILD_REF_NAME
 ARG CI_COMMIT_SHA
+ARG USER_AGENT
 
 RUN VERSION=$(./version.sh) gradle -Dorg.gradle.daemon=false runtime
 

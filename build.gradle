@@ -118,7 +118,7 @@ buildConfig {
   buildConfigField('String', 'BRANCH', "\"" + (System.getenv("CI_BUILD_REF_NAME") ?: "") + "\"")
   buildConfigField('String', 'COMMIT', "\"" + (System.getenv("CI_COMMIT_SHA") ?: "") + "\"")
 
-  buildConfigField('String', 'USER_AGENT', System.getenv("USER_AGENT") ? "\"" + System.getenv("USER_AGENT") : "NAME + \"-\" + VERSION")
+  buildConfigField('String', 'USER_AGENT', System.getenv("USER_AGENT") ? "\"" + System.getenv("USER_AGENT") : "NAME + \"/\" + VERSION")
   buildConfigField('String', 'SIGNAL_AGENT', System.getenv("SIGNAL_AGENT") ? "\"" + System.getenv("SIGNAL_AGENT") + "\"" : "NAME")
 
   // Parameters for the default server to provision new accounts with, if not specified in the protocol.
