@@ -259,6 +259,8 @@ unit tests x86:
     when: always
     reports:
       junit: build/test-results/test/**/TEST-*.xml
+    paths:
+      - build/reports/tests/test
 
 unit tests aarch64-unknown-linux-gnu:
   <<: *testserver
