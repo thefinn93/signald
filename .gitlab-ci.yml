@@ -13,11 +13,11 @@ variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
 .testserver: &testserver
-  services:
-    - postgres
+#  services:
+#    - postgres
   variables:
     POSTGRES_PASSWORD: test
-    SIGNALD_POSTGRES_TEST_DATABASE: postgresql://postgres:test@postgres/
+#    SIGNALD_POSTGRES_TEST_DATABASE: postgresql://postgres:test@postgres/
 
 clang-format:
   image: debian:buster-backports
