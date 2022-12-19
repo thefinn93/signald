@@ -17,6 +17,7 @@ import io.finn.signald.util.GroupsUtil;
 import io.finn.signald.util.KeyUtil;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +34,7 @@ import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
+import org.whispersystems.signalservice.api.profiles.AvatarUploadParams;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
@@ -126,6 +128,8 @@ public class RegistrationManager {
     Database.Get().PendingAccountDataTable.clear(e164);
 
     account.getDB().ProfileKeysTable.setProfileKey(account.getSelf(), profileKey);
+
+    account.getSignalDependencies().getAccountManager().setVersionedProfile(aci, profileKey, "", "", "", Optional.empty(), AvatarUploadParams.unchanged(false), List.of());
 
     return Manager.get(aci);
   }
