@@ -48,7 +48,7 @@ public class LegacyAccountData {
   @Deprecated @JsonProperty("nextSignedPreKeyId") public int legacyNextSignedPreKeyId;
   @Deprecated @JsonProperty("backgroundActionsLastRun") public LegacyBackgroundActionsLastRun legacyBackgroundActionsLastRun = new LegacyBackgroundActionsLastRun();
   @Deprecated @JsonProperty("lastAccountRefresh") public int legacyLastAccountRefresh;
-  @Deprecated @JsonProperty public String legacyProfileKey;
+  @Deprecated @JsonProperty("profileKey") public String legacyProfileKey;
   @Deprecated @JsonProperty("axolotlStore") public LegacySignalProtocolStore legacyProtocolStore;
   @Deprecated @JsonProperty("recipientStore") public LegacyRecipientStore legacyRecipientStore = new LegacyRecipientStore();
   @Deprecated @JsonProperty("groupsV2") public LegacyGroupsV2Storage legacyGroupsV2;
