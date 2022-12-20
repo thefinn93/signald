@@ -87,7 +87,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_50_signald_1'
+    implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_50_signald_2'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.6.1'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.6.1'
