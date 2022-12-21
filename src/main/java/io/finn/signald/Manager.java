@@ -63,6 +63,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.*;
 import org.whispersystems.signalservice.api.messages.multidevice.*;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.MissingConfigurationException;
 import org.whispersystems.signalservice.api.storage.StorageKey;
@@ -286,12 +287,12 @@ public class Manager {
     SignalServiceAddress address = recipient.getAddress();
     try {
       try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-        messageSender.sendReceipt(address, getAccessPairFor(recipient), message);
+        messageSender.sendReceipt(address, getAccessPairFor(recipient), message, recipient.isNeedsPniSignature());
       }
       if (message.getType() == SignalServiceReceiptMessage.Type.READ) {
         List<ReadMessage> readMessages = new LinkedList<>();
         for (Long ts : message.getTimestamps()) {
-          readMessages.add(new ReadMessage(address, ts));
+          readMessages.add(new ReadMessage(address.getServiceId(), ts));
         }
         try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
           messageSender.sendSyncMessage(SignalServiceSyncMessage.forRead(readMessages), getAccessPairFor(self));
@@ -319,11 +320,12 @@ public class Manager {
       if (message.getGroupContext().isPresent()) {
         try {
           final boolean isRecipientUpdate = false;
+          final boolean isUrgent = true;
           List<SignalServiceAddress> recipientAddresses = recipients.stream().map(Recipient::getAddress).collect(Collectors.toList());
           List<SendMessageResult> result;
           result = messageSender.sendDataMessage(recipientAddresses, getAccessPairFor(recipients), isRecipientUpdate, ContentHint.DEFAULT, message,
                                                  SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
-                                                 sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false);
+                                                 sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false, isUrgent);
           for (SendMessageResult r : result) {
             if (r.getIdentityFailure() != null) {
               try {
@@ -344,7 +346,7 @@ public class Manager {
         final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(self);
         SentTranscriptMessage transcript =
             new SentTranscriptMessage(Optional.of(self.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
-                                      Collections.singletonMap(self.getAddress(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
+                                      Collections.singletonMap(self.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
         SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
 
         List<SendMessageResult> results = new ArrayList<>(recipients.size());
@@ -367,7 +369,7 @@ public class Manager {
               final Optional<UnidentifiedAccessPair> unidentifiedAccess = getAccessPairFor(recipient);
               SentTranscriptMessage transcript =
                   new SentTranscriptMessage(Optional.of(recipient.getAddress()), message.getTimestamp(), Optional.of(message), message.getExpiresInSeconds(),
-                                            Collections.singletonMap(recipient.getAddress(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
+                                            Collections.singletonMap(recipient.getAddress().getServiceId(), unidentifiedAccess.isPresent()), false, Optional.empty(), Set.of());
               SignalServiceSyncMessage syncMessage = SignalServiceSyncMessage.forSentTranscript(transcript);
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
                 messageSender.sendSyncMessage(syncMessage, unidentifiedAccess);
@@ -376,7 +378,9 @@ public class Manager {
               //              Optional.absent());
             } else {
               try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-                results.add(messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, IndividualSendEventsLogger.INSTANCE));
+                final boolean isUrgent = true;
+                results.add(messageSender.sendDataMessage(recipient.getAddress(), getAccessPairFor(recipient), ContentHint.DEFAULT, message, IndividualSendEventsLogger.INSTANCE,
+                                                          isUrgent, recipient.isNeedsPniSignature()));
               } finally {
                 logger.debug("send complete");
               }
@@ -607,47 +611,6 @@ public class Manager {
         continue;
       }
 
-      for (final File fileEntry : dir.listFiles()) {
-        if (!fileEntry.isFile()) {
-          continue;
-        }
-        SignalServiceEnvelope envelope;
-        try {
-          envelope = loadEnvelope(fileEntry);
-          if (envelope == null) {
-            continue;
-          }
-        } catch (IOException e) {
-          Files.delete(fileEntry.toPath());
-          logger.catching(e);
-          continue;
-        }
-        SignalServiceContent content = null;
-        Exception exception = null;
-        if (!envelope.isReceipt()) {
-          try {
-            content = decryptMessage(envelope);
-          } catch (Exception e) {
-            exception = e;
-          }
-          if (exception == null && content != null) {
-            try {
-              handleMessage(envelope, content, ignoreAttachments);
-            } catch (VerificationFailedException | InvalidKeyException | InvalidMessageException e) {
-              logger.catching(e);
-              Sentry.captureException(e);
-            }
-          }
-        }
-        if (exception != null || content != null) {
-          handler.handleMessage(envelope, content, exception);
-        }
-        try {
-          Files.delete(fileEntry.toPath());
-        } catch (IOException e) {
-          logger.warn("Failed to delete cached message file “" + fileEntry + "”: " + e.getMessage());
-        }
-      }
       // Try to delete directory if empty
       dir.delete();
     }
@@ -920,56 +883,6 @@ public class Manager {
 
     for (Job job : jobs) {
       BackgroundJobRunnerThread.queue(job);
-    }
-  }
-
-  private SignalServiceEnvelope loadEnvelope(File file) throws IOException {
-    logger.debug("Loading cached envelope from " + file.toString());
-    try (FileInputStream f = new FileInputStream(file)) {
-      DataInputStream in = new DataInputStream(f);
-      int version = in.readInt();
-      if (version > 4) {
-        return null;
-      }
-      int type = in.readInt();
-      String source = in.readUTF();
-      ACI sourceACI = null;
-      if (version >= 3) {
-        sourceACI = ACI.parseOrNull(in.readUTF());
-      }
-      int sourceDevice = in.readInt();
-      if (version == 1) {
-        // read legacy relay field
-        in.readUTF();
-      }
-      long timestamp = in.readLong();
-      byte[] content = null;
-      int contentLen = in.readInt();
-      if (contentLen > 0) {
-        content = new byte[contentLen];
-        in.readFully(content);
-      }
-      byte[] legacyMessage = null;
-      int legacyMessageLen = in.readInt();
-      if (legacyMessageLen > 0) {
-        legacyMessage = new byte[legacyMessageLen];
-        in.readFully(legacyMessage);
-      }
-      long serverReceivedTimestamp = 0;
-      String uuid = null;
-      if (version >= 2) {
-        serverReceivedTimestamp = in.readLong();
-        uuid = in.readUTF();
-        if ("".equals(uuid)) {
-          uuid = null;
-        }
-      }
-      long serverDeliveredTimestamp = 0;
-      if (version >= 4) {
-        serverDeliveredTimestamp = in.readLong();
-      }
-      Optional<SignalServiceAddress> sourceAddress = sourceACI == null && source.isEmpty() ? Optional.empty() : Optional.of(new SignalServiceAddress(sourceACI, source));
-      return new SignalServiceEnvelope(type, sourceAddress, sourceDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, null);
     }
   }
 

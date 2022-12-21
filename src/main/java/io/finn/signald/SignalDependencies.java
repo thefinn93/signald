@@ -115,12 +115,12 @@ public class SignalDependencies {
         WebSocketFactory webSocketFactory = new WebSocketFactory() {
           @Override
           public WebSocketConnection createWebSocket() {
-            return new WebSocketConnection("normal", server.getSignalServiceConfiguration(), Optional.of(credentialsProvider), BuildConfig.USER_AGENT, healthMonitor);
+            return new WebSocketConnection("normal", server.getSignalServiceConfiguration(), Optional.of(credentialsProvider), BuildConfig.USER_AGENT, healthMonitor, true);
           }
 
           @Override
           public WebSocketConnection createUnidentifiedWebSocket() {
-            return new WebSocketConnection("unidentified", server.getSignalServiceConfiguration(), Optional.empty(), BuildConfig.USER_AGENT, healthMonitor);
+            return new WebSocketConnection("unidentified", server.getSignalServiceConfiguration(), Optional.empty(), BuildConfig.USER_AGENT, healthMonitor, true);
           }
         };
         websocket = new SignalWebSocket(webSocketFactory);

@@ -39,7 +39,9 @@ static String getTarget() {
             first = "aarch64"
         break
         case "arm-v7":
-            first = "armv7"
+            throw new Exception("Unsupported architecture, only 64-bit arm is supported. " +
+                                "For more info: https://gitlab.com/signald/signald/-/issues/349\n" +
+                                "To override, set environment variable SIGNALD_TARGET")
         break
     }
 
@@ -47,9 +49,6 @@ static String getTarget() {
     if(os.isLinux()) {
         second = "unknown-linux"
         third = "gnu"
-        if (arch.getName() == "arm-v7") {
-            third += "eabihf"
-        }
     }
 
     if(os.isMacOsX()) {
@@ -87,7 +86,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_50_signald_2'
+    implementation 'org.signald:signal-service-java-' + getTarget() + ':2.15.3_unofficial_65'
     implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
     implementation 'com.kohlschutter.junixsocket:junixsocket-common:2.6.1'
     implementation 'com.kohlschutter.junixsocket:junixsocket-native-common:2.6.1'
@@ -97,13 +96,13 @@ dependencies {
     implementation 'info.picocli:picocli:4.7.0'
     implementation 'org.xerial:sqlite-jdbc:3.40.0.0'
     implementation 'org.postgresql:postgresql:42.5.1'
-    implementation 'org.flywaydb:flyway-core:9.10.0'
+    implementation 'org.flywaydb:flyway-core:9.10.2'
     implementation 'com.google.protobuf:protobuf-javalite:3.21.11'
     implementation 'io.prometheus:simpleclient:0.16.0'
     implementation 'io.prometheus:simpleclient_hotspot:0.16.0'
     implementation 'io.prometheus:simpleclient_httpserver:0.16.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
-    implementation 'io.sentry:sentry:6.9.2'
+    implementation 'io.sentry:sentry:6.11.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
 }
 
@@ -131,7 +130,7 @@ buildConfig {
   buildConfigField('String', 'SIGNAL_STORAGE_URL', "\"" + (System.getenv("SIGNAL_STORAGE_URL") ?: "https://storage.signal.org") + "\"")
   buildConfigField('String', 'SIGNAL_CONTACT_DISCOVERY_URL', "\"" + (System.getenv("SIGNAL_CONTACT_DISCOVERY_URL") ?: "https://cms.souqcdn.com") + "\"")
   buildConfigField('String', "UNIDENTIFIED_SENDER_TRUST_ROOT", "\"" + (System.getenv("SIGNAL_UNIDENTIFIED_SENDER_ROOT") ?: "BXu6QIKVz5MA8gstzfOgRQGqyLqOwNKHL6INkv3IHWMF") + "\"")
-  buildConfigField('String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS", "\"" + (System.getenv("SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS") ?: "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X36nOoGPs54XsEGzPdEV+itQNGUFEjY6X9Uv+Acuks7NpyGvCoKxGwgKgE5XyJ+nNKlyHHOLb6N1NuHyBrZrgtY/JYJHRooo5CEqYKBqdFnmbTVGEkCvJKxLnjwKWf+fEPoWeQFj5ObDjcKMZf2Jm2Ae69x+ikU5gBXsRmoF94GXQ==") + "\"")
+  buildConfigField('String', "SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS", "\"" + (System.getenv("SIGNAL_ZK_GROUP_SERVER_PUBLIC_PARAMS") ?: "AMhf5ywVwITZMsff/eCyudZx9JDmkkkbV6PInzG4p8x3VqVJSFiMvnvlEKWuRob/1eaIetR31IYeAbm0NdOuHH8Qi+Rexi1wLlpzIo1gstHWBfZzy1+qHRV5A4TqPp15YzBPm0WSggW6PbSn+F4lf57VCnHF7p8SvzAA2ZZJPYJURt8X7bbg+H3i+PEjH9DXItNEqs2sNcug37xZQDLm7X36nOoGPs54XsEGzPdEV+itQNGUFEjY6X9Uv+Acuks7NpyGvCoKxGwgKgE5XyJ+nNKlyHHOLb6N1NuHyBrZrgtY/JYJHRooo5CEqYKBqdFnmbTVGEkCvJKxLnjwKWf+fEPoWeQFj5ObDjcKMZf2Jm2Ae69x+ikU5gBXsRmoF94GXTLfN0/vLt98KDPnxwAQL9j5V1jGOY8jQl6MLxEs56cwXN0dqCnImzVH3TZT1cJ8SW1BRX6qIVxEzjsSGx3yxF3suAilPMqGRp4ffyopjMD1JXiKR2RwLKzizUe5e8XyGOy9fplzhw3jVzTRyUZTRSZKkMLWcQ/gv0E4aONNqs4P") + "\"")
   // the base64 encoded trust store
   buildConfigField('String', "CA", "\"" + (System.getenv("SIGNAL_CA") ?: "AAAAAQAAABThGWAvYIoB26b2A/AhL6OoW74wfAAAB7cBABF0ZXh0c2VjdXJlLWdjbS1jYQAAAT2jsW+pAAAAAAAFWC41MDkAAAPzMIID7zCCAtegAwIBAgIJAIm6LatK5PNiMA0GCSqGSIb3DQEBBQUAMIGNMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEdMBsGA1UECgwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxHTAbBgNVBAsMFE9wZW4gV2hpc3BlciBTeXN0ZW1zMRMwEQYDVQQDDApUZXh0U2VjdXJlMB4XDTEzMDMyNTIyMTgzNVoXDTIzMDMyMzIyMTgzNVowgY0xCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMR0wGwYDVQQKDBRPcGVuIFdoaXNwZXIgU3lzdGVtczEdMBsGA1UECwwUT3BlbiBXaGlzcGVyIFN5c3RlbXMxEzARBgNVBAMMClRleHRTZWN1cmUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDBSWBpOCBDF0i4q2d4jAXkSXUGpbeWugVPQCjaL6qD9QDOxeW1afvfPo863i6Crq1KDxHpB36EwzVcjwLkFTIMeo7t9s1FQolAt3mErV2U0vie6Ves+yj6grSfxwIDAcdsKmI0a1SQCZlr3Q1tcHAkAKFRxYNawADyps5B+Zmqcgf653TXS5/0IPPQLocLn8GWLwOYNnYfBvILKDMItmZTtEbucdigxEA9mfIvvHADEbteLtVgwBm9R5vVvtwrD6CCxI3pgH7EH7kMP0Od93wLisvn1yhHY7FuYlrkYqdkMvWUrKoASVw4jb69vaeJCUdU+HCoXOSP1PQcL6WenNCHAgMBAAGjUDBOMB0GA1UdDgQWBBQBixjxP/s5GURuhYa+lGUypzI8kDAfBgNVHSMEGDAWgBQBixjxP/s5GURuhYa+lGUypzI8kDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQB+Hr4hC56m0LvJAu1RK6NuPDbTMEN7/jMojFHxH4P3XPFfupjR+bkDq0pPOU6JjIxnrD1XD/EVmTTaTVY5iOheyv7UzJOefb2pLOc9qsuvI4fnaESh9bhzln+LXxtCrRPGhkxA1IMIo3J/s2WF/KVYZyciu6b4ubJ91XPAuBNZwImug7/srWvbpk0hq6A6z140WTVSKtJG7EP41kJe/oF4usY5J7LPkxK3LWzMJnb5EIJDmRvyH8pyRwWg6Qm6qiGFaI4nL8QU4La1x2en4DGXRaLMPRwjELNgQPodR38zoCMuA8gHZfZYYoZ7D7Q1wNUiVHcxuFrEeBaYJbLErwLVALvy/4I2uFTpAiDQ7Wz7yaNw7tAl") + "\"")
   // proxy should be specified in host:port form

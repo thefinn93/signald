@@ -27,21 +27,19 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.util.Pair;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
-import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
+import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
 import org.signal.libsignal.zkgroup.groups.GroupMasterKey;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.GroupInviteLink;
 import org.signal.storageservice.protos.groups.Member;
@@ -109,9 +107,9 @@ public class Groups {
     final Optional<IGroupsTable.IGroup> localGroup = groupsTable.get(groupSecretParams.getPublicParams().getGroupIdentifier());
 
     if (localGroup.isEmpty() || localGroup.get().getRevision() < revision || revision < 0) {
-      int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
-      AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-      GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
+      int today = (int)TimeUnit.DAYS.toSeconds(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
+      AuthCredentialWithPniResponse authCredential = credentials.getCredential(groupsV2Api, today);
+      GroupsV2AuthorizationString authorization = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), account.getPNI(), today, groupSecretParams, authCredential);
 
       Optional<IGroupsTable.IGroup> latestServerGroup;
       try {
@@ -358,9 +356,8 @@ public class Groups {
     }
 
     IProfileKeysTable profileKeysTable = account.getDB().ProfileKeysTable;
-    IRecipientsTable recipientsTable = account.getDB().RecipientsTable;
-    ProfileKeyCredential selfProfileKeyCredential = profileKeysTable.getProfileKeyCredential(account.getSelf());
-    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfProfileKeyCredential));
+    ExpiringProfileKeyCredential selfExpiringProfileKeyCredential = profileKeysTable.getExpiringProfileKeyCredential(account.getSelf());
+    GroupCandidate groupCandidateSelf = new GroupCandidate(account.getUUID(), Optional.of(selfExpiringProfileKeyCredential));
 
     GroupsV2Operations.NewGroup newGroup = groupsV2Operations.createNewGroup(groupSecretParams, title, avatarBytes, groupCandidateSelf, candidates, memberRole, timer);
     groupsV2Api.putNewGroup(newGroup, getAuthorizationForToday(groupSecretParams));
@@ -370,9 +367,9 @@ public class Groups {
 
   private GroupsV2AuthorizationString getAuthorizationForToday(GroupSecretParams groupSecretParams)
       throws IOException, VerificationFailedException, InvalidInputException, SQLException {
-    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
-    AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-    return groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
+    int today = (int)TimeUnit.DAYS.toSeconds(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
+    AuthCredentialWithPniResponse authCredential = credentials.getCredential(groupsV2Api, today);
+    return groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), account.getPNI(), today, groupSecretParams, authCredential);
   }
 
   public Pair<SignalServiceDataMessage.Builder, IGroupsTable.IGroup> updateGroup(IGroupsTable.IGroup group, GroupChange.Actions.Builder change)
@@ -395,9 +392,9 @@ public class Groups {
     final DecryptedGroup previousGroupState = group.getDecryptedGroup();
     final int nextRevision = previousGroupState.getRevision() + 1;
     final GroupChange.Actions changeActions = change.setRevision(nextRevision).build();
-    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
-    AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
+    int today = (int)TimeUnit.DAYS.toSeconds(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
+    AuthCredentialWithPniResponse authCredential = credentials.getCredential(groupsV2Api, today);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), account.getPNI(), today, groupSecretParams, authCredential);
     GroupChange signedGroupChange = groupsV2Api.patchGroup(changeActions, authString, Optional.empty());
 
     final DecryptedGroup decryptedGroupState;
@@ -434,9 +431,9 @@ public class Groups {
 
   public GroupChange commitJoinToServer(GroupChange.Actions changeActions, GroupSecretParams groupSecretParams, byte[] password)
       throws IOException, VerificationFailedException, InvalidInputException, SQLException {
-    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
-    AuthCredentialResponse authCredentialResponse = credentials.getCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredentialResponse);
+    int today = (int)TimeUnit.DAYS.toSeconds(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
+    AuthCredentialWithPniResponse authCredentialResponse = credentials.getCredential(groupsV2Api, today);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), account.getPNI(), today, groupSecretParams, authCredentialResponse);
     return groupsV2Api.patchGroup(changeActions, authString, Optional.ofNullable(password));
   }
 
@@ -448,9 +445,9 @@ public class Groups {
 
   public GroupHistoryPage getGroupHistoryPage(GroupSecretParams groupSecretParams, int fromRevision, boolean includeFirstState)
       throws InvalidGroupStateException, IOException, VerificationFailedException, InvalidInputException, SQLException {
-    int today = (int)TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis());
-    AuthCredentialResponse authCredential = credentials.getCredential(groupsV2Api, today);
-    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), today, groupSecretParams, authCredential);
+    int today = (int)TimeUnit.DAYS.toSeconds(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
+    AuthCredentialWithPniResponse authCredential = credentials.getCredential(groupsV2Api, today);
+    GroupsV2AuthorizationString authString = groupsV2Api.getGroupsV2AuthorizationString(account.getACI(), account.getPNI(), today, groupSecretParams, authCredential);
 
     return groupsV2Api.getGroupHistoryPage(groupSecretParams, fromRevision, authString, includeFirstState);
   }

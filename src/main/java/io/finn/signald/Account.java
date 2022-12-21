@@ -77,9 +77,14 @@ public class Account {
   }
 
   public int getLocalRegistrationId() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.LOCAL_REGISTRATION_ID); }
+  public int getPniRegistrationId() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.PNI_REGISTRATION_ID); }
 
   public void setLocalRegistrationId(int localRegistrationId) throws SQLException {
     Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.LOCAL_REGISTRATION_ID, localRegistrationId);
+  }
+
+  public void setPniRegistrationId(int pniRegistrationId) throws SQLException {
+    Database.Get().AccountDataTable.set(aci, IAccountDataTable.Key.PNI_REGISTRATION_ID, pniRegistrationId);
   }
 
   public int getDeviceId() throws SQLException { return Database.Get().AccountDataTable.getInt(aci, IAccountDataTable.Key.DEVICE_ID); }
@@ -241,8 +246,9 @@ public class Account {
     ProfileKey ownProfileKey = getDB().ProfileKeysTable.getProfileKey(getSelf());
     byte[] ownUnidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(ownProfileKey);
     int localRegistrationId = getLocalRegistrationId();
+    int pniRegistrationId = getPniRegistrationId();
     getSignalDependencies().getAccountManager().setAccountAttributes(null, localRegistrationId, true, null, null, ownUnidentifiedAccessKey, true, ServiceConfig.CAPABILITIES, true,
-                                                                     Base64.decode(deviceName));
+                                                                     Base64.decode(deviceName), pniRegistrationId);
     setLastAccountRefresh(ACCOUNT_REFRESH_VERSION);
   }
 }

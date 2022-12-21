@@ -28,6 +28,7 @@ import java.util.Optional;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
 import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
@@ -65,14 +66,14 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
       throw new InvalidInviteURIError();
     }
 
-    ProfileKeyCredential profileKeyCredential;
+    ExpiringProfileKeyCredential expiringProfileKeyCredential;
     try {
-      profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(a.getSelf());
+      expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(a.getSelf());
     } catch (IOException | SQLException | InvalidInputException e) {
       throw new InternalError("error getting own profile key credential", e);
     }
 
-    if (profileKeyCredential == null) {
+    if (expiringProfileKeyCredential == null) {
       throw new OwnProfileKeyDoesNotExistError();
     }
 
@@ -106,9 +107,9 @@ public class JoinGroupRequest implements RequestType<JsonGroupJoinInfo> {
     boolean requestToJoin = groupJoinInfo.getAddFromInviteLink() == AccessControl.AccessRequired.ADMINISTRATOR;
     GroupChange.Actions.Builder change;
     if (requestToJoin) {
-      change = groupOperations.createGroupJoinRequest(profileKeyCredential);
+      change = groupOperations.createGroupJoinRequest(expiringProfileKeyCredential);
     } else {
-      change = groupOperations.createGroupJoinDirect(profileKeyCredential);
+      change = groupOperations.createGroupJoinDirect(expiringProfileKeyCredential);
     }
     change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
 

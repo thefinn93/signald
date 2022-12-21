@@ -8,6 +8,8 @@
 package io.finn.signald.clientprotocol.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.finn.signald.annotations.Deprecated;
+import io.finn.signald.annotations.Doc;
 import io.finn.signald.annotations.ExampleValue;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
@@ -30,7 +32,7 @@ public class IncomingMessage {
   @ExampleValue(ExampleValue.MESSAGE_ID) public long timestamp;
   @JsonProperty("server_receiver_timestamp") @ExampleValue(ExampleValue.MESSAGE_ID) public long serverReceivedTimestamp;
   @JsonProperty("server_deliver_timestamp") @ExampleValue(ExampleValue.MESSAGE_ID) public long serverDeliveredTimestamp;
-  @JsonProperty("has_legacy_message") public boolean hasLegacyMessage;
+  @Doc("removed from protocl") @Deprecated(0) @JsonProperty("has_legacy_message") public boolean hasLegacyMessage;
   @JsonProperty("has_content") public boolean hasContent;
   @JsonProperty("unidentified_sender") public boolean unidentifiedSender;
   @JsonProperty("data_message") public JsonDataMessage dataMessage;
@@ -67,7 +69,6 @@ public class IncomingMessage {
     timestamp = envelope.getTimestamp();
     serverReceivedTimestamp = envelope.getServerReceivedTimestamp();
     serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
-    hasLegacyMessage = envelope.hasLegacyMessage();
     hasContent = envelope.hasContent();
 
     if (content != null) {

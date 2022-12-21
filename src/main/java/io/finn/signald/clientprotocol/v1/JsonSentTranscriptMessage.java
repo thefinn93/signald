@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class JsonSentTranscriptMessage {
@@ -38,11 +39,8 @@ public class JsonSentTranscriptMessage {
     if (s.getStoryMessage().isPresent()) {
       story = new StoryMessage(s.getStoryMessage().get(), aci);
     }
-    for (SignalServiceAddress r : s.getRecipients()) {
-      if (r.getNumber().isPresent()) {
-        unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()) ? "true" : "false");
-      }
-      unidentifiedStatus.put(r.getServiceId().toString(), s.isUnidentified(r.getIdentifier()) ? "true" : "false");
+    for (ServiceId r : s.getRecipients()) {
+      unidentifiedStatus.put(r.toString(), s.isUnidentified(r) ? "true" : "false");
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }

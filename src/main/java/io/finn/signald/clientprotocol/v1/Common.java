@@ -147,6 +147,13 @@ public class Common {
                                              List<JsonAddress> members) throws InvalidRecipientError, UnknownGroupError, InternalError, RateLimitError, InvalidRequestError,
                                                                                NoSuchAccountError, ServerNotFoundError, InvalidProxyError, AuthorizationFailedError,
                                                                                ProofRequiredError, SignalServerError {
+    return send(account, messageBuilder, recipient, recipientGroupId, members, true, false);
+  }
+
+  public static List<SendMessageResult> send(Account account, SignalServiceDataMessage.Builder messageBuilder, Recipient recipient, String recipientGroupId,
+                                             List<JsonAddress> members, boolean isUrgent, boolean isStory)
+      throws InvalidRecipientError, UnknownGroupError, InternalError, RateLimitError, InvalidRequestError, NoSuchAccountError, ServerNotFoundError, InvalidProxyError,
+             AuthorizationFailedError, ProofRequiredError, SignalServerError {
     GroupIdentifier groupIdentifier = null;
     List<Recipient> memberRecipients = null;
     if (recipientGroupId != null) {
@@ -172,9 +179,9 @@ public class Common {
     try {
       MessageSender messageSender = new MessageSender(account);
       if (recipientGroupId != null) {
-        return messageSender.sendGroupMessage(messageBuilder, groupIdentifier, memberRecipients);
+        return messageSender.sendGroupMessage(messageBuilder, groupIdentifier, memberRecipients, isUrgent, isStory);
       } else {
-        return messageSender.send(messageBuilder, recipient);
+        return messageSender.send(messageBuilder, List.of(recipient), isUrgent);
       }
     } catch (io.finn.signald.exceptions.UnknownGroupException e) {
       throw new UnknownGroupError();
@@ -224,7 +231,7 @@ public class Common {
       if (requestingMembers != null) {
         allTargets.addAll(requestingMembers);
       }
-      return messageSender.sendGroupMessage(message, group.getId(), allTargets);
+      return messageSender.sendGroupMessage(message, group.getId(), allTargets, false, false);
     } catch (SQLException e) {
       throw new SQLError(e);
     } catch (NoSuchAccountException e) {

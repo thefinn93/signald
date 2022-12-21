@@ -30,6 +30,7 @@ import java.util.*;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.Member;
 import org.whispersystems.signalservice.api.groupsv2.GroupCandidate;
@@ -75,10 +76,10 @@ public class CreateGroupRequest implements RequestType<JsonGroupV2Info> {
     for (JsonAddress member : members) {
       try {
         Recipient recipient = recipientsTable.get(member);
-        ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
+        ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
         recipients.add(recipientsTable.get(recipient.getAddress()));
         UUID uuid = recipient.getUUID();
-        candidates.add(new GroupCandidate(uuid, Optional.ofNullable(profileKeyCredential)));
+        candidates.add(new GroupCandidate(uuid, Optional.ofNullable(expiringProfileKeyCredential)));
       } catch (InvalidInputException | SQLException | IOException e) {
         throw new InternalError("error adding member to group", e);
       }

@@ -7,6 +7,7 @@ import io.finn.signald.db.Recipient;
 import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.push.ACI;
@@ -59,13 +60,13 @@ public class ProfileKeysTable implements IProfileKeysTable {
   }
 
   @Override
-  public ProfileKeyCredential getProfileKeyCredential(Recipient recipient) throws SQLException, InvalidInputException {
+  public ExpiringProfileKeyCredential getExpiringProfileKeyCredential(Recipient recipient) throws SQLException, InvalidInputException {
     byte[] profileKeyCredential = getBytes(recipient, PROFILE_KEY_CREDENTIAL);
-    return profileKeyCredential == null ? null : new ProfileKeyCredential(profileKeyCredential);
+    return profileKeyCredential == null ? null : new ExpiringProfileKeyCredential(profileKeyCredential);
   }
 
   @Override
-  public void setProfileKeyCredential(Recipient recipient, ProfileKeyCredential profileKeyCredential) throws SQLException {
+  public void setExpiringProfileKeyCredential(Recipient recipient, ExpiringProfileKeyCredential profileKeyCredential) throws SQLException {
     set(recipient, PROFILE_KEY_CREDENTIAL, profileKeyCredential == null ? null : profileKeyCredential.serialize());
   }
 

@@ -47,9 +47,9 @@ public class RecipientsTable implements IRecipientsTable {
   public synchronized Recipient get(String queryE164, ServiceId queryServiceId) throws SQLException, IOException {
     logger.trace("looking up recipient {}/{}", queryE164, queryServiceId);
     List<Recipient> results = new ArrayList<>();
-    var query = String.format("SELECT %s, %s, %s, %s FROM %s WHERE (%s=? OR %s=?) AND %s=?",
+    var query = String.format("SELECT %s, %s, %s, %s, %s FROM %s WHERE (%s=? OR %s=?) AND %s=?",
                               // FIELDS
-                              ROW_ID, E164, UUID, REGISTERED,
+                              ROW_ID, E164, UUID, REGISTERED, NEEDS_PNI_SIGNATURE,
                               // FROM
                               TABLE_NAME,
                               // WHERE
@@ -65,7 +65,8 @@ public class RecipientsTable implements IRecipientsTable {
           UUID storedUUID = rows.getObject(UUID, java.util.UUID.class);
           SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(storedUUID), storedE164);
           boolean registered = rows.getBoolean(REGISTERED);
-          results.add(new Recipient(accountUUID, rowId, a, registered));
+          boolean needsPNISignature = rows.getBoolean(NEEDS_PNI_SIGNATURE);
+          results.add(new Recipient(accountUUID, rowId, a, registered, needsPNISignature));
           logger.trace("found result with rowid {} ({}/{})", rowId, storedE164, storedUUID);
         }
       }
@@ -151,7 +152,7 @@ public class RecipientsTable implements IRecipientsTable {
     }
 
     logger.trace("returning recipient {}", rowId);
-    return new Recipient(accountUUID, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered);
+    return new Recipient(accountUUID, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered, false);
   }
 
   public Recipient self() throws SQLException, IOException { return get(accountUUID); }

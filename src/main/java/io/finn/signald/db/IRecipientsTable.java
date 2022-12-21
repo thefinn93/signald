@@ -16,6 +16,7 @@ public interface IRecipientsTable {
   String UUID = "uuid";
   String E164 = "e164";
   String REGISTERED = "registered";
+  String NEEDS_PNI_SIGNATURE = "needs_pni_signature";
 
   Recipient get(String e164, ServiceId aci) throws SQLException, IOException;
   Recipient self() throws SQLException, IOException;

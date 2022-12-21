@@ -17,15 +17,17 @@ public class Recipient {
   private int id;
   private SignalServiceAddress address;
   private boolean registered;
+  private boolean needsPniSignature;
 
-  public Recipient(UUID account, int id, SignalServiceAddress address, boolean registered) {
+  public Recipient(UUID account, int id, SignalServiceAddress address, boolean registered, boolean needsPniSignature) {
     this.account = account;
     this.id = id;
     this.address = address;
     this.registered = registered;
+    this.needsPniSignature = needsPniSignature;
   }
 
-  public Recipient(UUID account, int id, SignalServiceAddress address) { this(account, id, address, true); }
+  public Recipient(UUID account, int id, SignalServiceAddress address) { this(account, id, address, true, false); }
 
   public int getId() { return id; }
 
@@ -40,4 +42,6 @@ public class Recipient {
   public boolean isRegistered() { return registered; }
 
   public boolean equals(Recipient other) { return other.getId() == getId(); }
+
+  public boolean isNeedsPniSignature() { return needsPniSignature; }
 }

@@ -61,8 +61,12 @@ class MessageQueueTableTest {
     long serverDeliveredTimestamp = 300L;
     String uuid = UUID.randomUUID().toString();
 
-    SignalServiceEnvelope originalEnvelope =
-        new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, ACCOUNT_ACI.toString());
+    boolean urgent = false;
+    String updatedPni = "idk";
+    boolean story = false;
+
+    SignalServiceEnvelope originalEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
+                                                                       ACCOUNT_ACI.toString(), urgent, updatedPni, story);
     messageQueue.storeEnvelope(originalEnvelope);
 
     StoredEnvelope storedEnvelope = messageQueue.nextEnvelope();
@@ -71,7 +75,6 @@ class MessageQueueTableTest {
     assertEquals(type, envelope.getType());
     assertEquals(senderDevice, envelope.getSourceDevice());
     assertEquals(timestamp, envelope.getTimestamp());
-    assertArrayEquals(legacyMessage, envelope.getLegacyMessage());
     assertArrayEquals(content, envelope.getContent());
     assertEquals(serverReceivedTimestamp, envelope.getServerReceivedTimestamp());
     assertEquals(serverDeliveredTimestamp, envelope.getServerDeliveredTimestamp());
@@ -79,7 +82,6 @@ class MessageQueueTableTest {
 
     // This is somewhat unexpected given a type of Optional<String>.
     // But it's consistent with deserialized Protobuf objects.
-    assertEquals("", envelope.getSourceE164().get());
     assertEquals("", envelope.getSourceUuid().get());
   }
 
@@ -112,7 +114,7 @@ class MessageQueueTableTest {
     long serverDeliveredTimestamp = 300L;
     String uuid = UUID.randomUUID().toString();
 
-    return new SignalServiceEnvelope(TYPE_UNIDENTIFIED_SENDER, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
-                                     ACCOUNT_ACI.toString());
+    return new SignalServiceEnvelope(TYPE_UNIDENTIFIED_SENDER, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid,
+                                     ACCOUNT_ACI.toString(), false, "idk", false);
   }
 }

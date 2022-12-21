@@ -75,7 +75,6 @@ public class JsonMessageEnvelope {
     timestampISO = formatTimestampISO(envelope.getTimestamp());
     serverTimestamp = envelope.getServerReceivedTimestamp();
     serverDeliveredTimestamp = envelope.getServerDeliveredTimestamp();
-    hasLegacyMessage = envelope.hasLegacyMessage();
     hasContent = envelope.hasContent();
 
     if (c != null) {

@@ -75,7 +75,8 @@ public class MarkReadRequest implements RequestType<Empty> {
     SignalServiceMessageSender sender = dependencies.getMessageSender();
 
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {
-      sender.sendReceipt(recipient.getAddress(), unidentifiedAccessUtil.getAccessPairFor(recipient), message);
+      final boolean includePNISignature = false; // TODO: figure out when to use this
+      sender.sendReceipt(recipient.getAddress(), unidentifiedAccessUtil.getAccessPairFor(recipient), message, includePNISignature);
     } catch (AuthorizationFailedException e) {
       throw new AuthorizationFailedError(e);
     } catch (ProofRequiredException e) {
@@ -96,7 +97,7 @@ public class MarkReadRequest implements RequestType<Empty> {
 
     List<ReadMessage> readMessages = new LinkedList<>();
     for (Long ts : timestamps) {
-      readMessages.add(new ReadMessage(recipient.getAddress(), ts));
+      readMessages.add(new ReadMessage(recipient.getServiceId(), ts));
     }
 
     try (SignalSessionLock.Lock ignored = dependencies.getSessionLock().acquire()) {

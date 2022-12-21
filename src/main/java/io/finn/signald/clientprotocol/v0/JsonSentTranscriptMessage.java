@@ -19,7 +19,7 @@ import java.util.Map;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
 import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.push.ServiceId;
 
 @Deprecated(1641027661)
 public class JsonSentTranscriptMessage {
@@ -40,11 +40,8 @@ public class JsonSentTranscriptMessage {
     if (s.getDataMessage().isPresent()) {
       message = new JsonDataMessage(s.getDataMessage().get(), aci);
     }
-    for (SignalServiceAddress r : s.getRecipients()) {
-      if (r.getNumber().isPresent()) {
-        unidentifiedStatus.put(r.getNumber().get(), s.isUnidentified(r.getNumber().get()));
-      }
-      unidentifiedStatus.put(r.getIdentifier(), s.isUnidentified(r.getServiceId()));
+    for (ServiceId r : s.getRecipients()) {
+      unidentifiedStatus.put(r.toString(), s.isUnidentified(r));
     }
     isRecipientUpdate = s.isRecipientUpdate();
   }

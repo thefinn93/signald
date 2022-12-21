@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.crypto.UnidentifiedAccess;
@@ -31,8 +32,8 @@ public interface IProfileKeysTable {
   ProfileKey getProfileKey(Recipient recipient) throws SQLException;
   void setProfileKey(Recipient recipient, ProfileKey profileKey) throws SQLException;
 
-  ProfileKeyCredential getProfileKeyCredential(Recipient recipient) throws SQLException, InvalidInputException;
-  void setProfileKeyCredential(Recipient recipient, ProfileKeyCredential profileKeyCredential) throws SQLException;
+  ExpiringProfileKeyCredential getExpiringProfileKeyCredential(Recipient recipient) throws SQLException, InvalidInputException;
+  void setExpiringProfileKeyCredential(Recipient recipient, ExpiringProfileKeyCredential profileKeyCredential) throws SQLException;
 
   boolean isRequestPending(Recipient recipient) throws SQLException;
   void setRequestPending(Recipient recipient, boolean isRequestPending) throws SQLException;

@@ -7,8 +7,6 @@
 
 package io.finn.signald.db;
 
-import static io.finn.signald.storage.LegacyAccountData.DELETED_DO_NOT_SAVE;
-
 import io.finn.signald.Account;
 import io.finn.signald.BuildConfig;
 import io.finn.signald.clientprotocol.v1.JsonAddress;
@@ -95,7 +93,7 @@ public interface IAccountsTable {
 
       accountData.migrateToDB(account);
 
-      accountData.version = DELETED_DO_NOT_SAVE;
+      accountData.version = LegacyAccountData.DELETED_DO_NOT_SAVE;
       logger.info("account fully migrated out of legacy storage, deleting legacy storage file");
       accountData.delete();
     } finally {

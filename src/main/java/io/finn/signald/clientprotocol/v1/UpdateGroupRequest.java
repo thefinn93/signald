@@ -27,7 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.VerificationFailedException;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
@@ -113,10 +113,10 @@ public class UpdateGroupRequest implements RequestType<GroupInfo> {
         Set<GroupCandidate> candidates = new HashSet<>();
         for (JsonAddress member : addMembers) {
           Recipient recipient = recipientsTable.get(member);
-          ProfileKeyCredential profileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(recipient);
+          ExpiringProfileKeyCredential expiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(recipient);
           recipients.add(recipientsTable.get(recipient.getAddress()));
           UUID uuid = recipient.getUUID();
-          candidates.add(new GroupCandidate(uuid, Optional.ofNullable(profileKeyCredential)));
+          candidates.add(new GroupCandidate(uuid, Optional.ofNullable(expiringProfileKeyCredential)));
         }
         change = groupOperations.createModifyGroupMembershipChange(candidates, Set.of(), a.getUUID());
       } else if (removeMembers != null && removeMembers.size() > 0) {

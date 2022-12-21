@@ -33,6 +33,6 @@ public class JsonReaction {
 
   @JsonIgnore
   public SignalServiceDataMessage.Reaction getReaction() {
-    return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
+    return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getServiceID(), targetSentTimestamp);
   }
 }

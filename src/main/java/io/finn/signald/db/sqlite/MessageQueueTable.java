@@ -30,30 +30,29 @@ public class MessageQueueTable implements IMessageQueueTable {
   @Override
   public long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException {
     var query = "INSERT INTO " + TABLE_NAME + " (" + ACCOUNT + ", " + VERSION + ", " + TYPE + ", " + SOURCE_E164 + ", " + SOURCE_UUID + ", " + SOURCE_DEVICE + ", " + TIMESTAMP +
-                ", " + CONTENT + ", " + LEGACY_MESSAGE + ", " + SERVER_RECEIVED_TIMESTAMP + ", " + SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ", " + DESTINATION_UUID +
-                ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                ", " + CONTENT + ", " + SERVER_RECEIVED_TIMESTAMP + ", " + SERVER_DELIVERED_TIMESTAMP + ", " + SERVER_UUID + ", " + DESTINATION_UUID + ", " + URGENT + ", " +
+                UPDATED_PNI + ", " + STORY + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setString(1, aci.toString());
-      statement.setInt(2, 2); // Version is hard-coded to 2
-      statement.setInt(3, envelope.getType());
-      if (envelope.getSourceE164().isPresent()) {
-        statement.setString(4, envelope.getSourceE164().get());
-      }
+      int i = 1;
+      statement.setString(i++, aci.toString());
+      statement.setInt(i++, 2); // Version is hard-coded to 2
+      statement.setInt(i++, envelope.getType());
+      statement.setString(i++, envelope.getSourceIdentifier());
       if (envelope.getSourceUuid().isPresent()) {
-        statement.setString(5, envelope.getSourceUuid().get());
+        statement.setString(i++, envelope.getSourceUuid().get());
       }
-      statement.setInt(6, envelope.getSourceDevice());
-      statement.setLong(7, envelope.getTimestamp());
+      statement.setInt(i++, envelope.getSourceDevice());
+      statement.setLong(i++, envelope.getTimestamp());
       if (envelope.hasContent()) {
-        statement.setBytes(8, envelope.getContent());
+        statement.setBytes(i++, envelope.getContent());
       }
-      if (envelope.hasLegacyMessage()) {
-        statement.setBytes(9, envelope.getLegacyMessage());
-      }
-      statement.setLong(10, envelope.getServerReceivedTimestamp());
-      statement.setLong(11, envelope.getServerDeliveredTimestamp());
-      statement.setString(12, envelope.getServerGuid());
-      statement.setString(13, envelope.getDestinationUuid());
+      statement.setLong(i++, envelope.getServerReceivedTimestamp());
+      statement.setLong(i++, envelope.getServerDeliveredTimestamp());
+      statement.setString(i++, envelope.getServerGuid());
+      statement.setString(i++, envelope.getDestinationUuid());
+      statement.setBoolean(i++, envelope.isUrgent());
+      statement.setString(i++, envelope.getUpdatedPni());
+      statement.setBoolean(i++, envelope.isStory());
       statement.executeUpdate();
 
       try (var generatedKeys = Database.getGeneratedKeys(TABLE_NAME + "_store_envelope", statement)) {
@@ -92,14 +91,16 @@ public class MessageQueueTable implements IMessageQueueTable {
         }
         int senderDevice = rows.getInt(SOURCE_DEVICE);
         long timestamp = rows.getLong(TIMESTAMP);
-        byte[] legacyMessage = rows.getBytes(LEGACY_MESSAGE);
         byte[] content = rows.getBytes(CONTENT);
         long serverReceivedTimestamp = rows.getLong(SERVER_RECEIVED_TIMESTAMP);
         long serverDeliveredTimestamp = rows.getLong(SERVER_DELIVERED_TIMESTAMP);
         String uuid = rows.getString(SERVER_UUID);
         String destinationUUID = rows.getString(DESTINATION_UUID);
-        SignalServiceEnvelope signalServiceEnvelope =
-            new SignalServiceEnvelope(type, sender, senderDevice, timestamp, legacyMessage, content, serverReceivedTimestamp, serverDeliveredTimestamp, uuid, destinationUUID);
+        boolean urgent = rows.getBoolean(URGENT);
+        String updatedPni = rows.getString(UPDATED_PNI);
+        boolean story = rows.getBoolean(STORY);
+        SignalServiceEnvelope signalServiceEnvelope = new SignalServiceEnvelope(type, sender, senderDevice, timestamp, content, serverReceivedTimestamp, serverDeliveredTimestamp,
+                                                                                uuid, destinationUUID, urgent, updatedPni, story);
         return new StoredEnvelope(id, signalServiceEnvelope);
       }
     }

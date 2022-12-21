@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
+import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
 import org.whispersystems.signalservice.api.push.ACI;
 
 public class GroupCredentialsTable implements IGroupCredentialsTable {
@@ -25,24 +26,24 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
   public GroupCredentialsTable(ACI aci) { this.aci = aci; }
 
   @Override
-  public Optional<AuthCredentialResponse> getCredential(int date) throws SQLException, InvalidInputException {
+  public Optional<AuthCredentialWithPniResponse> getCredential(int date) throws SQLException, InvalidInputException {
     var query = "SELECT " + CREDENTIAL + " FROM " + TABLE_NAME + " WHERE " + ACCOUNT_UUID + " = ? AND " + DATE + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       statement.setString(1, aci.toString());
       statement.setInt(2, date);
       try (var rows = Database.executeQuery(TABLE_NAME + "_get_credential", statement)) {
-        return rows.next() ? Optional.of(new AuthCredentialResponse(rows.getBytes(CREDENTIAL))) : Optional.empty();
+        return rows.next() ? Optional.of(new AuthCredentialWithPniResponse(rows.getBytes(CREDENTIAL))) : Optional.empty();
       }
     }
   }
 
   @Override
-  public void setCredentials(HashMap<Integer, AuthCredentialResponse> credentials) throws SQLException {
+  public void setCredentials(HashMap<Long, AuthCredentialWithPniResponse> credentials) throws SQLException {
     var query = "INSERT OR REPLACE INTO " + TABLE_NAME + " (" + ACCOUNT_UUID + "," + DATE + "," + CREDENTIAL + ") VALUES (?, ?, ?)";
     try (var statement = Database.getConn().prepareStatement(query)) {
-      for (Map.Entry<Integer, AuthCredentialResponse> entry : credentials.entrySet()) {
+      for (Map.Entry<Long, AuthCredentialWithPniResponse> entry : credentials.entrySet()) {
         statement.setString(1, aci.toString());
-        statement.setInt(2, entry.getKey());
+        statement.setLong(2, entry.getKey());
         statement.setBytes(3, entry.getValue().serialize());
         statement.addBatch();
       }

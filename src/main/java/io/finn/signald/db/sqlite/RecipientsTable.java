@@ -46,8 +46,8 @@ public class RecipientsTable implements IRecipientsTable {
 
   public Recipient get(String e164, ServiceId serviceId) throws SQLException, IOException {
     List<Recipient> results = new ArrayList<>();
-    var query =
-        "SELECT " + ROW_ID + "," + E164 + "," + UUID + "," + REGISTERED + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 + " = ?) AND " + ACCOUNT_UUID + " = ?";
+    var query = "SELECT " + ROW_ID + "," + E164 + "," + UUID + "," + REGISTERED + ", " + NEEDS_PNI_SIGNATURE + " FROM " + TABLE_NAME + " WHERE (" + UUID + " = ? OR " + E164 +
+                " = ?) AND " + ACCOUNT_UUID + " = ?";
     try (var statement = Database.getConn().prepareStatement(query)) {
       if (serviceId != null) {
         statement.setString(1, serviceId.toString());
@@ -64,8 +64,9 @@ public class RecipientsTable implements IRecipientsTable {
           String storedE164 = rows.getString(E164);
           String storedUUID = rows.getString(UUID);
           boolean registered = rows.getBoolean(REGISTERED);
+          boolean needsPniSignature = rows.getBoolean(NEEDS_PNI_SIGNATURE);
           SignalServiceAddress a = storedUUID == null ? null : new SignalServiceAddress(ACI.from(java.util.UUID.fromString(storedUUID)), storedE164);
-          results.add(new Recipient(uuid, rowId, a, registered));
+          results.add(new Recipient(uuid, rowId, a, registered, needsPniSignature));
         }
       }
     }
@@ -139,7 +140,7 @@ public class RecipientsTable implements IRecipientsTable {
       rowId = storeNew(serviceId, e164);
     }
 
-    return new Recipient(uuid, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered);
+    return new Recipient(uuid, rowId, new SignalServiceAddress(storedServiceId, storedE164), registered, false);
   }
 
   public Recipient self() throws SQLException, IOException { return get(uuid); }

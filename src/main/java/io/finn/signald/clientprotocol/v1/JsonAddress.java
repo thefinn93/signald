@@ -81,6 +81,8 @@ public class JsonAddress {
     return ACI.from(UUID.fromString(uuid));
   }
 
+  public JsonAddress(ServiceId serviceId) { uuid = serviceId.toString(); }
+
   public JsonAddress(SignalServiceAddress address) {
     if (address.getNumber().isPresent()) {
       String n = address.getNumber().get();

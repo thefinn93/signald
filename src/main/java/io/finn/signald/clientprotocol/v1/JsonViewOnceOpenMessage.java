@@ -21,5 +21,5 @@ public class JsonViewOnceOpenMessage {
     timestamp = message.getTimestamp();
   }
 
-  public ViewOnceOpenMessage toLibSignalClass() { return new ViewOnceOpenMessage(sender.getSignalServiceAddress(), timestamp); }
+  public ViewOnceOpenMessage toLibSignalClass() { return new ViewOnceOpenMessage(sender.getServiceID(), timestamp); }
 }

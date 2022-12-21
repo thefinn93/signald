@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.protocol.InvalidKeyException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
-import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.crypto.InvalidCiphertextException;
 import org.whispersystems.signalservice.api.crypto.ProfileCipher;
@@ -85,9 +85,9 @@ public class RefreshProfileJob implements Job {
       return;
     }
 
-    Optional<ProfileKeyCredential> profileKeyCredential = profileAndCredential.getProfileKeyCredential();
-    if (profileKeyCredential.isPresent()) {
-      db.ProfileKeysTable.setProfileKeyCredential(recipient, profileKeyCredential.get());
+    Optional<ExpiringProfileKeyCredential> expiringProfileKeyCredential = profileAndCredential.getExpiringProfileKeyCredential();
+    if (expiringProfileKeyCredential.isPresent()) {
+      db.ProfileKeysTable.setExpiringProfileKeyCredential(recipient, expiringProfileKeyCredential.get());
     }
 
     ProfileCipher profileCipher = new ProfileCipher(profileKey);

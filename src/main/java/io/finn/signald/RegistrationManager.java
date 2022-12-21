@@ -78,6 +78,7 @@ public class RegistrationManager {
 
   public void register(boolean voiceVerification, Optional<String> captcha, UUID server) throws IOException, InvalidInputException, SQLException {
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
+    Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.LOCAL_PNI_REGISTRATION_ID, KeyHelper.generateRegistrationId(false));
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.ACI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.PNI_IDENTITY_KEY_PAIR, KeyUtil.generateIdentityKeyPair().serialize());
     Database.Get().PendingAccountDataTable.set(e164, IPendingAccountDataTable.Key.SERVER_UUID, server.toString());
@@ -95,9 +96,11 @@ public class RegistrationManager {
       throws IOException, InvalidInputException, SQLException, InvalidProxyException, InvalidKeyException, ServerNotFoundException, NoSuchAccountException {
     verificationCode = verificationCode.replace("-", "");
     int registrationID = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.LOCAL_REGISTRATION_ID);
+    int pniRegistrationID = Database.Get().PendingAccountDataTable.getInt(e164, IPendingAccountDataTable.Key.LOCAL_PNI_REGISTRATION_ID);
     ProfileKey profileKey = generateProfileKey();
     byte[] unidentifiedAccessKey = UnidentifiedAccess.deriveAccessKeyFrom(profileKey);
-    ServiceResponse<VerifyAccountResponse> r = accountManager.verifyAccount(verificationCode, registrationID, true, unidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true);
+    ServiceResponse<VerifyAccountResponse> r =
+        accountManager.verifyAccount(verificationCode, registrationID, true, unidentifiedAccessKey, false, ServiceConfig.CAPABILITIES, true, pniRegistrationID);
     handleResponseException(r);
 
     VerifyAccountResponse result = r.getResult().get();
@@ -123,6 +126,7 @@ public class RegistrationManager {
     account.getDB().IdentityKeysTable.saveIdentity(Database.Get(aci).RecipientsTable.get(aci), aciIdentityKeyPair.getPublicKey(), TrustLevel.TRUSTED_VERIFIED);
 
     account.setLocalRegistrationId(registrationID);
+    account.setPniRegistrationId(pniRegistrationID);
     account.setDeviceId(SignalServiceAddress.DEFAULT_DEVICE_ID);
 
     Database.Get().PendingAccountDataTable.clear(e164);

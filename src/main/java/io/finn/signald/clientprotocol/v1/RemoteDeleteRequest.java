@@ -51,6 +51,7 @@ public class RemoteDeleteRequest implements RequestType<SendResponse> {
     if (address != null) {
       recipient = Common.getRecipient(Database.Get(a.getACI()).RecipientsTable, address);
     }
+
     List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, group, members);
     return new SendResponse(results, timestamp);
   }

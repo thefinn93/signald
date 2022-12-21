@@ -32,9 +32,4 @@ public class JsonReaction {
     targetAuthor = new JsonAddress(r.getTargetAuthor());
     targetSentTimestamp = r.getTargetSentTimestamp();
   }
-
-  @JsonIgnore
-  public SignalServiceDataMessage.Reaction getReaction() {
-    return new SignalServiceDataMessage.Reaction(emoji, remove, targetAuthor.getSignalServiceAddress(), targetSentTimestamp);
-  }
 }

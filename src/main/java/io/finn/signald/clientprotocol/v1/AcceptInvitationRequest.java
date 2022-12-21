@@ -16,6 +16,7 @@ import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
 import java.io.IOException;
 import java.sql.SQLException;
 import org.signal.libsignal.zkgroup.InvalidInputException;
+import org.signal.libsignal.zkgroup.profiles.ExpiringProfileKeyCredential;
 import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredential;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
@@ -35,21 +36,21 @@ public class AcceptInvitationRequest implements RequestType<JsonGroupV2Info> {
                                                      InvalidRequestError, AuthorizationFailedError, SQLError, GroupPatchNotAcceptedError {
     Account a = Common.getAccount(account);
 
-    ProfileKeyCredential ownProfileKeyCredential;
+    ExpiringProfileKeyCredential ownExpiringProfileKeyCredential;
     try {
-      ownProfileKeyCredential = a.getDB().ProfileKeysTable.getProfileKeyCredential(a.getSelf());
+      ownExpiringProfileKeyCredential = a.getDB().ProfileKeysTable.getExpiringProfileKeyCredential(a.getSelf());
     } catch (IOException | SQLException | InvalidInputException e) {
       throw new InternalError("error getting own profile key credential", e);
     }
 
-    if (ownProfileKeyCredential == null) {
+    if (ownExpiringProfileKeyCredential == null) {
       throw new OwnProfileKeyDoesNotExistError();
     }
 
     var group = Common.getGroup(a, groupID);
 
     GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, group);
-    GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownProfileKeyCredential);
+    GroupChange.Actions.Builder change = groupOperations.createAcceptInviteChange(ownExpiringProfileKeyCredential);
     change.setSourceUuid(UuidUtil.toByteString(a.getUUID()));
 
     Common.updateGroup(a, group, change);

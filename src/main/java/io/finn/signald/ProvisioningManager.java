@@ -41,6 +41,7 @@ import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.signalservice.api.util.DeviceNameUtil;
 import org.whispersystems.signalservice.internal.configuration.SignalServiceConfiguration;
+import org.whispersystems.signalservice.internal.push.ConfirmCodeMessage;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
 import org.whispersystems.signalservice.internal.util.DynamicCredentialsProvider;
 import org.whispersystems.util.Base64;
@@ -52,6 +53,7 @@ public class ProvisioningManager {
   private final SignalServiceAccountManager accountManager;
   private final IdentityKeyPair identityKey;
   private final int registrationId;
+  private final int pniRegistrationId;
   private final String password;
   private final UUID server;
   private SignalServiceAccountManager.NewDeviceRegistrationReturn newDeviceRegistration;
@@ -69,6 +71,7 @@ public class ProvisioningManager {
     this.server = server;
     identityKey = KeyUtil.generateIdentityKeyPair();
     registrationId = KeyHelper.generateRegistrationId(false);
+    pniRegistrationId = KeyHelper.generateRegistrationId(false);
     password = Util.getSecret(18);
     DynamicCredentialsProvider credentialProvider = new DynamicCredentialsProvider(null, null, null, password, SignalServiceAddress.DEFAULT_DEVICE_ID);
     SignalServiceConfiguration serviceConfiguration = Database.Get().ServersTable.getServer(server).getSignalServiceConfiguration();
@@ -97,7 +100,8 @@ public class ProvisioningManager {
     }
 
     String encryptedDeviceName = DeviceNameUtil.encryptDeviceName(deviceName, newDeviceRegistration.getAciIdentity().getPrivateKey());
-    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(), false, true, registrationId, encryptedDeviceName);
+    int deviceId = accountManager.finishNewDeviceRegistration(newDeviceRegistration.getProvisioningCode(),
+                                                              new ConfirmCodeMessage(false, true, registrationId, pniRegistrationId, encryptedDeviceName, null));
 
     ACI aci = newDeviceRegistration.getAci();
     if (Database.Get().AccountsTable.exists(aci)) {
@@ -116,6 +120,7 @@ public class ProvisioningManager {
     account.setACIIdentityKeyPair(newDeviceRegistration.getAciIdentity());
     account.setPNIIdentityKeyPair(newDeviceRegistration.getPniIdentity());
     account.setLocalRegistrationId(registrationId);
+    account.setPniRegistrationId(pniRegistrationId);
 
     // store all known identifiers in the recipients table
     account.getDB().RecipientsTable.get(newDeviceRegistration.getNumber(), newDeviceRegistration.getAci());

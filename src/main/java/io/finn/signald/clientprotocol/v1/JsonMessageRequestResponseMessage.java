@@ -40,7 +40,7 @@ public class JsonMessageRequestResponseMessage {
       throw new IOException("unknown message request response type " + type, e);
     }
     if (person != null) {
-      return MessageRequestResponseMessage.forIndividual(person.getSignalServiceAddress(), responseType);
+      return MessageRequestResponseMessage.forIndividual(person.getServiceID(), responseType);
     } else if (groupId != null) {
       return MessageRequestResponseMessage.forGroup(Base64.decode(groupId), responseType);
     } else {

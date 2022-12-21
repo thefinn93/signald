@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.signal.libsignal.zkgroup.InvalidInputException;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
+import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
 import org.whispersystems.signalservice.api.push.ACI;
 
@@ -25,15 +26,15 @@ public interface IGroupCredentialsTable {
   String DATE = "date";
   String CREDENTIAL = "credential";
 
-  void setCredentials(HashMap<Integer, AuthCredentialResponse> credentials) throws SQLException;
+  void setCredentials(HashMap<Long, AuthCredentialWithPniResponse> credentials) throws SQLException;
   void deleteAccount(ACI aci) throws SQLException;
-  Optional<AuthCredentialResponse> getCredential(int date) throws SQLException, InvalidInputException;
+  Optional<AuthCredentialWithPniResponse> getCredential(int date) throws SQLException, InvalidInputException;
 
-  default AuthCredentialResponse getCredential(GroupsV2Api groupsV2Api, int today) throws InvalidInputException, SQLException, IOException {
-    Optional<AuthCredentialResponse> todaysCredentials = getCredential(today);
+  default AuthCredentialWithPniResponse getCredential(GroupsV2Api groupsV2Api, int today) throws InvalidInputException, SQLException, IOException {
+    Optional<AuthCredentialWithPniResponse> todaysCredentials = getCredential(today);
     if (todaysCredentials.isEmpty()) {
       logger.debug("refreshing group credentials");
-      setCredentials(groupsV2Api.getCredentials(today, true));
+      setCredentials(groupsV2Api.getCredentials(today));
       todaysCredentials = getCredential(today);
     }
     return todaysCredentials.get();

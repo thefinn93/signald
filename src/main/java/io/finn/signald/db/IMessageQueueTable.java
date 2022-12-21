@@ -14,11 +14,14 @@ public interface IMessageQueueTable {
   String SOURCE_DEVICE = "source_device";
   String TIMESTAMP = "timestamp";
   String CONTENT = "content";
-  String LEGACY_MESSAGE = "legacy_message";
+  //  String LEGACY_MESSAGE = "legacy_message";
   String SERVER_RECEIVED_TIMESTAMP = "server_received_timestamp";
   String SERVER_UUID = "server_uuid";
   String SERVER_DELIVERED_TIMESTAMP = "server_delivered_timestamp";
   String DESTINATION_UUID = "destination_uuid";
+  String URGENT = "urgent";
+  String UPDATED_PNI = "updated_pni";
+  String STORY = "story";
 
   long storeEnvelope(SignalServiceEnvelope envelope) throws SQLException;
   void deleteEnvelope(long id) throws SQLException;

@@ -24,6 +24,7 @@ public class AccountRepair {
   public final static int ACCOUNT_REPAIR_VERSION_REFRESH_ALL_GROUPS = 1;
   public final static int ACCOUNT_REPAIR_VERSION_CLEAR_SENDER_KEY_SHARED = 2;
   public final static int ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE = 3;
+  public final static int ACCOUNT_REPAIR_VERSION_CLEAR_GROUP_CREDENTIALS_TABLE = 4;
 
   public static int getLatestVersion() { return ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE; }
 
@@ -40,6 +41,10 @@ public class AccountRepair {
 
     if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE) {
       clearContactsTableIfNonPrimaryDevice(account);
+    }
+
+    if (lastAccountRepair < ACCOUNT_REPAIR_VERSION_CLEAR_GROUP_CREDENTIALS_TABLE) {
+      clearGroupCredentialsTable(account);
     }
   }
 
@@ -82,5 +87,11 @@ public class AccountRepair {
     }
 
     Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_CONTACTS_TABLE);
+  }
+
+  private static void clearGroupCredentialsTable(Account account) throws SQLException {
+    logger.info("clearing group credentials cache as format has changed");
+    account.getDB().GroupCredentialsTable.deleteAccount(account.getACI());
+    Database.Get().AccountDataTable.set(account.getACI(), IAccountDataTable.Key.LAST_ACCOUNT_REPAIR, ACCOUNT_REPAIR_VERSION_CLEAR_GROUP_CREDENTIALS_TABLE);
   }
 }

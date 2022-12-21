@@ -24,6 +24,7 @@ public interface IAccountDataTable {
     ACI_IDENTITY_KEY_PAIR, // one of these were previously OWN_IDENTITY_KEY_PAIR
     PNI_IDENTITY_KEY_PAIR,
     LOCAL_REGISTRATION_ID,
+    PNI_REGISTRATION_ID,
     LAST_PRE_KEY_REFRESH,
     DEVICE_NAME,
     SENDER_CERTIFICATE,

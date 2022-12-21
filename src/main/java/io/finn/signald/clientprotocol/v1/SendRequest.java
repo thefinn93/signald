@@ -10,6 +10,7 @@ package io.finn.signald.clientprotocol.v1;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.ACCOUNT;
 import static io.finn.signald.annotations.ExactlyOneOfRequired.RECIPIENT;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.finn.signald.Account;
 import io.finn.signald.SignalDependencies;
@@ -59,6 +60,7 @@ public class SendRequest implements RequestType<SendResponse> {
   public List<JsonMention> mentions;
   public List<JsonPreview> previews;
   @Doc("Optionally set to a sub-set of group members. Ignored if recipientGroupId isn't specified") public List<JsonAddress> members;
+  @Doc("set to true when replying to a story") @JsonProperty("is_for_story") boolean isForStory = false;
 
   @Override
   public SendResponse run(Request request)
@@ -166,7 +168,7 @@ public class SendRequest implements RequestType<SendResponse> {
       }
     }
 
-    List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, recipientGroupId, members);
+    List<SendMessageResult> results = Common.send(a, messageBuilder, recipient, recipientGroupId, members, true, isForStory);
     return new SendResponse(results, timestamp);
   }
 }

@@ -25,6 +25,7 @@ import org.signal.libsignal.zkgroup.groups.GroupSecretParams;
 import org.signal.libsignal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.storage.*;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
@@ -99,8 +100,7 @@ public class SyncStorageDataJob implements Job {
     MessageReceiver.broadcastStorageStateChange(account.getUUID(), manifest.getVersion());
   }
 
-  private void readAccountRecord(final SignalStorageManifest manifest)
-      throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException, InvalidKeyException {
+  private void readAccountRecord(final SignalStorageManifest manifest) throws IOException, NoSuchAccountException, SQLException, ServerNotFoundException, InvalidProxyException {
     Optional<StorageId> accountId = manifest.getAccountStorageId();
     if (accountId.isEmpty()) {
       logger.warn("Manifest has no account record, ignoring.");
@@ -153,33 +153,33 @@ public class SyncStorageDataJob implements Job {
     }
   }
 
-  // "contact" records appear to contain PROFILE information, not contact information
+  // "contact" records appear to contain PROFILE information and contact information
   private void readContactRecord(final SignalStorageRecord record) throws SQLException, IOException {
     if (record == null || record.getContact().isEmpty()) {
       return;
     }
 
     SignalContactRecord contactRecord = record.getContact().get();
-    SignalServiceAddress address = contactRecord.getAddress();
+    ServiceId serviceId = contactRecord.getServiceId();
 
     Recipient recipient;
     try {
-      recipient = account.getDB().RecipientsTable.get(address);
+      recipient = account.getDB().RecipientsTable.get(serviceId);
     } catch (SQLException e) {
       logger.error("error getting recipient for storage sync", e);
       Sentry.captureException(e);
       return;
     }
 
-    if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
+    if (contactRecord.getProfileGivenName().isPresent() || contactRecord.getProfileFamilyName().isPresent()) {
       logger.debug("storing profile in local database");
       Database db = account.getDB();
-      if (contactRecord.getGivenName().isPresent() || contactRecord.getFamilyName().isPresent()) {
+      if (contactRecord.getProfileGivenName().isPresent() || contactRecord.getProfileFamilyName().isPresent()) {
         String name;
-        if (contactRecord.getGivenName().isPresent() && contactRecord.getFamilyName().isPresent()) {
-          name = contactRecord.getGivenName().get() + "\0" + contactRecord.getFamilyName().get();
+        if (contactRecord.getProfileGivenName().isPresent() && contactRecord.getProfileFamilyName().isPresent()) {
+          name = contactRecord.getProfileGivenName().get() + "\0" + contactRecord.getProfileFamilyName().get();
         } else {
-          name = contactRecord.getGivenName().orElse("") + contactRecord.getFamilyName().orElse("");
+          name = contactRecord.getProfileGivenName().orElse("") + contactRecord.getProfileFamilyName().orElse("");
         }
         db.ProfilesTable.setSerializedName(recipient, name);
       }

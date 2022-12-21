@@ -44,15 +44,16 @@ public class LegacyGroupsV2Storage {
   public boolean migrateToDB(Account account) throws SQLException, InvalidInputException, InvalidProtocolBufferException {
     boolean needsSave = false;
 
-    if (credentials != null) {
-      HashMap<Integer, AuthCredentialResponse> credentialResponseHashMap = new HashMap<>();
-      for (Map.Entry<Integer, JsonAuthCredential> entry : credentials.entrySet()) {
-        credentialResponseHashMap.put(entry.getKey(), entry.getValue().credential);
-      }
-      Database.Get(account.getACI()).GroupCredentialsTable.setCredentials(credentialResponseHashMap);
-      credentials = null;
-      needsSave = true;
-    }
+    // credentials format changed, don't migrate credentials (will be automatically re-fetched when first needed)
+    //    if (credentials != null) {
+    //      HashMap<Integer, AuthCredentialResponse> credentialResponseHashMap = new HashMap<>();
+    //      for (Map.Entry<Integer, JsonAuthCredential> entry : credentials.entrySet()) {
+    //        credentialResponseHashMap.put(entry.getKey(), entry.getValue().credential);
+    //      }
+    //      Database.Get(account.getACI()).GroupCredentialsTable.setCredentials(credentialResponseHashMap);
+    //      credentials = null;
+    //      needsSave = true;
+    //    }
 
     if (groups != null) {
       var groupsTable = Database.Get(account.getACI()).GroupsTable;

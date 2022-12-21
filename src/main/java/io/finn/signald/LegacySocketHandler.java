@@ -506,7 +506,7 @@ public class LegacySocketHandler {
   private void link(JsonRequest request) throws AssertionError, IOException, InvalidKeyException, URISyntaxException, NoSuchAccountException, InvalidInputException, SQLException,
                                                 ServerNotFoundException, InvalidProxyException, NoSuchAccountError, UntrustedIdentityException {
     ProvisioningManager pm = new ProvisioningManager(UUID.fromString(BuildConfig.DEFAULT_SERVER_UUID));
-    String deviceName = "signald"; // TODO: Set this to "signald on <hostname>" or maybe allow client to specify
+    String deviceName = "signald";
     if (request.deviceName != null) {
       deviceName = request.deviceName;
     }

@@ -50,9 +50,10 @@ public class MessageSender {
     self = Database.Get(account.getACI()).RecipientsTable.get(account.getACI());
   }
 
-  public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members)
-      throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException, ServerNotFoundException, InvalidProxyException, InvalidKeyException,
-             InvalidCertificateException, InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
+  public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members, boolean isUrgent,
+                                                  boolean isForStory) throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException,
+                                                                             ServerNotFoundException, InvalidProxyException, InvalidKeyException, InvalidCertificateException,
+                                                                             InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
     var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
     if (groupOptional.isEmpty()) {
       throw new UnknownGroupException();
@@ -170,8 +171,8 @@ public class MessageSender {
       logger.debug("sending group message to {} members via a distribution group", recipientAddresses.size());
       SenderKeyGroupEventsLogger sendEvents = new SenderKeyGroupEventsLogger();
       try {
-        List<SendMessageResult> skdmResults =
-            messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEvents);
+        List<SendMessageResult> skdmResults = messageSender.sendGroupDataMessage(distributionId, recipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT,
+                                                                                 message.build(), sendEvents, isUrgent, isForStory);
         Set<ServiceId> networkFailAddressesForRetry = new HashSet<>();
         if (sendEvents.isSyncMessageSent()) {
           isRecipientUpdate = true; // prevent duplicate sync messages from being sent
@@ -219,8 +220,8 @@ public class MessageSender {
 
           SenderKeyGroupEventsLogger sendEventsRetry = new SenderKeyGroupEventsLogger();
 
-          List<SendMessageResult> senderKeyRetryResults =
-              messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate, ContentHint.DEFAULT, message.build(), sendEventsRetry);
+          List<SendMessageResult> senderKeyRetryResults = messageSender.sendGroupDataMessage(distributionId, retryRecipientAddresses, access, isRecipientUpdate,
+                                                                                             ContentHint.DEFAULT, message.build(), sendEventsRetry, isUrgent, isForStory);
           if (!isRecipientUpdate && sendEventsRetry.isSyncMessageSent()) {
             isRecipientUpdate = true;
           }
@@ -275,7 +276,7 @@ public class MessageSender {
       try {
         results.addAll(messageSender.sendDataMessage(recipientAddresses, ua.getAccessPairFor(legacyTargets), isRecipientUpdate, ContentHint.DEFAULT, message.build(),
                                                      SignalServiceMessageSender.LegacyGroupEvents.EMPTY,
-                                                     sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false));
+                                                     sendResult -> logger.trace("Partial message send result: {}", sendResult.isSuccess()), () -> false, isUrgent));
       } catch (UntrustedIdentityException e) {
         account.getProtocolStore().handleUntrustedIdentityException(e);
       }
@@ -327,12 +328,7 @@ public class MessageSender {
     }
   }
 
-  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, Recipient recipient)
-      throws SQLException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidProxyException {
-    return send(messageBuilder, List.of(recipient));
-  }
-
-  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, List<Recipient> recipients)
+  public List<SendMessageResult> send(SignalServiceDataMessage.Builder messageBuilder, List<Recipient> recipients, boolean isUrgent)
       throws SQLException, NoSuchAccountException, ServerNotFoundException, IOException, InvalidProxyException {
     ProfileKey profileKey = account.getDB().ProfileKeysTable.getProfileKey(self);
     if (profileKey != null) {
@@ -353,7 +349,7 @@ public class MessageSender {
         message = messageBuilder.build();
         try (SignalSessionLock.Lock ignored = account.getSignalDependencies().getSessionLock().acquire()) {
           results.add(messageSender.sendDataMessage(recipient.getAddress(), new UnidentifiedAccessUtil(account.getACI()).getAccessPairFor(recipient), ContentHint.DEFAULT, message,
-                                                    IndividualSendEventsLogger.INSTANCE));
+                                                    IndividualSendEventsLogger.INSTANCE, isUrgent, recipient.isNeedsPniSignature()));
 
         } catch (org.whispersystems.signalservice.api.crypto.UntrustedIdentityException e) {
           if (e.getIdentityKey() != null) {

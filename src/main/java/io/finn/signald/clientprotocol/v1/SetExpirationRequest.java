@@ -16,13 +16,16 @@ import io.finn.signald.clientprotocol.Request;
 import io.finn.signald.clientprotocol.RequestType;
 import io.finn.signald.clientprotocol.v1.exceptions.*;
 import io.finn.signald.clientprotocol.v1.exceptions.InternalError;
+import io.finn.signald.db.Database;
 import io.finn.signald.db.Recipient;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.messages.SendMessageResult;
+import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 
 @ProtocolType("set_expiration")
 @ErrorDoc(error = AuthorizationFailedError.class, doc = AuthorizationFailedError.DEFAULT_ERROR_DOC)
@@ -36,28 +39,27 @@ public class SetExpirationRequest implements RequestType<SendResponse> {
   @ExampleValue("604800") @Required public int expiration;
 
   @Override
-  public SendResponse run(Request request)
-      throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError, InvalidRequestError, AuthorizationFailedError,
-             UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError, NetworkError {
+  public SendResponse run(Request request) throws InternalError, InvalidProxyError, ServerNotFoundError, NoSuchAccountError, UnknownGroupError, GroupVerificationError,
+                                                  InvalidRequestError, AuthorizationFailedError, UnregisteredUserError, SQLError, GroupPatchNotAcceptedError, UnsupportedGroupError,
+                                                  NetworkError, InvalidRecipientError, ProofRequiredError, RateLimitError, SignalServerError {
     List<SendMessageResult> results;
+    Account a = Common.getAccount(account);
 
     if (group != null) {
       if (group.length() != 44) {
         throw new UnsupportedGroupError();
       }
-      Account a = Common.getAccount(account);
       var storedGroup = Common.getGroup(a, group);
       GroupsV2Operations.GroupOperations groupOperations = Common.getGroupOperations(a, storedGroup);
       results = Common.updateGroup(a, storedGroup, groupOperations.createModifyGroupTimerChange(expiration));
 
     } else {
-      Manager m = Common.getManager(account);
-      Recipient recipient = Common.getRecipient(m.getACI(), address);
+      Recipient recipient = Common.getRecipient(a.getACI(), address);
       try {
-        results = m.setExpiration(recipient, expiration);
-      } catch (UnknownHostException e) {
-        throw new NetworkError(e);
-      } catch (IOException | SQLException e) {
+        a.getDB().ContactsTable.update(recipient, null, null, null, expiration, null);
+        SignalServiceDataMessage.Builder messageBuilder = SignalServiceDataMessage.newBuilder().asExpirationUpdate().withExpiration(expiration);
+        results = Common.send(a, messageBuilder, recipient, null, null);
+      } catch (SQLException e) {
         throw new InternalError("error setting expiration", e);
       }
     }
