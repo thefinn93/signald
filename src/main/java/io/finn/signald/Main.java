@@ -57,6 +57,8 @@ public class Main {
             "Support for this version of Java may be going away. Please update your java version. For more information see https://gitlab.com/signald/signald/-/issues/219");
       }
 
+      checkArch();
+
       // Workaround for BKS truststore
       Security.insertProviderAt(new SecurityProvider(), 1);
       Security.addProvider(new BouncyCastleProvider());
@@ -167,6 +169,22 @@ public class Main {
       logger.catching(e);
       System.exit(1);
     }
+  }
+
+  private static void checkArch() {
+    String os = System.getProperty("os.name");
+    if (!os.equals("Linux")) { // don't bother for non-linux hosts
+      return;
+    }
+
+    String arch = System.getProperty("os.arch");
+    if (arch.equals("amd64") || arch.equals("aarch64")) { // amd64 and aarch64 hosts should continue to work going forward
+      return;
+    }
+
+    logger.warn(
+        "support for this CPU architecture {} will be ending soon due to issues keeping libsignal-client compiled for it. For more info, see https://gitlab.com/signald/signald/-/issues/349",
+        arch);
   }
 
   // sdnotify is based on https://gist.github.com/yrro/18dc22513f1001d0ec8d
