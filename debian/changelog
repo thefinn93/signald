@@ -1,3 +1,12 @@
+signald (0.23.1) unstable; urgency=medium
+
+  * Full release notes at https://gitlab.com/signald/signald/-/releases/0.23.1
+  * Update kbs settings to hopefully address SGX issues ([#345](https://gitlab.com/signald/signald/-/issues/345))
+  * attempt to detect and warn on startup when cpu architecture support is being deprecated
+  * A few other minor bug fixes
+
+ -- Finn <finn@janky.solutions>  Wed, 21 Dec 2022 22:05:51 -0800
+
 signald (0.23.0) unstable; urgency=medium
 
   * update CA for prod server, which appears to have changed
