@@ -810,6 +810,7 @@ public class Manager {
 
       if (syncMessage.getSent().isPresent()) {
         SentTranscriptMessage sentMessage = syncMessage.getSent().get();
+        logger.info("received sent message transcript from device " + content.getSenderDevice());
         if (sentMessage.getDataMessage().isPresent()) {
           SignalServiceDataMessage message = sentMessage.getDataMessage().get();
 
@@ -826,6 +827,7 @@ public class Manager {
         if (rm.isContactsRequest()) {
           jobs.add(new SendContactsSyncJob(account));
         }
+        logger.info("received contact sync request from device " + content.getSenderDevice());
       }
 
       if (syncMessage.getBlockedList().isPresent()) {
@@ -864,7 +866,7 @@ public class Manager {
             try {
               Files.delete(tmpFile.toPath());
             } catch (IOException e) {
-              logger.warn("Failed to delete received contacts temp file “" + tmpFile + "”: " + e.getMessage());
+              logger.warn("Failed to delete received contacts temp file \"" + tmpFile + "\": " + e.getMessage());
             }
           }
         }
@@ -880,6 +882,7 @@ public class Manager {
 
       if (syncMessage.getKeys().isPresent()) {
         KeysMessage keysMessage = syncMessage.getKeys().get();
+        logger.info("received storage keys from device " + content.getSenderDevice());
         if (keysMessage.getStorageService().isPresent()) {
           StorageKey storageKey = keysMessage.getStorageService().get();
           account.setStorageKey(storageKey);
@@ -896,6 +899,7 @@ public class Manager {
           BackgroundJobRunnerThread.queue(new SyncStorageDataJob(account));
           break;
         }
+        logger.info("received {} fetch request device {}", syncMessage.getFetchType().get().name(), content.getSenderDevice());
       }
 
       if (syncMessage.getPniIdentity().isPresent()) {
