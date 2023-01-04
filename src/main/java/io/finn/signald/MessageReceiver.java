@@ -183,7 +183,7 @@ public class MessageReceiver implements Manager.ReceiveMessageHandler, Runnable 
         } catch (NotSavedException e) {
           logger.fatal("error saving incoming message, signald will exit \uD83D\uDCA5");
           System.exit(10);
-        } catch (AssertionError e) {
+        } catch (Throwable e) {
           this.sockets.broadcastListenStopped(e);
           logger.catching(e);
         } finally {
