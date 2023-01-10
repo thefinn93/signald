@@ -13,7 +13,6 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Optional;
 import org.signal.libsignal.zkgroup.InvalidInputException;
-import org.signal.libsignal.zkgroup.auth.AuthCredentialResponse;
 import org.signal.libsignal.zkgroup.auth.AuthCredentialWithPniResponse;
 import org.whispersystems.signalservice.api.push.ACI;
 
@@ -60,7 +59,7 @@ public class GroupCredentialsTable implements IGroupCredentialsTable {
   public void deleteAccount(ACI aci) throws SQLException {
     var query = String.format("DELETE FROM %s WHERE %s=?", TABLE_NAME, ACCOUNT_UUID);
     try (var statement = Database.getConn().prepareStatement(query)) {
-      statement.setObject(1, aci);
+      statement.setObject(1, aci.uuid());
       Database.executeUpdate(TABLE_NAME + "_delete_account", statement);
     }
   }

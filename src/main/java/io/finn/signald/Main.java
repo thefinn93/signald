@@ -118,8 +118,8 @@ public class Main {
         } catch (AuthorizationFailedException e) {
           logger.error("server rejected our authorization while refreshing account {}, you may wish to remove this account from signald", account.getSelf().toRedactedString());
         } catch (Exception e) {
-          logger.error("error syncing local account state with server:", e);
           Sentry.captureException(e);
+          logger.fatal("error syncing local account state with server:", e);
         }
       }
 

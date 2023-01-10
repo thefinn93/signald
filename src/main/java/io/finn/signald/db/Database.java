@@ -23,6 +23,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.sqlite.SQLiteErrorCode;
+import org.sqlite.SQLiteException;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.util.UuidUtil;
@@ -33,6 +35,9 @@ public class Database {
       Histogram.build().name(BuildConfig.NAME + "_sqlite_query_latency_seconds").help("sqlite latency in seconds.").labelNames("query", "write").register();
 
   private static final Map<ServiceId, Database> DatabaseInstances = new HashMap<>();
+
+  private static final int maxRetries = 5;
+  private static final long initialBackoff = 500;
 
   public static Database Get() { return Get(ACI.from(UuidUtil.UNKNOWN_UUID)); }
   public static Database Get(ACI aci) {
@@ -195,74 +200,68 @@ public class Database {
 
   // Helpers for executing queries
 
-  public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException { return executeQuery(name, statement, true); }
+  public static ResultSet executeQuery(String name, PreparedStatement statement) throws SQLException { return execute(name, true, statement::executeQuery); }
 
   public static ResultSet executeQuery(String name, PreparedStatement statement, boolean explodeOnTimeout) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name, "false").startTimer();
-    try {
-      return statement.executeQuery();
-    } catch (SQLException e) {
-      if (explodeOnTimeout) {
-        handleSQLException(e);
-      }
-      throw e;
-    } finally {
-      double seconds = timer.observeDuration();
-      if (Config.getLogDatabaseTransactions()) {
-        logger.debug("executed query {} in {} ms", name, seconds * 1000);
-      }
-    }
+    return execute(name, explodeOnTimeout, statement::executeQuery);
   }
 
-  public static int executeUpdate(String name, PreparedStatement statement) throws SQLException {
+  public static int executeUpdate(String name, PreparedStatement statement) throws SQLException { return execute(name, false, statement::executeUpdate); }
+
+  public static ResultSet getGeneratedKeys(String name, PreparedStatement statement) throws SQLException { return execute(name, false, statement::getGeneratedKeys); }
+
+  public static int[] executeBatch(String name, PreparedStatement statement) throws SQLException { return execute(name, false, statement::executeBatch); }
+
+  @FunctionalInterface
+  interface dbQueryFn<T> {
+    T get() throws SQLException;
+  }
+
+  private static <T> T execute(String name, boolean explodeOnTimeout, dbQueryFn<T> fn) throws SQLException {
     Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
+    long backoff = initialBackoff;
     try {
-      return statement.executeUpdate();
-    } catch (SQLException e) {
-      handleSQLException(e);
-      throw e;
+      for (int i = 0; i < 5; i++) {
+        if (i > 0) {
+          Thread.sleep(backoff);
+          backoff = backoff * 2;
+        }
+
+        try {
+          return fn.get();
+        } catch (SQLException e) {
+          if (e instanceof SQLiteException) {
+            SQLiteException sqliteException = (SQLiteException)e;
+            if (sqliteException.getResultCode() == SQLiteErrorCode.SQLITE_BUSY) {
+              logger.warn("SQLite database is busy, could not complete query (retry {}/{})", i, maxRetries);
+
+              if (i >= maxRetries - 1) {
+                throw e;
+              }
+
+              continue;
+            }
+          }
+
+          if (explodeOnTimeout) {
+            if (e.getCause() instanceof SocketTimeoutException) {
+              logger.fatal("socket timeout exception while talking to postgres. signald will exit \uD83D\uDCA5");
+              System.exit(10);
+            }
+          }
+
+          throw e;
+        }
+      }
+    } catch (InterruptedException e) {
+      logger.fatal("interrupted: ", e);
     } finally {
       double seconds = timer.observeDuration();
       if (Config.getLogDatabaseTransactions()) {
-        logger.debug("executed query {} in {} ms", name, seconds * 1000);
+        logger.debug("executed db transaction {} in {} ms", name, seconds * 1000);
       }
     }
-  }
 
-  public static ResultSet getGeneratedKeys(String name, PreparedStatement statement) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
-    try {
-      return statement.getGeneratedKeys();
-    } catch (SQLException e) {
-      handleSQLException(e);
-      throw e;
-    } finally {
-      double seconds = timer.observeDuration();
-      if (Config.getLogDatabaseTransactions()) {
-        logger.debug("executed query {} in {} ms", name, seconds * 1000);
-      }
-    }
-  }
-
-  public static int[] executeBatch(String name, PreparedStatement statement) throws SQLException {
-    Histogram.Timer timer = queryLatency.labels(name, "true").startTimer();
-    try {
-      return statement.executeBatch();
-    } catch (SQLException e) {
-      handleSQLException(e);
-      throw e;
-    } finally {
-      double seconds = timer.observeDuration();
-      if (Config.getLogDatabaseTransactions()) {
-        logger.debug("executed query {} in {} ms", name, seconds * 1000);
-      }
-    }
-  }
-
-  private static void handleSQLException(SQLException e) {
-    if (e.getCause() instanceof SocketTimeoutException) {
-      logger.fatal("socket timeout exception while talking to postgres. signald will exit \uD83D\uDCA5");
-      System.exit(10);
-    }
+    throw new SQLException("this should never happen");
   }
 }

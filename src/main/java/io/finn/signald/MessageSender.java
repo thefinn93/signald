@@ -53,7 +53,7 @@ public class MessageSender {
   public List<SendMessageResult> sendGroupMessage(SignalServiceDataMessage.Builder message, GroupIdentifier recipientGroupId, List<Recipient> members, boolean isUrgent,
                                                   boolean isForStory) throws UnknownGroupException, SQLException, IOException, InvalidInputException, NoSuchAccountException,
                                                                              ServerNotFoundException, InvalidProxyException, InvalidKeyException, InvalidCertificateException,
-                                                                             InvalidRegistrationIdException, TimeoutException, ExecutionException, InterruptedException {
+                                                                             InvalidRegistrationIdException, TimeoutException, ExecutionException {
     var groupOptional = Database.Get(account.getACI()).GroupsTable.get(recipientGroupId);
     if (groupOptional.isEmpty()) {
       throw new UnknownGroupException();

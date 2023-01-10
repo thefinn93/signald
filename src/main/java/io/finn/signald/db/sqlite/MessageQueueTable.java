@@ -20,7 +20,6 @@ import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 public class MessageQueueTable implements IMessageQueueTable {
-  private static final Logger logger = LogManager.getLogger();
   private static final String TABLE_NAME = "message_queue";
 
   private final ACI aci;

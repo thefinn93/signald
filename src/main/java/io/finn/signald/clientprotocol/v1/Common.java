@@ -204,7 +204,7 @@ public class Common {
         throw new InternalError(String.format("unexpected %s status code from server", e.getCode()), e);
       }
     } catch (IOException | SQLException | InvalidInputException | InvalidRegistrationIdException | InvalidCertificateException | InvalidKeyException | TimeoutException |
-             ExecutionException | InterruptedException e) {
+             ExecutionException e) {
       throw new InternalError("error sending message", e);
     } finally {
       timer.observeDuration();
@@ -242,8 +242,7 @@ public class Common {
       throw new ServerNotFoundError(e);
     } catch (InvalidProxyException e) {
       throw new InvalidProxyError(e);
-    } catch (InvalidInputException | TimeoutException | InterruptedException | InvalidCertificateException | ExecutionException | InvalidKeyException |
-             InvalidRegistrationIdException | IOException e) {
+    } catch (InvalidInputException | TimeoutException | InvalidCertificateException | ExecutionException | InvalidKeyException | InvalidRegistrationIdException | IOException e) {
       throw new InternalError("error notifying new members of group", e);
     }
   }

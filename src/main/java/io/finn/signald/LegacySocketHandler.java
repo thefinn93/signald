@@ -355,9 +355,8 @@ public class LegacySocketHandler {
     reply("device_added", new JsonStatusMessage(4, "Successfully linked device"), request.id);
   }
 
-  private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, NotAGroupMemberException, NoSuchAccountException, VerificationFailedException,
-                                                       InterruptedException, ExecutionException, TimeoutException, SQLException, InvalidKeyException, ServerNotFoundException,
-                                                       InvalidProxyException, InvalidInputException {
+  private void updateGroup(JsonRequest request) throws IOException, GroupNotFoundException, NoSuchAccountException, VerificationFailedException, SQLException, InvalidKeyException,
+                                                       ServerNotFoundException, InvalidProxyException, InvalidInputException {
     Manager m = Manager.get(request.username);
     Account a = m.getAccount();
 
