@@ -228,7 +228,11 @@ public class Database {
         }
 
         try {
-          return fn.get();
+          T result = fn.get();
+          if (i > 0) {
+            logger.debug("transaction succeeded after {} retries", i);
+          }
+          return result;
         } catch (SQLException e) {
           if (e instanceof SQLiteException) {
             SQLiteException sqliteException = (SQLiteException)e;
