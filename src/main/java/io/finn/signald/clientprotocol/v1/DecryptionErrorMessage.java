@@ -14,11 +14,13 @@ import org.whispersystems.util.Base64;
 public class DecryptionErrorMessage {
   public final long timestamp;
   @JsonProperty("device_id") public final int deviceId;
-  @JsonProperty("ratchet_key") public final Optional<String> ratchetKey;
+  @JsonProperty("ratchet_key") public String ratchetKey;
 
   public DecryptionErrorMessage(org.signal.libsignal.protocol.message.DecryptionErrorMessage message) {
     timestamp = message.getTimestamp();
     deviceId = message.getDeviceId();
-    ratchetKey = message.getRatchetKey().map(k -> Base64.encodeBytes(k.serialize()));
+    if(message.getRatchetKey().isPresent()) {
+      ratchetKey = Base64.encodeBytes(message.getRatchetKey().get().serialize());
+    }
   }
 }
