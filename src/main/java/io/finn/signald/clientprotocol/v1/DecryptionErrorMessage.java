@@ -19,7 +19,7 @@ public class DecryptionErrorMessage {
   public DecryptionErrorMessage(org.signal.libsignal.protocol.message.DecryptionErrorMessage message) {
     timestamp = message.getTimestamp();
     deviceId = message.getDeviceId();
-    if(message.getRatchetKey().isPresent()) {
+    if (message.getRatchetKey().isPresent()) {
       ratchetKey = Base64.encodeBytes(message.getRatchetKey().get().serialize());
     }
   }
