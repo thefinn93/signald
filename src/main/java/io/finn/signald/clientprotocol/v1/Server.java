@@ -62,7 +62,14 @@ public class Server {
     for (ServerCDN cdn : cdnURLs) {
       cdns.put(cdn.number, cdn.url);
     }
-    return Database.NewServer(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, Base64.decode(zkParams), Base64.decode(unidentifiedSenderRoot), proxy,
-                              Base64.decode(ca), keyBackupServiceName, Base64.decode(keyBackupServiceId), keyBackupMrenclave, cdsMrenclave, Base64.decode(iasCa));
+
+    byte[] decodedZkParams = Base64.decode(zkParams);
+    byte[] decodedUnidentifiedSenderRoot = Base64.decode(unidentifiedSenderRoot);
+    byte[] decodedCa = Base64.decode(ca);
+    byte[] decodedKeyBackupServiceId = Base64.decode(keyBackupServiceId);
+    byte[] decodedIasCa = iasCa == null ? null : Base64.decode(iasCa);
+
+    return Database.NewServer(uuid, serviceURL, cdns, contactDiscoveryURL, keyBackupURL, storageURL, decodedZkParams, decodedUnidentifiedSenderRoot, proxy, decodedCa,
+                              keyBackupServiceName, decodedKeyBackupServiceId, keyBackupMrenclave, cdsMrenclave, decodedIasCa);
   }
 }

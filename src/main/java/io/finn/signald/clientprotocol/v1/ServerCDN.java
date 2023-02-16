@@ -13,6 +13,8 @@ public class ServerCDN {
   public int number;
   public String url;
 
+  public ServerCDN() {}
+
   public ServerCDN(Map.Entry<Integer, String> entry) {
     number = entry.getKey();
     url = entry.getValue();
