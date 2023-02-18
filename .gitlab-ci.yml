@@ -110,7 +110,6 @@ build deb aarch64-unknown-linux-gnu:
       allow_failure: true
 
 .docker-buildx:
-  image: docker.io/library/debian:stable
   stage: build docker
   tags: [docker-builder]
   needs: []
@@ -143,7 +142,6 @@ container arm64:
 
 container manifest:
   stage: publish
-  image: docker.io/library/debian:stable
   needs: ["container amd64", "container arm64"]
   tags: [docker-builder]
   before_script:
