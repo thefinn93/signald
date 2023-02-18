@@ -57,6 +57,9 @@ public class JsonQuote {
     for (JsonMention mention : mentions) {
       signalMentions.add(mention.asMention());
     }
-    return new SignalServiceDataMessage.Quote(this.id, this.author.getServiceID(), this.text, quotedAttachments, signalMentions, SignalServiceDataMessage.Quote.Type.NORMAL);
+
+    String body = this.text == null ? "" : this.text;
+
+    return new SignalServiceDataMessage.Quote(this.id, this.author.getServiceID(), body, quotedAttachments, signalMentions, SignalServiceDataMessage.Quote.Type.NORMAL);
   }
 }
